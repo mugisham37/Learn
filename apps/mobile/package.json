@@ -43,7 +43,7 @@
     "@taskmanagement/observability": "workspace:*",
     "expo": "~49.0.0",
     "expo-application": "~5.3.0",
-    "expo-auth-session": "~5.0.2",
+    "expo-auth-session": "~7.0.8",
     "expo-battery": "~6.0.1",
     "expo-camera": "~13.4.2",
     "expo-constants": "~14.4.2",
