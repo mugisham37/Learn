@@ -56,7 +56,7 @@
     "react-intersection-observer": "^9.13.0",
     "use-debounce": "^10.0.1",
     "date-fns": "^3.6.0",
-    "recharts": "^2.12.7",
+    "recharts": "^3.2.1",
     "@hello-pangea/dnd": "^16.6.0",
     "react-dropzone": "^14.2.3",
     "react-virtualized-auto-sizer": "^1.0.24",
