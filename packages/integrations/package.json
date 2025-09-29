@@ -21,7 +21,7 @@
     "@taskmanagement/config": "workspace:*",
     "nodemailer": "^6.9.7",
     "@sendgrid/mail": "^7.7.0",
-    "mailgun.js": "^9.4.1",
+    "mailgun.js": "^12.1.0",
     "twilio": "^4.19.0",
     "firebase-admin": "^11.11.1",
     "@google-cloud/storage": "^7.7.0",
