@@ -23,7 +23,7 @@
     "winston": "^3.11.0",
     "winston-daily-rotate-file": "^4.7.1",
     "@opentelemetry/api": "^1.7.0",
-    "@opentelemetry/sdk-node": "^0.45.1",
+    "@opentelemetry/sdk-node": "^0.206.0",
     "@opentelemetry/exporter-jaeger": "^1.18.1",
     "@opentelemetry/exporter-prometheus": "^0.45.1",
     "@opentelemetry/instrumentation": "^0.45.1",
