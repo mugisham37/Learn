@@ -30,7 +30,7 @@
     "@opentelemetry/instrumentation-http": "^0.45.1",
     "@opentelemetry/instrumentation-express": "^0.34.1",
     "@opentelemetry/instrumentation-pg": "^0.39.0",
-    "@opentelemetry/instrumentation-redis": "^0.35.2",
+    "@opentelemetry/instrumentation-redis": "^0.55.0",
     "elastic-apm-node": "^4.0.0",
     "@sentry/node": "^7.81.1",
     "clinic": "^12.1.0",
