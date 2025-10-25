@@ -308,7 +308,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Download all security results
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
 
       - name: Evaluate security quality gate
         run: |
