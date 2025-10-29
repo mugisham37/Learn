@@ -39,7 +39,7 @@
     "react-hook-form": "^7.52.1",
     "@hookform/resolvers": "^3.9.0",
     "zod": "^3.23.8",
-    "tailwindcss": "^3.4.6",
+    "tailwindcss": "^4.1.16",
     "autoprefixer": "^10.4.19",
     "postcss": "^8.4.39",
     "clsx": "^2.1.1",
