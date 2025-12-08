@@ -58,3 +58,6 @@ export function redactSensitiveData(obj: Record<string, unknown>): Record<string
 
   return redacted;
 }
+
+// Export authentication utilities
+export * from './auth.js';
