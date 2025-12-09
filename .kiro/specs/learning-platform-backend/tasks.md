@@ -317,7 +317,12 @@ This implementation plan breaks down the development of the educational learning
   - Handle database errors and map to domain errors
   - _Requirements: 1.1, 1.2_
 
-- [ ] 20. Implement user domain entities and value objects
+- [x] 20. Implement user domain entities and value objects
+
+
+
+
+
   - Create User entity class with validation
   - Create UserProfile value object
   - Create Email value object with validation
