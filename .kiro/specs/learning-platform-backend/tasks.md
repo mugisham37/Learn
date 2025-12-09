@@ -196,7 +196,12 @@ This implementation plan breaks down the development of the educational learning
   - Create foreign key relationships with cascade delete
   - _Requirements: 1.1, 1.2, 2.1_
 
-- [ ] 12. Define course management schemas
+- [x] 12. Define course management schemas
+
+
+
+
+
   - Create courses table schema (id, instructorId, title, description, slug, category, difficulty, price, status, ratings, timestamps)
   - Create course_modules table schema (id, courseId, title, description, orderNumber, duration, prerequisiteModuleId)
   - Create lessons table schema (id, moduleId, title, description, lessonType, contentUrl, contentText, duration, orderNumber, isPreview, metadata)

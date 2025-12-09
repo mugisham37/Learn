@@ -7,8 +7,10 @@
 // Users and Authentication
 export * from './users.schema.js';
 
+// Courses and Content
+export * from './courses.schema.js';
+
 // TODO: Export remaining schema definitions
-// export * from './courses.schema.js';
 // export * from './enrollments.schema.js';
 // export * from './assessments.schema.js';
 // export * from './communication.schema.js';
