@@ -16,8 +16,10 @@ export * from './enrollments.schema.js';
 // Assessments (Quizzes and Assignments)
 export * from './assessments.schema.js';
 
+// Communication (Messages, Discussions, Announcements)
+export * from './communication.schema.js';
+
 // TODO: Export remaining schema definitions
-// export * from './communication.schema.js';
 // export * from './notifications.schema.js';
 // export * from './analytics.schema.js';
 // export * from './payments.schema.js';

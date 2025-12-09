@@ -239,7 +239,17 @@ This implementation plan breaks down the development of the educational learning
   - Add indexes on lessonId, quizId, studentId, gradingStatus
   - _Requirements: 6.1, 6.2, 7.1_
 
-- [ ] 15. Define communication schemas
+- [x] 15. Define communication schemas
+
+
+
+
+
+
+
+
+
+
   - Create messages table schema (id, senderId, recipientId, conversationId, subject, content, attachments, isRead, readAt, parentMessageId, deletedBy timestamps)
   - Create discussion_threads table schema (id, courseId, authorId, category, title, content, isPinned, isLocked, viewCount, replyCount, lastActivityAt)
   - Create discussion_posts table schema (id, threadId, authorId, parentPostId, content, upvoteCount, isSolution, editedAt, editHistory, isDeleted)
