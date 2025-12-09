@@ -210,7 +210,12 @@ This implementation plan breaks down the development of the educational learning
   - Add indexes on instructorId, status, category, slug
   - _Requirements: 3.1, 3.2, 3.3_
 
-- [ ] 13. Define enrollment and progress schemas
+- [x] 13. Define enrollment and progress schemas
+
+
+
+
+
   - Create enrollments table schema (id, studentId, courseId, enrolledAt, completedAt, progressPercentage, lastAccessedAt, paymentId, certificateId, status)
   - Create lesson_progress table schema (id, enrollmentId, lessonId, status, timeSpentSeconds, completedAt, quizScore, attemptsCount)
   - Create certificates table schema (id, enrollmentId, certificateId, pdfUrl, issuedAt, verificationUrl, metadata)
