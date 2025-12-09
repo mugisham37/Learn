@@ -61,3 +61,6 @@ export function redactSensitiveData(obj: Record<string, unknown>): Record<string
 
 // Export authentication utilities
 export * from './auth.js';
+
+// Export ownership verification utilities
+export * from './ownership.js';
