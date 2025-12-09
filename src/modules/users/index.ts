@@ -4,4 +4,11 @@
  * Public API for the users module
  */
 
-// TODO: Export module interfaces and services
+// Domain Layer
+export * from './domain/index.js';
+
+// Infrastructure Layer
+export * from './infrastructure/index.js';
+
+// Application Layer
+export * from './application/index.js';
