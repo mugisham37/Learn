@@ -13,10 +13,11 @@ export * from './courses.schema.js';
 // Enrollments and Progress
 export * from './enrollments.schema.js';
 
+// Assessments (Quizzes and Assignments)
+export * from './assessments.schema.js';
+
 // TODO: Export remaining schema definitions
-// export * from './assessments.schema.js';
 // export * from './communication.schema.js';
 // export * from './notifications.schema.js';
 // export * from './analytics.schema.js';
 // export * from './payments.schema.js';
-// export * from './certificates.schema.js';

@@ -224,7 +224,12 @@ This implementation plan breaks down the development of the educational learning
   - Add indexes on status, completedAt
   - _Requirements: 5.1, 5.3, 5.6_
 
-- [ ] 14. Define assessment schemas
+- [x] 14. Define assessment schemas
+
+
+
+
+
   - Create quizzes table schema (id, lessonId, title, description, quizType, timeLimitMinutes, passingScorePercentage, maxAttempts, randomization flags, availability timestamps)
   - Create questions table schema (id, quizId, questionType, questionText, questionMediaUrl, options, correctAnswer, explanation, points, orderNumber, difficulty)
   - Create quiz_submissions table schema (id, quizId, studentId, enrollmentId, attemptNumber, timestamps, timeTakenSeconds, scorePercentage, pointsEarned, answers, gradingStatus, feedback, gradedBy)
