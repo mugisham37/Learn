@@ -257,7 +257,12 @@ This implementation plan breaks down the development of the educational learning
   - Add indexes on conversationId, recipientId, isRead, courseId, threadId, authorId
   - _Requirements: 9.1, 9.2, 9.3_
 
-- [ ] 16. Define notification and analytics schemas
+- [x] 16. Define notification and analytics schemas
+
+
+
+
+
   - Create notifications table schema (id, recipientId, notificationType, title, content, actionUrl, priority, isRead, readAt, metadata, expiresAt)
   - Create course_analytics table schema (courseId, totalEnrollments, activeEnrollments, completionCount, completionRate, averageRating, totalRevenue, averageTimeToCompletionDays, dropoutRate, mostDifficultLessonId, engagementMetrics, lastUpdated)
   - Create student_analytics table schema (userId, totalCoursesEnrolled, coursesCompleted, coursesInProgress, averageQuizScore, totalTimeInvestedMinutes, currentStreakDays, longestStreakDays, badgesEarned, skillRatings, lastUpdated)

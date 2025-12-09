@@ -19,7 +19,11 @@ export * from './assessments.schema.js';
 // Communication (Messages, Discussions, Announcements)
 export * from './communication.schema.js';
 
+// Notifications
+export * from './notifications.schema.js';
+
+// Analytics
+export * from './analytics.schema.js';
+
 // TODO: Export remaining schema definitions
-// export * from './notifications.schema.js';
-// export * from './analytics.schema.js';
 // export * from './payments.schema.js';
