@@ -271,7 +271,12 @@ This implementation plan breaks down the development of the educational learning
   - Add indexes on recipientId, isRead, notificationType, userId, eventType, timestamp
   - _Requirements: 10.1, 12.1, 12.2, 12.7_
 
-- [ ] 17. Define payment schemas
+- [x] 17. Define payment schemas
+
+
+
+
+
   - Create payments table schema (id, userId, courseId, stripePaymentIntentId, stripeCheckoutSessionId, amount, currency, status, paymentMethod, metadata)
   - Create subscriptions table schema (id, userId, stripeSubscriptionId, stripeCustomerId, planId, status, currentPeriodStart, currentPeriodEnd, cancelAtPeriodEnd)
   - Create refunds table schema (id, paymentId, enrollmentId, stripeRefundId, amount, reason, status)

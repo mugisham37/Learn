@@ -25,5 +25,5 @@ export * from './notifications.schema.js';
 // Analytics
 export * from './analytics.schema.js';
 
-// TODO: Export remaining schema definitions
-// export * from './payments.schema.js';
+// Payments (Transactions, Subscriptions, Refunds)
+export * from './payments.schema.js';
