@@ -83,7 +83,12 @@ The application follows a modular monolith architecture where each business doma
    npm run db:migrate
    ```
 
-6. **Start the development server**
+6. **Verify database migration**
+   ```bash
+   npm run db:verify
+   ```
+
+7. **Start the development server**
    ```bash
    npm run dev
    ```
@@ -149,6 +154,60 @@ learning-platform-backend/
 └── README.md                       # This file
 ```
 
+## �️ Database Migrations
+
+The project uses Drizzle ORM for database schema management and migrations.
+
+### Initial Migration
+
+The initial migration creates:
+- **24 tables** for all domain modules
+- **16 enum types** for status fields
+- **Foreign key constraints** with cascade delete
+- **Indexes** for optimized query performance
+
+### Migration Commands
+
+```bash
+# Generate new migration from schema changes
+npm run db:generate
+
+# Run all pending migrations
+npm run db:migrate
+
+# Verify migration was applied correctly
+npm run db:verify
+
+# Open database GUI
+npm run db:studio
+```
+
+### Database Access
+
+**Using psql:**
+```bash
+psql postgresql://postgres:password@localhost:5432/learning_platform
+```
+
+**Using PgAdmin:**
+- URL: http://localhost:5050
+- Email: admin@learningplatform.com
+- Password: admin
+
+### Documentation
+
+- **Full Guide**: See `docs/database-migration-guide.md` for comprehensive instructions
+- **Quick Reference**: See `docs/migration-quick-reference.md` for common commands
+- **Migration README**: See `migrations/README.md` for migration-specific details
+
+### Rollback
+
+⚠️ **WARNING**: Rollback will delete all data!
+
+```bash
+psql postgresql://postgres:password@localhost:5432/learning_platform -f migrations/rollback/0000_rollback.sql
+```
+
 ## 🛠️ Development
 
 ### Available Scripts
@@ -177,6 +236,7 @@ npm run test:coverage    # Run tests with coverage
 # Database
 npm run db:generate      # Generate database migrations
 npm run db:migrate       # Run database migrations
+npm run db:verify        # Verify database migration
 npm run db:studio        # Open Drizzle Studio (database GUI)
 
 # Docker

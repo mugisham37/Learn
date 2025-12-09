@@ -17,6 +17,7 @@
     "test:coverage": "vitest run --coverage",
     "db:generate": "drizzle-kit generate:pg",
     "db:migrate": "tsx src/infrastructure/database/migrate.ts",
+    "db:verify": "tsx scripts/verify-migration.ts",
     "db:studio": "drizzle-kit studio",
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down",

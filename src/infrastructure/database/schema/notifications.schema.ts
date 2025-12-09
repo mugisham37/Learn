@@ -17,7 +17,7 @@ import {
   pgEnum
 } from 'drizzle-orm/pg-core';
 
-import { users } from './users.schema.js';
+import { users } from './users.schema';
 
 /**
  * Notification Type Enum

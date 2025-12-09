@@ -10,7 +10,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 export default {
-  schema: './src/infrastructure/database/schema/index.ts',
+  schema: './src/infrastructure/database/schema/*.schema.ts',
   out: './migrations',
   driver: 'pg',
   dbCredentials: {

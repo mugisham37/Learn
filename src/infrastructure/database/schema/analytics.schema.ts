@@ -16,8 +16,8 @@ import {
   index
 } from 'drizzle-orm/pg-core';
 
-import { courses, lessons } from './courses.schema.js';
-import { users } from './users.schema.js';
+import { courses, lessons } from './courses.schema';
+import { users } from './users.schema';
 
 /**
  * Course Analytics Table
