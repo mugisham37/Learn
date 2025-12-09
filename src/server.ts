@@ -134,27 +134,9 @@ export async function createServer(): Promise<FastifyInstance> {
   });
 
   // Global error handler
-  server.setErrorHandler((error, request, reply) => {
-    request.log.error({
-      requestId: request.id,
-      error: {
-        message: error.message,
-        stack: error.stack,
-        code: error.code,
-      },
-    }, 'Request error');
-
-    // Don't leak error details in production
-    const isDevelopment = config.nodeEnv === 'development';
-
-    void reply.code(error.statusCode || 500).send({
-      statusCode: error.statusCode || 500,
-      error: error.name || 'Internal Server Error',
-      message: isDevelopment ? error.message : 'An unexpected error occurred',
-      requestId: request.id,
-      ...(isDevelopment && { stack: error.stack }),
-    });
-  });
+  // Import the comprehensive error handler
+  const { errorHandler } = await import('./shared/errors/errorHandler.js');
+  server.setErrorHandler(errorHandler);
 
   return server;
 }

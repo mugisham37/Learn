@@ -64,3 +64,6 @@ export * from './auth.js';
 
 // Export ownership verification utilities
 export * from './ownership.js';
+
+// Export validation utilities
+export * from './validation.js';

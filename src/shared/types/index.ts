@@ -35,3 +35,21 @@ export interface DateRange {
   startDate: Date;
   endDate: Date;
 }
+
+/**
+ * User context attached to authenticated requests
+ */
+export interface UserContext {
+  id: string;
+  email: string;
+  role: Role;
+}
+
+/**
+ * Extend Fastify types to include user context
+ */
+declare module 'fastify' {
+  interface FastifyRequest {
+    user?: UserContext;
+  }
+}

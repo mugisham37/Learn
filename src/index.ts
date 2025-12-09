@@ -75,16 +75,16 @@ async function shutdown(signal: string): Promise<void> {
 process.on('SIGTERM', () => void shutdown('SIGTERM'));
 process.on('SIGINT', () => void shutdown('SIGINT'));
 
-// Handle uncaught errors
+// Handle uncaught errors with comprehensive error handlers
+import { handleUncaughtException, handleUnhandledRejection } from './shared/errors/index.js';
+
 process.on('uncaughtException', (error) => {
-  // eslint-disable-next-line no-console
-  console.error('Uncaught Exception:', error);
+  handleUncaughtException(error);
   void shutdown('UNCAUGHT_EXCEPTION');
 });
 
 process.on('unhandledRejection', (reason, promise) => {
-  // eslint-disable-next-line no-console
-  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  handleUnhandledRejection(reason, promise);
   void shutdown('UNHANDLED_REJECTION');
 });
 
