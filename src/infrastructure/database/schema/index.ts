@@ -4,8 +4,10 @@
  * Central export point for all database schemas
  */
 
-// TODO: Export all schema definitions
-// export * from './users.schema.js';
+// Users and Authentication
+export * from './users.schema.js';
+
+// TODO: Export remaining schema definitions
 // export * from './courses.schema.js';
 // export * from './enrollments.schema.js';
 // export * from './assessments.schema.js';
