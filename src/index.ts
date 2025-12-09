@@ -9,6 +9,7 @@ import { FastifyInstance } from 'fastify';
 
 import { config, validateConfig } from './config/index.js';
 import { createServer, startServer, stopServer } from './server.js';
+import { logger } from './shared/utils/logger.js';
 
 // Global server instance for graceful shutdown
 let server: FastifyInstance | null = null;
@@ -18,12 +19,10 @@ let server: FastifyInstance | null = null;
  */
 async function bootstrap(): Promise<void> {
   try {
-    // eslint-disable-next-line no-console
-    console.log('Starting Learning Platform Backend...');
-    // eslint-disable-next-line no-console
-    console.log(`Environment: ${config.nodeEnv}`);
-    // eslint-disable-next-line no-console
-    console.log(`Port: ${config.port}`);
+    logger.info('Starting Learning Platform Backend...', {
+      environment: config.nodeEnv,
+      port: config.port,
+    });
     
     // Validate configuration
     validateConfig();
@@ -39,11 +38,15 @@ async function bootstrap(): Promise<void> {
     // Start the server
     await startServer(server);
     
-    // eslint-disable-next-line no-console
-    console.log('Server initialization complete');
+    logger.info('Server initialization complete');
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Failed to start server:', error);
+    logger.error('Failed to start server', {
+      error: error instanceof Error ? {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+      } : String(error),
+    });
     process.exit(1);
   }
 }
@@ -52,18 +55,21 @@ async function bootstrap(): Promise<void> {
  * Gracefully shutdown the application
  */
 async function shutdown(signal: string): Promise<void> {
-  // eslint-disable-next-line no-console
-  console.log(`${signal} signal received: closing HTTP server`);
+  logger.info(`${signal} signal received: closing HTTP server`, { signal });
   
   if (server) {
     try {
       await stopServer(server);
-      // eslint-disable-next-line no-console
-      console.log('Graceful shutdown completed');
+      logger.info('Graceful shutdown completed');
       process.exit(0);
     } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Error during graceful shutdown:', error);
+      logger.error('Error during graceful shutdown', {
+        error: error instanceof Error ? {
+          name: error.name,
+          message: error.message,
+          stack: error.stack,
+        } : String(error),
+      });
       process.exit(1);
     }
   } else {

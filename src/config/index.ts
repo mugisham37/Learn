@@ -202,5 +202,7 @@ export function validateConfig(): void {
     }
   }
 
+  // Note: We can't import logger here due to circular dependency
+  // Logger will be initialized after config is loaded
   console.log('Configuration validated successfully');
 }

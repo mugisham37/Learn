@@ -13,6 +13,7 @@ import {
   getStatusCode,
   sanitizeError,
 } from './index.js';
+import { logger } from '../utils/logger.js';
 
 /**
  * Error context for logging
@@ -180,19 +181,19 @@ export async function errorHandler(
   const isClientError = statusCode >= 400 && statusCode < 500;
   const isServerError = statusCode >= 500;
 
-  // Log error with appropriate level
+  // Log error with appropriate level using Winston
   if (isServerError) {
-    request.log.error(context, 'Server error occurred');
+    logger.error('Server error occurred', context);
     
     // Trigger alert for critical errors
     if (shouldAlert(error)) {
       // TODO: Integrate with alerting system (PagerDuty, Slack, etc.)
-      request.log.fatal(context, 'CRITICAL ERROR - Alert triggered');
+      logger.error('CRITICAL ERROR - Alert triggered', { ...context, critical: true });
     }
   } else if (isClientError) {
-    request.log.warn(context, 'Client error occurred');
+    logger.warn('Client error occurred', context);
   } else {
-    request.log.info(context, 'Request error occurred');
+    logger.info('Request error occurred', context);
   }
 
   // Determine if we're in development mode
@@ -221,8 +222,14 @@ export async function errorHandler(
  * @param error - Uncaught exception
  */
 export function handleUncaughtException(error: Error): void {
-  console.error('UNCAUGHT EXCEPTION! Shutting down...');
-  console.error(error);
+  logger.error('UNCAUGHT EXCEPTION! Shutting down...', {
+    error: {
+      name: error.name,
+      message: error.message,
+      stack: error.stack,
+    },
+    critical: true,
+  });
 
   // Give time for logging before exit
   setTimeout(() => {
@@ -241,9 +248,15 @@ export function handleUnhandledRejection(
   reason: unknown,
   promise: Promise<unknown>
 ): void {
-  console.error('UNHANDLED REJECTION! Shutting down...');
-  console.error('Promise:', promise);
-  console.error('Reason:', reason);
+  logger.error('UNHANDLED REJECTION! Shutting down...', {
+    promise: String(promise),
+    reason: reason instanceof Error ? {
+      name: reason.name,
+      message: reason.message,
+      stack: reason.stack,
+    } : String(reason),
+    critical: true,
+  });
 
   // Give time for logging before exit
   setTimeout(() => {

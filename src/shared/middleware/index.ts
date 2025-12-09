@@ -399,5 +399,5 @@ export function requireOwnership(
   };
 }
 
-// TODO: Implement error handling middleware
-// TODO: Implement request logging middleware
+// Export request logging middleware
+export { logRequest, logResponse, logError } from './requestLogger.js';

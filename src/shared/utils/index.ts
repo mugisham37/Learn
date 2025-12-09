@@ -67,3 +67,6 @@ export * from './ownership.js';
 
 // Export validation utilities
 export * from './validation.js';
+
+// Export logger utilities
+export * from './logger.js';

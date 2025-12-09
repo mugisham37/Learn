@@ -12,6 +12,8 @@ import helmet from '@fastify/helmet';
 import Fastify, { FastifyInstance, FastifyServerOptions } from 'fastify';
 
 import { config } from './config/index.js';
+import { logger } from './shared/utils/logger.js';
+import { logRequest, logResponse } from './shared/middleware/index.js';
 
 /**
  * Creates and configures a Fastify server instance
@@ -19,23 +21,12 @@ import { config } from './config/index.js';
 export async function createServer(): Promise<FastifyInstance> {
   // Fastify server options
   const serverOptions: FastifyServerOptions = {
-    logger: {
-      level: config.logLevel,
-      transport: config.nodeEnv === 'development' 
-        ? {
-            target: 'pino-pretty',
-            options: {
-              translateTime: 'HH:MM:ss Z',
-              ignore: 'pid,hostname',
-              colorize: true,
-            },
-          }
-        : undefined,
-    },
+    // Disable Pino logger - we'll use Winston instead
+    logger: false,
     // Generate unique request ID for each request
     genReqId: () => randomUUID(),
-    // Disable request logging by default (we'll add custom logging)
-    disableRequestLogging: false,
+    // Disable request logging by default (we'll add custom logging with Winston)
+    disableRequestLogging: true,
     // Trust proxy for proper IP detection behind load balancers
     trustProxy: config.nodeEnv === 'production',
     // Request timeout
@@ -63,27 +54,11 @@ export async function createServer(): Promise<FastifyInstance> {
     crossOriginResourcePolicy: config.nodeEnv === 'production',
   });
 
-  // Add request logging hook
-  server.addHook('onRequest', async (request, _reply) => {
-    request.log.info({
-      requestId: request.id,
-      method: request.method,
-      url: request.url,
-      ip: request.ip,
-      userAgent: request.headers['user-agent'],
-    }, 'Incoming request');
-  });
+  // Add request logging hook using Winston
+  server.addHook('onRequest', logRequest);
 
-  // Add response logging hook
-  server.addHook('onResponse', async (request, reply) => {
-    request.log.info({
-      requestId: request.id,
-      method: request.method,
-      url: request.url,
-      statusCode: reply.statusCode,
-      responseTime: reply.elapsedTime,
-    }, 'Request completed');
-  });
+  // Add response logging hook using Winston
+  server.addHook('onResponse', logResponse);
 
   // Health check endpoint
   server.get('/health', () => {
@@ -151,11 +126,22 @@ export async function startServer(server: FastifyInstance): Promise<void> {
       host: config.host,
     });
 
-    server.log.info(
-      `Server listening on ${config.host}:${config.port} in ${config.nodeEnv} mode`
+    logger.info(
+      `Server listening on ${config.host}:${config.port} in ${config.nodeEnv} mode`,
+      {
+        host: config.host,
+        port: config.port,
+        environment: config.nodeEnv,
+      }
     );
   } catch (error) {
-    server.log.error(error, 'Failed to start server');
+    logger.error('Failed to start server', {
+      error: error instanceof Error ? {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+      } : String(error),
+    });
     throw error;
   }
 }
@@ -165,14 +151,20 @@ export async function startServer(server: FastifyInstance): Promise<void> {
  */
 export async function stopServer(server: FastifyInstance): Promise<void> {
   try {
-    server.log.info('Shutting down server gracefully...');
+    logger.info('Shutting down server gracefully...');
     
     // Close the server (stops accepting new connections)
     await server.close();
     
-    server.log.info('Server shut down successfully');
+    logger.info('Server shut down successfully');
   } catch (error) {
-    server.log.error(error, 'Error during server shutdown');
+    logger.error('Error during server shutdown', {
+      error: error instanceof Error ? {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+      } : String(error),
+    });
     throw error;
   }
 }
