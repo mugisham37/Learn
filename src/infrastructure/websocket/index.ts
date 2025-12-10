@@ -81,8 +81,6 @@ export async function createSocketServer(fastify: FastifyInstance): Promise<Sock
     allowUpgrades: true,
     // Transport options
     transports: ['websocket', 'polling'],
-    // Compression
-    compression: true,
     // HTTP compression threshold
     httpCompression: true,
   });

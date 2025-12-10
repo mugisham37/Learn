@@ -22,3 +22,4 @@ export * from './MediaConvertWebhookProcessor.js';
 export * from './VideoProcessingManager.js';
 export * from './IRealtimeService.js';
 export * from './RealtimeService.js';
+export * from './ServiceFactory.js';
