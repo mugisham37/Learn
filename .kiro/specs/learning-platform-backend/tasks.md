@@ -645,7 +645,10 @@ This implementation plan breaks down the development of the educational learning
   - Create queries for video processing status
   - _Requirements: 21.1, 21.2_
 
-- [ ] 38. Implement GraphQL resolvers for content module
+- [x] 38. Implement GraphQL resolvers for content module
+
+
+
   - Implement upload URL generation resolver
   - Implement file upload resolvers with validation
   - Implement content deletion resolver with authorization

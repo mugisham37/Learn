@@ -7,3 +7,4 @@
  */
 
 export { contentTypeDefs } from './graphql/schema.js';
+export { contentResolvers } from './graphql/resolvers.js';
