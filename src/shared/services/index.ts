@@ -20,3 +20,5 @@ export * from './VideoProcessingQueue.js';
 export * from './VideoProcessingService.js';
 export * from './MediaConvertWebhookProcessor.js';
 export * from './VideoProcessingManager.js';
+export * from './IRealtimeService.js';
+export * from './RealtimeService.js';

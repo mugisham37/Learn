@@ -14,6 +14,7 @@ import Fastify, { FastifyInstance, FastifyServerOptions } from 'fastify';
 import { config } from './config/index.js';
 import { logger } from './shared/utils/logger.js';
 import { logRequest, logResponse } from './shared/middleware/index.js';
+import { createSocketServer, closeSocketServer } from './infrastructure/websocket/index.js';
 
 /**
  * Creates and configures a Fastify server instance
@@ -113,6 +114,10 @@ export async function createServer(): Promise<FastifyInstance> {
   const { errorHandler } = await import('./shared/errors/errorHandler.js');
   server.setErrorHandler(errorHandler);
 
+  // Initialize Socket.io server for real-time communication
+  await createSocketServer(server);
+  logger.info('Socket.io server initialized successfully');
+
   return server;
 }
 
@@ -152,6 +157,9 @@ export async function startServer(server: FastifyInstance): Promise<void> {
 export async function stopServer(server: FastifyInstance): Promise<void> {
   try {
     logger.info('Shutting down server gracefully...');
+    
+    // Close Socket.io server first
+    await closeSocketServer();
     
     // Close the server (stops accepting new connections)
     await server.close();

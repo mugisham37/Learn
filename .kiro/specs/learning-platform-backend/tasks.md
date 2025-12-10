@@ -1054,6 +1054,7 @@ This implementation plan breaks down the development of the educational learning
 
 
 
+
   - Create IAnnouncementService interface
   - Implement createAnnouncement method with educator authorization
   - Implement scheduleAnnouncement method
@@ -1061,7 +1062,10 @@ This implementation plan breaks down the development of the educational learning
   - Support email digest for announcements
   - _Requirements: 9.1_
 
-- [ ] 63. Set up Socket.io for real-time communication
+- [x] 63. Set up Socket.io for real-time communication
+
+
+
   - Install Socket.io and Redis adapter
   - Configure Socket.io server with Fastify
   - Implement authentication middleware for WebSocket connections
