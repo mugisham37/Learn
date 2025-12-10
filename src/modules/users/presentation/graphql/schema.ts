@@ -98,6 +98,11 @@ export const userTypeDefs = gql`
     user: User!
   }
 
+  type RefreshTokenPayload {
+    accessToken: String!
+    refreshToken: String!
+  }
+
   # Input Types
   input RegisterInput {
     email: String!
@@ -175,13 +180,21 @@ export const userTypeDefs = gql`
     token: String!
   }
 
+  input RefreshTokenInput {
+    refreshToken: String!
+  }
+
+  input LogoutInput {
+    refreshToken: String
+  }
+
   # Mutations
   type Mutation {
     # Authentication mutations
     register(input: RegisterInput!): AuthPayload!
     login(input: LoginInput!): AuthPayload!
-    refreshToken: AuthPayload!
-    logout: Boolean!
+    refreshToken(input: RefreshTokenInput!): RefreshTokenPayload!
+    logout(input: LogoutInput): Boolean!
     
     # Email verification and password reset
     verifyEmail(input: VerifyEmailInput!): Boolean!

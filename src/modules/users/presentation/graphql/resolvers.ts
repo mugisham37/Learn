@@ -94,6 +94,14 @@ interface VerifyEmailInput {
   token: string;
 }
 
+interface RefreshTokenInput {
+  refreshToken: string;
+}
+
+interface LogoutInput {
+  refreshToken?: string;
+}
+
 /**
  * Helper function to require authentication
  */
@@ -219,10 +227,51 @@ export const userResolvers = {
      */
     register: async (_parent: any, args: { input: RegisterInput }, context: GraphQLContext) => {
       try {
+        // Validate input
+        if (!args.input.email || args.input.email.trim().length === 0) {
+          throw new GraphQLError('Email is required', {
+            extensions: {
+              code: 'BAD_USER_INPUT',
+              http: { status: 400 },
+              field: 'email'
+            }
+          });
+        }
+
+        if (!args.input.password || args.input.password.length === 0) {
+          throw new GraphQLError('Password is required', {
+            extensions: {
+              code: 'BAD_USER_INPUT',
+              http: { status: 400 },
+              field: 'password'
+            }
+          });
+        }
+
+        if (!args.input.fullName || args.input.fullName.trim().length === 0) {
+          throw new GraphQLError('Full name is required', {
+            extensions: {
+              code: 'BAD_USER_INPUT',
+              http: { status: 400 },
+              field: 'fullName'
+            }
+          });
+        }
+
+        if (!args.input.role) {
+          throw new GraphQLError('Role is required', {
+            extensions: {
+              code: 'BAD_USER_INPUT',
+              http: { status: 400 },
+              field: 'role'
+            }
+          });
+        }
+
         const registerData: RegisterDTO = {
-          email: args.input.email,
+          email: args.input.email.trim(),
           password: args.input.password,
-          fullName: args.input.fullName,
+          fullName: args.input.fullName.trim(),
           role: mapRoleFromGraphQL(args.input.role)
         };
 
@@ -230,7 +279,7 @@ export const userResolvers = {
         
         // For registration, we need to return tokens immediately
         // In a real implementation, you might want to require email verification first
-        const loginResult = await context.authService.login(args.input.email, args.input.password);
+        const loginResult = await context.authService.login(args.input.email.trim(), args.input.password);
         
         return {
           accessToken: loginResult.accessToken,
@@ -238,6 +287,10 @@ export const userResolvers = {
           user: loginResult.user
         };
       } catch (error: any) {
+        if (error instanceof GraphQLError) {
+          throw error;
+        }
+        
         if (error.message?.includes('duplicate') || error.message?.includes('already exists')) {
           throw new GraphQLError('Email already exists', {
             extensions: {
@@ -271,7 +324,28 @@ export const userResolvers = {
      */
     login: async (_parent: any, args: { input: LoginInput }, context: GraphQLContext) => {
       try {
-        const result = await context.authService.login(args.input.email, args.input.password);
+        // Validate input
+        if (!args.input.email || args.input.email.trim().length === 0) {
+          throw new GraphQLError('Email is required', {
+            extensions: {
+              code: 'BAD_USER_INPUT',
+              http: { status: 400 },
+              field: 'email'
+            }
+          });
+        }
+
+        if (!args.input.password || args.input.password.length === 0) {
+          throw new GraphQLError('Password is required', {
+            extensions: {
+              code: 'BAD_USER_INPUT',
+              http: { status: 400 },
+              field: 'password'
+            }
+          });
+        }
+
+        const result = await context.authService.login(args.input.email.trim(), args.input.password);
         
         return {
           accessToken: result.accessToken,
@@ -279,6 +353,10 @@ export const userResolvers = {
           user: result.user
         };
       } catch (error: any) {
+        if (error instanceof GraphQLError) {
+          throw error;
+        }
+        
         if (error.message?.includes('invalid') || error.message?.includes('credentials')) {
           throw new GraphQLError('Invalid email or password', {
             extensions: {
@@ -308,23 +386,42 @@ export const userResolvers = {
 
     /**
      * Refresh access token
+     * Note: In GraphQL, refresh tokens are typically passed as arguments
+     * rather than cookies since GraphQL doesn't have direct access to HTTP context
      */
-    refreshToken: async (_parent: any, _args: any, _context: GraphQLContext) => {
-      // In a real implementation, you would extract the refresh token from cookies or headers
-      // For now, this is a placeholder implementation
+    refreshToken: async (_parent: any, args: { input: { refreshToken: string } }, context: GraphQLContext) => {
       try {
-        // This is a simplified implementation - in reality, you'd get the refresh token from the request
-        throw new GraphQLError('Refresh token implementation needed', {
-          extensions: {
-            code: 'NOT_IMPLEMENTED',
-            http: { status: 501 }
-          }
-        });
-      } catch (error) {
+        if (!args.input.refreshToken) {
+          throw new GraphQLError('Refresh token is required', {
+            extensions: {
+              code: 'BAD_USER_INPUT',
+              http: { status: 400 }
+            }
+          });
+        }
+
+        const result = await context.authService.refreshToken(args.input.refreshToken);
+        
+        return {
+          accessToken: result.accessToken,
+          refreshToken: result.refreshToken,
+          // Note: We don't return user here since it's not part of the refresh token result
+          // The client should use the new access token to query for user data if needed
+        };
+      } catch (error: any) {
+        if (error.message?.includes('invalid') || error.message?.includes('expired') || error.message?.includes('revoked')) {
+          throw new GraphQLError('Invalid or expired refresh token', {
+            extensions: {
+              code: 'UNAUTHENTICATED',
+              http: { status: 401 }
+            }
+          });
+        }
+        
         throw new GraphQLError('Token refresh failed', {
           extensions: {
-            code: 'UNAUTHENTICATED',
-            http: { status: 401 }
+            code: 'INTERNAL_ERROR',
+            http: { status: 500 }
           }
         });
       }
@@ -333,13 +430,14 @@ export const userResolvers = {
     /**
      * Logout user
      */
-    logout: async (_parent: any, _args: any, context: GraphQLContext): Promise<boolean> => {
+    logout: async (_parent: any, args: { input?: { refreshToken?: string } }, context: GraphQLContext): Promise<boolean> => {
       const authUser = requireAuth(context);
       
       try {
-        // In a real implementation, you would extract the refresh token from cookies or headers
-        // For now, we'll use a placeholder
-        await context.authService.logout(authUser.id, 'refresh-token-placeholder');
+        // If refresh token is provided, invalidate it specifically
+        // Otherwise, invalidate all tokens for the user (more secure)
+        const refreshToken = args.input?.refreshToken || 'all-tokens';
+        await context.authService.logout(authUser.id, refreshToken);
         return true;
       } catch (error) {
         throw new GraphQLError('Logout failed', {
@@ -356,9 +454,23 @@ export const userResolvers = {
      */
     verifyEmail: async (_parent: any, args: { input: VerifyEmailInput }, context: GraphQLContext): Promise<boolean> => {
       try {
-        await context.authService.verifyEmail(args.input.token);
+        // Validate input
+        if (!args.input.token || args.input.token.trim().length === 0) {
+          throw new GraphQLError('Verification token is required', {
+            extensions: {
+              code: 'BAD_USER_INPUT',
+              http: { status: 400 }
+            }
+          });
+        }
+
+        await context.authService.verifyEmail(args.input.token.trim());
         return true;
       } catch (error: any) {
+        if (error instanceof GraphQLError) {
+          throw error;
+        }
+        
         if (error.message?.includes('invalid') || error.message?.includes('expired')) {
           throw new GraphQLError('Invalid or expired verification token', {
             extensions: {
@@ -382,10 +494,35 @@ export const userResolvers = {
      */
     requestPasswordReset: async (_parent: any, args: { input: RequestPasswordResetInput }, context: GraphQLContext): Promise<boolean> => {
       try {
-        await context.authService.requestPasswordReset(args.input.email);
+        // Validate input
+        if (!args.input.email || args.input.email.trim().length === 0) {
+          throw new GraphQLError('Email is required', {
+            extensions: {
+              code: 'BAD_USER_INPUT',
+              http: { status: 400 }
+            }
+          });
+        }
+
+        // Basic email format validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(args.input.email.trim())) {
+          throw new GraphQLError('Invalid email format', {
+            extensions: {
+              code: 'BAD_USER_INPUT',
+              http: { status: 400 }
+            }
+          });
+        }
+
+        await context.authService.requestPasswordReset(args.input.email.trim());
         return true;
       } catch (error) {
-        // Always return true to prevent email enumeration
+        if (error instanceof GraphQLError) {
+          throw error;
+        }
+        
+        // Always return true for other errors to prevent email enumeration
         return true;
       }
     },
@@ -395,9 +532,32 @@ export const userResolvers = {
      */
     resetPassword: async (_parent: any, args: { input: ResetPasswordInput }, context: GraphQLContext): Promise<boolean> => {
       try {
-        await context.authService.resetPassword(args.input.token, args.input.newPassword);
+        // Validate input
+        if (!args.input.token || args.input.token.trim().length === 0) {
+          throw new GraphQLError('Reset token is required', {
+            extensions: {
+              code: 'BAD_USER_INPUT',
+              http: { status: 400 }
+            }
+          });
+        }
+
+        if (!args.input.newPassword || args.input.newPassword.length === 0) {
+          throw new GraphQLError('New password is required', {
+            extensions: {
+              code: 'BAD_USER_INPUT',
+              http: { status: 400 }
+            }
+          });
+        }
+
+        await context.authService.resetPassword(args.input.token.trim(), args.input.newPassword);
         return true;
       } catch (error: any) {
+        if (error instanceof GraphQLError) {
+          throw error;
+        }
+        
         if (error.message?.includes('invalid') || error.message?.includes('expired')) {
           throw new GraphQLError('Invalid or expired reset token', {
             extensions: {

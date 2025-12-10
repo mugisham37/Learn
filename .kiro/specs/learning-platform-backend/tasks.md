@@ -405,7 +405,12 @@ This implementation plan breaks down the development of the educational learning
   - Create queries for me, user(id)
   - _Requirements: 21.1, 21.2, 21.3_
 
-- [ ] 24. Implement GraphQL resolvers for users module
+- [x] 24. Implement GraphQL resolvers for users module
+
+
+
+
+
   - Implement authentication mutation resolvers
   - Implement profile query and mutation resolvers
   - Add authentication checks using middleware
