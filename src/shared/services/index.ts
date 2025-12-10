@@ -6,5 +6,9 @@
 
 export * from './IS3Service.js';
 export * from './S3Service.js';
+export * from './ICloudFrontService.js';
+export * from './CloudFrontService.js';
+export * from './IContentService.js';
+export * from './ContentService.js';
 export * from './IImageProcessingService.js';
 export * from './ImageProcessingService.js';

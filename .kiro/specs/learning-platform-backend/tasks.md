@@ -524,6 +524,7 @@ This implementation plan breaks down the development of the educational learning
 
 
 
+
   - Implement course mutation resolvers with authorization
   - Implement course query resolvers with filtering and pagination
   - Implement nested resolvers for modules and lessons
@@ -542,7 +543,12 @@ This implementation plan breaks down the development of the educational learning
 
 ## Phase 6: Content Module - File and Video Management
 
-- [ ] 32. Set up AWS S3 integration
+- [x] 32. Set up AWS S3 integration
+
+
+
+
+
   - Install AWS SDK v3 for S3
   - Create S3 client configuration
   - Implement S3 service with upload, delete, generatePresignedUrl methods
