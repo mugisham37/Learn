@@ -972,7 +972,10 @@ This implementation plan breaks down the development of the educational learning
 
 ## Phase 9: Communication Module - Messaging and Discussions
 
-- [ ] 58. Implement messaging repository (infrastructure layer)
+- [x] 58. Implement messaging repository (infrastructure layer)
+
+
+
   - Create IMessagingRepository interface
   - Implement MessagingRepository with Drizzle queries
   - Add methods for creating, retrieving, updating messages
