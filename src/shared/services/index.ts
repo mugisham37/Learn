@@ -16,3 +16,7 @@ export * from './IMediaConvertService.js';
 export * from './MediaConvertService.js';
 export * from './MediaConvertWebhookHandler.js';
 export * from './VideoProcessingLambda.js';
+export * from './VideoProcessingQueue.js';
+export * from './VideoProcessingService.js';
+export * from './MediaConvertWebhookProcessor.js';
+export * from './VideoProcessingManager.js';

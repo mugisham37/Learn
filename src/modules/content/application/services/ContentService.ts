@@ -22,7 +22,8 @@ import {
 import { IContentRepository } from '../../infrastructure/repositories/IContentRepository.js';
 import { IS3Service } from '../../../../shared/services/IS3Service.js';
 import { ICloudFrontService } from '../../../../shared/services/ICloudFrontService.js';
-import { IMediaConvertService, DEFAULT_TRANSCODING_RESOLUTIONS } from '../../../../shared/services/IMediaConvertService.js';
+import { IMediaConvertService } from '../../../../shared/services/IMediaConvertService.js';
+import { VideoProcessingService } from '../../../../shared/services/VideoProcessingService.js';
 import { 
   VideoAsset as VideoAssetData, 
   FileAsset as FileAssetData, 
@@ -52,12 +53,26 @@ import {
  * comprehensive error handling and logging.
  */
 export class ContentService implements IContentService {
+  private videoProcessingService: VideoProcessingService;
+
   constructor(
     private readonly contentRepository: IContentRepository,
     private readonly s3Service: IS3Service,
     private readonly cloudFrontService: ICloudFrontService,
     private readonly mediaConvertService: IMediaConvertService
-  ) {}
+  ) {
+    this.videoProcessingService = new VideoProcessingService(
+      this.contentRepository,
+      this.mediaConvertService
+    );
+  }
+
+  /**
+   * Initializes the content service and video processing
+   */
+  async initialize(): Promise<void> {
+    await this.videoProcessingService.initialize();
+  }
 
   /**
    * Generates a presigned URL for content upload
@@ -187,65 +202,37 @@ export class ContentService implements IContentService {
         },
       });
 
-      // Generate output S3 key prefix
-      const outputS3KeyPrefix = this.generateOutputS3KeyPrefix(params.s3Key);
-      const jobName = this.generateJobName(params.s3Key, videoAsset.id);
-
-      // Create MediaConvert transcoding job
-      const mediaConvertJob = await this.mediaConvertService.createTranscodingJob({
-        inputS3Bucket: params.s3Bucket,
-        inputS3Key: params.s3Key,
-        outputS3Bucket: params.s3Bucket, // Use same bucket for output
-        outputS3KeyPrefix,
-        jobName,
-        resolutions: DEFAULT_TRANSCODING_RESOLUTIONS,
-        hlsSegmentDuration: 6,
-        thumbnailGeneration: true,
-        metadata: {
-          videoAssetId: videoAsset.id,
-          originalFileName: params.originalFileName,
-          uploadedBy: params.uploadedBy,
-        },
-      });
-
-      // Create processing job record for tracking
-      const processingJob = await this.createProcessingJob({
+      // Use the new video processing service to handle the workflow
+      const result = await this.videoProcessingService.processVideoUpload({
         videoAssetId: videoAsset.id,
-        jobType: 'video_transcode',
-        externalJobId: mediaConvertJob.jobId,
-        externalServiceName: 'mediaconvert',
-        jobConfiguration: {
-          inputS3Key: params.s3Key,
-          inputS3Bucket: params.s3Bucket,
-          outputS3KeyPrefix,
-          outputResolutions: DEFAULT_TRANSCODING_RESOLUTIONS.map(r => r.name),
-          outputFormat: 'hls',
-          thumbnailGeneration: true,
-          mediaConvertJobArn: mediaConvertJob.jobArn,
-        },
-        status: 'pending',
-        priority: 7, // High priority for video processing
+        s3Bucket: params.s3Bucket,
+        s3Key: params.s3Key,
+        uploadedBy: params.uploadedBy,
+        originalFileName: params.originalFileName,
+        fileSize: params.fileSize,
+        metadata: params.metadata,
       });
 
-      // Update video asset with processing job information
-      await this.contentRepository.updateVideoAsset(videoAsset.id, {
-        processingJobId: processingJob.id,
-        processingStatus: 'in_progress',
-        processingStartedAt: new Date(),
-        metadata: {
-          ...(videoAsset.metadata as Record<string, any> || {}),
-          mediaConvertJobId: mediaConvertJob.jobId,
-          mediaConvertJobArn: mediaConvertJob.jobArn,
-          outputS3KeyPrefix,
-        },
-      });
+      // Find the processing job that was created
+      const processingJob = result.processingJobId 
+        ? await this.contentRepository.findProcessingJobById(result.processingJobId)
+        : null;
+
+      if (!processingJob) {
+        throw new ExternalServiceError(
+          'Content Service',
+          'Processing job not found after creation',
+          new Error('Processing job creation failed')
+        );
+      }
 
       logger.info('Video upload handled successfully', {
         videoAssetId: videoAsset.id,
         processingJobId: processingJob.id,
+        queueJobId: result.queueJobId,
       });
 
-      return processingJob;
+      return this.mapToProcessingJobEntity(processingJob);
     } catch (error) {
       logger.error('Failed to handle video upload', {
         s3Key: params.s3Key,
@@ -538,6 +525,160 @@ export class ContentService implements IContentService {
   }
 
   /**
+   * Gets video processing status
+   */
+  async getVideoProcessingStatus(videoAssetId: string): Promise<{
+    status: 'pending' | 'in_progress' | 'completed' | 'failed' | 'cancelled';
+    progress: number;
+    queueJobId?: string;
+    errorMessage?: string;
+    startedAt?: Date;
+    completedAt?: Date;
+    outputs?: Array<{
+      resolution: string;
+      url: string;
+      bitrate: number;
+      fileSize?: number;
+    }>;
+  }> {
+    try {
+      logger.debug('Getting video processing status', { videoAssetId });
+
+      const statusInfo = await this.videoProcessingService.getProcessingStatus(videoAssetId);
+
+      return {
+        status: statusInfo.status,
+        progress: statusInfo.progress,
+        queueJobId: statusInfo.queueJobId,
+        errorMessage: statusInfo.errorMessage,
+        startedAt: statusInfo.startedAt,
+        completedAt: statusInfo.completedAt,
+        outputs: statusInfo.outputs,
+      };
+    } catch (error) {
+      logger.error('Failed to get video processing status', {
+        videoAssetId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+
+      if (error instanceof NotFoundError) {
+        throw error;
+      }
+
+      throw new ExternalServiceError(
+        'Content Service',
+        'Failed to get processing status',
+        error instanceof Error ? error : new Error('Unknown error')
+      );
+    }
+  }
+
+  /**
+   * Cancels video processing
+   */
+  async cancelVideoProcessing(videoAssetId: string): Promise<void> {
+    try {
+      logger.info('Cancelling video processing', { videoAssetId });
+
+      await this.videoProcessingService.cancelProcessing(videoAssetId);
+
+      logger.info('Video processing cancelled successfully', { videoAssetId });
+    } catch (error) {
+      logger.error('Failed to cancel video processing', {
+        videoAssetId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+
+      if (error instanceof NotFoundError || error instanceof ValidationError) {
+        throw error;
+      }
+
+      throw new ExternalServiceError(
+        'Content Service',
+        'Failed to cancel processing',
+        error instanceof Error ? error : new Error('Unknown error')
+      );
+    }
+  }
+
+  /**
+   * Retries failed video processing
+   */
+  async retryVideoProcessing(videoAssetId: string): Promise<{
+    queueJobId: string;
+    processingJobId?: string;
+  }> {
+    try {
+      logger.info('Retrying video processing', { videoAssetId });
+
+      const result = await this.videoProcessingService.retryProcessing(videoAssetId);
+
+      logger.info('Video processing retry initiated', {
+        videoAssetId,
+        queueJobId: result.queueJobId,
+      });
+
+      return result;
+    } catch (error) {
+      logger.error('Failed to retry video processing', {
+        videoAssetId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+
+      if (error instanceof NotFoundError || error instanceof ValidationError) {
+        throw error;
+      }
+
+      throw new ExternalServiceError(
+        'Content Service',
+        'Failed to retry processing',
+        error instanceof Error ? error : new Error('Unknown error')
+      );
+    }
+  }
+
+  /**
+   * Gets video processing queue statistics
+   */
+  async getProcessingQueueStats(): Promise<{
+    waiting: number;
+    active: number;
+    completed: number;
+    failed: number;
+    delayed: number;
+  }> {
+    try {
+      return await this.videoProcessingService.getQueueStats();
+    } catch (error) {
+      logger.error('Failed to get processing queue stats', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+
+      return {
+        waiting: 0,
+        active: 0,
+        completed: 0,
+        failed: 0,
+        delayed: 0,
+      };
+    }
+  }
+
+  /**
+   * Gracefully shuts down the content service
+   */
+  async shutdown(): Promise<void> {
+    try {
+      await this.videoProcessingService.shutdown();
+      logger.info('Content service shut down successfully');
+    } catch (error) {
+      logger.error('Error during content service shutdown', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }
+
+  /**
    * Deletes content from storage and database
    */
   async deleteContent(params: DeleteContentParams): Promise<void> {
@@ -697,18 +838,6 @@ export class ContentService implements IContentService {
     return urlParts.slice(3).join('/'); // Remove protocol and domain
   }
 
-  private generateOutputS3KeyPrefix(inputS3Key: string): string {
-    // Remove file extension and add processed prefix
-    const keyWithoutExtension = inputS3Key.substring(0, inputS3Key.lastIndexOf('.'));
-    return `${keyWithoutExtension}_processed`;
-  }
-
-  private generateJobName(inputS3Key: string, videoAssetId: string): string {
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const fileName = inputS3Key.substring(inputS3Key.lastIndexOf('/') + 1, inputS3Key.lastIndexOf('.'));
-    return `video-transcode-${fileName}-${videoAssetId}-${timestamp}`;
-  }
-
   private async createVideoAssetRecord(data: Omit<NewVideoAsset, 'id' | 'createdAt' | 'updatedAt'>): Promise<VideoAsset> {
     const videoData = await this.contentRepository.createVideoAsset(data);
     return this.mapToVideoAssetEntity(videoData);
@@ -717,11 +846,6 @@ export class ContentService implements IContentService {
   private async createFileAssetRecord(data: Omit<NewFileAsset, 'id' | 'createdAt' | 'updatedAt'>): Promise<FileAsset> {
     const fileData = await this.contentRepository.createFileAsset(data);
     return this.mapToFileAssetEntity(fileData);
-  }
-
-  private async createProcessingJob(data: Omit<NewProcessingJob, 'id' | 'createdAt' | 'updatedAt'>): Promise<ProcessingJob> {
-    const jobData = await this.contentRepository.createProcessingJob(data);
-    return this.mapToProcessingJobEntity(jobData);
   }
 
   // Mapper methods to convert database types to domain entities
