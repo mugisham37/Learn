@@ -7,4 +7,4 @@
  */
 
 export { enrollmentTypeDefs } from './schema.js';
-// export { enrollmentResolvers } from './resolvers.js'; // Will be implemented in next task
+export { enrollmentResolvers } from './resolvers.js';

@@ -953,7 +953,11 @@ This implementation plan breaks down the development of the educational learning
   - Create queries for myEnrollments, enrollmentProgress, verifyCertificate
   - _Requirements: 21.1, 21.2_
 
-- [ ] 56. Implement GraphQL resolvers for enrollments module
+- [x] 56. Implement GraphQL resolvers for enrollments module
+
+
+
+
   - Implement enrollment mutation resolvers with authorization
   - Implement progress update resolvers
   - Implement certificate verification resolver
