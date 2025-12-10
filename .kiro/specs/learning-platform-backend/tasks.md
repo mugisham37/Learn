@@ -909,7 +909,11 @@ This implementation plan breaks down the development of the educational learning
   - Use historical data for predictions
   - _Requirements: 5.4_
 
-- [ ] 53. Implement certificate generator service
+- [x] 53. Implement certificate generator service
+
+
+
+
   - Create ICertificateGenerator interface
   - Implement generateCertificate method
   - Implement PDF creation with PDFKit or similar
