@@ -23,3 +23,6 @@ export { QuizService } from './application/index.js';
 
 // Infrastructure layer exports
 export * from './infrastructure/index.js';
+
+// Presentation layer exports
+export * from './presentation/index.js';
