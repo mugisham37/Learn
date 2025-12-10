@@ -5,7 +5,16 @@
  * Includes entities, value objects, and domain services.
  */
 
-// Domain entities and value objects will be exported here
-// export * from './entities/index.js';
-// export * from './value-objects/index.js';
-// export * from './services/index.js';
+// Domain entities
+export * from './entities/index';
+
+// Domain events
+export type { DomainEvent } from './events/EnrollmentEvents';
+export {
+  EnrollmentCreatedEvent,
+  LessonProgressUpdatedEvent,
+  CourseProgressUpdatedEvent,
+  CourseCompletedEvent,
+  CertificateGeneratedEvent,
+  EnrollmentWithdrawnEvent
+} from './events/EnrollmentEvents';

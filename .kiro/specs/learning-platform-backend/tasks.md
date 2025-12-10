@@ -837,7 +837,10 @@ This implementation plan breaks down the development of the educational learning
   - Implement progress tracking queries
   - _Requirements: 5.1, 5.3, 5.6_
 
-- [ ] 50. Implement enrollment domain entities
+- [x] 50. Implement enrollment domain entities
+
+
+
   - Create Enrollment entity with validation
   - Create LessonProgress entity
   - Create Certificate entity
