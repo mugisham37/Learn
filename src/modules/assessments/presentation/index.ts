@@ -8,4 +8,3 @@
  */
 
 export * from './graphql/schema.js';
-export * from './graphql/resolvers.js';
