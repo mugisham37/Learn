@@ -5,4 +5,10 @@
  */
 
 // Domain Layer
-export * from './domain';
+export * from './domain/index.js';
+
+// Application Layer
+export * from './application/index.js';
+
+// Infrastructure Layer
+export * from './infrastructure/index.js';
