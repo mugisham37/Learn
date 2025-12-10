@@ -19,6 +19,7 @@ import {
   PaginationParams, 
   CourseFilters 
 } from '../../infrastructure/repositories/ICourseRepository.js';
+import { CourseDataLoaders } from './dataloaders.js';
 
 /**
  * GraphQL context interface
@@ -30,6 +31,7 @@ export interface GraphQLContext {
     role: string;
   };
   courseService: ICourseService;
+  dataloaders: CourseDataLoaders;
 }
 
 /**
@@ -1101,7 +1103,7 @@ export const courseResolvers = {
 
         const lessons = await context.courseService.reorderLessons(args.moduleId, user.id, args.input.lessonIds);
         return lessons;
-      } catch (error: unknown) {
+      } catch (error: any) {
         if (error instanceof GraphQLError) {
           throw error;
         }
@@ -1148,47 +1150,58 @@ export const courseResolvers = {
     difficulty: (course: Course): 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED' => mapDifficultyToGraphQL(course.difficulty),
     status: (course: Course): 'DRAFT' | 'PENDING_REVIEW' | 'PUBLISHED' | 'ARCHIVED' => mapStatusToGraphQL(course.status),
     
-    // Note: In a real implementation, these would use DataLoader to prevent N+1 queries
     instructor: async (course: Course, _args: unknown, _context: GraphQLContext): Promise<{ id: string }> => {
-      // This would typically use a UserService or DataLoader
-      // For now, return a placeholder that matches the User type
+      // Return a placeholder that matches the User type
+      // In a full implementation, this would use a UserDataLoader
       return {
         id: course.instructorId,
-        // Other user fields would be loaded via DataLoader
+        // Other user fields would be loaded via UserDataLoader
       };
     },
     
-    modules: async (course: Course, _args: unknown, _context: GraphQLContext): Promise<CourseModule[]> => {
-      // Modules are typically loaded with the course or via DataLoader
-      return course.modules || [];
+    modules: async (course: Course, _args: unknown, context: GraphQLContext): Promise<CourseModule[]> => {
+      // Use DataLoader to efficiently load modules
+      if (course.modules && course.modules.length > 0) {
+        // If modules are already loaded, return them
+        return course.modules;
+      }
+      
+      // Load modules using DataLoader to prevent N+1 queries
+      return await context.dataloaders.modulesByCourseId.load(course.id);
     }
   },
 
   CourseModule: {
     course: async (module: CourseModule, _args: unknown, context: GraphQLContext): Promise<Course | null> => {
-      // This would typically use DataLoader to load the course
-      const course = await context.courseService.getCourseById(module.courseId);
-      return course;
+      // Use DataLoader to efficiently load the course
+      return await context.dataloaders.courseById.load(module.courseId);
     },
     
-    prerequisiteModule: async (module: CourseModule, _args: unknown, _context: GraphQLContext): Promise<CourseModule | null> => {
+    prerequisiteModule: async (module: CourseModule, _args: unknown, context: GraphQLContext): Promise<CourseModule | null> => {
       if (!module.prerequisiteModuleId) return null;
-      // This would typically use DataLoader to load the prerequisite module
-      return null; // Placeholder - would load via service
+      
+      // Use DataLoader to efficiently load the prerequisite module
+      return await context.dataloaders.moduleById.load(module.prerequisiteModuleId);
     },
     
-    lessons: async (module: CourseModule, _args: unknown, _context: GraphQLContext): Promise<Lesson[]> => {
-      // Lessons are typically loaded with the module or via DataLoader
-      return module.lessons || [];
+    lessons: async (module: CourseModule, _args: unknown, context: GraphQLContext): Promise<Lesson[]> => {
+      // Use DataLoader to efficiently load lessons
+      if (module.lessons && module.lessons.length > 0) {
+        // If lessons are already loaded, return them
+        return module.lessons;
+      }
+      
+      // Load lessons using DataLoader to prevent N+1 queries
+      return await context.dataloaders.lessonsByModuleId.load(module.id);
     }
   },
 
   Lesson: {
     type: (lesson: Lesson): 'VIDEO' | 'TEXT' | 'QUIZ' | 'ASSIGNMENT' => mapLessonTypeToGraphQL(lesson.type),
     
-    module: async (_lesson: Lesson, _args: unknown, _context: GraphQLContext): Promise<CourseModule | null> => {
-      // This would typically use DataLoader to load the module
-      return null; // Placeholder - would load via service
+    module: async (lesson: Lesson, _args: unknown, context: GraphQLContext): Promise<CourseModule | null> => {
+      // Use DataLoader to efficiently load the module
+      return await context.dataloaders.moduleById.load(lesson.moduleId);
     }
   }
 };

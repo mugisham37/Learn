@@ -518,7 +518,12 @@ This implementation plan breaks down the development of the educational learning
   - Create queries for course(id), courses(filter, pagination), myCourses
   - _Requirements: 21.1, 21.2_
 
-- [ ] 30. Implement GraphQL resolvers for courses module
+- [x] 30. Implement GraphQL resolvers for courses module
+
+
+
+
+
   - Implement course mutation resolvers with authorization
   - Implement course query resolvers with filtering and pagination
   - Implement nested resolvers for modules and lessons
