@@ -9,6 +9,7 @@ export * from './users.schema.js';
 
 // Courses and Content
 export * from './courses.schema.js';
+export * from './content.schema.js';
 
 // Enrollments and Progress
 export * from './enrollments.schema.js';
