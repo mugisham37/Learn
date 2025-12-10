@@ -4,7 +4,7 @@
  * Exports all application services for the communication module
  */
 
-export { IMessagingService, MessageContent, MessageAttachment, MessageResult, ConversationResult } from './IMessagingService.js';
+export type { IMessagingService, MessageContent, MessageAttachment, MessageResult, ConversationResult } from './IMessagingService.js';
 export { MessagingService } from './MessagingService.js';
 
 export type { 
@@ -19,3 +19,12 @@ export type {
   SolutionResult
 } from './IDiscussionService.js';
 export { DiscussionService } from './DiscussionService.js';
+
+export type {
+  IAnnouncementService,
+  AnnouncementCreationResult,
+  AnnouncementUpdateResult,
+  AnnouncementDeletionResult,
+  PublishScheduledResult
+} from './IAnnouncementService.js';
+export { AnnouncementService } from './AnnouncementService.js';

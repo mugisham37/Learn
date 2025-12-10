@@ -1050,7 +1050,10 @@ This implementation plan breaks down the development of the educational learning
   - **Property 47: Solution marking effects**
   - **Validates: Requirements 9.5**
 
-- [ ] 62. Implement announcement service
+- [x] 62. Implement announcement service
+
+
+
   - Create IAnnouncementService interface
   - Implement createAnnouncement method with educator authorization
   - Implement scheduleAnnouncement method
