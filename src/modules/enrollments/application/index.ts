@@ -5,7 +5,9 @@
  * Includes services, use cases, and DTOs.
  */
 
-// Application services and use cases will be exported here
-// export * from './services/index.js';
+// Application services
+export * from './services/index.js';
+
+// Use cases and DTOs will be exported here when implemented
 // export * from './use-cases/index.js';
 // export * from './dtos/index.js';
