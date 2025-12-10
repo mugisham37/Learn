@@ -22,6 +22,7 @@ import {
 import { IContentRepository } from '../../infrastructure/repositories/IContentRepository.js';
 import { IS3Service } from '../../../../shared/services/IS3Service.js';
 import { ICloudFrontService } from '../../../../shared/services/ICloudFrontService.js';
+import { IMediaConvertService, DEFAULT_TRANSCODING_RESOLUTIONS } from '../../../../shared/services/IMediaConvertService.js';
 import { 
   VideoAsset as VideoAssetData, 
   FileAsset as FileAssetData, 
@@ -54,7 +55,8 @@ export class ContentService implements IContentService {
   constructor(
     private readonly contentRepository: IContentRepository,
     private readonly s3Service: IS3Service,
-    private readonly cloudFrontService: ICloudFrontService
+    private readonly cloudFrontService: ICloudFrontService,
+    private readonly mediaConvertService: IMediaConvertService
   ) {}
 
   /**
@@ -185,24 +187,57 @@ export class ContentService implements IContentService {
         },
       });
 
-      // Create processing job for video transcoding
+      // Generate output S3 key prefix
+      const outputS3KeyPrefix = this.generateOutputS3KeyPrefix(params.s3Key);
+      const jobName = this.generateJobName(params.s3Key, videoAsset.id);
+
+      // Create MediaConvert transcoding job
+      const mediaConvertJob = await this.mediaConvertService.createTranscodingJob({
+        inputS3Bucket: params.s3Bucket,
+        inputS3Key: params.s3Key,
+        outputS3Bucket: params.s3Bucket, // Use same bucket for output
+        outputS3KeyPrefix,
+        jobName,
+        resolutions: DEFAULT_TRANSCODING_RESOLUTIONS,
+        hlsSegmentDuration: 6,
+        thumbnailGeneration: true,
+        metadata: {
+          videoAssetId: videoAsset.id,
+          originalFileName: params.originalFileName,
+          uploadedBy: params.uploadedBy,
+        },
+      });
+
+      // Create processing job record for tracking
       const processingJob = await this.createProcessingJob({
         videoAssetId: videoAsset.id,
         jobType: 'video_transcode',
+        externalJobId: mediaConvertJob.jobId,
         externalServiceName: 'mediaconvert',
         jobConfiguration: {
           inputS3Key: params.s3Key,
           inputS3Bucket: params.s3Bucket,
-          outputResolutions: ['1080p', '720p', '480p', '360p'],
+          outputS3KeyPrefix,
+          outputResolutions: DEFAULT_TRANSCODING_RESOLUTIONS.map(r => r.name),
           outputFormat: 'hls',
           thumbnailGeneration: true,
+          mediaConvertJobArn: mediaConvertJob.jobArn,
         },
+        status: 'pending',
         priority: 7, // High priority for video processing
       });
 
-      // Update video asset with processing job ID
+      // Update video asset with processing job information
       await this.contentRepository.updateVideoAsset(videoAsset.id, {
         processingJobId: processingJob.id,
+        processingStatus: 'in_progress',
+        processingStartedAt: new Date(),
+        metadata: {
+          ...(videoAsset.metadata as Record<string, any> || {}),
+          mediaConvertJobId: mediaConvertJob.jobId,
+          mediaConvertJobArn: mediaConvertJob.jobArn,
+          outputS3KeyPrefix,
+        },
       });
 
       logger.info('Video upload handled successfully', {
@@ -660,6 +695,18 @@ export class ContentService implements IContentService {
     // Extract S3 key from CloudFront or S3 URL
     const urlParts = url.split('/');
     return urlParts.slice(3).join('/'); // Remove protocol and domain
+  }
+
+  private generateOutputS3KeyPrefix(inputS3Key: string): string {
+    // Remove file extension and add processed prefix
+    const keyWithoutExtension = inputS3Key.substring(0, inputS3Key.lastIndexOf('.'));
+    return `${keyWithoutExtension}_processed`;
+  }
+
+  private generateJobName(inputS3Key: string, videoAssetId: string): string {
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const fileName = inputS3Key.substring(inputS3Key.lastIndexOf('/') + 1, inputS3Key.lastIndexOf('.'));
+    return `video-transcode-${fileName}-${videoAssetId}-${timestamp}`;
   }
 
   private async createVideoAssetRecord(data: Omit<NewVideoAsset, 'id' | 'createdAt' | 'updatedAt'>): Promise<VideoAsset> {

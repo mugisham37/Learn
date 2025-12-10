@@ -12,3 +12,7 @@ export * from './IContentService.js';
 export * from './ContentService.js';
 export * from './IImageProcessingService.js';
 export * from './ImageProcessingService.js';
+export * from './IMediaConvertService.js';
+export * from './MediaConvertService.js';
+export * from './MediaConvertWebhookHandler.js';
+export * from './VideoProcessingLambda.js';

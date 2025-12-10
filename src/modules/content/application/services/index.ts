@@ -6,6 +6,7 @@
 
 export type { IContentService } from './IContentService.js';
 export { ContentService } from './ContentService.js';
+export { ContentWebhookHandler } from './ContentWebhookHandler.js';
 
 export type {
   GenerateUploadUrlParams,
