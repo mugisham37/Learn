@@ -808,6 +808,7 @@ This implementation plan breaks down the development of the educational learning
 
 
 
+
   - Implement quiz mutation resolvers with educator authorization
   - Implement assignment mutation resolvers
   - Implement submission resolvers with student authorization
@@ -822,7 +823,12 @@ This implementation plan breaks down the development of the educational learning
 
 ## Phase 8: Enrollments Module - Progress Tracking
 
-- [ ] 49. Implement enrollment repository (infrastructure layer)
+- [x] 49. Implement enrollment repository (infrastructure layer)
+
+
+
+
+
   - Create IEnrollmentRepository interface
   - Implement EnrollmentRepository with Drizzle queries
   - Implement lesson progress repository
