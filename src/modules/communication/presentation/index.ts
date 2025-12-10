@@ -4,7 +4,6 @@
  * GraphQL resolvers, REST controllers, and input validation
  */
 
-// Placeholder for future presentation layer
-// Will be implemented in subsequent tasks
-
-export {};
+export { communicationTypeDefs } from './graphql/index.js';
+// Resolvers will be exported once implemented in the next task
+// export { communicationResolvers } from './graphql/index.js';

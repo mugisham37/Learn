@@ -1092,7 +1092,20 @@ This implementation plan breaks down the development of the educational learning
   - Implement online presence tracking
   - _Requirements: 9.6, 9.7, 9.8_
 
-- [ ] 65. Create GraphQL schema for communication module
+- [x] 65. Create GraphQL schema for communication module
+
+
+
+
+
+
+
+
+
+
+
+
+
   - Define Message type
   - Define DiscussionThread type with posts
   - Define DiscussionPost type
