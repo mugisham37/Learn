@@ -6,3 +6,16 @@
 
 export { IMessagingService, MessageContent, MessageAttachment, MessageResult, ConversationResult } from './IMessagingService.js';
 export { MessagingService } from './MessagingService.js';
+
+export type { 
+  IDiscussionService,
+  CreateThreadDTO,
+  CreateReplyDTO,
+  VotePostDTO,
+  MarkSolutionDTO,
+  ThreadCreationResult,
+  ReplyCreationResult,
+  VoteResult,
+  SolutionResult
+} from './IDiscussionService.js';
+export { DiscussionService } from './DiscussionService.js';
