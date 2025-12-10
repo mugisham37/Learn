@@ -5,13 +5,16 @@
  */
 
 // Entities
-export { Course, CourseProps, CourseStatus, CourseDifficulty } from './entities/Course';
-export { CourseModule, CourseModuleProps } from './entities/CourseModule';
-export { Lesson, LessonProps, LessonType } from './entities/Lesson';
+export { Course } from './entities/Course';
+export type { CourseProps, CourseStatus, CourseDifficulty } from './entities/Course';
+export { CourseModule } from './entities/CourseModule';
+export type { CourseModuleProps } from './entities/CourseModule';
+export { Lesson } from './entities/Lesson';
+export type { LessonProps, LessonType } from './entities/Lesson';
 
 // Events
+export type { DomainEvent } from './events/CourseEvents';
 export {
-  DomainEvent,
   CourseCreatedEvent,
   CourseUpdatedEvent,
   CoursePublishedEvent,
@@ -21,6 +24,6 @@ export {
   ModulesReorderedEvent,
   LessonAddedEvent,
   LessonRemovedEvent,
-  LessonsReorderedEvent,
-  CourseEvent
+  LessonsReorderedEvent
 } from './events/CourseEvents';
+export type { CourseEvent } from './events/CourseEvents';

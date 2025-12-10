@@ -101,6 +101,8 @@ export class CourseModule {
 
     this._lessons.splice(lessonIndex, 1);
     this.recalculateDuration();
+    
+    this.addDomainEvent(new LessonRemovedEvent(this.id, this.courseId, lessonId));
   }
 
   // Reorder lessons within module
@@ -114,7 +116,7 @@ export class CourseModule {
     const providedIds = new Set(lessonIds);
     
     if (existingIds.size !== providedIds.size || 
-        ![...existingIds].every(id => providedIds.has(id))) {
+        !Array.from(existingIds).every(id => providedIds.has(id))) {
       throw new Error('Invalid lesson IDs provided');
     }
 
@@ -128,6 +130,13 @@ export class CourseModule {
 
     this._lessons = reorderedLessons;
     this._props.updatedAt = new Date();
+    
+    const newOrder = reorderedLessons.map(lesson => ({
+      lessonId: lesson.id,
+      orderNumber: lesson.orderNumber
+    }));
+    
+    this.addDomainEvent(new LessonsReorderedEvent(this.id, this.courseId, newOrder));
   }
 
   // Get next available order number for new lesson
@@ -149,6 +158,11 @@ export class CourseModule {
   setLessons(lessons: Lesson[]): void {
     this._lessons = [...lessons];
     this.recalculateDuration();
+  }
+
+  // Clear domain events
+  clearDomainEvents(): void {
+    this._domainEvents = [];
   }
 
   // Recalculate total duration based on lessons
@@ -178,5 +192,9 @@ export class CourseModule {
     if (!props.courseId || props.courseId.trim().length === 0) {
       throw new Error('Course ID is required');
     }
+  }
+
+  private addDomainEvent(event: any): void {
+    this._domainEvents.push(event);
   }
 }

@@ -95,24 +95,29 @@ export class Course {
       .replace(/-+/g, '-') // Replace multiple hyphens with single
       .trim();
     
-    // Add timestamp to ensure uniqueness
+    // Add timestamp and random component to ensure uniqueness
     const timestamp = Date.now().toString(36);
-    return `${baseSlug}-${timestamp}`;
+    const random = Math.random().toString(36).substring(2, 8);
+    return `${baseSlug}-${timestamp}-${random}`;
   }
 
   // Update course properties
   update(updates: Partial<Pick<CourseProps, 'title' | 'description' | 'category' | 'difficulty' | 'price' | 'enrollmentLimit' | 'thumbnailUrl'>>): void {
     const oldTitle = this._props.title;
     
-    // Update properties
-    Object.assign(this._props, updates, { updatedAt: new Date() });
+    // Create updated props for validation
+    const updatedProps = { ...this._props, ...updates, updatedAt: new Date() };
     
     // Regenerate slug if title changed
     if (updates.title && updates.title !== oldTitle) {
-      this._props.slug = Course.generateSlug(updates.title);
+      updatedProps.slug = Course.generateSlug(updates.title);
     }
 
-    this.validateProps(this._props);
+    // Validate the updated properties
+    this.validateProps(updatedProps);
+    
+    // Apply the updates
+    this._props = updatedProps;
     this.addDomainEvent(new CourseUpdatedEvent(this.id, this.instructorId));
   }
 
@@ -159,7 +164,7 @@ export class Course {
     const providedIds = new Set(moduleIds);
     
     if (existingIds.size !== providedIds.size || 
-        ![...existingIds].every(id => providedIds.has(id))) {
+        !Array.from(existingIds).every(id => providedIds.has(id))) {
       throw new Error('Invalid module IDs provided');
     }
 

@@ -4,4 +4,5 @@
  * Public API for the courses module
  */
 
-// TODO: Export module interfaces and services
+// Domain Layer
+export * from './domain';
