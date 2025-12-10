@@ -175,6 +175,31 @@ export const announcements = pgTable('announcements', {
 }));
 
 /**
+ * Post Votes Table
+ * Tracks user votes on discussion posts to prevent duplicate voting
+ * 
+ * Requirements:
+ * - 9.4: Post upvoting with duplicate prevention
+ */
+export const postVotes = pgTable('post_votes', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  postId: uuid('post_id')
+    .references(() => discussionPosts.id, { onDelete: 'cascade' })
+    .notNull(),
+  userId: uuid('user_id')
+    .references(() => users.id, { onDelete: 'cascade' })
+    .notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => ({
+  // Unique constraint to prevent duplicate votes from same user on same post
+  userPostIdx: index('post_votes_user_post_idx').on(table.userId, table.postId),
+  // Index on postId for fast lookups of votes for a post
+  postIdx: index('post_votes_post_idx').on(table.postId),
+  // Index on userId for fast lookups of votes by a user
+  userIdx: index('post_votes_user_idx').on(table.userId),
+}));
+
+/**
  * Type exports for use in application code
  */
 export type Message = typeof messages.$inferSelect;
@@ -183,5 +208,7 @@ export type DiscussionThread = typeof discussionThreads.$inferSelect;
 export type NewDiscussionThread = typeof discussionThreads.$inferInsert;
 export type DiscussionPost = typeof discussionPosts.$inferSelect;
 export type NewDiscussionPost = typeof discussionPosts.$inferInsert;
+export type PostVote = typeof postVotes.$inferSelect;
+export type NewPostVote = typeof postVotes.$inferInsert;
 export type Announcement = typeof announcements.$inferSelect;
 export type NewAnnouncement = typeof announcements.$inferInsert;
