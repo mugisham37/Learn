@@ -30,7 +30,6 @@ import {
   ProcessingJob as ProcessingJobData,
   NewVideoAsset,
   NewFileAsset,
-  NewProcessingJob,
   AssetType 
 } from '../../../../infrastructure/database/schema/content.schema.js';
 import { VideoAsset, FileAsset, ProcessingJob } from '../../domain/entities/index.js';
@@ -756,8 +755,8 @@ export class ContentService implements IContentService {
     }
 
     // Validate file extension matches content type
-    const extension = extname(params.fileName).toLowerCase();
-    if (!this.isValidFileExtension(extension, params.contentType)) {
+    const fileExtension = extname(params.fileName).toLowerCase();
+    if (!this.isValidFileExtension(fileExtension, params.contentType)) {
       throw new ValidationError('File extension does not match content type');
     }
   }
@@ -773,8 +772,8 @@ export class ContentService implements IContentService {
       throw new ValidationError('File size exceeds maximum limit of 100MB');
     }
 
-    const extension = extname(fileName).toLowerCase();
-    if (!this.isValidFileExtension(extension, contentType)) {
+    const fileExtension = extname(fileName).toLowerCase();
+    if (!this.isValidFileExtension(fileExtension, contentType)) {
       throw new ValidationError('Invalid file type');
     }
   }
