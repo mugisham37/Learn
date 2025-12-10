@@ -799,7 +799,15 @@ This implementation plan breaks down the development of the educational learning
   - Create queries for retrieving quizzes, assignments, and submissions
   - _Requirements: 21.1, 21.2_
 
-- [ ] 47. Implement GraphQL resolvers for assessments module
+- [x] 47. Implement GraphQL resolvers for assessments module
+
+
+
+
+
+
+
+
   - Implement quiz mutation resolvers with educator authorization
   - Implement assignment mutation resolvers
   - Implement submission resolvers with student authorization
