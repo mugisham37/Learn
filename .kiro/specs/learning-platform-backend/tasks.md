@@ -429,7 +429,12 @@ This implementation plan breaks down the development of the educational learning
 
 ## Phase 5: Courses Module - Course Management
 
-- [ ] 26. Implement course repository (infrastructure layer)
+- [x] 26. Implement course repository (infrastructure layer)
+
+
+
+
+
   - Create ICourseRepository interface
   - Implement CourseRepository with Drizzle queries
   - Implement create, findById, findByInstructor, update, publish, delete methods
@@ -438,7 +443,10 @@ This implementation plan breaks down the development of the educational learning
   - Implement cache invalidation strategies
   - _Requirements: 3.1, 3.6_
 
-- [ ] 27. Implement course domain entities
+- [-] 27. Implement course domain entities
+
+
+
   - Create Course entity with validation
   - Create CourseModule entity with ordering logic
   - Create Lesson entity with type-specific validation
