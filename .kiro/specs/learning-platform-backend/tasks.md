@@ -569,7 +569,11 @@ This implementation plan breaks down the development of the educational learning
   - Add database records for uploaded content
   - _Requirements: 4.1, 4.4_
 
-- [ ] 34. Implement content service (application layer)
+- [x] 34. Implement content service (application layer)
+
+
+
+
   - Create IContentService interface
   - Implement generateUploadUrl method for presigned URLs
   - Implement handleVideoUpload method

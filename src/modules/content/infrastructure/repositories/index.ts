@@ -4,7 +4,7 @@
  * Central export point for content repository interfaces and implementations
  */
 
-export { IContentRepository } from './IContentRepository.js';
+export type { IContentRepository } from './IContentRepository.js';
 export { ContentRepository } from './ContentRepository.js';
 
 export type {
