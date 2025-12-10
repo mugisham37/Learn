@@ -21,6 +21,7 @@ export const CachePrefix = {
   ENROLLMENT: 'enrollment',
   QUIZ: 'quiz',
   ASSIGNMENT: 'assignment',
+  ASSIGNMENT_SUBMISSION: 'assignment_submission',
   ANALYTICS: 'analytics',
   SEARCH: 'search',
   SESSION: 'session',

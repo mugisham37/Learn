@@ -94,11 +94,11 @@ export class QuizService implements IQuizService {
         quizType: data.quizType,
         timeLimitMinutes: data.timeLimitMinutes,
         passingScorePercentage: data.passingScorePercentage,
-        maxAttempts: data.maxAttempts,
-        randomizeQuestions: data.randomizeQuestions,
-        randomizeOptions: data.randomizeOptions,
-        showCorrectAnswers: data.showCorrectAnswers,
-        showExplanations: data.showExplanations,
+        maxAttempts: data.maxAttempts || 0,
+        randomizeQuestions: data.randomizeQuestions || false,
+        randomizeOptions: data.randomizeOptions || false,
+        showCorrectAnswers: data.showCorrectAnswers !== false, // Default true
+        showExplanations: data.showExplanations !== false, // Default true
         availableFrom: data.availableFrom,
         availableUntil: data.availableUntil
       });
