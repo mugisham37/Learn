@@ -6,3 +6,5 @@
 
 export * from './IAuthService.js';
 export * from './AuthService.js';
+export * from './IUserProfileService.js';
+export * from './UserProfileService.js';
