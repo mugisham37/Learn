@@ -12,3 +12,6 @@ export * from './infrastructure/index.js';
 
 // Application Layer
 export * from './application/index.js';
+
+// Presentation Layer
+export * from './presentation/index.js';

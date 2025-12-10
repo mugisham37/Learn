@@ -391,7 +391,11 @@ This implementation plan breaks down the development of the educational learning
   - Handle profile image optimization and thumbnail generation
   - _Requirements: 10.7_
 
-- [ ] 23. Create GraphQL schema for users module
+- [x] 23. Create GraphQL schema for users module
+
+
+
+
   - Define User type with all fields
   - Define UserProfile type
   - Define Role enum
