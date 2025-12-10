@@ -246,4 +246,24 @@ export interface IEnrollmentService {
    * @returns Array of struggling area descriptions
    */
   identifyStrugglingAreas(enrollmentId: string): Promise<string[]>;
+
+  /**
+   * Checks if a lesson can be accessed based on prerequisites
+   * 
+   * Requirements: 5.8 - Prerequisite enforcement for lesson access
+   * 
+   * @param enrollmentId - Enrollment ID
+   * @param lessonId - Lesson ID to check access for
+   * @returns Access result with eligibility and reasons
+   * @throws NotFoundError if enrollment or lesson doesn't exist
+   */
+  checkLessonAccess(enrollmentId: string, lessonId: string): Promise<{
+    canAccess: boolean;
+    reasons: string[];
+    prerequisiteModules?: {
+      moduleId: string;
+      moduleTitle: string;
+      isCompleted: boolean;
+    }[];
+  }>;
 }

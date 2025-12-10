@@ -11,6 +11,7 @@ import { ILessonProgressRepository } from '../../infrastructure/repositories/ILe
 import { ICertificateRepository } from '../../infrastructure/repositories/ICertificateRepository.js';
 import { ICourseRepository } from '../../../courses/infrastructure/repositories/ICourseRepository.js';
 import { ILessonRepository } from '../../../courses/infrastructure/repositories/ILessonRepository.js';
+import { ICourseModuleRepository } from '../../../courses/infrastructure/repositories/ICourseModuleRepository.js';
 import { IUserRepository } from '../../../users/infrastructure/repositories/IUserRepository.js';
 
 // Mock repositories
@@ -20,11 +21,13 @@ const mockEnrollmentRepository: Partial<IEnrollmentRepository> = {
   getActiveEnrollmentCount: vi.fn(),
   invalidateCacheByStudent: vi.fn(),
   invalidateCacheByCourse: vi.fn(),
+  findById: vi.fn(),
 };
 
 const mockLessonProgressRepository: Partial<ILessonProgressRepository> = {
   createMany: vi.fn(),
   invalidateCacheByEnrollment: vi.fn(),
+  findByEnrollmentAndLesson: vi.fn(),
 };
 
 const mockCertificateRepository: Partial<ICertificateRepository> = {};
@@ -35,6 +38,12 @@ const mockCourseRepository: Partial<ICourseRepository> = {
 
 const mockLessonRepository: Partial<ILessonRepository> = {
   findByCourse: vi.fn(),
+  findById: vi.fn(),
+  findByModule: vi.fn(),
+};
+
+const mockCourseModuleRepository: Partial<ICourseModuleRepository> = {
+  findById: vi.fn(),
 };
 
 const mockUserRepository: Partial<IUserRepository> = {
@@ -51,6 +60,7 @@ describe('EnrollmentService', () => {
       mockCertificateRepository as ICertificateRepository,
       mockCourseRepository as ICourseRepository,
       mockLessonRepository as ILessonRepository,
+      mockCourseModuleRepository as ICourseModuleRepository,
       mockUserRepository as IUserRepository
     );
 
@@ -170,6 +180,172 @@ describe('EnrollmentService', () => {
 
       expect(url).toContain('enrollment-123');
       expect(url).toMatch(/^https?:\/\/.+\/certificates\/verify\/enrollment-123$/);
+    });
+  });
+
+  describe('checkLessonAccess', () => {
+    it('should allow access to lesson without prerequisites', async () => {
+      // Mock active enrollment
+      (mockEnrollmentRepository.findById as any).mockResolvedValue({
+        id: 'enrollment-1',
+        studentId: 'student-1',
+        courseId: 'course-1',
+        status: 'active'
+      });
+
+      // Mock lesson exists
+      (mockLessonRepository.findById as any).mockResolvedValue({
+        id: 'lesson-1',
+        moduleId: 'module-1',
+        title: 'Test Lesson'
+      });
+
+      // Mock module without prerequisites
+      (mockCourseModuleRepository.findById as any).mockResolvedValue({
+        id: 'module-1',
+        courseId: 'course-1',
+        title: 'Test Module',
+        prerequisiteModuleId: null
+      });
+
+      // Mock lesson belongs to course
+      (mockLessonRepository.findByCourse as any).mockResolvedValue([
+        { id: 'lesson-1', moduleId: 'module-1' }
+      ]);
+
+      const result = await enrollmentService.checkLessonAccess('enrollment-1', 'lesson-1');
+
+      expect(result.canAccess).toBe(true);
+      expect(result.reasons).toHaveLength(0);
+    });
+
+    it('should deny access to lesson with unmet prerequisites', async () => {
+      // Mock active enrollment
+      (mockEnrollmentRepository.findById as any).mockResolvedValue({
+        id: 'enrollment-1',
+        studentId: 'student-1',
+        courseId: 'course-1',
+        status: 'active'
+      });
+
+      // Mock lesson exists
+      (mockLessonRepository.findById as any).mockResolvedValue({
+        id: 'lesson-2',
+        moduleId: 'module-2',
+        title: 'Advanced Lesson'
+      });
+
+      // Mock module with prerequisites
+      (mockCourseModuleRepository.findById as any)
+        .mockResolvedValueOnce({
+          id: 'module-2',
+          courseId: 'course-1',
+          title: 'Advanced Module',
+          prerequisiteModuleId: 'module-1'
+        })
+        .mockResolvedValueOnce({
+          id: 'module-1',
+          courseId: 'course-1',
+          title: 'Basic Module',
+          prerequisiteModuleId: null
+        });
+
+      // Mock lesson belongs to course
+      (mockLessonRepository.findByCourse as any).mockResolvedValue([
+        { id: 'lesson-2', moduleId: 'module-2' }
+      ]);
+
+      // Mock prerequisite module lessons
+      (mockLessonRepository.findByModule as any).mockResolvedValue([
+        { id: 'lesson-1', moduleId: 'module-1' }
+      ]);
+
+      // Mock prerequisite lesson not completed
+      (mockLessonProgressRepository.findByEnrollmentAndLesson as any).mockResolvedValue({
+        id: 'progress-1',
+        enrollmentId: 'enrollment-1',
+        lessonId: 'lesson-1',
+        status: 'in_progress'
+      });
+
+      const result = await enrollmentService.checkLessonAccess('enrollment-1', 'lesson-2');
+
+      expect(result.canAccess).toBe(false);
+      expect(result.reasons).toContain('Prerequisite module "Basic Module" must be completed first');
+      expect(result.prerequisiteModules).toHaveLength(1);
+      expect(result.prerequisiteModules![0].isCompleted).toBe(false);
+    });
+
+    it('should allow access to lesson with completed prerequisites', async () => {
+      // Mock active enrollment
+      (mockEnrollmentRepository.findById as any).mockResolvedValue({
+        id: 'enrollment-1',
+        studentId: 'student-1',
+        courseId: 'course-1',
+        status: 'active'
+      });
+
+      // Mock lesson exists
+      (mockLessonRepository.findById as any).mockResolvedValue({
+        id: 'lesson-2',
+        moduleId: 'module-2',
+        title: 'Advanced Lesson'
+      });
+
+      // Mock module with prerequisites
+      (mockCourseModuleRepository.findById as any)
+        .mockResolvedValueOnce({
+          id: 'module-2',
+          courseId: 'course-1',
+          title: 'Advanced Module',
+          prerequisiteModuleId: 'module-1'
+        })
+        .mockResolvedValueOnce({
+          id: 'module-1',
+          courseId: 'course-1',
+          title: 'Basic Module',
+          prerequisiteModuleId: null
+        });
+
+      // Mock lesson belongs to course
+      (mockLessonRepository.findByCourse as any).mockResolvedValue([
+        { id: 'lesson-2', moduleId: 'module-2' }
+      ]);
+
+      // Mock prerequisite module lessons
+      (mockLessonRepository.findByModule as any).mockResolvedValue([
+        { id: 'lesson-1', moduleId: 'module-1' }
+      ]);
+
+      // Mock prerequisite lesson completed
+      (mockLessonProgressRepository.findByEnrollmentAndLesson as any).mockResolvedValue({
+        id: 'progress-1',
+        enrollmentId: 'enrollment-1',
+        lessonId: 'lesson-1',
+        status: 'completed'
+      });
+
+      const result = await enrollmentService.checkLessonAccess('enrollment-1', 'lesson-2');
+
+      expect(result.canAccess).toBe(true);
+      expect(result.reasons).toHaveLength(0);
+      expect(result.prerequisiteModules).toHaveLength(1);
+      expect(result.prerequisiteModules![0].isCompleted).toBe(true);
+    });
+
+    it('should deny access for inactive enrollment', async () => {
+      // Mock inactive enrollment
+      (mockEnrollmentRepository.findById as any).mockResolvedValue({
+        id: 'enrollment-1',
+        studentId: 'student-1',
+        courseId: 'course-1',
+        status: 'completed'
+      });
+
+      const result = await enrollmentService.checkLessonAccess('enrollment-1', 'lesson-1');
+
+      expect(result.canAccess).toBe(false);
+      expect(result.reasons).toContain('Enrollment is not active');
     });
   });
 });

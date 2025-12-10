@@ -14,6 +14,7 @@ import {
 } from '../../../../shared/errors/index.js';
 import { ICourseRepository } from '../../../courses/infrastructure/repositories/ICourseRepository.js';
 import { ILessonRepository } from '../../../courses/infrastructure/repositories/ILessonRepository.js';
+import { ICourseModuleRepository } from '../../../courses/infrastructure/repositories/ICourseModuleRepository.js';
 import { IUserRepository } from '../../../users/infrastructure/repositories/IUserRepository.js';
 import { Certificate } from '../../domain/entities/Certificate.js';
 import { Enrollment } from '../../domain/entities/Enrollment.js';
@@ -55,6 +56,7 @@ export class EnrollmentService implements IEnrollmentService {
     private readonly certificateRepository: ICertificateRepository,
     private readonly courseRepository: ICourseRepository,
     private readonly lessonRepository: ILessonRepository,
+    private readonly courseModuleRepository: ICourseModuleRepository,
     private readonly userRepository: IUserRepository
   ) {}
 
@@ -165,6 +167,7 @@ export class EnrollmentService implements IEnrollmentService {
    * Updates lesson progress for a student
    * 
    * Requirements: 5.3, 5.4 - Progress tracking and calculation
+   * Requirements: 5.8 - Prerequisite enforcement for lesson access
    */
   async updateLessonProgress(data: UpdateLessonProgressRequestDTO): Promise<LessonProgress> {
     // Validate enrollment exists
@@ -192,6 +195,14 @@ export class EnrollmentService implements IEnrollmentService {
     if (!lessonBelongsToCourse) {
       throw new ValidationError('Lesson does not belong to the enrolled course', [
         { field: 'lessonId', message: 'Lesson is not part of this course' }
+      ]);
+    }
+
+    // Check prerequisite requirements before allowing progress updates
+    const accessCheck = await this.checkLessonAccess(data.enrollmentId, data.lessonId);
+    if (!accessCheck.canAccess) {
+      throw new ValidationError('Cannot access lesson due to unmet prerequisites', [
+        { field: 'lessonId', message: accessCheck.reasons.join('; ') }
       ]);
     }
 
@@ -766,5 +777,169 @@ export class EnrollmentService implements IEnrollmentService {
   private generateVerificationUrl(enrollmentId: string): string {
     const baseUrl = process.env['APP_BASE_URL'] || 'https://platform.example.com';
     return `${baseUrl}/certificates/verify/${enrollmentId}`;
+  }
+
+  /**
+   * Checks if a lesson can be accessed based on prerequisites
+   * 
+   * Requirements: 5.8 - Prerequisite enforcement for lesson access
+   */
+  async checkLessonAccess(enrollmentId: string, lessonId: string): Promise<{
+    canAccess: boolean;
+    reasons: string[];
+    prerequisiteModules?: {
+      moduleId: string;
+      moduleTitle: string;
+      isCompleted: boolean;
+    }[];
+  }> {
+    // Validate enrollment exists and is active
+    const enrollmentRecord = await this.enrollmentRepository.findById(enrollmentId);
+    if (!enrollmentRecord) {
+      throw new NotFoundError('Enrollment not found');
+    }
+
+    if (enrollmentRecord.status !== 'active') {
+      return {
+        canAccess: false,
+        reasons: ['Enrollment is not active']
+      };
+    }
+
+    // Validate lesson exists
+    const lesson = await this.lessonRepository.findById(lessonId);
+    if (!lesson) {
+      throw new NotFoundError('Lesson not found');
+    }
+
+    // Get the module that contains this lesson
+    const lessonModule = await this.courseModuleRepository.findById(lesson.moduleId);
+    if (!lessonModule) {
+      throw new NotFoundError('Lesson module not found');
+    }
+
+    // Verify lesson belongs to the enrolled course
+    const courseLessons = await this.lessonRepository.findByCourse(enrollmentRecord.courseId);
+    const lessonBelongsToCourse = courseLessons.some(l => l.id === lessonId);
+    
+    if (!lessonBelongsToCourse) {
+      return {
+        canAccess: false,
+        reasons: ['Lesson does not belong to the enrolled course']
+      };
+    }
+
+    // Check if the lesson's module has prerequisites
+    if (!lessonModule.prerequisiteModuleId) {
+      // No prerequisites, access is allowed
+      return {
+        canAccess: true,
+        reasons: []
+      };
+    }
+
+    // Get all prerequisite modules (including nested prerequisites)
+    const prerequisiteModules = await this.getPrerequisiteModulesRecursive(
+      lessonModule.prerequisiteModuleId,
+      enrollmentRecord.courseId
+    );
+
+    // Check completion status of all prerequisite modules
+    const prerequisiteResults = await Promise.all(
+      prerequisiteModules.map(async (prereqModule) => {
+        const isCompleted = await this.isModuleCompleted(enrollmentId, prereqModule.id);
+        return {
+          moduleId: prereqModule.id,
+          moduleTitle: prereqModule.title,
+          isCompleted
+        };
+      })
+    );
+
+    // Check if all prerequisites are completed
+    const uncompletedPrerequisites = prerequisiteResults.filter(p => !p.isCompleted);
+    
+    if (uncompletedPrerequisites.length > 0) {
+      const reasons = uncompletedPrerequisites.map(p => 
+        `Prerequisite module "${p.moduleTitle}" must be completed first`
+      );
+      
+      return {
+        canAccess: false,
+        reasons,
+        prerequisiteModules: prerequisiteResults
+      };
+    }
+
+    // All prerequisites are met
+    return {
+      canAccess: true,
+      reasons: [],
+      prerequisiteModules: prerequisiteResults
+    };
+  }
+
+  /**
+   * Recursively gets all prerequisite modules for a given module
+   * Handles nested prerequisites (A requires B, B requires C, etc.)
+   */
+  private async getPrerequisiteModulesRecursive(
+    moduleId: string,
+    courseId: string,
+    visited: Set<string> = new Set()
+  ): Promise<Array<{ id: string; title: string; prerequisiteModuleId?: string }>> {
+    // Prevent infinite loops in case of circular dependencies
+    if (visited.has(moduleId)) {
+      return [];
+    }
+    visited.add(moduleId);
+
+    const module = await this.courseModuleRepository.findById(moduleId);
+    if (!module) {
+      return [];
+    }
+
+    const prerequisites = [{ 
+      id: module.id, 
+      title: module.title, 
+      prerequisiteModuleId: module.prerequisiteModuleId 
+    }];
+
+    // If this module has its own prerequisites, get them recursively
+    if (module.prerequisiteModuleId) {
+      const nestedPrerequisites = await this.getPrerequisiteModulesRecursive(
+        module.prerequisiteModuleId,
+        courseId,
+        visited
+      );
+      prerequisites.unshift(...nestedPrerequisites);
+    }
+
+    return prerequisites;
+  }
+
+  /**
+   * Checks if all lessons in a module are completed for an enrollment
+   */
+  private async isModuleCompleted(enrollmentId: string, moduleId: string): Promise<boolean> {
+    // Get all lessons in the module
+    const moduleLessons = await this.lessonRepository.findByModule(moduleId);
+    
+    if (moduleLessons.length === 0) {
+      // Empty module is considered completed
+      return true;
+    }
+
+    // Check if all lessons in the module are completed
+    const progressRecords = await Promise.all(
+      moduleLessons.map(lesson => 
+        this.lessonProgressRepository.findByEnrollmentAndLesson(enrollmentId, lesson.id)
+      )
+    );
+
+    // All lessons must have progress records and be completed
+    return progressRecords.every(progress => 
+      progress !== null && progress.status === 'completed'
+    );
   }
 }
