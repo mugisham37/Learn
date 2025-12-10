@@ -927,6 +927,7 @@ This implementation plan breaks down the development of the educational learning
 
 
 
+
   - Create prerequisite checking logic
   - Implement lesson access control based on prerequisites
   - Add prerequisite validation in lesson access
@@ -937,7 +938,11 @@ This implementation plan breaks down the development of the educational learning
   - **Property 28: Prerequisite enforcement**
   - **Validates: Requirements 5.8**
 
-- [ ] 55. Create GraphQL schema for enrollments module
+- [x] 55. Create GraphQL schema for enrollments module
+
+
+
+
   - Define Enrollment type with progress details
   - Define LessonProgress type
   - Define Certificate type

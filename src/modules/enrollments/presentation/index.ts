@@ -5,7 +5,10 @@
  * Includes GraphQL resolvers, REST controllers, and validation schemas.
  */
 
-// Presentation components will be exported here
-// export * from './graphql/index.js';
+// GraphQL exports
+export { enrollmentTypeDefs } from './graphql/index.js';
+// export { enrollmentResolvers } from './graphql/index.js'; // Will be implemented in next task
+
+// REST and validation exports will be added here
 // export * from './rest/index.js';
 // export * from './validation/index.js';
