@@ -1106,6 +1106,7 @@ This implementation plan breaks down the development of the educational learning
 
 
 
+
   - Define Message type
   - Define DiscussionThread type with posts
   - Define DiscussionPost type
@@ -1116,7 +1117,12 @@ This implementation plan breaks down the development of the educational learning
   - Create subscriptions for messageReceived, newDiscussionPost, announcementPublished, userPresence
   - _Requirements: 21.1, 21.2, 21.4_
 
-- [ ] 66. Implement GraphQL resolvers for communication module
+- [x] 66. Implement GraphQL resolvers for communication module
+
+
+
+
+
   - Implement messaging mutation resolvers
   - Implement discussion mutation resolvers with authorization
   - Implement announcement resolvers with educator checks

@@ -5,5 +5,4 @@
  */
 
 export { communicationTypeDefs } from './schema.js';
-// Resolvers will be exported from here once implemented in the next task
-// export { communicationResolvers } from './resolvers.js';
+export { communicationResolvers } from './resolvers.js';
