@@ -36,7 +36,7 @@ import {
 import {
   IEnrollmentService,
   EnrollStudentDTO,
-  UpdateLessonProgressDTO,
+  UpdateLessonProgressRequestDTO,
   CompleteCourseDTO,
   WithdrawEnrollmentDTO,
   EnrollmentProgressSummary
@@ -166,7 +166,7 @@ export class EnrollmentService implements IEnrollmentService {
    * 
    * Requirements: 5.3, 5.4 - Progress tracking and calculation
    */
-  async updateLessonProgress(data: UpdateLessonProgressDTO): Promise<LessonProgress> {
+  async updateLessonProgress(data: UpdateLessonProgressRequestDTO): Promise<LessonProgress> {
     // Validate enrollment exists
     const enrollmentRecord = await this.enrollmentRepository.findById(data.enrollmentId);
     if (!enrollmentRecord) {

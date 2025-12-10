@@ -6,3 +6,5 @@
 
 export * from './IEnrollmentService.js';
 export * from './EnrollmentService.js';
+export * from './IProgressCalculator.js';
+export * from './ProgressCalculatorService.js';

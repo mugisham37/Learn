@@ -7,9 +7,9 @@
  * Requirements: 5.1, 5.3, 5.4, 5.5, 5.7
  */
 
+import { Certificate } from '../../domain/entities/Certificate.js';
 import { Enrollment } from '../../domain/entities/Enrollment.js';
 import { LessonProgress } from '../../domain/entities/LessonProgress.js';
-import { Certificate } from '../../domain/entities/Certificate.js';
 
 /**
  * Data Transfer Object for enrollment creation
@@ -27,7 +27,7 @@ export interface EnrollStudentDTO {
 /**
  * Data Transfer Object for lesson progress updates
  */
-export interface UpdateLessonProgressDTO {
+export interface UpdateLessonProgressRequestDTO {
   enrollmentId: string;
   lessonId: string;
   progressUpdate: {
@@ -123,7 +123,7 @@ export interface IEnrollmentService {
    * @throws ValidationError if progress update is invalid
    * @throws AuthorizationError if student doesn't own the enrollment
    */
-  updateLessonProgress(data: UpdateLessonProgressDTO): Promise<LessonProgress>;
+  updateLessonProgress(data: UpdateLessonProgressRequestDTO): Promise<LessonProgress>;
 
   /**
    * Completes a course and generates certificate
