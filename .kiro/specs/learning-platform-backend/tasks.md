@@ -976,6 +976,7 @@ This implementation plan breaks down the development of the educational learning
 
 
 
+
   - Create IMessagingRepository interface
   - Implement MessagingRepository with Drizzle queries
   - Add methods for creating, retrieving, updating messages

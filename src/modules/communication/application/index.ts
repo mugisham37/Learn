@@ -6,3 +6,5 @@
 
 // Placeholder for future application services
 // Will be implemented in subsequent tasks
+
+export {};

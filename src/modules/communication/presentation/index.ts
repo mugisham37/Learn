@@ -6,3 +6,5 @@
 
 // Placeholder for future presentation layer
 // Will be implemented in subsequent tasks
+
+export {};
