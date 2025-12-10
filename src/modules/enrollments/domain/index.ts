@@ -6,10 +6,10 @@
  */
 
 // Domain entities
-export * from './entities/index';
+export * from './entities/index.js';
 
 // Domain events
-export type { DomainEvent } from './events/EnrollmentEvents';
+export type { DomainEvent } from './events/EnrollmentEvents.js';
 export {
   EnrollmentCreatedEvent,
   LessonProgressUpdatedEvent,
@@ -17,4 +17,4 @@ export {
   CourseCompletedEvent,
   CertificateGeneratedEvent,
   EnrollmentWithdrawnEvent
-} from './events/EnrollmentEvents';
+} from './events/EnrollmentEvents.js';

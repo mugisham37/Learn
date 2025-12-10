@@ -138,7 +138,6 @@ export class Enrollment {
       throw new Error(`Lesson progress not found for lesson ${lessonId}`);
     }
 
-    const previousStatus = progress.status;
     updateFn(progress);
 
     // Recalculate overall progress

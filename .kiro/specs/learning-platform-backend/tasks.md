@@ -841,6 +841,7 @@ This implementation plan breaks down the development of the educational learning
 
 
 
+
   - Create Enrollment entity with validation
   - Create LessonProgress entity
   - Create Certificate entity

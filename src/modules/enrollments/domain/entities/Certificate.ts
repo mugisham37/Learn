@@ -121,7 +121,7 @@ export class Certificate {
     this._props.metadata = {
       ...this._props.metadata,
       ...metadata,
-    };
+    } as CertificateProps['metadata'];
   }
 
   /**
@@ -223,7 +223,7 @@ export class Certificate {
    */
   private static generateVerificationUrl(certificateId: string): string {
     // This would typically use the application's base URL from configuration
-    const baseUrl = process.env.APP_BASE_URL || 'https://platform.example.com';
+    const baseUrl = process.env['APP_BASE_URL'] || 'https://platform.example.com';
     return `${baseUrl}/certificates/verify/${certificateId}`;
   }
 
