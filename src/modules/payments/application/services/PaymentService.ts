@@ -164,7 +164,7 @@ export class PaymentService implements IPaymentService {
         throw error;
       }
 
-      throw new ExternalServiceError('Failed to create checkout session', error instanceof Error ? error : new Error(String(error)));
+      throw new ExternalServiceError('Stripe', 'Failed to create checkout session', error instanceof Error ? error : new Error(String(error)));
     }
   }
 
@@ -230,7 +230,7 @@ export class PaymentService implements IPaymentService {
         eventType: event.type,
         eventId: event.id
       });
-      throw new ExternalServiceError('Failed to process webhook event', error instanceof Error ? error : new Error(String(error)));
+      throw new ExternalServiceError('Stripe', 'Failed to process webhook event', error instanceof Error ? error : new Error(String(error)));
     }
   }
 
@@ -350,7 +350,7 @@ export class PaymentService implements IPaymentService {
         throw error;
       }
 
-      throw new ExternalServiceError('Failed to process refund', error instanceof Error ? error : new Error(String(error)));
+      throw new ExternalServiceError('Stripe', 'Failed to process refund', error instanceof Error ? error : new Error(String(error)));
     }
   }
 
@@ -433,7 +433,7 @@ export class PaymentService implements IPaymentService {
         throw error;
       }
 
-      throw new ExternalServiceError('Failed to create subscription', error instanceof Error ? error : new Error(String(error)));
+      throw new ExternalServiceError('Stripe', 'Failed to create subscription', error instanceof Error ? error : new Error(String(error)));
     }
   }
 
@@ -505,7 +505,7 @@ export class PaymentService implements IPaymentService {
         throw error;
       }
 
-      throw new ExternalServiceError('Failed to cancel subscription', error instanceof Error ? error : new Error(String(error)));
+      throw new ExternalServiceError('Stripe', 'Failed to cancel subscription', error instanceof Error ? error : new Error(String(error)));
     }
   }
 
@@ -556,7 +556,7 @@ export class PaymentService implements IPaymentService {
         userId
       });
 
-      throw new DatabaseError('Failed to retrieve payment history', error instanceof Error ? error : new Error(String(error)));
+      throw new DatabaseError('Failed to retrieve payment history', 'getPaymentHistory', error instanceof Error ? error : new Error(String(error)));
     }
   }
 
@@ -595,7 +595,7 @@ export class PaymentService implements IPaymentService {
         userId
       });
 
-      throw new DatabaseError('Failed to retrieve user subscriptions', error instanceof Error ? error : new Error(String(error)));
+      throw new DatabaseError('Failed to retrieve user subscriptions', 'getUserSubscriptions', error instanceof Error ? error : new Error(String(error)));
     }
   }
 
@@ -712,7 +712,7 @@ export class PaymentService implements IPaymentService {
         paymentId
       });
 
-      throw new DatabaseError('Failed to retry payment', error instanceof Error ? error : new Error(String(error)));
+      throw new DatabaseError('Failed to retry payment', 'retryFailedPayment', error instanceof Error ? error : new Error(String(error)));
     }
   }
 
