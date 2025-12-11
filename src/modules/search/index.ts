@@ -18,6 +18,9 @@
 // Application layer exports
 export * from './application/index.js';
 
+// Presentation layer exports
+export * from './presentation/index.js';
+
 // Infrastructure layer exports (re-exported for convenience)
 export type { 
   ISearchRepository,

@@ -1642,6 +1642,7 @@ This implementation plan breaks down the development of the educational learning
 
 
 
+
   - Create query builder for full-text search
   - Implement filter query construction
   - Implement facet aggregation queries
@@ -1650,7 +1651,13 @@ This implementation plan breaks down the development of the educational learning
   - Implement pagination with from/size
   - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5_
 
-- [ ] 101. Create GraphQL schema for search module
+- [-] 101. Create GraphQL schema for search module
+
+
+
+
+
+
   - Define SearchResult type
   - Define SearchFacet type
   - Define SearchFilters input type
