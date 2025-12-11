@@ -1732,6 +1732,12 @@ This implementation plan breaks down the development of the educational learning
 
 
 
+
+
+
+
+
+
   - Create file type validation against whitelist
   - Implement file size validation
   - Implement malware scanning (ClamAV or AWS service)

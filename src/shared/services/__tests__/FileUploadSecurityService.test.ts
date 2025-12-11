@@ -42,7 +42,7 @@ describe('FileUploadSecurityService', () => {
       expect(result.errors).toHaveLength(0);
       expect(result.detectedMimeType).toBe('image/png');
       expect(result.sanitizedFileName).toBe('test.png');
-      expect(result.uniqueFileName).toMatch(/^test_\d+_[a-f0-9]{8}\.png$/);
+      expect(result.uniqueFileName).toMatch(/^test_\d+_[a-f0-9]{8}_[a-f0-9]{8}\.png$/);
       expect(result.fileHash).toBeDefined();
     });
 
@@ -116,7 +116,7 @@ describe('FileUploadSecurityService', () => {
       expect(result.valid).toBe(true);
       // The sanitization should remove dangerous characters and path traversal
       expect(result.sanitizedFileName).toBe('script_.png');
-      expect(result.uniqueFileName).toMatch(/^script__\d+_[a-f0-9]{8}\.png$/);
+      expect(result.uniqueFileName).toMatch(/^script__\d+_[a-f0-9]{8}_[a-f0-9]{8}\.png$/);
     });
 
     it('should detect MIME type mismatch', async () => {
@@ -192,8 +192,89 @@ describe('FileUploadSecurityService', () => {
       });
 
       expect(result1.uniqueFileName).not.toBe(result2.uniqueFileName);
-      expect(result1.uniqueFileName).toMatch(/^test_\d+_[a-f0-9]{8}\.png$/);
-      expect(result2.uniqueFileName).toMatch(/^test_\d+_[a-f0-9]{8}\.png$/);
+      expect(result1.uniqueFileName).toMatch(/^test_\d+_[a-f0-9]{8}_[a-f0-9]{8}\.png$/);
+      expect(result2.uniqueFileName).toMatch(/^test_\d+_[a-f0-9]{8}_[a-f0-9]{8}\.png$/);
+    });
+
+    it('should detect EICAR test malware signature', async () => {
+      const eicarBuffer = Buffer.from('X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*');
+
+      const result = await service.validateFileUpload({
+        fileName: 'eicar.txt',
+        fileBuffer: eicarBuffer,
+        declaredMimeType: 'text/plain',
+        context: 'document',
+        userId: 'user-123',
+      });
+
+      expect(result.valid).toBe(false);
+      expect(result.errors.some(error => error.includes('Malware detected'))).toBe(true);
+    });
+
+    it('should detect suspicious executable patterns', async () => {
+      // Create a buffer that looks like a PE executable
+      const peBuffer = Buffer.alloc(128);
+      peBuffer.write('MZ', 0); // DOS header
+      peBuffer.writeUInt32LE(64, 60); // PE offset
+      peBuffer.write('PE', 64); // PE header
+
+      const result = await service.validateFileUpload({
+        fileName: 'innocent.txt',
+        fileBuffer: peBuffer,
+        declaredMimeType: 'text/plain',
+        context: 'document',
+        userId: 'user-123',
+      });
+
+      expect(result.valid).toBe(false);
+      expect(result.errors.some(error => error.includes('Malware detected'))).toBe(true);
+    });
+
+    it('should detect script injection patterns', async () => {
+      const scriptBuffer = Buffer.from('<script>alert("xss")</script>');
+
+      const result = await service.validateFileUpload({
+        fileName: 'innocent.txt',
+        fileBuffer: scriptBuffer,
+        declaredMimeType: 'text/plain',
+        context: 'document',
+        userId: 'user-123',
+      });
+
+      expect(result.valid).toBe(false);
+      expect(result.errors.some(error => error.includes('Malware detected'))).toBe(true);
+    });
+
+    it('should detect suspicious file size patterns', async () => {
+      const tinyBuffer = Buffer.alloc(5); // Very small file
+
+      const result = await service.validateFileUpload({
+        fileName: 'tiny.txt',
+        fileBuffer: tinyBuffer,
+        declaredMimeType: 'text/plain',
+        context: 'document',
+        userId: 'user-123',
+      });
+
+      expect(result.valid).toBe(false);
+      expect(result.errors.some(error => error.includes('Malware detected'))).toBe(true);
+    });
+
+    it('should detect excessive null byte padding', async () => {
+      const paddedBuffer = Buffer.alloc(2048);
+      paddedBuffer.fill(0); // Fill with null bytes
+      paddedBuffer.write('some content', 0); // Add minimal content
+
+      const result = await service.validateFileUpload({
+        fileName: 'padded.txt',
+        fileBuffer: paddedBuffer,
+        declaredMimeType: 'text/plain',
+        context: 'document',
+        userId: 'user-123',
+      });
+
+      expect(result.valid).toBe(false);
+      expect(result.errors.some(error => error.includes('Malware detected'))).toBe(true);
     });
   });
 
