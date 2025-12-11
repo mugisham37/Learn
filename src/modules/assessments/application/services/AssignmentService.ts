@@ -17,6 +17,7 @@ import {
   DatabaseError,
   ExternalServiceError
 } from '../../../../shared/errors/index.js';
+import { sanitizeByContentType } from '../../../../shared/utils/sanitization.js';
 import { IS3Service } from '../../../../shared/services/IS3Service.js';
 import { logger } from '../../../../shared/utils/logger.js';
 import { Assignment } from '../../domain/entities/Assignment.js';
@@ -81,12 +82,12 @@ export class AssignmentService implements IAssignmentService {
       // Validate using domain entity
       Assignment.create(assignmentData);
 
-      // Save to repository
+      // Save to repository with sanitized content
       const createdAssignment = await this.assignmentRepository.create({
         lessonId: data.lessonId,
         title: data.title,
-        description: data.description,
-        instructions: data.instructions,
+        description: data.description ? sanitizeByContentType(data.description, 'assignment.description') : undefined,
+        instructions: sanitizeByContentType(data.instructions, 'assignment.instructions'),
         dueDate: data.dueDate,
         lateSubmissionAllowed: data.lateSubmissionAllowed || false,
         latePenaltyPercentage: data.latePenaltyPercentage || 0,
@@ -252,7 +253,7 @@ export class AssignmentService implements IAssignmentService {
 
       const domainSubmission = AssignmentSubmission.create(submissionData, assignment);
 
-      // Save to repository
+      // Save to repository with sanitized content
       const createdSubmission = await this.submissionRepository.create({
         assignmentId: data.assignmentId,
         studentId: data.studentId,
@@ -260,7 +261,7 @@ export class AssignmentService implements IAssignmentService {
         fileUrl: fileInfo?.url,
         fileName: fileInfo?.name,
         fileSizeBytes: fileInfo?.sizeBytes,
-        submissionText: data.submissionText,
+        submissionText: data.submissionText ? sanitizeByContentType(data.submissionText, 'submission.text') : undefined,
         isLate: domainSubmission.isLate,
         revisionNumber,
         parentSubmissionId: data.parentSubmissionId
@@ -384,10 +385,10 @@ export class AssignmentService implements IAssignmentService {
       // Calculate final score with late penalty if applicable
       const finalScore = gradedSubmission.calculateFinalScore(assignmentData.latePenaltyPercentage);
 
-      // Update submission in repository
+      // Update submission in repository with sanitized feedback
       const updatedSubmission = await this.submissionRepository.update(data.submissionId, {
         pointsAwarded: finalScore?.toString() || data.pointsAwarded.toString(),
-        feedback: data.feedback,
+        feedback: sanitizeByContentType(data.feedback, 'feedback'),
         gradingStatus: 'graded',
         gradedAt: new Date(),
         gradedBy: data.gradedBy
@@ -494,9 +495,9 @@ export class AssignmentService implements IAssignmentService {
       // Request revision using domain entity
       domainSubmission.requestRevision(data.feedback, data.gradedBy);
 
-      // Update submission in repository
+      // Update submission in repository with sanitized feedback
       const updatedSubmission = await this.submissionRepository.update(data.submissionId, {
-        feedback: data.feedback,
+        feedback: sanitizeByContentType(data.feedback, 'feedback'),
         gradingStatus: 'revision_requested',
         gradedAt: new Date(),
         gradedBy: data.gradedBy,

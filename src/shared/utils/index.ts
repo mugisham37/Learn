@@ -70,3 +70,6 @@ export * from './validation.js';
 
 // Export logger utilities
 export * from './logger.js';
+
+// Export sanitization utilities
+export * from './sanitization.js';

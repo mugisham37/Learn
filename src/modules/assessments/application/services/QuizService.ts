@@ -38,6 +38,7 @@ import {
   ConflictError,
   DatabaseError
 } from '../../../../shared/errors/index.js';
+import { sanitizeByContentType } from '../../../../shared/utils/sanitization.js';
 
 import { logger } from '../../../../shared/utils/logger.js';
 
@@ -86,11 +87,11 @@ export class QuizService implements IQuizService {
         }
       });
 
-      // Save to repository
+      // Save to repository with sanitized content
       const createdQuiz = await this.quizRepository.create({
         lessonId: data.lessonId,
         title: data.title,
-        description: data.description,
+        description: data.description ? sanitizeByContentType(data.description, 'quiz.description') : undefined,
         quizType: data.quizType,
         timeLimitMinutes: data.timeLimitMinutes,
         passingScorePercentage: data.passingScorePercentage,
@@ -159,15 +160,15 @@ export class QuizService implements IQuizService {
       // Get next order number
       const orderNumber = await this.questionRepository.getNextOrderNumber(quizId);
 
-      // Create question
+      // Create question with sanitized content
       const createdQuestion = await this.questionRepository.create({
         quizId,
         questionType: data.questionType,
-        questionText: data.questionText,
+        questionText: sanitizeByContentType(data.questionText, 'question.questionText'),
         questionMediaUrl: data.questionMediaUrl,
         options: data.options,
         correctAnswer: data.correctAnswer,
-        explanation: data.explanation,
+        explanation: data.explanation ? sanitizeByContentType(data.explanation, 'question.explanation') : undefined,
         points: data.points || 1,
         orderNumber,
         difficulty: data.difficulty || 'medium'

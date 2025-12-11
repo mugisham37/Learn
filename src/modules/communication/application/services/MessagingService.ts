@@ -9,6 +9,7 @@ import { randomUUID } from 'node:crypto';
 
 import type { Message } from '../../../../infrastructure/database/schema/communication.schema.js';
 import { ValidationError, NotFoundError, AuthorizationError } from '../../../../shared/errors/index.js';
+import { sanitizeByContentType } from '../../../../shared/utils/sanitization.js';
 import { IS3Service } from '../../../../shared/services/IS3Service.js';
 import { 
   IMessagingRepository, 
@@ -95,12 +96,12 @@ export class MessagingService implements IMessagingService {
       }
     }
 
-    // Create message data
+    // Create message data with sanitized content
     const messageData: CreateMessageDTO = {
       senderId,
       recipientId,
       subject: content.subject?.trim(),
-      content: content.content.trim(),
+      content: sanitizeByContentType(content.content.trim(), 'message.content'),
       attachments: content.attachments || [],
       parentMessageId: content.parentMessageId,
     };

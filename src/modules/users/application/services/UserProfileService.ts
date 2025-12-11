@@ -10,6 +10,7 @@
 import { randomUUID } from 'crypto';
 
 import { ValidationError, NotFoundError, ExternalServiceError } from '../../../../shared/errors/index.js';
+import { sanitizeByContentType } from '../../../../shared/utils/sanitization.js';
 import { logger } from '../../../../shared/utils/logger.js';
 import { IS3Service } from '../../../../shared/services/IS3Service.js';
 import { IImageProcessingService } from '../../../../shared/services/IImageProcessingService.js';
@@ -107,17 +108,21 @@ export class UserProfileService implements IUserProfileService {
       let profileData = await this.userProfileRepository.findByUserId(userId);
       
       if (!profileData) {
-        // Create new profile with default values
+        // Create new profile with default values and sanitized bio
         profileData = await this.userProfileRepository.create({
           userId,
           fullName: data.fullName || 'Unknown User',
-          bio: data.bio,
+          bio: data.bio ? sanitizeByContentType(data.bio, 'user.bio') : undefined,
           timezone: data.timezone || 'UTC',
           language: data.language || 'en',
         });
       } else {
-        // Update existing profile
-        profileData = await this.userProfileRepository.update(userId, data);
+        // Update existing profile with sanitized bio
+        const sanitizedData = {
+          ...data,
+          ...(data.bio && { bio: sanitizeByContentType(data.bio, 'user.bio') })
+        };
+        profileData = await this.userProfileRepository.update(userId, sanitizedData);
       }
 
       // Convert to domain entity

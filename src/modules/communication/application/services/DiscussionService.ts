@@ -18,6 +18,7 @@ import {
   NotFoundError,
   ConflictError 
 } from '../../../../shared/errors/index.js';
+import { sanitizeByContentType } from '../../../../shared/utils/sanitization.js';
 import { DiscussionThread, CreateDiscussionThreadDTO } from '../../domain/entities/DiscussionThread.js';
 import { DiscussionPost, CreateDiscussionPostDTO, VoteType } from '../../domain/entities/DiscussionPost.js';
 import type { 
@@ -104,13 +105,13 @@ export class DiscussionService implements IDiscussionService {
       );
     }
 
-    // Create the thread
+    // Create the thread with sanitized content
     const threadData: CreateDiscussionThreadDTO = {
       courseId: data.courseId,
       authorId: data.authorId,
       category: data.category,
       title: data.title,
-      content: data.content
+      content: sanitizeByContentType(data.content, 'discussion.content')
     };
 
     const createdThread = await this.discussionRepository.createThread(threadData);
@@ -201,12 +202,12 @@ export class DiscussionService implements IDiscussionService {
       }
     }
 
-    // Create the reply
+    // Create the reply with sanitized content
     const postData: CreateDiscussionPostDTO = {
       threadId: data.threadId,
       authorId: data.authorId,
       parentPostId: data.parentPostId,
-      content: data.content
+      content: sanitizeByContentType(data.content, 'post.content')
     };
 
     const createdPost = await this.discussionRepository.createPost(postData);

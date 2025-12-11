@@ -6,6 +6,7 @@
  */
 
 import { ValidationError, NotFoundError, AuthorizationError } from '../../../../shared/errors/index.js';
+import { sanitizeByContentType } from '../../../../shared/utils/sanitization.js';
 import type { IAnnouncementRepository } from '../../infrastructure/repositories/IAnnouncementRepository.js';
 import { 
   validateAnnouncementData,
@@ -90,12 +91,12 @@ export class AnnouncementService implements IAnnouncementService {
       // Verify educator authorization (this would typically check if the user is an educator for this course)
       await this.verifyEducatorAuthorization(courseId, educatorId);
 
-      // Create announcement data
+      // Create announcement data with sanitized content
       const announcementData: AnnouncementData = {
         courseId,
         educatorId,
         title: data.title.trim(),
-        content: data.content.trim(),
+        content: sanitizeByContentType(data.content.trim(), 'announcement.content'),
         scheduledFor: data.scheduledFor
       };
 

@@ -36,6 +36,7 @@ import {
   ValidationError, 
   ConflictError 
 } from '../../../../shared/errors/index.js';
+import { sanitizeByContentType } from '../../../../shared/utils/sanitization.js';
 import { cache, CachePrefix, CacheTTL, buildCacheKey } from '../../../../infrastructure/cache/index.js';
 
 /**
@@ -64,10 +65,11 @@ export class CourseService implements ICourseService {
     // Validate course data
     this.validateCourseData(data);
 
-    // Ensure instructor ID matches the data
+    // Ensure instructor ID matches the data and sanitize content
     const courseData: CreateCourseDTO = {
       ...data,
-      instructorId
+      instructorId,
+      description: sanitizeByContentType(data.description, 'course.description')
     };
 
     // Create course with automatic slug generation
@@ -194,8 +196,12 @@ export class CourseService implements ICourseService {
     // Validate update data
     this.validateCourseUpdateData(data);
 
-    // Update course
-    const updatedCourseSchema = await this.courseRepository.update(courseId, data);
+    // Update course with sanitized content
+    const sanitizedData = {
+      ...data,
+      ...(data.description && { description: sanitizeByContentType(data.description, 'course.description') })
+    };
+    const updatedCourseSchema = await this.courseRepository.update(courseId, sanitizedData);
     const updatedCourse = CourseMapper.toDomain(updatedCourseSchema);
 
     // Invalidate caches
@@ -233,11 +239,12 @@ export class CourseService implements ICourseService {
       orderNumber = await this.moduleRepository.getNextOrderNumber(courseId);
     }
 
-    // Create module
+    // Create module with sanitized content
     const moduleData: CreateCourseModuleDTO = {
       ...data,
       courseId,
-      orderNumber
+      orderNumber,
+      ...(data.description && { description: sanitizeByContentType(data.description, 'module.description') })
     };
 
     const moduleSchema = await this.moduleRepository.create(moduleData);
@@ -317,11 +324,12 @@ export class CourseService implements ICourseService {
       orderNumber = await this.lessonRepository.getNextOrderNumber(moduleId);
     }
 
-    // Create lesson
+    // Create lesson with sanitized content
     const lessonData: CreateLessonDTO = {
       ...data,
       moduleId,
-      orderNumber
+      orderNumber,
+      ...(data.contentText && { contentText: sanitizeByContentType(data.contentText, 'lesson.contentText') })
     };
 
     const lessonSchema = await this.lessonRepository.create(lessonData);
