@@ -15,6 +15,7 @@ import { config } from './config/index.js';
 import { logger } from './shared/utils/logger.js';
 import { logRequest, logResponse } from './shared/middleware/index.js';
 import { registerGlobalRateLimit, registerAdaptiveRateLimit } from './shared/middleware/rateLimiting.js';
+import { registerCSRFProtection } from './shared/middleware/csrf.js';
 import { createSocketServer, closeSocketServer } from './infrastructure/websocket/index.js';
 
 /**
@@ -44,7 +45,7 @@ export async function createServer(): Promise<FastifyInstance> {
     origin: config.cors.origin,
     credentials: config.cors.credentials,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID', 'X-CSRF-Token', 'X-Requested-With'],
     exposedHeaders: ['X-Request-ID', 'X-RateLimit-Limit', 'X-RateLimit-Remaining', 'X-RateLimit-Reset'],
   });
 
@@ -59,6 +60,9 @@ export async function createServer(): Promise<FastifyInstance> {
   // Register rate limiting middleware (before other middleware)
   await registerGlobalRateLimit(server);
   await registerAdaptiveRateLimit(server);
+
+  // Register CSRF protection middleware
+  await registerCSRFProtection(server);
 
   // Add request logging hook using Winston
   server.addHook('onRequest', logRequest);
@@ -161,6 +165,19 @@ export async function createServer(): Promise<FastifyInstance> {
   // Initialize Socket.io server for real-time communication
   await createSocketServer(server);
   logger.info('Socket.io server initialized successfully');
+
+  // Register authentication REST routes
+  const { registerAuthRoutes } = await import('./modules/users/presentation/rest/authController.js');
+  const { AuthService } = await import('./modules/users/application/services/AuthService.js');
+  const { UserRepository } = await import('./modules/users/infrastructure/repositories/UserRepository.js');
+  
+  // Create auth service instance
+  const userRepository = new UserRepository();
+  const authService = new AuthService(userRepository);
+  
+  // Register auth routes
+  await registerAuthRoutes(server, authService);
+  logger.info('Authentication REST routes registered successfully');
 
   return server;
 }

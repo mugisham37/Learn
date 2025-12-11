@@ -436,3 +436,13 @@ export {
   checkRateLimit,
   checkRateLimitHealth,
 } from './rateLimiting.js';
+
+// Export CSRF protection middleware
+export {
+  csrfProtection,
+  generateCSRFToken,
+  setCSRFTokenCookie,
+  getCSRFToken,
+  registerCSRFProtection,
+  requireCSRFProtection,
+} from './csrf.js';
