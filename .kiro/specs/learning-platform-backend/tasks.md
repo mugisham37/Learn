@@ -1383,6 +1383,7 @@ This implementation plan breaks down the development of the educational learning
 
 
 
+
   - Define Payment type
   - Define Subscription type
   - Define Refund type
@@ -1392,7 +1393,11 @@ This implementation plan breaks down the development of the educational learning
   - Create queries for getPaymentHistory
   - _Requirements: 21.1, 21.2_
 
-- [ ] 84. Implement GraphQL resolvers for payments module
+- [x] 84. Implement GraphQL resolvers for payments module
+
+
+
+
   - Implement checkout session creation resolver
   - Implement refund request resolver with authorization
   - Implement subscription management resolvers

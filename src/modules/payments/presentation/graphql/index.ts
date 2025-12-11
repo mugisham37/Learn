@@ -8,6 +8,4 @@
  */
 
 export { paymentTypeDefs } from './schema.js';
-
-// TODO: Export resolvers when implemented in task 84
-// export { paymentResolvers } from './resolvers.js';
+export { paymentResolvers } from './resolvers.js';
