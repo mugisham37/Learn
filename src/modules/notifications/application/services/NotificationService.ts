@@ -30,8 +30,11 @@ import {
   NotificationPreferences 
 } from '../../../users/domain/value-objects/UserProfile.js';
 import { 
-  IUserProfileRepository 
-} from '../../../users/infrastructure/repositories/IUserProfileRepository.js';
+  IUserProfileService 
+} from '../../../users/application/services/IUserProfileService.js';
+import { 
+  INotificationPreferenceService 
+} from './INotificationPreferenceService.js';
 import { 
   IUserRepository 
 } from '../../../users/infrastructure/repositories/IUserRepository.js';
@@ -63,7 +66,8 @@ import {
 export class NotificationService implements INotificationService {
   constructor(
     private readonly notificationRepository: INotificationRepository,
-    private readonly userProfileRepository: IUserProfileRepository,
+    private readonly userProfileService: IUserProfileService,
+    private readonly notificationPreferenceService: INotificationPreferenceService,
     private readonly userRepository: IUserRepository,
     private readonly emailService?: IEmailService,
     private readonly realtimeService?: IRealtimeService
@@ -80,8 +84,8 @@ export class NotificationService implements INotificationService {
       this.validateNotificationData(data);
 
       // Check if recipient exists
-      const userProfile = await this.userProfileRepository.findByUserId(data.recipientId);
-      if (!userProfile) {
+      const user = await this.userRepository.findById(data.recipientId);
+      if (!user) {
         throw new NotFoundError('User', data.recipientId);
       }
 
@@ -214,7 +218,7 @@ export class NotificationService implements INotificationService {
       }
 
       // Get recipient profile for name
-      const userProfile = await this.userProfileRepository.findByUserId(notification.recipientId);
+      const userProfile = await this.userProfileService.getUserProfile(notification.recipientId);
       if (!userProfile) {
         throw new NotFoundError('User profile', notification.recipientId);
       }
@@ -486,12 +490,7 @@ export class NotificationService implements INotificationService {
    */
   async getUserNotificationPreferences(userId: string): Promise<NotificationPreferences> {
     try {
-      const userProfile = await this.userProfileRepository.findByUserId(userId);
-      if (!userProfile) {
-        throw new NotFoundError('User profile', userId);
-      }
-
-      return userProfile.notificationPreferences || {};
+      return await this.notificationPreferenceService.getPreferences(userId);
     } catch (error) {
       logger.error('Failed to get user notification preferences', {
         userId,
@@ -523,22 +522,7 @@ export class NotificationService implements INotificationService {
     channel: 'email' | 'push' | 'inApp'
   ): Promise<boolean> {
     try {
-      const preferences = await this.getUserNotificationPreferences(userId);
-      
-      // Map notification types to preference keys
-      const preferenceKey = this.mapNotificationTypeToPreferenceKey(notificationType);
-      
-      // Check channel-specific preference
-      const channelPreferences = preferences[channel] as Record<string, boolean> | undefined;
-      if (!channelPreferences) {
-        // Default to enabled if no preferences set
-        return true;
-      }
-
-      const isEnabled = channelPreferences[preferenceKey] as boolean | undefined;
-      
-      // Default to enabled if preference not explicitly set
-      return isEnabled !== false;
+      return await this.notificationPreferenceService.isNotificationEnabled(userId, notificationType, channel);
     } catch (error) {
       logger.error('Failed to check notification preference', {
         userId,
@@ -726,7 +710,7 @@ export class NotificationService implements INotificationService {
       'announcement': 'announcement',
       'discussion_reply': 'discussionReply',
       'enrollment_confirmed': 'courseUpdate', // Map to courseUpdate as closest match
-      'certificate_issued': 'courseUpdate', // Map to courseUpdate as closest match
+      'certificate_issued': 'gradePosted', // Map to gradePosted as it's achievement-related
       'payment_received': 'courseUpdate', // Map to courseUpdate as closest match
       'refund_processed': 'courseUpdate', // Map to courseUpdate as closest match
     };

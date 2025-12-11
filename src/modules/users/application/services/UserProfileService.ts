@@ -245,6 +245,49 @@ export class UserProfileService implements IUserProfileService {
   }
 
   /**
+   * Gets a user's notification preferences
+   */
+  async getNotificationPreferences(userId: string): Promise<NotificationPreferences> {
+    try {
+      logger.info('Getting notification preferences', { userId });
+
+      // Verify user exists
+      const user = await this.userRepository.findById(userId);
+      if (!user) {
+        throw new NotFoundError('User', userId);
+      }
+
+      // Get profile from database
+      const profileData = await this.userProfileRepository.findByUserId(userId);
+      
+      if (!profileData) {
+        // Return default preferences if no profile exists
+        logger.info('No profile found, returning default notification preferences', { userId });
+        return this.getDefaultNotificationPreferences();
+      }
+
+      const preferences = profileData.notificationPreferences as NotificationPreferences || {};
+      
+      // Merge with defaults to ensure all preferences are present
+      const mergedPreferences = this.mergeWithDefaultPreferences(preferences);
+
+      logger.info('Notification preferences retrieved successfully', { userId });
+      return mergedPreferences;
+    } catch (error) {
+      logger.error('Failed to get notification preferences', {
+        userId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+
+      if (error instanceof NotFoundError) {
+        throw error;
+      }
+
+      throw new Error(`Failed to get notification preferences: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
    * Updates a user's notification preferences
    */
   async updateNotificationPreferences(userId: string, preferences: NotificationPreferences): Promise<UserProfileEntity> {
@@ -271,9 +314,13 @@ export class UserProfileService implements IUserProfileService {
           notificationPreferences: preferences,
         });
       } else {
+        // Merge with existing preferences to preserve unspecified settings
+        const existingPreferences = profileData.notificationPreferences as NotificationPreferences || {};
+        const mergedPreferences = this.mergeNotificationPreferences(existingPreferences, preferences);
+        
         // Update existing profile
         profileData = await this.userProfileRepository.update(userId, {
-          notificationPreferences: preferences,
+          notificationPreferences: mergedPreferences,
         });
       }
 
@@ -301,6 +348,66 @@ export class UserProfileService implements IUserProfileService {
       }
 
       throw new Error(`Failed to update notification preferences: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Updates a specific notification preference setting
+   */
+  async updateNotificationPreference(
+    userId: string, 
+    channel: 'email' | 'push' | 'inApp', 
+    notificationType: string, 
+    enabled: boolean
+  ): Promise<UserProfileEntity> {
+    try {
+      logger.info('Updating specific notification preference', { 
+        userId, 
+        channel, 
+        notificationType, 
+        enabled 
+      });
+
+      // Validate parameters
+      this.validateNotificationPreferenceParameters(channel, notificationType, enabled);
+
+      // Get current preferences
+      const currentPreferences = await this.getNotificationPreferences(userId);
+
+      // Update the specific preference
+      const updatedPreferences = { ...currentPreferences };
+      
+      if (!updatedPreferences[channel]) {
+        updatedPreferences[channel] = {};
+      }
+      
+      updatedPreferences[channel]![notificationType] = enabled;
+
+      // Update the full preferences
+      const profile = await this.updateNotificationPreferences(userId, updatedPreferences);
+
+      logger.info('Specific notification preference updated successfully', { 
+        userId, 
+        channel, 
+        notificationType, 
+        enabled 
+      });
+
+      return profile;
+    } catch (error) {
+      logger.error('Failed to update specific notification preference', {
+        userId,
+        channel,
+        notificationType,
+        enabled,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+
+      if (error instanceof NotFoundError || error instanceof ValidationError) {
+        throw error;
+      }
+
+      throw new Error(`Failed to update notification preference: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
@@ -362,6 +469,109 @@ export class UserProfileService implements IUserProfileService {
 
     if (upload.buffer.length !== upload.fileSize) {
       throw new ValidationError('File size mismatch');
+    }
+  }
+
+  /**
+   * Gets default notification preferences
+   */
+  private getDefaultNotificationPreferences(): NotificationPreferences {
+    return {
+      email: {
+        newMessage: true,
+        assignmentDue: true,
+        gradePosted: true,
+        courseUpdate: true,
+        announcement: true,
+        discussionReply: false,
+      },
+      push: {
+        newMessage: true,
+        assignmentDue: true,
+        gradePosted: true,
+        courseUpdate: false,
+        announcement: false,
+        discussionReply: false,
+      },
+      inApp: {
+        newMessage: true,
+        assignmentDue: true,
+        gradePosted: true,
+        courseUpdate: true,
+        announcement: true,
+        discussionReply: true,
+      },
+    };
+  }
+
+  /**
+   * Merges user preferences with defaults to ensure all preferences are present
+   */
+  private mergeWithDefaultPreferences(userPreferences: NotificationPreferences): NotificationPreferences {
+    const defaults = this.getDefaultNotificationPreferences();
+    const merged: NotificationPreferences = {};
+
+    // Merge each channel
+    for (const channel of ['email', 'push', 'inApp'] as const) {
+      merged[channel] = {
+        ...defaults[channel],
+        ...(userPreferences[channel] || {}),
+      };
+    }
+
+    return merged;
+  }
+
+  /**
+   * Merges existing preferences with new preferences
+   */
+  private mergeNotificationPreferences(
+    existing: NotificationPreferences, 
+    updates: NotificationPreferences
+  ): NotificationPreferences {
+    const merged: NotificationPreferences = { ...existing };
+
+    // Merge each channel
+    for (const [channel, settings] of Object.entries(updates)) {
+      if (settings && typeof settings === 'object') {
+        merged[channel as keyof NotificationPreferences] = {
+          ...(merged[channel as keyof NotificationPreferences] || {}),
+          ...settings,
+        };
+      }
+    }
+
+    return merged;
+  }
+
+  /**
+   * Validates notification preference parameters
+   */
+  private validateNotificationPreferenceParameters(
+    channel: string, 
+    notificationType: string, 
+    enabled: boolean
+  ): void {
+    const validChannels = ['email', 'push', 'inApp'];
+    const validTypes = [
+      'newMessage',
+      'assignmentDue',
+      'gradePosted',
+      'courseUpdate',
+      'announcement',
+      'discussionReply',
+    ];
+
+    if (!validChannels.includes(channel)) {
+      throw new ValidationError(`Invalid notification channel: ${channel}. Valid channels: ${validChannels.join(', ')}`);
+    }
+
+    if (!validTypes.includes(notificationType)) {
+      throw new ValidationError(`Invalid notification type: ${notificationType}. Valid types: ${validTypes.join(', ')}`);
+    }
+
+    if (typeof enabled !== 'boolean') {
+      throw new ValidationError('Enabled parameter must be a boolean');
     }
   }
 

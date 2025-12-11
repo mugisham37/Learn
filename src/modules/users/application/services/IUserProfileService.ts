@@ -80,6 +80,16 @@ export interface IUserProfileService {
   uploadAvatar(userId: string, upload: AvatarUploadDTO): Promise<AvatarUploadResult>;
 
   /**
+   * Gets a user's notification preferences
+   * 
+   * @param userId - User ID
+   * @returns The user's notification preferences
+   * @throws NotFoundError if user doesn't exist
+   * @throws DatabaseError if database operation fails
+   */
+  getNotificationPreferences(userId: string): Promise<NotificationPreferences>;
+
+  /**
    * Updates a user's notification preferences
    * 
    * @param userId - User ID
@@ -90,4 +100,23 @@ export interface IUserProfileService {
    * @throws DatabaseError if database operation fails
    */
   updateNotificationPreferences(userId: string, preferences: NotificationPreferences): Promise<UserProfile>;
+
+  /**
+   * Updates a specific notification preference setting
+   * 
+   * @param userId - User ID
+   * @param channel - Notification channel ('email', 'push', 'inApp')
+   * @param notificationType - Type of notification
+   * @param enabled - Whether to enable or disable the notification
+   * @returns The updated user profile
+   * @throws NotFoundError if user doesn't exist
+   * @throws ValidationError if parameters are invalid
+   * @throws DatabaseError if database operation fails
+   */
+  updateNotificationPreference(
+    userId: string, 
+    channel: 'email' | 'push' | 'inApp', 
+    notificationType: string, 
+    enabled: boolean
+  ): Promise<UserProfile>;
 }
