@@ -51,10 +51,56 @@ export async function createServer(): Promise<FastifyInstance> {
 
   // Register Helmet for security headers
   await server.register(helmet, {
-    contentSecurityPolicy: config.nodeEnv === 'production' ? undefined : false,
+    // Content Security Policy - comprehensive policy for production
+    contentSecurityPolicy: config.nodeEnv === 'production' ? {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", "data:", "https:"],
+        connectSrc: ["'self'"],
+        fontSrc: ["'self'"],
+        objectSrc: ["'none'"],
+        mediaSrc: ["'self'"],
+        frameSrc: ["'none'"],
+      },
+    } : false,
+    
+    // HTTP Strict Transport Security - enforce HTTPS for 1 year
+    hsts: {
+      maxAge: 31536000, // 1 year in seconds
+      includeSubDomains: true,
+      preload: true,
+    },
+    
+    // X-Content-Type-Options - prevent MIME type sniffing
+    noSniff: true,
+    
+    // X-Frame-Options - prevent clickjacking attacks
+    frameguard: {
+      action: 'deny',
+    },
+    
+    // X-XSS-Protection - enable XSS filtering
+    xssFilter: true,
+    
+    // Additional security headers
     crossOriginEmbedderPolicy: config.nodeEnv === 'production',
     crossOriginOpenerPolicy: config.nodeEnv === 'production',
     crossOriginResourcePolicy: config.nodeEnv === 'production',
+    
+    // Referrer Policy - control referrer information
+    referrerPolicy: {
+      policy: 'strict-origin-when-cross-origin',
+    },
+    
+    // Permissions Policy - control browser features
+    permissionsPolicy: {
+      camera: [],
+      microphone: [],
+      geolocation: [],
+      payment: [],
+    },
   });
 
   // Register rate limiting middleware (before other middleware)
