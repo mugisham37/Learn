@@ -9,6 +9,7 @@
 
 import { Client, ClientOptions } from '@elastic/elasticsearch';
 import { config } from '../../config/index.js';
+import type { ISearchRepository } from './ISearchRepository.js';
 
 /**
  * Index names for different document types
@@ -647,8 +648,21 @@ export async function getIndexStats(indexName: string): Promise<{
 export async function closeElasticsearchConnection(): Promise<void> {
   try {
     await elasticsearch.close();
-    console.log('Elasticsearch connection closed gracefully');
+    
   } catch (error) {
     console.error('Error closing Elasticsearch connection:', error);
   }
+}
+
+// Export repository interface and implementation
+export type { ISearchRepository } from './ISearchRepository.js';
+export { SearchRepository } from './SearchRepository.js';
+
+/**
+ * Create a search repository instance
+ * Factory function to create a properly configured search repository
+ */
+export async function createSearchRepository(): Promise<ISearchRepository> {
+  const { SearchRepository } = await import('./SearchRepository.js');
+  return new SearchRepository();
 }
