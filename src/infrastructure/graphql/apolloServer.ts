@@ -31,7 +31,7 @@ import { paymentTypeDefs, paymentResolvers } from '../../modules/payments/presen
 import { searchTypeDefs, searchResolvers } from '../../modules/search/presentation/graphql/index.js';
 
 // Helper function to safely import resolvers
-function safeImportResolvers() {
+function safeImportResolvers(): any[] {
   const resolvers = [];
   
   // Always available resolvers
@@ -63,6 +63,11 @@ function safeImportResolvers() {
   return resolvers.filter(Boolean);
 }
 
+// Import DataLoader types and implementations
+import { UserDataLoaders } from '../../modules/users/presentation/graphql/dataloaders.js';
+import { CourseDataLoaders } from '../../modules/courses/presentation/graphql/dataloaders.js';
+import { EnrollmentDataLoaders } from '../../modules/enrollments/presentation/graphql/dataloaders.js';
+
 /**
  * GraphQL Context interface
  */
@@ -73,7 +78,29 @@ export interface GraphQLContext {
     role: string;
   };
   requestId: string;
-  dataloaders?: any; // Will be properly typed when DataLoaders are implemented
+  dataloaders?: {
+    // User data loaders
+    users?: UserDataLoaders;
+    
+    // Course data loaders  
+    courses?: CourseDataLoaders;
+    
+    // Enrollment data loaders
+    enrollments?: EnrollmentDataLoaders;
+    
+    // Legacy individual loaders for backward compatibility
+    userById?: any;
+    usersByIds?: any;
+    courseById?: any;
+    coursesByInstructorId?: any;
+    modulesByCourseId?: any;
+    moduleById?: any;
+    lessonsByModuleId?: any;
+    lessonById?: any;
+    enrollmentById?: any;
+    enrollmentsByStudentId?: any;
+    enrollmentsByCourseId?: unknown;
+  };
 }
 
 /**
@@ -184,35 +211,35 @@ export async function createApolloServer(fastify: FastifyInstance): Promise<Apol
       logger.error('GraphQL Error', {
         error: formattedError,
         originalError: error,
-        requestId: (error as any)?.extensions?.requestId,
+        requestId: (error as Record<string, Record<string, unknown>>)?.['extensions']?.['requestId'],
       });
 
       // In production, sanitize error messages
       if (config.nodeEnv === 'production') {
         // Don't expose internal errors in production
-        if (formattedError.message.includes('Database') || 
-            formattedError.message.includes('Internal') ||
-            formattedError.extensions?.code === 'INTERNAL_SERVER_ERROR') {
+        if ((formattedError as Record<string, unknown>)?.['message']?.toString().includes('Database') || 
+            (formattedError as Record<string, unknown>)?.['message']?.toString().includes('Internal') ||
+            (formattedError as Record<string, Record<string, unknown>>)?.['extensions']?.['code'] === 'INTERNAL_SERVER_ERROR') {
           return {
             message: 'An internal error occurred',
             code: 'INTERNAL_ERROR',
             extensions: {
               code: 'INTERNAL_ERROR',
-              requestId: (error as any)?.extensions?.requestId,
+              requestId: (error as Record<string, Record<string, unknown>>)?.['extensions']?.['requestId'],
             },
           };
         }
       }
 
       return {
-        message: formattedError.message,
-        code: formattedError.extensions?.code || 'UNKNOWN_ERROR',
-        locations: formattedError.locations,
-        path: formattedError.path,
+        message: (formattedError as Record<string, unknown>)?.['message'],
+        code: (formattedError as Record<string, Record<string, unknown>>)?.['extensions']?.['code'] || 'UNKNOWN_ERROR',
+        locations: (formattedError as Record<string, unknown>)?.['locations'],
+        path: (formattedError as Record<string, unknown>)?.['path'],
         extensions: {
-          code: formattedError.extensions?.code || 'UNKNOWN_ERROR',
-          requestId: (error as any)?.extensions?.requestId,
-          field: formattedError.extensions?.field,
+          code: (formattedError as Record<string, Record<string, unknown>>)?.['extensions']?.['code'] || 'UNKNOWN_ERROR',
+          requestId: (error as Record<string, Record<string, unknown>>)?.['extensions']?.['requestId'],
+          field: (formattedError as Record<string, Record<string, unknown>>)?.['extensions']?.['field'],
         },
       };
     },
@@ -229,36 +256,88 @@ export async function createApolloServer(fastify: FastifyInstance): Promise<Apol
   return server;
 }
 
+// Import DataLoader factory
+import { createDataLoaders as createDataLoadersFactory } from './dataLoaderFactory.js';
+
+/**
+ * Creates data loaders for efficient data fetching
+ */
+async function createDataLoaders(context: Pick<GraphQLContext, 'requestId'>): Promise<GraphQLContext['dataloaders']> {
+  return await createDataLoadersFactory(context.requestId);
+}
+
+/**
+ * Request interface for GraphQL context
+ */
+interface GraphQLRequest {
+  id?: string;
+  headers: {
+    authorization?: string;
+    [key: string]: string | string[] | undefined;
+  };
+}
+
 /**
  * Context function to extract user information from request
  */
-export async function createGraphQLContext({ request }: { request: any }): Promise<GraphQLContext> {
+export async function createGraphQLContext({ request }: { request: GraphQLRequest }): Promise<GraphQLContext> {
   const context: GraphQLContext = {
     requestId: request.id || 'unknown',
   };
 
-  // Extract user from JWT if present
+  // Extract and validate JWT from Authorization header
   try {
     const authHeader = request.headers.authorization;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
+    if (authHeader && typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
       const token = authHeader.substring(7);
       
-      // Verify JWT token (this will be implemented in task 114)
-      // For now, we'll just extract the user from the request if it exists
-      if (request.user) {
+      // Import JWT utilities
+      const { verifyToken } = await import('../../shared/utils/auth.js');
+      
+      // Verify and decode JWT token
+      const { payload, expired } = verifyToken(token);
+      
+      // Check if token is expired
+      if (expired) {
+        logger.warn('Expired JWT token in GraphQL request', {
+          requestId: context.requestId,
+          userId: payload.userId,
+        });
+        // Don't attach user to context for expired tokens
+      } else {
+        // Attach validated user context
         context.user = {
-          id: request.user.id,
-          email: request.user.email,
-          role: request.user.role,
+          id: payload.userId,
+          email: payload.email,
+          role: payload.role,
         };
+        
+        logger.debug('Authenticated GraphQL request', {
+          requestId: context.requestId,
+          userId: payload.userId,
+          role: payload.role,
+        });
       }
     }
   } catch (error) {
     // Log authentication errors but don't fail the request
+    // This allows unauthenticated queries to still work
     logger.warn('Failed to authenticate GraphQL request', {
       error: error instanceof Error ? error.message : String(error),
       requestId: context.requestId,
+      authHeader: request.headers.authorization ? 'present' : 'missing',
     });
+  }
+
+  // Add data loaders to context
+  try {
+    context.dataloaders = await createDataLoaders(context);
+  } catch (error) {
+    logger.error('Failed to create data loaders for GraphQL context', {
+      error: error instanceof Error ? error.message : String(error),
+      requestId: context.requestId,
+    });
+    // Continue without data loaders - resolvers should handle gracefully
   }
 
   return context;

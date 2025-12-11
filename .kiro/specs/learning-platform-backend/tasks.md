@@ -1845,7 +1845,12 @@ This implementation plan breaks down the development of the educational learning
   - Integrate with Fastify application
   - _Requirements: 21.1_
 
-- [ ] 114. Implement GraphQL context builder
+- [x] 114. Implement GraphQL context builder
+
+
+
+
+
   - Extract JWT from Authorization header
   - Validate and decode JWT
   - Attach user context to GraphQL context
@@ -1854,7 +1859,12 @@ This implementation plan breaks down the development of the educational learning
   - Handle authentication errors
   - _Requirements: 21.7_
 
-- [ ] 115. Implement DataLoader for N+1 prevention
+- [x] 115. Implement DataLoader for N+1 prevention
+
+
+
+
+
   - Create DataLoader instances for common queries
   - Implement user loader for batching user queries
   - Implement course loader for batching course queries
