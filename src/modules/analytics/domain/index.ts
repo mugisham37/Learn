@@ -5,5 +5,5 @@
  * including entities, value objects, and domain services.
  */
 
-// Domain entities and value objects will be implemented in future tasks
-export {};
+// Domain entities
+export * from './entities/index.js';
