@@ -9,6 +9,38 @@
  */
 
 import { 
+  Notification, 
+  NotificationType 
+} from '../../../../infrastructure/database/schema/notifications.schema.js';
+import {
+  ValidationError,
+  NotFoundError,
+  AuthorizationError,
+  ExternalServiceError,
+} from '../../../../shared/errors/index.js';
+import { 
+  IEmailService,
+  EmailOptions,
+} from '../../../../shared/services/IEmailService.js';
+import { 
+  IRealtimeService 
+} from '../../../../shared/services/IRealtimeService.js';
+import { logger } from '../../../../shared/utils/logger.js';
+import { 
+  NotificationPreferences 
+} from '../../../users/domain/value-objects/UserProfile.js';
+import { 
+  IUserProfileRepository 
+} from '../../../users/infrastructure/repositories/IUserProfileRepository.js';
+import { 
+  IUserRepository 
+} from '../../../users/infrastructure/repositories/IUserRepository.js';
+import { 
+  INotificationRepository,
+  CreateNotificationDTO,
+} from '../../infrastructure/repositories/INotificationRepository.js';
+
+import { 
   INotificationService,
   CreateNotificationData,
   BatchNotificationData,
@@ -17,42 +49,6 @@ import {
   NotificationEmailData,
   PushNotificationData,
 } from './INotificationService.js';
-
-import { 
-  INotificationRepository,
-  CreateNotificationDTO,
-} from '../../infrastructure/repositories/INotificationRepository.js';
-
-import { 
-  Notification, 
-  NotificationType 
-} from '../../../../infrastructure/database/schema/notifications.schema.js';
-
-import { 
-  NotificationPreferences 
-} from '../../../users/domain/value-objects/UserProfile.js';
-
-import { 
-  IUserProfileRepository 
-} from '../../../users/infrastructure/repositories/IUserProfileRepository.js';
-
-import { 
-  IEmailService,
-  EmailOptions,
-} from '../../../../shared/services/IEmailService.js';
-
-import { 
-  IRealtimeService 
-} from '../../../../shared/services/IRealtimeService.js';
-
-import {
-  ValidationError,
-  NotFoundError,
-  AuthorizationError,
-  ExternalServiceError,
-} from '../../../../shared/errors/index.js';
-
-import { logger } from '../../../../shared/utils/logger.js';
 
 /**
  * Notification Service Implementation
@@ -68,6 +64,7 @@ export class NotificationService implements INotificationService {
   constructor(
     private readonly notificationRepository: INotificationRepository,
     private readonly userProfileRepository: IUserProfileRepository,
+    private readonly userRepository: IUserRepository,
     private readonly emailService?: IEmailService,
     private readonly realtimeService?: IRealtimeService
   ) {}
@@ -111,8 +108,7 @@ export class NotificationService implements INotificationService {
         errors: [],
       };
 
-      // Get user notification preferences
-      const preferences = userProfile.notificationPreferences || {};
+      // User notification preferences are checked in individual channel methods
 
       // Send real-time notification (always sent for in-app notifications)
       try {
@@ -122,7 +118,7 @@ export class NotificationService implements INotificationService {
             type: notification.notificationType,
             title: notification.title,
             content: notification.content,
-            actionUrl: notification.actionUrl,
+            actionUrl: notification.actionUrl || undefined,
             priority: notification.priority as 'low' | 'medium' | 'high',
             timestamp: notification.createdAt.toISOString(),
           });
@@ -211,6 +207,12 @@ export class NotificationService implements INotificationService {
         return;
       }
 
+      // Get recipient user for email address
+      const user = await this.userRepository.findById(notification.recipientId);
+      if (!user) {
+        throw new NotFoundError('User', notification.recipientId);
+      }
+
       // Get recipient profile for name
       const userProfile = await this.userProfileRepository.findByUserId(notification.recipientId);
       if (!userProfile) {
@@ -225,7 +227,7 @@ export class NotificationService implements INotificationService {
 
       // Send email
       const emailOptions: EmailOptions = {
-        to: userProfile.userId, // This should be the email address, but we need to get it from user
+        to: user.email, // Use the actual email address from user entity
         templateId,
         templateData: emailData,
         priority: notification.priority === 'urgent' ? 'urgent' : 
@@ -293,6 +295,9 @@ export class NotificationService implements INotificationService {
         notificationId: notification.id,
         pushData,
       });
+
+      // Simulate async operation for future implementation
+      await Promise.resolve();
 
       // Future implementation will:
       // 1. Get user's device tokens from database
@@ -411,11 +416,14 @@ export class NotificationService implements INotificationService {
         try {
           if (group.notifications.length === 1) {
             // Single notification - process normally
-            const result = await this.createNotification(group.notifications[0]);
-            const notification = await this.notificationRepository.findById(result.notificationId);
-            if (notification) {
-              createdNotifications.push(notification);
-              deliveryResults.push(result);
+            const singleNotification = group.notifications[0];
+            if (singleNotification) {
+              const result = await this.createNotification(singleNotification);
+              const notification = await this.notificationRepository.findById(result.notificationId);
+              if (notification) {
+                createdNotifications.push(notification);
+                deliveryResults.push(result);
+              }
             }
           } else {
             // Multiple notifications - create digest
@@ -521,13 +529,13 @@ export class NotificationService implements INotificationService {
       const preferenceKey = this.mapNotificationTypeToPreferenceKey(notificationType);
       
       // Check channel-specific preference
-      const channelPreferences = preferences[channel];
+      const channelPreferences = preferences[channel] as Record<string, boolean> | undefined;
       if (!channelPreferences) {
         // Default to enabled if no preferences set
         return true;
       }
 
-      const isEnabled = channelPreferences[preferenceKey];
+      const isEnabled = channelPreferences[preferenceKey] as boolean | undefined;
       
       // Default to enabled if preference not explicitly set
       return isEnabled !== false;
@@ -572,7 +580,7 @@ export class NotificationService implements INotificationService {
       recipientName,
       notificationTitle: notification.title,
       notificationContent: notification.content,
-      actionUrl: notification.actionUrl,
+      actionUrl: notification.actionUrl || undefined,
       actionButtonText: this.getActionButtonText(notification.notificationType),
       unsubscribeUrl: `/settings/notifications`, // TODO: Generate proper unsubscribe URL
     };
@@ -592,10 +600,10 @@ export class NotificationService implements INotificationService {
       data: {
         notificationId: notification.id,
         type: notification.notificationType,
-        actionUrl: notification.actionUrl,
-        ...notification.metadata,
+        actionUrl: notification.actionUrl || undefined,
+        ...(notification.metadata as Record<string, unknown>),
       },
-      clickAction: notification.actionUrl,
+      clickAction: notification.actionUrl || undefined,
     };
   }
 
@@ -643,10 +651,12 @@ export class NotificationService implements INotificationService {
     }
 
     return Array.from(groups.entries()).map(([key, notifications]) => {
-      const [recipientId, type] = key.split(':');
+      const parts = key.split(':');
+      const recipientId = parts[0]!; // Use non-null assertion since we know the key format
+      const type = parts[1]! as NotificationType;
       return {
         recipientId,
-        type: type as NotificationType,
+        type,
         notifications,
       };
     });
@@ -707,8 +717,8 @@ export class NotificationService implements INotificationService {
   /**
    * Maps notification type to user preference key
    */
-  private mapNotificationTypeToPreferenceKey(notificationType: NotificationType): keyof NotificationPreferences['email'] {
-    const keyMap: Record<NotificationType, keyof NotificationPreferences['email']> = {
+  private mapNotificationTypeToPreferenceKey(notificationType: NotificationType): string {
+    const keyMap: Record<NotificationType, string> = {
       'new_message': 'newMessage',
       'assignment_due': 'assignmentDue',
       'grade_posted': 'gradePosted',

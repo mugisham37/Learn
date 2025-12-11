@@ -155,14 +155,14 @@ export class UserProfile {
    * Gets the bio
    */
   get bio(): string | undefined {
-    return this._bio;
+    return this._bio || undefined;
   }
 
   /**
    * Gets the avatar URL
    */
   get avatarUrl(): string | undefined {
-    return this._avatarUrl;
+    return this._avatarUrl || undefined;
   }
 
   /**
@@ -183,14 +183,14 @@ export class UserProfile {
    * Gets the notification preferences
    */
   get notificationPreferences(): NotificationPreferences {
-    return { ...this._notificationPreferences };
+    return this._notificationPreferences ? { ...this._notificationPreferences } : {};
   }
 
   /**
    * Gets the privacy settings
    */
   get privacySettings(): PrivacySettings {
-    return { ...this._privacySettings };
+    return this._privacySettings ? { ...this._privacySettings } : {};
   }
 
   /**
