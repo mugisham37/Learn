@@ -181,7 +181,11 @@ export async function createServer(): Promise<FastifyInstance> {
       version: '1.0.0',
       environment: config.nodeEnv,
       documentation: config.features.enableApiDocs ? '/docs' : undefined,
-      graphql: '/graphql',
+      graphql: {
+        endpoint: '/graphql',
+        playground: config.nodeEnv !== 'production' ? '/graphql' : undefined,
+        introspection: config.nodeEnv !== 'production',
+      },
     };
   });
 
@@ -216,6 +220,14 @@ export async function createServer(): Promise<FastifyInstance> {
   // Register auth routes
   await registerAuthRoutes(server, authService);
   logger.info('Authentication REST routes registered successfully');
+
+  // Register Apollo Server GraphQL plugin
+  const { apolloServerPlugin } = await import('./infrastructure/graphql/index.js');
+  await server.register(apolloServerPlugin, {
+    path: '/graphql',
+    cors: true,
+  });
+  logger.info('Apollo Server GraphQL endpoint registered successfully at /graphql');
 
   return server;
 }
