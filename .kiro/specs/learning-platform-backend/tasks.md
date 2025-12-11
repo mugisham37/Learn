@@ -1412,7 +1412,11 @@ This implementation plan breaks down the development of the educational learning
 
 ## Phase 12: Analytics Module - Data Aggregation and Reporting
 
-- [ ] 86. Implement analytics repository (infrastructure layer)
+- [x] 86. Implement analytics repository (infrastructure layer)
+
+
+
+
   - Create IAnalyticsRepository interface
   - Implement CourseAnalyticsRepository with Drizzle queries
   - Implement StudentAnalyticsRepository

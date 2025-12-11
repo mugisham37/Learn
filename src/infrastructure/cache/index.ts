@@ -38,6 +38,7 @@ export const CacheTTL = {
   LONG: 3600, // 1 hour - analytics, search results
   VERY_LONG: 86400, // 24 hours - static content
   SESSION: 2592000, // 30 days - refresh tokens
+  ANALYTICS: 300, // 5 minutes - analytics data
 } as const;
 
 /**
