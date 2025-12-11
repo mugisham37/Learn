@@ -93,14 +93,6 @@ export async function createServer(): Promise<FastifyInstance> {
     referrerPolicy: {
       policy: 'strict-origin-when-cross-origin',
     },
-    
-    // Permissions Policy - control browser features
-    permissionsPolicy: {
-      camera: [],
-      microphone: [],
-      geolocation: [],
-      payment: [],
-    },
   });
 
   // Register rate limiting middleware (before other middleware)

@@ -2,7 +2,7 @@
  * Application Configuration
  * 
  * Centralized configuration management loading from environment variables
- * with validation and type safety.
+ * with validation and type safety. Supports AWS Secrets Manager for production.
  */
 
 import dotenv from 'dotenv';
@@ -186,6 +186,7 @@ export const config = {
 
 /**
  * Validates the configuration on startup
+ * Note: This is a basic validation. Full secret validation is done by SecretsManager
  */
 export function validateConfig(): void {
   const requiredInProduction = [
@@ -205,4 +206,29 @@ export function validateConfig(): void {
   // Note: We can't import logger here due to circular dependency
   // Logger will be initialized after config is loaded
   console.log('Configuration validated successfully');
+}
+
+/**
+ * Enhanced configuration with secrets manager integration
+ * This will be used after secrets manager is initialized
+ */
+export interface EnhancedConfig extends typeof config {
+  secrets: {
+    getSecret: (name: string) => string | undefined;
+    getRequiredSecret: (name: string) => string;
+  };
+}
+
+/**
+ * Create enhanced configuration with secrets manager
+ * This should be called after secrets manager is initialized
+ */
+export function createEnhancedConfig(secretsManager: any): EnhancedConfig {
+  return {
+    ...config,
+    secrets: {
+      getSecret: (name: string) => secretsManager.getSecret(name),
+      getRequiredSecret: (name: string) => secretsManager.getRequiredSecret(name),
+    },
+  };
 }

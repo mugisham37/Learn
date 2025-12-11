@@ -24,8 +24,9 @@ async function bootstrap(): Promise<void> {
       port: config.port,
     });
     
-    // Validate configuration
-    validateConfig();
+    // Initialize startup service (includes secrets management, config validation, etc.)
+    const { startupService } = await import('./shared/services/StartupService.js');
+    await startupService.initialize();
     
     // Create and configure Fastify server
     server = await createServer();
@@ -70,6 +71,10 @@ async function shutdown(signal: string): Promise<void> {
       // Then shutdown infrastructure
       const { shutdownInfrastructure } = await import('./infrastructure/index.js');
       await shutdownInfrastructure();
+      
+      // Finally shutdown startup service
+      const { startupService } = await import('./shared/services/StartupService.js');
+      await startupService.shutdown();
       
       logger.info('Graceful shutdown completed');
       process.exit(0);

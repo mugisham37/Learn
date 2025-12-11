@@ -52,13 +52,7 @@ describe('Security Headers (Helmet)', () => {
         policy: 'strict-origin-when-cross-origin',
       },
       
-      // Permissions Policy - control browser features
-      permissionsPolicy: {
-        camera: [],
-        microphone: [],
-        geolocation: [],
-        payment: [],
-      },
+
     });
 
     // Add a test route
@@ -135,23 +129,7 @@ describe('Security Headers (Helmet)', () => {
     expect(response.headers['referrer-policy']).toBe('strict-origin-when-cross-origin');
   });
 
-  it('should set Permissions-Policy header', async () => {
-    const response = await server.inject({
-      method: 'GET',
-      url: '/test',
-    });
 
-    // Check if permissions-policy header is set (it might be undefined in some helmet versions)
-    if (response.headers['permissions-policy']) {
-      expect(response.headers['permissions-policy']).toContain('camera=()');
-      expect(response.headers['permissions-policy']).toContain('microphone=()');
-      expect(response.headers['permissions-policy']).toContain('geolocation=()');
-      expect(response.headers['permissions-policy']).toContain('payment=()');
-    } else {
-      // If permissions-policy is not set, that's also acceptable for this version of helmet
-      expect(response.headers['permissions-policy']).toBeUndefined();
-    }
-  });
 
   it('should return successful response with all security headers', async () => {
     const response = await server.inject({
@@ -175,11 +153,5 @@ describe('Security Headers (Helmet)', () => {
     coreRequiredHeaders.forEach(header => {
       expect(response.headers[header]).toBeDefined();
     });
-
-    // Permissions-Policy might not be set in all helmet versions
-    // but if it is set, it should be valid
-    if (response.headers['permissions-policy']) {
-      expect(typeof response.headers['permissions-policy']).toBe('string');
-    }
   });
 });

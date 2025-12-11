@@ -13,6 +13,18 @@ import { checkElasticsearchHealth } from '../../infrastructure/search/index.js';
 import { checkRateLimitHealth } from '../middleware/rateLimiting.js';
 
 /**
+ * Check secrets manager health
+ */
+async function checkSecretsManagerHealth(): Promise<boolean> {
+  try {
+    const { secretsManager } = await import('../services/SecretsManager.js');
+    return await secretsManager.healthCheck();
+  } catch (error) {
+    return false;
+  }
+}
+
+/**
  * Overall health status
  */
 export type HealthStatus = 'healthy' | 'degraded' | 'unhealthy';
@@ -41,6 +53,7 @@ export interface SystemHealth {
     sessionRedis: ServiceHealth;
     elasticsearch: ServiceHealth;
     rateLimit: ServiceHealth;
+    secretsManager: ServiceHealth;
   };
   summary: {
     healthy: number;
@@ -53,7 +66,7 @@ export interface SystemHealth {
  * Services that are critical for application functionality
  * If any of these fail, the overall status should be 'unhealthy'
  */
-const CRITICAL_SERVICES = ['database', 'redis'] as const;
+const CRITICAL_SERVICES = ['database', 'redis', 'secretsManager'] as const;
 
 /**
  * Services that are important but not critical
@@ -74,12 +87,14 @@ export async function performSystemHealthCheck(): Promise<SystemHealth> {
     sessionRedisHealth,
     elasticsearchHealth,
     rateLimitHealth,
+    secretsManagerHealth,
   ] = await Promise.allSettled([
     checkDatabaseHealth(),
     checkRedisHealth(),
     checkSessionRedisHealth(),
     checkElasticsearchHealth(),
     checkRateLimitHealth(),
+    checkSecretsManagerHealth(),
   ]);
 
   // Process database health check result
@@ -159,12 +174,26 @@ export async function performSystemHealthCheck(): Promise<SystemHealth> {
           : 'Rate limiting health check failed',
       };
 
+  // Process secrets manager health check result
+  const secretsManager: ServiceHealth = secretsManagerHealth.status === 'fulfilled'
+    ? {
+        healthy: secretsManagerHealth.value,
+        error: secretsManagerHealth.value ? undefined : 'Secrets manager health check failed',
+      }
+    : {
+        healthy: false,
+        error: secretsManagerHealth.reason instanceof Error 
+          ? secretsManagerHealth.reason.message 
+          : 'Secrets manager health check failed',
+      };
+
   const services = {
     database,
     redis,
     sessionRedis,
     elasticsearch,
     rateLimit,
+    secretsManager,
   };
 
   // Calculate overall health status
