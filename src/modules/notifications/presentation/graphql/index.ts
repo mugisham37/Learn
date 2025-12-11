@@ -5,3 +5,4 @@
  */
 
 export { notificationTypeDefs } from './schema';
+export { notificationResolvers } from './resolvers';

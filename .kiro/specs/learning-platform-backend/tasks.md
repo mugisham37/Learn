@@ -1261,7 +1261,11 @@ This implementation plan breaks down the development of the educational learning
   - Create subscription for notificationReceived
   - _Requirements: 21.1, 21.2, 21.4_
 
-- [ ] 75. Implement GraphQL resolvers for notifications module
+- [x] 75. Implement GraphQL resolvers for notifications module
+
+
+
+
   - Implement notification query resolvers with filtering
   - Implement mark as read resolver
   - Implement preference update resolver
