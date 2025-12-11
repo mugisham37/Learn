@@ -1293,7 +1293,13 @@ This implementation plan breaks down the development of the educational learning
   - Configure Stripe API keys from environment
   - _Requirements: 11.1, 11.2_
 
-- [ ] 78. Implement payment repository (infrastructure layer)
+- [x] 78. Implement payment repository (infrastructure layer)
+
+
+
+
+
+
   - Create IPaymentRepository interface
   - Implement PaymentRepository with Drizzle queries
   - Implement subscription repository
