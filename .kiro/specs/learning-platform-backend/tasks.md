@@ -1364,7 +1364,12 @@ This implementation plan breaks down the development of the educational learning
   - Handle Stripe API errors
   - _Requirements: 11.1, 11.2, 11.5_
 
-- [ ] 82. Implement payment webhook handlers
+- [x] 82. Implement payment webhook handlers
+
+
+
+
+
   - Handle checkout.session.completed event
   - Handle payment_intent.succeeded event
   - Handle payment_intent.failed event

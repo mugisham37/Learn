@@ -10,22 +10,48 @@ import { StripeClientFactory } from '../../infrastructure/clients/StripeClientFa
 import { StripeWebhookHandler } from '../../infrastructure/webhooks/StripeWebhookHandler';
 import { logger } from '../../../../shared/utils/logger';
 
-export interface WebhookRequest extends FastifyRequest {
-  body: Buffer;
-  headers: {
-    'stripe-signature': string;
-  };
-}
+
 
 /**
  * Registers Stripe webhook routes with the Fastify instance
  */
 export async function registerWebhookRoutes(fastify: FastifyInstance): Promise<void> {
   const stripeClient = StripeClientFactory.getInstance();
-  const webhookHandler = new StripeWebhookHandler();
+  
+  // Get payment service from dependency injection container
+  // For now, we'll create it manually - in a real app this would come from DI
+  const { PaymentService } = await import('../../application/services/PaymentService.js');
+  const { PaymentRepository } = await import('../../infrastructure/repositories/PaymentRepository.js');
+  const { SubscriptionRepository } = await import('../../infrastructure/repositories/SubscriptionRepository.js');
+  const { RefundRepository } = await import('../../infrastructure/repositories/RefundRepository.js');
+  const { EnrollmentRepository } = await import('../../../enrollments/infrastructure/repositories/EnrollmentRepository.js');
+  const { CourseRepository } = await import('../../../courses/infrastructure/repositories/CourseRepository.js');
+  const { UserRepository } = await import('../../../users/infrastructure/repositories/UserRepository.js');
+  
+  // Create repositories
+  const paymentRepository = new PaymentRepository();
+  const subscriptionRepository = new SubscriptionRepository();
+  const refundRepository = new RefundRepository();
+  const enrollmentRepository = new EnrollmentRepository();
+  const courseRepository = new CourseRepository();
+  const userRepository = new UserRepository();
+  
+  // Create payment service (notification service is optional)
+  const paymentService = new PaymentService(
+    paymentRepository,
+    subscriptionRepository,
+    refundRepository,
+    enrollmentRepository,
+    courseRepository,
+    userRepository,
+    stripeClient,
+    undefined // notificationService - optional for webhook processing
+  );
+  
+  const webhookHandler = new StripeWebhookHandler(paymentService);
 
   // Add content type parser for raw body (needed for Stripe webhook signature verification)
-  fastify.addContentTypeParser('application/json', { parseAs: 'buffer' }, (req, body, done) => {
+  fastify.addContentTypeParser('application/json', { parseAs: 'buffer' }, (_req, body, done) => {
     done(null, body);
   });
 
@@ -40,9 +66,9 @@ export async function registerWebhookRoutes(fastify: FastifyInstance): Promise<v
         required: ['stripe-signature'],
       },
     },
-  }, async (request: WebhookRequest, reply: FastifyReply) => {
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-      const signature = request.headers['stripe-signature'];
+      const signature = request.headers['stripe-signature'] as string;
       
       if (!signature) {
         logger.warn('Stripe webhook received without signature');
@@ -50,7 +76,7 @@ export async function registerWebhookRoutes(fastify: FastifyInstance): Promise<v
       }
 
       // Get raw body as string for signature verification
-      const payload = request.body.toString();
+      const payload = (request.body as Buffer).toString();
 
       if (!payload) {
         logger.warn('Stripe webhook received without payload');
