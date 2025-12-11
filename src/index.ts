@@ -30,12 +30,14 @@ async function bootstrap(): Promise<void> {
     // Create and configure Fastify server
     server = await createServer();
     
+    // Initialize infrastructure (database, Redis, Elasticsearch)
+    const { initializeInfrastructure } = await import('./infrastructure/index.js');
+    await initializeInfrastructure();
+    
     // Register module routes
     const { registerModules } = await import('./modules/index.js');
     await registerModules(server);
     
-    // TODO: Initialize database connection
-    // TODO: Initialize Redis connection
     // TODO: Register GraphQL server
     
     // Start the server
@@ -62,7 +64,13 @@ async function shutdown(signal: string): Promise<void> {
   
   if (server) {
     try {
+      // Stop the server first
       await stopServer(server);
+      
+      // Then shutdown infrastructure
+      const { shutdownInfrastructure } = await import('./infrastructure/index.js');
+      await shutdownInfrastructure();
+      
       logger.info('Graceful shutdown completed');
       process.exit(0);
     } catch (error) {

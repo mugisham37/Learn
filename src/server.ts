@@ -72,20 +72,59 @@ export async function createServer(): Promise<FastifyInstance> {
   });
 
   // Deep health check endpoint (checks dependencies)
-  server.get('/health/deep', () => {
-    const health = {
-      status: 'ok',
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-      environment: config.nodeEnv,
-      checks: {
-        database: 'not_implemented',
-        redis: 'not_implemented',
-      },
-    };
+  server.get('/health/deep', async (request, reply) => {
+    try {
+      const { performSystemHealthCheck } = await import('./shared/utils/health.js');
+      const health = await performSystemHealthCheck();
+      
+      // Set appropriate HTTP status based on health
+      const statusCode = health.status === 'healthy' ? 200 
+        : health.status === 'degraded' ? 200 
+        : 503;
+      
+      return reply.code(statusCode).send(health);
+    } catch (error) {
+      logger.error('Health check failed', { error });
+      return reply.code(503).send({
+        status: 'unhealthy',
+        timestamp: new Date().toISOString(),
+        error: 'Health check system failure',
+      });
+    }
+  });
 
-    // TODO: Add actual health checks for database and redis
-    return health;
+  // Readiness probe endpoint (for Kubernetes)
+  server.get('/health/ready', async (request, reply) => {
+    try {
+      const { checkReadiness } = await import('./shared/utils/health.js');
+      const readiness = await checkReadiness();
+      
+      const statusCode = readiness.ready ? 200 : 503;
+      return reply.code(statusCode).send(readiness);
+    } catch (error) {
+      logger.error('Readiness check failed', { error });
+      return reply.code(503).send({
+        ready: false,
+        error: 'Readiness check system failure',
+      });
+    }
+  });
+
+  // Liveness probe endpoint (for Kubernetes)
+  server.get('/health/live', async (request, reply) => {
+    try {
+      const { checkLiveness } = await import('./shared/utils/health.js');
+      const liveness = await checkLiveness();
+      
+      const statusCode = liveness.alive ? 200 : 503;
+      return reply.code(statusCode).send(liveness);
+    } catch (error) {
+      logger.error('Liveness check failed', { error });
+      return reply.code(503).send({
+        alive: false,
+        error: 'Liveness check system failure',
+      });
+    }
   });
 
   // Root endpoint
