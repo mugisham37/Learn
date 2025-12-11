@@ -170,12 +170,16 @@ export class SecretsManager {
     
     // Initialize AWS Secrets Manager client for production
     if (this.isProduction) {
+      // Use environment variables for initial AWS credentials to bootstrap secrets manager
+      const awsAccessKeyId = process.env.AWS_ACCESS_KEY_ID;
+      const awsSecretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
+      
       this.awsClient = new SecretsManagerClient({
         region: config.aws.region,
-        credentials: {
-          accessKeyId: config.aws.accessKeyId,
-          secretAccessKey: config.aws.secretAccessKey,
-        },
+        credentials: awsAccessKeyId && awsSecretAccessKey ? {
+          accessKeyId: awsAccessKeyId,
+          secretAccessKey: awsSecretAccessKey,
+        } : undefined, // Use default credential chain if not provided
       });
     }
   }

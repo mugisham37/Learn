@@ -14,6 +14,7 @@ import * as crypto from 'crypto';
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 
 import { config } from '../../config/index.js';
+import { secureConfig } from '../utils/secureConfig.js';
 import { AuthenticationError, ValidationError } from '../errors/index.js';
 import { logger } from '../utils/logger.js';
 
@@ -268,7 +269,7 @@ export async function registerCSRFProtection(fastify: FastifyInstance): Promise<
   // Register cookie plugin for cookie parsing
   const cookiePlugin = await import('@fastify/cookie');
   await fastify.register(cookiePlugin.default, {
-    secret: config.session.secret,
+    secret: secureConfig.getSessionSecret(),
   });
 
   // Add CSRF token endpoint

@@ -9,6 +9,7 @@ import winston from 'winston';
 import WinstonCloudWatch from 'winston-cloudwatch';
 
 import { config } from '../../config/index.js';
+import { secrets } from './secureConfig.js';
 
 /**
  * Sensitive fields that should be redacted from logs
@@ -174,26 +175,27 @@ function createLogger(): winston.Logger {
   // Only add if all required AWS credentials are present
   if (
     isProduction && 
-    config.aws.accessKeyId && 
-    config.aws.secretAccessKey &&
     config.cloudwatch.logGroup &&
     config.cloudwatch.logStream
   ) {
     try {
-      const cloudwatchTransport = new WinstonCloudWatch({
-        logGroupName: config.cloudwatch.logGroup,
-        logStreamName: config.cloudwatch.logStream,
-        awsRegion: config.aws.region,
-        awsAccessKeyId: config.aws.accessKeyId,
-        awsSecretKey: config.aws.secretAccessKey,
-        messageFormatter: (logObject) => {
-          // Format as JSON for CloudWatch
-          return JSON.stringify(logObject);
-        },
-        retentionInDays: 30,
-      });
-      
-      transports.push(cloudwatchTransport);
+      const awsConfig = secrets.getAwsConfig();
+      if (awsConfig.accessKeyId && awsConfig.secretAccessKey) {
+        const cloudwatchTransport = new WinstonCloudWatch({
+          logGroupName: config.cloudwatch.logGroup,
+          logStreamName: config.cloudwatch.logStream,
+          awsRegion: awsConfig.region,
+          awsAccessKeyId: awsConfig.accessKeyId,
+          awsSecretKey: awsConfig.secretAccessKey,
+          messageFormatter: (logObject) => {
+            // Format as JSON for CloudWatch
+            return JSON.stringify(logObject);
+          },
+          retentionInDays: 30,
+        });
+        
+        transports.push(cloudwatchTransport);
+      }
     } catch (error) {
       // Log to console if CloudWatch fails to initialize
       console.error('Failed to initialize CloudWatch transport:', error);

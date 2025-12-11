@@ -14,6 +14,7 @@ import {
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { config } from '../../config/index.js';
+import { secrets } from '../utils/secureConfig.js';
 import { ExternalServiceError } from '../errors/index.js';
 import { logger } from '../utils/logger.js';
 import { 
@@ -33,12 +34,13 @@ export class S3Service implements IS3Service {
   private readonly bucketName: string;
 
   constructor() {
+    const awsConfig = secrets.getAwsConfig();
     this.client = new S3Client({
       region: config.s3.bucketRegion,
-      credentials: {
-        accessKeyId: config.aws.accessKeyId,
-        secretAccessKey: config.aws.secretAccessKey,
-      },
+      credentials: awsConfig.accessKeyId && awsConfig.secretAccessKey ? {
+        accessKeyId: awsConfig.accessKeyId,
+        secretAccessKey: awsConfig.secretAccessKey,
+      } : undefined, // Use default credential chain if not provided
     });
     this.bucketName = config.s3.bucketName;
 

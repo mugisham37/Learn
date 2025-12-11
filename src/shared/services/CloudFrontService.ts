@@ -8,6 +8,7 @@
 import { getSignedUrl } from '@aws-sdk/cloudfront-signer';
 import { readFileSync } from 'fs';
 import { config } from '../../config/index.js';
+import { secrets } from '../utils/secureConfig.js';
 import { ExternalServiceError } from '../errors/index.js';
 import { logger } from '../utils/logger.js';
 import { 
@@ -30,12 +31,13 @@ export class CloudFrontService implements ICloudFrontService {
     this.keyPairId = config.cloudfront.keyPairId;
     
     // Load private key from file if path is provided
-    if (config.cloudfront.privateKeyPath) {
+    const cloudFrontConfig = secrets.getCloudFrontConfig();
+    if (cloudFrontConfig.privateKeyPath) {
       try {
-        this.privateKey = readFileSync(config.cloudfront.privateKeyPath, 'utf8');
+        this.privateKey = readFileSync(cloudFrontConfig.privateKeyPath, 'utf8');
       } catch (error) {
         logger.error('Failed to load CloudFront private key', {
-          path: config.cloudfront.privateKeyPath,
+          path: cloudFrontConfig.privateKeyPath,
           error: error instanceof Error ? error.message : 'Unknown error',
         });
         throw new Error('Failed to load CloudFront private key');

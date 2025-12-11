@@ -9,7 +9,7 @@
 
 import crypto from 'crypto';
 
-import { config } from '@config/index.js';
+import { secrets } from './secureConfig.js';
 import bcrypt from 'bcrypt';
 
 /**
@@ -66,7 +66,8 @@ export function generateAccessToken(
     type: 'access',
   };
 
-  const expiresIn = parseExpiry(config.jwt.accessTokenExpiry);
+  const jwtConfig = secrets.getJwtConfig();
+  const expiresIn = parseExpiry(jwtConfig.accessTokenExpiry);
   const iat = Math.floor(Date.now() / 1000);
   const exp = iat + expiresIn;
 
@@ -77,7 +78,7 @@ export function generateAccessToken(
 
   const encodedHeader = base64UrlEncode(JSON.stringify(header));
   const encodedPayload = base64UrlEncode(JSON.stringify({ ...payload, iat, exp }));
-  const signature = createSignature(`${encodedHeader}.${encodedPayload}`, config.jwt.secret);
+  const signature = createSignature(`${encodedHeader}.${encodedPayload}`, jwtConfig.secret);
 
   return `${encodedHeader}.${encodedPayload}.${signature}`;
 }
@@ -102,7 +103,8 @@ export function generateRefreshToken(
     type: 'refresh',
   };
 
-  const expiresIn = parseExpiry(config.jwt.refreshTokenExpiry);
+  const jwtConfig = secrets.getJwtConfig();
+  const expiresIn = parseExpiry(jwtConfig.refreshTokenExpiry);
   const iat = Math.floor(Date.now() / 1000);
   const exp = iat + expiresIn;
 
@@ -113,7 +115,7 @@ export function generateRefreshToken(
 
   const encodedHeader = base64UrlEncode(JSON.stringify(header));
   const encodedPayload = base64UrlEncode(JSON.stringify({ ...payload, iat, exp }));
-  const signature = createSignature(`${encodedHeader}.${encodedPayload}`, config.jwt.secret);
+  const signature = createSignature(`${encodedHeader}.${encodedPayload}`, jwtConfig.secret);
 
   return `${encodedHeader}.${encodedPayload}.${signature}`;
 }
@@ -156,7 +158,7 @@ export function verifyToken(token: string): VerifiedToken {
   // Verify signature
   const expectedSignature = createSignature(
     `${encodedHeader}.${encodedPayload}`,
-    config.jwt.secret
+    secrets.getJwtConfig().secret
   );
 
   if (signature !== expectedSignature) {

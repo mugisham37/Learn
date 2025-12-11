@@ -13,6 +13,7 @@ import { FastifyInstance } from 'fastify';
 import { verify } from 'jsonwebtoken';
 
 import { config } from '../../config/index.js';
+import { secrets } from '../../shared/utils/secureConfig.js';
 import { redis } from '../cache/index.js';
 import { logger } from '../../shared/utils/logger.js';
 
@@ -189,7 +190,7 @@ async function authenticateSocket(socket: any, next: (err?: Error) => void): Pro
     }
 
     // Verify JWT token
-    const decoded = verify(token, config.jwt.secret) as {
+    const decoded = verify(token, secrets.getJwtConfig().secret) as {
       userId: string;
       role: 'student' | 'educator' | 'admin';
       enrolledCourses?: string[];

@@ -7,6 +7,7 @@
 
 import { SESClient, SendEmailCommand, SendBulkTemplatedEmailCommand } from '@aws-sdk/client-ses';
 import { config } from '../../config';
+import { secrets } from '../utils/secureConfig';
 import { logger } from '../utils/logger';
 import { 
   IEmailService, 
@@ -40,11 +41,12 @@ export class SESEmailService implements IEmailService {
    * Initialize AWS SES client
    */
   private initializeSES(): void {
+    const awsConfig = secrets.getAwsConfig();
     this.sesClient = new SESClient({
       region: config.ses.region,
-      credentials: config.aws.accessKeyId && config.aws.secretAccessKey ? {
-        accessKeyId: config.aws.accessKeyId,
-        secretAccessKey: config.aws.secretAccessKey
+      credentials: awsConfig.accessKeyId && awsConfig.secretAccessKey ? {
+        accessKeyId: awsConfig.accessKeyId,
+        secretAccessKey: awsConfig.secretAccessKey
       } : undefined // Use default credential chain if not provided
     });
 

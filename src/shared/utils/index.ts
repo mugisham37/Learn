@@ -73,3 +73,6 @@ export * from './logger.js';
 
 // Export sanitization utilities
 export * from './sanitization.js';
+
+// Export secure configuration utilities
+export * from './secureConfig.js';

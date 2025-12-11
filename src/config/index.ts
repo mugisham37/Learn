@@ -3,6 +3,9 @@
  * 
  * Centralized configuration management loading from environment variables
  * with validation and type safety. Supports AWS Secrets Manager for production.
+ * 
+ * Note: This config loads basic environment variables. For secrets, use the
+ * SecretsManager after it's initialized during startup.
  */
 
 import dotenv from 'dotenv';
@@ -53,18 +56,15 @@ export const config = {
     db: parseInt(getEnv('REDIS_DB', '0'), 10),
   },
 
-  // JWT
+  // JWT (secret loaded via SecretsManager)
   jwt: {
-    secret: requireEnv('JWT_SECRET'),
     accessTokenExpiry: getEnv('JWT_ACCESS_TOKEN_EXPIRY', '15m'),
     refreshTokenExpiry: getEnv('JWT_REFRESH_TOKEN_EXPIRY', '30d'),
   },
 
-  // AWS
+  // AWS (credentials loaded via SecretsManager)
   aws: {
     region: getEnv('AWS_REGION', 'us-east-1'),
-    accessKeyId: getEnv('AWS_ACCESS_KEY_ID', ''),
-    secretAccessKey: getEnv('AWS_SECRET_ACCESS_KEY', ''),
   },
 
   // S3
@@ -73,11 +73,10 @@ export const config = {
     bucketRegion: getEnv('S3_BUCKET_REGION', 'us-east-1'),
   },
 
-  // CloudFront
+  // CloudFront (private key loaded via SecretsManager)
   cloudfront: {
     domain: getEnv('CLOUDFRONT_DOMAIN', ''),
     keyPairId: getEnv('CLOUDFRONT_KEY_PAIR_ID', ''),
-    privateKeyPath: getEnv('CLOUDFRONT_PRIVATE_KEY_PATH', ''),
   },
 
   // MediaConvert
@@ -87,23 +86,19 @@ export const config = {
     queueArn: getEnv('MEDIACONVERT_QUEUE_ARN', ''),
   },
 
-  // Elasticsearch
+  // Elasticsearch (password loaded via SecretsManager)
   elasticsearch: {
     node: getEnv('ELASTICSEARCH_NODE', 'http://localhost:9200'),
     username: getEnv('ELASTICSEARCH_USERNAME', 'elastic'),
-    password: getEnv('ELASTICSEARCH_PASSWORD', 'changeme'),
   },
 
-  // Stripe
+  // Stripe (secrets loaded via SecretsManager)
   stripe: {
-    secretKey: getEnv('STRIPE_SECRET_KEY', ''),
     publishableKey: getEnv('STRIPE_PUBLISHABLE_KEY', ''),
-    webhookSecret: getEnv('STRIPE_WEBHOOK_SECRET', ''),
   },
 
-  // Email (SendGrid)
+  // Email (SendGrid) - API key loaded via SecretsManager
   sendgrid: {
-    apiKey: getEnv('SENDGRID_API_KEY', ''),
     fromEmail: getEnv('SENDGRID_FROM_EMAIL', 'noreply@learningplatform.com'),
     fromName: getEnv('SENDGRID_FROM_NAME', 'Learning Platform'),
   },
@@ -114,10 +109,9 @@ export const config = {
     fromEmail: getEnv('SES_FROM_EMAIL', 'noreply@learningplatform.com'),
   },
 
-  // Firebase
+  // Firebase (private key loaded via SecretsManager)
   firebase: {
     projectId: getEnv('FIREBASE_PROJECT_ID', ''),
-    privateKey: getEnv('FIREBASE_PRIVATE_KEY', ''),
     clientEmail: getEnv('FIREBASE_CLIENT_EMAIL', ''),
   },
 
@@ -133,10 +127,7 @@ export const config = {
     credentials: getEnv('CORS_CREDENTIALS', 'true') === 'true',
   },
 
-  // Session
-  session: {
-    secret: requireEnv('SESSION_SECRET'),
-  },
+  // Session (secret loaded via SecretsManager)
 
   // File Upload
   fileUpload: {
@@ -144,10 +135,7 @@ export const config = {
     maxVideoSizeMb: parseInt(getEnv('MAX_VIDEO_SIZE_MB', '500'), 10),
   },
 
-  // Certificate
-  certificate: {
-    signingKey: getEnv('CERTIFICATE_SIGNING_KEY', ''),
-  },
+  // Certificate (signing key loaded via SecretsManager)
 
   // CloudWatch
   cloudwatch: {
@@ -162,12 +150,11 @@ export const config = {
     enableRateLimiting: getEnv('ENABLE_RATE_LIMITING', 'true') === 'true',
   },
 
-  // BullMQ
+  // BullMQ (Redis password loaded via SecretsManager)
   bullmq: {
     redis: {
       host: getEnv('BULLMQ_REDIS_HOST', 'localhost'),
       port: parseInt(getEnv('BULLMQ_REDIS_PORT', '6379'), 10),
-      password: getEnv('BULLMQ_REDIS_PASSWORD', ''),
     },
   },
 
@@ -186,13 +173,12 @@ export const config = {
 
 /**
  * Validates the configuration on startup
- * Note: This is a basic validation. Full secret validation is done by SecretsManager
+ * Note: This validates non-secret environment variables only.
+ * Secret validation is done by SecretsManager during startup.
  */
 export function validateConfig(): void {
   const requiredInProduction = [
     'DATABASE_URL',
-    'JWT_SECRET',
-    'SESSION_SECRET',
   ];
 
   if (config.nodeEnv === 'production') {
@@ -212,12 +198,12 @@ export function validateConfig(): void {
  * Enhanced configuration with secrets manager integration
  * This will be used after secrets manager is initialized
  */
-export interface EnhancedConfig extends typeof config {
+export type EnhancedConfig = typeof config & {
   secrets: {
     getSecret: (name: string) => string | undefined;
     getRequiredSecret: (name: string) => string;
   };
-}
+};
 
 /**
  * Create enhanced configuration with secrets manager

@@ -7,6 +7,7 @@
 
 import sgMail from '@sendgrid/mail';
 import { config } from '../../config';
+import { secrets } from '../utils/secureConfig';
 import { logger } from '../utils/logger';
 import { 
   IEmailService, 
@@ -39,12 +40,13 @@ export class SendGridEmailService implements IEmailService {
    * Initialize SendGrid configuration
    */
   private initializeSendGrid(): void {
-    if (!config.sendgrid.apiKey) {
+    const sendGridConfig = secrets.getSendGridConfig();
+    if (!sendGridConfig.apiKey) {
       logger.warn('SendGrid API key not configured. Email service will not function.');
       return;
     }
 
-    sgMail.setApiKey(config.sendgrid.apiKey);
+    sgMail.setApiKey(sendGridConfig.apiKey);
     logger.info('SendGrid email service initialized');
   }
 
@@ -54,7 +56,8 @@ export class SendGridEmailService implements IEmailService {
   public async sendTransactional(options: EmailOptions): Promise<EmailResult> {
     try {
       // Validate configuration
-      if (!config.sendgrid.apiKey) {
+      const sendGridConfig = secrets.getSendGridConfig();
+      if (!sendGridConfig.apiKey) {
         throw new Error('SendGrid API key not configured');
       }
 
@@ -162,7 +165,8 @@ export class SendGridEmailService implements IEmailService {
     templateData: EmailTemplateData
   ): Promise<BulkEmailResult> {
     try {
-      if (!config.sendgrid.apiKey) {
+      const sendGridConfig = secrets.getSendGridConfig();
+      if (!sendGridConfig.apiKey) {
         throw new Error('SendGrid API key not configured');
       }
 
@@ -308,7 +312,8 @@ export class SendGridEmailService implements IEmailService {
    */
   public async healthCheck(): Promise<boolean> {
     try {
-      if (!config.sendgrid.apiKey) {
+      const sendGridConfig = secrets.getSendGridConfig();
+      if (!sendGridConfig.apiKey) {
         return false;
       }
 
@@ -317,7 +322,7 @@ export class SendGridEmailService implements IEmailService {
       // This is a minimal request that doesn't send any emails
       const response = await fetch('https://api.sendgrid.com/v3/user/account', {
         headers: {
-          'Authorization': `Bearer ${config.sendgrid.apiKey}`,
+          'Authorization': `Bearer ${sendGridConfig.apiKey}`,
           'Content-Type': 'application/json'
         }
       });

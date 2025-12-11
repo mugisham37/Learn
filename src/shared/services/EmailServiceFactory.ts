@@ -6,6 +6,7 @@
  */
 
 import { config } from '../../config';
+import { secrets } from '../utils/secureConfig';
 import { logger } from '../utils/logger';
 import { IEmailService } from './IEmailService';
 import { SendGridEmailService } from './SendGridEmailService';
@@ -67,9 +68,12 @@ export class EmailServiceFactory {
     }
 
     // Auto-detect based on available configuration
-    const hasSendGridConfig = Boolean(config.sendgrid.apiKey);
+    const sendGridConfig = secrets.getSendGridConfig();
+    const awsConfig = secrets.getAwsConfig();
+    
+    const hasSendGridConfig = Boolean(sendGridConfig.apiKey);
     const hasSESConfig = Boolean(
-      config.aws.accessKeyId && config.aws.secretAccessKey
+      awsConfig.accessKeyId && awsConfig.secretAccessKey
     ) || Boolean(process.env.AWS_PROFILE); // AWS profile or IAM role
 
     // Prefer SendGrid if both are configured

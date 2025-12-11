@@ -9,6 +9,7 @@
 import Stripe from 'stripe';
 
 import { config } from '../../../../config';
+import { secrets } from '../../../../shared/utils/secureConfig';
 import { logger } from '../../../../shared/utils/logger';
 import { 
   IStripeClient, 
@@ -21,11 +22,12 @@ export class StripeClient implements IStripeClient {
   private stripe: Stripe;
 
   constructor() {
-    if (!config.stripe.secretKey) {
+    const stripeConfig = secrets.getStripeConfig();
+    if (!stripeConfig.secretKey) {
       throw new Error('Stripe secret key is required');
     }
 
-    this.stripe = new Stripe(config.stripe.secretKey, {
+    this.stripe = new Stripe(stripeConfig.secretKey, {
       apiVersion: '2023-10-16',
       typescript: true,
     });
@@ -249,14 +251,15 @@ export class StripeClient implements IStripeClient {
 
   verifyWebhookSignature(payload: string, signature: string): Stripe.Event {
     try {
-      if (!config.stripe.webhookSecret) {
+      const stripeConfig = secrets.getStripeConfig();
+      if (!stripeConfig.webhookSecret) {
         throw new Error('Stripe webhook secret is not configured');
       }
 
       const event = this.stripe.webhooks.constructEvent(
         payload,
         signature,
-        config.stripe.webhookSecret
+        stripeConfig.webhookSecret
       );
 
       logger.info('Stripe webhook signature verified', { eventType: event.type });

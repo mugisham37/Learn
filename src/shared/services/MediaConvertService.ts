@@ -31,6 +31,7 @@ import {
 } from '@aws-sdk/client-mediaconvert';
 import { logger } from '../utils/logger.js';
 import { config } from '../../config/index.js';
+import { secrets } from '../utils/secureConfig.js';
 import {
   ExternalServiceError,
   NotFoundError,
@@ -60,11 +61,12 @@ export class MediaConvertService implements IMediaConvertService {
   constructor() {
     // Initialize client with basic configuration
     // Endpoint will be set dynamically after discovery
+    const awsConfig = secrets.getAwsConfig();
     this.client = new MediaConvertClient({
-      region: config.aws.region,
-      credentials: config.aws.accessKeyId && config.aws.secretAccessKey ? {
-        accessKeyId: config.aws.accessKeyId,
-        secretAccessKey: config.aws.secretAccessKey,
+      region: awsConfig.region,
+      credentials: awsConfig.accessKeyId && awsConfig.secretAccessKey ? {
+        accessKeyId: awsConfig.accessKeyId,
+        secretAccessKey: awsConfig.secretAccessKey,
       } : undefined,
     });
   }
@@ -296,12 +298,13 @@ export class MediaConvertService implements IMediaConvertService {
       this.endpoint = response.Endpoints[0]?.Url || '';
 
       // Update client with discovered endpoint
+      const awsConfig = secrets.getAwsConfig();
       this.client = new MediaConvertClient({
-        region: config.aws.region,
+        region: awsConfig.region,
         endpoint: this.endpoint,
-        credentials: config.aws.accessKeyId && config.aws.secretAccessKey ? {
-          accessKeyId: config.aws.accessKeyId,
-          secretAccessKey: config.aws.secretAccessKey,
+        credentials: awsConfig.accessKeyId && awsConfig.secretAccessKey ? {
+          accessKeyId: awsConfig.accessKeyId,
+          secretAccessKey: awsConfig.secretAccessKey,
         } : undefined,
       });
 
