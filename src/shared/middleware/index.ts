@@ -413,3 +413,15 @@ export {
   type ValidationErrorDetail,
   type ValidationResult,
 } from './validation.js';
+
+// Export file upload security middleware
+export {
+  createFileUploadSecurityMiddleware,
+  createAvatarUploadMiddleware,
+  createCourseResourceUploadMiddleware,
+  createAssignmentSubmissionUploadMiddleware,
+  createVideoContentUploadMiddleware,
+  createDocumentUploadMiddleware,
+  type FileUploadMiddlewareOptions,
+  type RequestWithFileValidation,
+} from './fileUploadSecurity.js';

@@ -39,6 +39,8 @@ export { VideoProcessingService } from './VideoProcessingService.js';
 export { CloudFrontService } from './CloudFrontService.js';
 export { ContentService } from './ContentService.js';
 export { S3Service } from './S3Service.js';
+export { FileUploadSecurityService } from './FileUploadSecurityService.js';
+export { SecureFileUploadService } from './SecureFileUploadService.js';
 
 // Email services
 export { EmailTemplateService } from './EmailTemplateService.js';
@@ -85,6 +87,21 @@ export type {
 export type { ICloudFrontService } from './ICloudFrontService.js';
 export type { IContentService } from './IContentService.js';
 export type { IEmailService, EmailOptions, EmailResult, BulkEmailResult, EmailTemplateData } from './IEmailService.js';
+export type { IFileUploadSecurityService } from './IFileUploadSecurityService.js';
+export type { 
+  FileUploadContext, 
+  FileValidationResult, 
+  FileUploadParams,
+  MalwareScanResult,
+  ContentValidationResult
+} from './FileUploadSecurityService.js';
+export type { 
+  ISecureFileUploadService,
+  SecureUploadParams,
+  SecureUploadResult,
+  DirectFileUploadParams,
+  DirectFileUploadResult
+} from './SecureFileUploadService.js';
 export type { IImageProcessingService } from './IImageProcessingService.js';
 export type { IMediaConvertService } from './IMediaConvertService.js';
 export type { IRealtimeService } from './IRealtimeService.js';
