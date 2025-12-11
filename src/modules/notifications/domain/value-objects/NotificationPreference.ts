@@ -13,19 +13,9 @@
 export type NotificationChannel = 'email' | 'push' | 'in_app';
 
 /**
- * Notification types that can be configured
+ * Import notification type from entities
  */
-export type NotificationType = 
-  | 'new_message'
-  | 'assignment_due'
-  | 'grade_posted'
-  | 'course_update'
-  | 'announcement'
-  | 'discussion_reply'
-  | 'enrollment_confirmed'
-  | 'certificate_issued'
-  | 'payment_received'
-  | 'refund_processed';
+import type { NotificationType } from '../entities/Notification.js';
 
 /**
  * Channel preferences for a specific notification type

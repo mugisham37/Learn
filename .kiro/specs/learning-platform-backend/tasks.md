@@ -1239,13 +1239,19 @@ This implementation plan breaks down the development of the educational learning
 
 
 
+
   - Create methods for getting and updating preferences
   - Validate preference settings
   - Store preferences in user profile JSONB column
   - Apply preferences when creating notifications
   - _Requirements: 10.7_
 
-- [ ] 74. Create GraphQL schema for notifications module
+- [x] 74. Create GraphQL schema for notifications module
+
+
+
+
+
   - Define Notification type
   - Define NotificationPreference type
   - Define enums for NotificationType, Priority
