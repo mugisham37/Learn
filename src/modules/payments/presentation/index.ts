@@ -6,5 +6,6 @@
  */
 
 export * from './routes';
+export * from './graphql';
 
-// TODO: Implement payment GraphQL schema and resolvers in tasks 83-84
+// TODO: Implement payment GraphQL resolvers in task 84

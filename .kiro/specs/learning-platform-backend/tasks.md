@@ -1379,7 +1379,10 @@ This implementation plan breaks down the development of the educational learning
   - Trigger notifications for payment events
   - _Requirements: 11.2, 11.3, 11.4_
 
-- [ ] 83. Create GraphQL schema for payments module
+- [x] 83. Create GraphQL schema for payments module
+
+
+
   - Define Payment type
   - Define Subscription type
   - Define Refund type
