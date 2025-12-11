@@ -17,6 +17,7 @@ import { makeExecutableSchema } from '@graphql-tools/schema';
 
 import { config } from '../../config/index.js';
 import { logger } from '../../shared/utils/logger.js';
+import { formatGraphQLError } from './errorFormatter.js';
 
 // Import all module schemas and resolvers
 import { userTypeDefs, userResolvers } from '../../modules/users/presentation/graphql/index.js';
@@ -205,43 +206,9 @@ export async function createApolloServer(fastify: FastifyInstance): Promise<Apol
           }),
     ],
 
-    // Format errors for consistent structure
+    // Format errors for consistent structure using custom formatter
     formatError: (formattedError, error) => {
-      // Log the error for debugging
-      logger.error('GraphQL Error', {
-        error: formattedError,
-        originalError: error,
-        requestId: (error as Record<string, Record<string, unknown>>)?.['extensions']?.['requestId'],
-      });
-
-      // In production, sanitize error messages
-      if (config.nodeEnv === 'production') {
-        // Don't expose internal errors in production
-        if ((formattedError as Record<string, unknown>)?.['message']?.toString().includes('Database') || 
-            (formattedError as Record<string, unknown>)?.['message']?.toString().includes('Internal') ||
-            (formattedError as Record<string, Record<string, unknown>>)?.['extensions']?.['code'] === 'INTERNAL_SERVER_ERROR') {
-          return {
-            message: 'An internal error occurred',
-            code: 'INTERNAL_ERROR',
-            extensions: {
-              code: 'INTERNAL_ERROR',
-              requestId: (error as Record<string, Record<string, unknown>>)?.['extensions']?.['requestId'],
-            },
-          };
-        }
-      }
-
-      return {
-        message: (formattedError as Record<string, unknown>)?.['message'],
-        code: (formattedError as Record<string, Record<string, unknown>>)?.['extensions']?.['code'] || 'UNKNOWN_ERROR',
-        locations: (formattedError as Record<string, unknown>)?.['locations'],
-        path: (formattedError as Record<string, unknown>)?.['path'],
-        extensions: {
-          code: (formattedError as Record<string, Record<string, unknown>>)?.['extensions']?.['code'] || 'UNKNOWN_ERROR',
-          requestId: (error as Record<string, Record<string, unknown>>)?.['extensions']?.['requestId'],
-          field: (formattedError as Record<string, Record<string, unknown>>)?.['extensions']?.['field'],
-        },
-      };
+      return formatGraphQLError(formattedError, error);
     },
 
     // Include stack trace in development

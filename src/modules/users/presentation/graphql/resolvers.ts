@@ -13,6 +13,18 @@ import { IUserProfileService, UpdateProfileDTO } from '../../application/service
 import { IUserRepository } from '../../infrastructure/repositories/IUserRepository.js';
 import { User as DbUser } from '../../../../infrastructure/database/schema/users.schema.js';
 import { UserProfile, NotificationPreferences } from '../../domain/value-objects/UserProfile.js';
+import {
+  requireAuth,
+  requireOwnershipOrAdmin,
+  validateRequiredFields,
+  validatePasswordStrength,
+  withErrorHandling,
+  throwNotFound,
+  throwConflict,
+  createValidationError,
+  createAuthenticationError,
+  createGraphQLError
+} from '../../../../infrastructure/graphql/utils.js';
 
 /**
  * GraphQL context interface
@@ -102,20 +114,7 @@ interface LogoutInput {
   refreshToken?: string;
 }
 
-/**
- * Helper function to require authentication
- */
-function requireAuth(context: GraphQLContext): { id: string; email: string; role: string } {
-  if (!context.user) {
-    throw new GraphQLError('Authentication required', {
-      extensions: {
-        code: 'UNAUTHENTICATED',
-        http: { status: 401 }
-      }
-    });
-  }
-  return context.user;
-}
+// Note: requireAuth is now imported from GraphQL utilities
 
 /**
  * Helper function to check role authorization
@@ -225,56 +224,26 @@ export const userResolvers = {
     /**
      * Register a new user
      */
-    register: async (_parent: any, args: { input: RegisterInput }, context: GraphQLContext) => {
+    register: withErrorHandling(async (_parent: any, args: { input: RegisterInput }, context: GraphQLContext) => {
+      // Validate required fields with proper error formatting
+      validateRequiredFields(args.input, [
+        { field: 'email', type: 'email' },
+        { field: 'password', type: 'string', minLength: 8 },
+        { field: 'fullName', type: 'string', minLength: 1, maxLength: 255 },
+        { field: 'role', type: 'string' }
+      ], context);
+
+      // Validate password strength
+      validatePasswordStrength(args.input.password, context);
+
+      const registerData: RegisterDTO = {
+        email: args.input.email.trim(),
+        password: args.input.password,
+        fullName: args.input.fullName.trim(),
+        role: mapRoleFromGraphQL(args.input.role)
+      };
+
       try {
-        // Validate input
-        if (!args.input.email || args.input.email.trim().length === 0) {
-          throw new GraphQLError('Email is required', {
-            extensions: {
-              code: 'BAD_USER_INPUT',
-              http: { status: 400 },
-              field: 'email'
-            }
-          });
-        }
-
-        if (!args.input.password || args.input.password.length === 0) {
-          throw new GraphQLError('Password is required', {
-            extensions: {
-              code: 'BAD_USER_INPUT',
-              http: { status: 400 },
-              field: 'password'
-            }
-          });
-        }
-
-        if (!args.input.fullName || args.input.fullName.trim().length === 0) {
-          throw new GraphQLError('Full name is required', {
-            extensions: {
-              code: 'BAD_USER_INPUT',
-              http: { status: 400 },
-              field: 'fullName'
-            }
-          });
-        }
-
-        if (!args.input.role) {
-          throw new GraphQLError('Role is required', {
-            extensions: {
-              code: 'BAD_USER_INPUT',
-              http: { status: 400 },
-              field: 'role'
-            }
-          });
-        }
-
-        const registerData: RegisterDTO = {
-          email: args.input.email.trim(),
-          password: args.input.password,
-          fullName: args.input.fullName.trim(),
-          role: mapRoleFromGraphQL(args.input.role)
-        };
-
         await context.authService.register(registerData);
         
         // For registration, we need to return tokens immediately
@@ -287,64 +256,26 @@ export const userResolvers = {
           user: loginResult.user
         };
       } catch (error: any) {
-        if (error instanceof GraphQLError) {
-          throw error;
-        }
-        
         if (error.message?.includes('duplicate') || error.message?.includes('already exists')) {
-          throw new GraphQLError('Email already exists', {
-            extensions: {
-              code: 'CONFLICT',
-              http: { status: 409 },
-              field: 'email'
-            }
-          });
+          throwConflict('Email already exists', 'email', context);
         }
         
-        if (error.message?.includes('validation') || error.message?.includes('invalid')) {
-          throw new GraphQLError('Invalid input data', {
-            extensions: {
-              code: 'BAD_USER_INPUT',
-              http: { status: 400 }
-            }
-          });
-        }
-        
-        throw new GraphQLError('Registration failed', {
-          extensions: {
-            code: 'INTERNAL_ERROR',
-            http: { status: 500 }
-          }
-        });
+        // Re-throw the error to be handled by withErrorHandling
+        throw error;
       }
-    },
+    }),
 
     /**
      * Login user
      */
-    login: async (_parent: any, args: { input: LoginInput }, context: GraphQLContext) => {
+    login: withErrorHandling(async (_parent: any, args: { input: LoginInput }, context: GraphQLContext) => {
+      // Validate required fields
+      validateRequiredFields(args.input, [
+        { field: 'email', type: 'email' },
+        { field: 'password', type: 'string', minLength: 1 }
+      ], context);
+
       try {
-        // Validate input
-        if (!args.input.email || args.input.email.trim().length === 0) {
-          throw new GraphQLError('Email is required', {
-            extensions: {
-              code: 'BAD_USER_INPUT',
-              http: { status: 400 },
-              field: 'email'
-            }
-          });
-        }
-
-        if (!args.input.password || args.input.password.length === 0) {
-          throw new GraphQLError('Password is required', {
-            extensions: {
-              code: 'BAD_USER_INPUT',
-              http: { status: 400 },
-              field: 'password'
-            }
-          });
-        }
-
         const result = await context.authService.login(args.input.email.trim(), args.input.password);
         
         return {
@@ -353,36 +284,26 @@ export const userResolvers = {
           user: result.user
         };
       } catch (error: any) {
-        if (error instanceof GraphQLError) {
-          throw error;
-        }
-        
         if (error.message?.includes('invalid') || error.message?.includes('credentials')) {
-          throw new GraphQLError('Invalid email or password', {
-            extensions: {
-              code: 'UNAUTHENTICATED',
-              http: { status: 401 }
-            }
-          });
+          throw createAuthenticationError(
+            'Invalid email or password',
+            'invalid_credentials',
+            context.requestId
+          );
         }
         
         if (error.message?.includes('not verified')) {
-          throw new GraphQLError('Email not verified', {
-            extensions: {
-              code: 'UNAUTHENTICATED',
-              http: { status: 401 }
-            }
-          });
+          throw createAuthenticationError(
+            'Email not verified',
+            'email_not_verified',
+            context.requestId
+          );
         }
         
-        throw new GraphQLError('Login failed', {
-          extensions: {
-            code: 'INTERNAL_ERROR',
-            http: { status: 500 }
-          }
-        });
+        // Re-throw the error to be handled by withErrorHandling
+        throw error;
       }
-    },
+    }),
 
     /**
      * Refresh access token
