@@ -30,7 +30,10 @@ async function bootstrap(): Promise<void> {
     // Create and configure Fastify server
     server = await createServer();
     
-    // TODO: Register module routes
+    // Register module routes
+    const { registerModules } = await import('./modules/index.js');
+    await registerModules(server);
+    
     // TODO: Initialize database connection
     // TODO: Initialize Redis connection
     // TODO: Register GraphQL server
