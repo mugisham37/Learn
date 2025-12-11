@@ -1573,7 +1573,12 @@ This implementation plan breaks down the development of the educational learning
   - Implement index management operations
   - _Requirements: 8.1, 8.7_
 
-- [ ] 97. Implement search service (application layer)
+- [x] 97. Implement search service (application layer)
+
+
+
+
+
   - Create ISearchService interface
   - Implement indexCourse method with full-text indexing
   - Implement indexLesson method
