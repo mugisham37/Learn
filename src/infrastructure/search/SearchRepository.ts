@@ -27,6 +27,7 @@ import {
   checkElasticsearchHealth
 } from './index.js';
 import { ExternalServiceError } from '../../shared/errors/index.js';
+import { createSearchQueryBuilder } from '../../modules/search/infrastructure/query/SearchQueryBuilder.js';
 
 /**
  * Search Repository Implementation
@@ -178,83 +179,59 @@ export class SearchRepository implements ISearchRepository {
         highlight = false,
       } = options;
 
-      // Build the search query
-      const searchQuery: any = {
-        bool: {
-          must: [],
-          filter: [],
-        },
-      };
+      // Build query using SearchQueryBuilder
+      const queryBuilder = createSearchQueryBuilder();
 
-      // Add text search query
+      // Set main search query with boosted fields
+      const searchFields = [
+        'title^3',
+        'description^2',
+        'instructorName^2',
+        'category',
+        'lessonContent',
+        'modules.title',
+        'modules.description',
+      ];
+
       if (query.trim()) {
-        searchQuery.bool.must.push({
-          multi_match: {
-            query: query.trim(),
-            fields: [
-              'title^3',
-              'description^2',
-              'instructorName^2',
-              'category',
-              'lessonContent',
-              'modules.title',
-              'modules.description',
-            ],
-            type: 'best_fields',
-            fuzziness: 'AUTO',
-          },
-        });
+        queryBuilder.query(query.trim(), searchFields, 'AUTO');
       } else {
-        searchQuery.bool.must.push({
-          match_all: {},
-        });
+        queryBuilder.query('', searchFields); // Will use match_all internally
       }
 
       // Add filters
       if (filters.category?.length) {
-        searchQuery.bool.filter.push({
-          terms: { category: filters.category },
-        });
+        queryBuilder.filterTerms('category', filters.category);
       }
 
       if (filters.difficulty?.length) {
-        searchQuery.bool.filter.push({
-          terms: { difficulty: filters.difficulty },
-        });
+        queryBuilder.filterTerms('difficulty', filters.difficulty);
       }
 
       if (filters.status?.length) {
-        searchQuery.bool.filter.push({
-          terms: { status: filters.status },
-        });
+        queryBuilder.filterTerms('status', filters.status);
       }
 
       if (filters.priceRange) {
-        const priceFilter: any = {};
+        const priceRange: { gte?: number; lte?: number } = {};
         if (filters.priceRange.min !== undefined) {
-          priceFilter.gte = filters.priceRange.min;
+          priceRange.gte = filters.priceRange.min;
         }
         if (filters.priceRange.max !== undefined) {
-          priceFilter.lte = filters.priceRange.max;
+          priceRange.lte = filters.priceRange.max;
         }
-        if (Object.keys(priceFilter).length > 0) {
-          searchQuery.bool.filter.push({
-            range: { price: priceFilter },
-          });
+        if (Object.keys(priceRange).length > 0) {
+          queryBuilder.filterRange('price', priceRange);
         }
       }
 
       if (filters.rating?.min !== undefined) {
-        searchQuery.bool.filter.push({
-          range: { averageRating: { gte: filters.rating.min } },
-        });
+        queryBuilder.filterRange('averageRating', { gte: filters.rating.min });
       }
 
-      // Build sort configuration
-      const sortConfig: any[] = [];
-      
+      // Add sorting
       if (sort.field === 'relevance') {
-        sortConfig.push('_score');
+        queryBuilder.sortBy('_score', sort.order);
       } else {
         const sortField = {
           popularity: 'popularityScore',
@@ -264,38 +241,37 @@ export class SearchRepository implements ISearchRepository {
           updated: 'updatedAt',
         }[sort.field] || sort.field;
 
-        sortConfig.push({
-          [sortField]: { order: sort.order },
+        queryBuilder.sortBy(sortField, sort.order);
+        
+        // Add secondary sort by relevance score
+        queryBuilder.sortBy('_score', 'desc');
+      }
+
+      // Add pagination
+      queryBuilder.paginate(pagination.from || 0, pagination.size || 20);
+
+      // Add highlighting
+      if (highlight) {
+        queryBuilder.highlightFields([
+          'title',
+          'description',
+          'modules.title',
+          'modules.description',
+        ], {
+          preTags: ['<mark>'],
+          postTags: ['</mark>'],
+          fragmentSize: 150,
+          numberOfFragments: 3,
         });
       }
 
-      // Add secondary sort by relevance score
-      if (sort.field !== 'relevance') {
-        sortConfig.push('_score');
-      }
-
-      // Build highlight configuration
-      const highlightConfig = highlight ? {
-        fields: {
-          title: {},
-          description: {},
-          'modules.title': {},
-          'modules.description': {},
-        },
-        pre_tags: ['<mark>'],
-        post_tags: ['</mark>'],
-      } : undefined;
+      // Build the final query
+      const builtQuery = queryBuilder.build();
 
       // Execute search
       const response = await elasticsearch.search({
         index: ElasticsearchAlias.COURSES,
-        body: {
-          query: searchQuery,
-          sort: sortConfig,
-          from: pagination.from,
-          size: pagination.size,
-          highlight: highlightConfig,
-        },
+        body: builtQuery,
       });
 
       // Process results
@@ -352,59 +328,39 @@ export class SearchRepository implements ISearchRepository {
         highlight = false,
       } = options;
 
-      // Build the search query
-      const searchQuery: any = {
-        bool: {
-          must: [],
-          filter: [],
-        },
-      };
+      // Build query using SearchQueryBuilder
+      const queryBuilder = createSearchQueryBuilder();
 
-      // Add text search query
+      // Set main search query with boosted fields
+      const searchFields = [
+        'title^3',
+        'description^2',
+        'contentText^2',
+        'courseTitle',
+      ];
+
       if (query.trim()) {
-        searchQuery.bool.must.push({
-          multi_match: {
-            query: query.trim(),
-            fields: [
-              'title^3',
-              'description^2',
-              'contentText^2',
-              'courseTitle',
-            ],
-            type: 'best_fields',
-            fuzziness: 'AUTO',
-          },
-        });
+        queryBuilder.query(query.trim(), searchFields, 'AUTO');
       } else {
-        searchQuery.bool.must.push({
-          match_all: {},
-        });
+        queryBuilder.query('', searchFields); // Will use match_all internally
       }
 
       // Add filters
       if (filters.courseId) {
-        searchQuery.bool.filter.push({
-          term: { courseId: filters.courseId },
-        });
+        queryBuilder.filterTerms('courseId', [filters.courseId]);
       }
 
       if (filters.lessonType?.length) {
-        searchQuery.bool.filter.push({
-          terms: { lessonType: filters.lessonType },
-        });
+        queryBuilder.filterTerms('lessonType', filters.lessonType);
       }
 
       if (filters.isPreview !== undefined) {
-        searchQuery.bool.filter.push({
-          term: { isPreview: filters.isPreview },
-        });
+        queryBuilder.filterBool('isPreview', filters.isPreview);
       }
 
-      // Build sort configuration
-      const sortConfig: any[] = [];
-      
+      // Add sorting
       if (sort.field === 'relevance') {
-        sortConfig.push('_score');
+        queryBuilder.sortBy('_score', sort.order);
       } else {
         const sortField = {
           order: 'orderNumber',
@@ -412,39 +368,38 @@ export class SearchRepository implements ISearchRepository {
           updated: 'updatedAt',
         }[sort.field] || sort.field;
 
-        sortConfig.push({
-          [sortField]: { order: sort.order },
-        });
+        queryBuilder.sortBy(sortField, sort.order);
       }
 
       // Add secondary sort by order number for consistency
       if (sort.field !== 'order') {
-        sortConfig.push({
-          orderNumber: { order: 'asc' },
+        queryBuilder.sortBy('orderNumber', 'asc');
+      }
+
+      // Add pagination
+      queryBuilder.paginate(pagination.from || 0, pagination.size || 20);
+
+      // Add highlighting
+      if (highlight) {
+        queryBuilder.highlightFields([
+          'title',
+          'description',
+          'contentText',
+        ], {
+          preTags: ['<mark>'],
+          postTags: ['</mark>'],
+          fragmentSize: 150,
+          numberOfFragments: 3,
         });
       }
 
-      // Build highlight configuration
-      const highlightConfig = highlight ? {
-        fields: {
-          title: {},
-          description: {},
-          contentText: {},
-        },
-        pre_tags: ['<mark>'],
-        post_tags: ['</mark>'],
-      } : undefined;
+      // Build the final query
+      const builtQuery = queryBuilder.build();
 
       // Execute search
       const response = await elasticsearch.search({
         index: ElasticsearchAlias.LESSONS,
-        body: {
-          query: searchQuery,
-          sort: sortConfig,
-          from: pagination.from,
-          size: pagination.size,
-          highlight: highlightConfig,
-        },
+        body: builtQuery,
       });
 
       // Process results
@@ -611,6 +566,219 @@ export class SearchRepository implements ISearchRepository {
         error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
+  }
+
+  /**
+   * Search courses with faceted aggregations
+   */
+  async searchCoursesWithFacets(
+    query: string,
+    options: {
+      filters?: {
+        category?: string[];
+        difficulty?: string[];
+        priceRange?: { min?: number; max?: number };
+        rating?: { min?: number };
+        status?: string[];
+      };
+      sort?: {
+        field: 'relevance' | 'popularity' | 'rating' | 'price' | 'created' | 'updated';
+        order: 'asc' | 'desc';
+      };
+      pagination?: {
+        from?: number;
+        size?: number;
+      };
+      highlight?: boolean;
+    } = {}
+  ): Promise<SearchResult<CourseSearchDocument> & { 
+    facets: {
+      categories: Array<{ key: string; count: number }>;
+      difficulties: Array<{ key: string; count: number }>;
+      priceRanges: Array<{ key: string; count: number; from?: number; to?: number }>;
+      ratings: Array<{ key: string; count: number; from?: number }>;
+    }
+  }> {
+    try {
+      const {
+        filters = {},
+        sort = { field: 'relevance', order: 'desc' },
+        pagination = { from: 0, size: 20 },
+        highlight = false,
+      } = options;
+
+      // Build query using SearchQueryBuilder with facets
+      const queryBuilder = createSearchQueryBuilder();
+
+      // Set main search query with boosted fields
+      const searchFields = [
+        'title^3',
+        'description^2',
+        'instructorName^2',
+        'category',
+        'lessonContent',
+        'modules.title',
+        'modules.description',
+      ];
+
+      if (query.trim()) {
+        queryBuilder.query(query.trim(), searchFields, 'AUTO');
+      } else {
+        queryBuilder.query('', searchFields);
+      }
+
+      // Add filters
+      if (filters.category?.length) {
+        queryBuilder.filterTerms('category', filters.category);
+      }
+
+      if (filters.difficulty?.length) {
+        queryBuilder.filterTerms('difficulty', filters.difficulty);
+      }
+
+      if (filters.status?.length) {
+        queryBuilder.filterTerms('status', filters.status);
+      }
+
+      if (filters.priceRange) {
+        const priceRange: { gte?: number; lte?: number } = {};
+        if (filters.priceRange.min !== undefined) {
+          priceRange.gte = filters.priceRange.min;
+        }
+        if (filters.priceRange.max !== undefined) {
+          priceRange.lte = filters.priceRange.max;
+        }
+        if (Object.keys(priceRange).length > 0) {
+          queryBuilder.filterRange('price', priceRange);
+        }
+      }
+
+      if (filters.rating?.min !== undefined) {
+        queryBuilder.filterRange('averageRating', { gte: filters.rating.min });
+      }
+
+      // Add sorting
+      if (sort.field === 'relevance') {
+        queryBuilder.sortBy('_score', sort.order);
+      } else {
+        const sortField = {
+          popularity: 'popularityScore',
+          rating: 'averageRating',
+          price: 'price',
+          created: 'createdAt',
+          updated: 'updatedAt',
+        }[sort.field] || sort.field;
+
+        queryBuilder.sortBy(sortField, sort.order);
+        queryBuilder.sortBy('_score', 'desc');
+      }
+
+      // Add pagination
+      queryBuilder.paginate(pagination.from || 0, pagination.size || 20);
+
+      // Add highlighting
+      if (highlight) {
+        queryBuilder.highlightFields([
+          'title',
+          'description',
+          'modules.title',
+          'modules.description',
+        ], {
+          preTags: ['<mark>'],
+          postTags: ['</mark>'],
+          fragmentSize: 150,
+          numberOfFragments: 3,
+        });
+      }
+
+      // Add facet aggregations
+      queryBuilder
+        .aggregateTerms('categories', 'category.keyword', 20)
+        .aggregateTerms('difficulties', 'difficulty', 10)
+        .aggregateRange('priceRanges', 'price', [
+          { key: 'Free', from: 0, to: 0 },
+          { key: '$1-$50', from: 1, to: 50 },
+          { key: '$51-$100', from: 51, to: 100 },
+          { key: '$101-$200', from: 101, to: 200 },
+          { key: '$201+', from: 201 },
+        ])
+        .aggregateRange('ratings', 'averageRating', [
+          { key: '4+ stars', from: 4 },
+          { key: '3+ stars', from: 3 },
+          { key: '2+ stars', from: 2 },
+          { key: '1+ stars', from: 1 },
+        ]);
+
+      // Build the final query
+      const builtQuery = queryBuilder.build();
+
+      // Execute search
+      const response = await elasticsearch.search({
+        index: ElasticsearchAlias.COURSES,
+        body: builtQuery,
+      });
+
+      // Process results
+      const documents = response.hits.hits.map((hit: any) => ({
+        ...hit._source,
+        _highlight: hit.highlight,
+      }));
+
+      // Process facets from aggregations
+      const facets = {
+        categories: this.processFacetAggregation(response.aggregations?.categories),
+        difficulties: this.processFacetAggregation(response.aggregations?.difficulties),
+        priceRanges: this.processRangeFacetAggregation(response.aggregations?.priceRanges),
+        ratings: this.processRangeFacetAggregation(response.aggregations?.ratings),
+      };
+
+      return {
+        documents,
+        total: typeof response.hits.total === 'number' 
+          ? response.hits.total 
+          : response.hits.total?.value || 0,
+        took: response.took,
+        maxScore: response.hits.max_score,
+        facets,
+      };
+    } catch (error) {
+      console.error('Failed to search courses with facets:', error);
+      throw new ExternalServiceError(
+        'Failed to search course documents with facets',
+        'ELASTICSEARCH_SEARCH_ERROR',
+        { query, options, error: error instanceof Error ? error.message : 'Unknown error' }
+      );
+    }
+  }
+
+  /**
+   * Process terms aggregation into facet format
+   */
+  private processFacetAggregation(aggregation: any): Array<{ key: string; count: number }> {
+    if (!aggregation?.buckets) {
+      return [];
+    }
+
+    return aggregation.buckets.map((bucket: any) => ({
+      key: bucket.key,
+      count: bucket.doc_count,
+    }));
+  }
+
+  /**
+   * Process range aggregation into facet format
+   */
+  private processRangeFacetAggregation(aggregation: any): Array<{ key: string; count: number; from?: number; to?: number }> {
+    if (!aggregation?.buckets) {
+      return [];
+    }
+
+    return aggregation.buckets.map((bucket: any) => ({
+      key: bucket.key,
+      count: bucket.doc_count,
+      from: bucket.from,
+      to: bucket.to,
+    }));
   }
 
   /**

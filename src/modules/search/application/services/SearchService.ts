@@ -125,10 +125,11 @@ export class SearchService implements ISearchService {
         },
         pagination,
         highlight: true, // Enable highlighting for better UX
+        includeFacets, // Pass facets flag to repository
       };
 
-      // Perform search
-      const searchResult = await this.searchRepository.searchCourses(query, searchOptions);
+      // Perform search with facets
+      const searchResult = await this.searchCoursesWithFacets(query, searchOptions);
 
       // Transform results
       const transformedResults: SearchResults<CourseSearchResult> = {
@@ -136,12 +137,8 @@ export class SearchService implements ISearchService {
         total: searchResult.total,
         took: searchResult.took,
         maxScore: searchResult.maxScore,
+        facets: searchResult.facets,
       };
-
-      // Add facets if requested
-      if (includeFacets) {
-        transformedResults.facets = this.generateCourseFacets(query, filters);
-      }
 
       // Add autocomplete suggestions for empty or short queries
       if (query.trim().length <= 2) {
@@ -512,43 +509,117 @@ export class SearchService implements ISearchService {
   }
 
   /**
-   * Generate facets for course search
+   * Search courses with facets using query builder
    */
-  private generateCourseFacets(_query: string, _currentFilters: SearchFilters): SearchFacets {
-    // This is a simplified implementation
-    // In production, you would use Elasticsearch aggregations to generate facets
-    
-    // For now, return static facets
-    return {
-        categories: [
-          { key: 'Web Development', count: 150 },
-          { key: 'Data Science', count: 89 },
-          { key: 'Mobile Development', count: 67 },
-          { key: 'Machine Learning', count: 45 },
-          { key: 'DevOps', count: 34 },
-        ],
-        difficulties: [
-          { key: 'beginner', count: 200 },
-          { key: 'intermediate', count: 120 },
-          { key: 'advanced', count: 65 },
-        ],
-        priceRanges: [
-          { key: 'Free', count: 85, from: 0, to: 0 },
-          { key: '$1-$50', count: 120, from: 1, to: 50 },
-          { key: '$51-$100', count: 95, from: 51, to: 100 },
-          { key: '$101+', count: 85, from: 101 },
-        ],
-        ratings: [
-          { key: '4+ stars', count: 250, from: 4 },
-          { key: '3+ stars', count: 320, from: 3 },
-          { key: '2+ stars', count: 365, from: 2 },
-        ],
-        languages: [
-          { key: 'English', count: 350 },
-          { key: 'Spanish', count: 45 },
-          { key: 'French', count: 23 },
-          { key: 'German', count: 18 },
-        ],
+  private async searchCoursesWithFacets(
+    query: string,
+    options: {
+      filters?: {
+        category?: string[];
+        difficulty?: string[];
+        priceRange?: { min?: number; max?: number };
+        rating?: { min?: number };
+        status?: string[];
       };
+      sort?: {
+        field: 'relevance' | 'popularity' | 'rating' | 'price' | 'created' | 'updated';
+        order: 'asc' | 'desc';
+      };
+      pagination?: {
+        from?: number;
+        size?: number;
+      };
+      highlight?: boolean;
+      includeFacets?: boolean;
+    }
+  ): Promise<SearchResult<CourseSearchDocument> & { facets?: SearchFacets }> {
+    // If facets are not requested, use the regular search
+    if (!options.includeFacets) {
+      return await this.searchRepository.searchCourses(query, options);
+    }
+
+    // Use the repository's faceted search method
+    const searchResult = await (this.searchRepository as any).searchCoursesWithFacets(query, options);
+    
+    // Transform facets to the expected format
+    const facets: SearchFacets = {
+      categories: searchResult.facets.categories,
+      difficulties: searchResult.facets.difficulties,
+      priceRanges: searchResult.facets.priceRanges,
+      ratings: searchResult.facets.ratings,
+      languages: [
+        { key: 'English', count: 350 },
+        { key: 'Spanish', count: 45 },
+        { key: 'French', count: 23 },
+        { key: 'German', count: 18 },
+        { key: 'Portuguese', count: 12 },
+        { key: 'Italian', count: 8 },
+      ], // Static for now, would be from aggregations in real implementation
+    };
+
+    return {
+      ...searchResult,
+      facets,
+    };
+  }
+
+  /**
+   * Generate facets for course search using aggregations
+   */
+  private async generateCourseFacets(
+    _query: string, 
+    _currentFilters: {
+      category?: string[];
+      difficulty?: string[];
+      priceRange?: { min?: number; max?: number };
+      rating?: { min?: number };
+      status?: string[];
+    }
+  ): Promise<SearchFacets> {
+    // This is a simplified implementation that returns static facets
+    // In a production system, you would:
+    // 1. Execute a separate aggregation query to get real facet counts
+    // 2. Use the SearchQueryBuilder to build faceted queries
+    // 3. Parse Elasticsearch aggregation results
+    
+    // For now, return realistic static facets
+    return {
+      categories: [
+        { key: 'Web Development', count: 150 },
+        { key: 'Data Science', count: 89 },
+        { key: 'Mobile Development', count: 67 },
+        { key: 'Machine Learning', count: 45 },
+        { key: 'DevOps', count: 34 },
+        { key: 'Design', count: 28 },
+        { key: 'Business', count: 22 },
+        { key: 'Marketing', count: 18 },
+      ],
+      difficulties: [
+        { key: 'beginner', count: 200 },
+        { key: 'intermediate', count: 120 },
+        { key: 'advanced', count: 65 },
+      ],
+      priceRanges: [
+        { key: 'Free', count: 85, from: 0, to: 0 },
+        { key: '$1-$50', count: 120, from: 1, to: 50 },
+        { key: '$51-$100', count: 95, from: 51, to: 100 },
+        { key: '$101-$200', count: 65, from: 101, to: 200 },
+        { key: '$201+', count: 20, from: 201 },
+      ],
+      ratings: [
+        { key: '4+ stars', count: 250, from: 4 },
+        { key: '3+ stars', count: 320, from: 3 },
+        { key: '2+ stars', count: 365, from: 2 },
+        { key: '1+ stars', count: 385, from: 1 },
+      ],
+      languages: [
+        { key: 'English', count: 350 },
+        { key: 'Spanish', count: 45 },
+        { key: 'French', count: 23 },
+        { key: 'German', count: 18 },
+        { key: 'Portuguese', count: 12 },
+        { key: 'Italian', count: 8 },
+      ],
+    };
   }
 }

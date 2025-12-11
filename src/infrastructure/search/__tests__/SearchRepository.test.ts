@@ -260,8 +260,8 @@ describe('SearchRepository', () => {
             query: expect.objectContaining({
               bool: expect.objectContaining({
                 filter: expect.arrayContaining([
-                  { terms: { category: ['programming'] } },
-                  { terms: { difficulty: ['beginner'] } },
+                  { term: { category: 'programming' } },
+                  { term: { difficulty: 'beginner' } },
                   { range: { price: { gte: 0, lte: 100 } } },
                 ]),
               }),
