@@ -8,7 +8,7 @@
  * Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 8.7
  */
 
-import type { ISearchRepository, CourseSearchDocument, LessonSearchDocument } from '../../../../infrastructure/search/ISearchRepository.js';
+import type { ISearchRepository, CourseSearchDocument, LessonSearchDocument, SearchResult } from '../../../../infrastructure/search/ISearchRepository.js';
 import { ExternalServiceError } from '../../../../shared/errors/index.js';
 import type { Course } from '../../../courses/domain/entities/Course.js';
 import type { Lesson } from '../../../courses/domain/entities/Lesson.js';
@@ -133,7 +133,7 @@ export class SearchService implements ISearchService {
 
       // Transform results
       const transformedResults: SearchResults<CourseSearchResult> = {
-        documents: searchResult.documents.map(doc => this.transformCourseSearchDocument(doc)),
+        documents: searchResult.documents.map((doc: CourseSearchDocument & { _highlight?: Record<string, string[]> }) => this.transformCourseSearchDocument(doc)),
         total: searchResult.total,
         took: searchResult.took,
         maxScore: searchResult.maxScore,
@@ -188,7 +188,7 @@ export class SearchService implements ISearchService {
 
       // Transform results
       return {
-        documents: searchResult.documents.map(doc => this.transformLessonSearchDocument(doc)),
+        documents: searchResult.documents.map((doc: LessonSearchDocument & { _highlight?: Record<string, string[]> }) => this.transformLessonSearchDocument(doc)),
         total: searchResult.total,
         took: searchResult.took,
         maxScore: searchResult.maxScore,

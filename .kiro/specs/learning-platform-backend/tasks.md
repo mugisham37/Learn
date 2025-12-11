@@ -1651,7 +1651,10 @@ This implementation plan breaks down the development of the educational learning
   - Implement pagination with from/size
   - _Requirements: 8.1, 8.2, 8.3, 8.4, 8.5_
 
-- [-] 101. Create GraphQL schema for search module
+- [x] 101. Create GraphQL schema for search module
+
+
+
 
 
 
@@ -1665,7 +1668,12 @@ This implementation plan breaks down the development of the educational learning
   - Create queries for searchCourses, searchLessons, autocomplete, trendingSearches
   - _Requirements: 21.1, 21.2_
 
-- [ ] 102. Implement GraphQL resolvers for search module
+- [x] 102. Implement GraphQL resolvers for search module
+
+
+
+
+
   - Implement search query resolvers
   - Implement autocomplete resolver
   - Implement trending searches resolver
