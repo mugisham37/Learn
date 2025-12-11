@@ -8,6 +8,7 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { StripeClientFactory } from '../../infrastructure/clients/StripeClientFactory';
 import { StripeWebhookHandler } from '../../infrastructure/webhooks/StripeWebhookHandler';
+import { EndpointRateLimits } from '../../../../shared/middleware/rateLimiting.js';
 import { logger } from '../../../../shared/utils/logger';
 
 
@@ -55,8 +56,10 @@ export async function registerWebhookRoutes(fastify: FastifyInstance): Promise<v
     done(null, body);
   });
 
-  // Stripe webhook endpoint
+  // Stripe webhook endpoint with rate limiting
+  // Webhooks should have moderate rate limiting to prevent abuse while allowing legitimate traffic
   fastify.post('/webhooks/stripe', {
+    ...EndpointRateLimits.expensive.config, // Use expensive config for webhook protection
     schema: {
       headers: {
         type: 'object',

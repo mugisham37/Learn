@@ -399,7 +399,29 @@ export class FileUploadSecurityService {
    * Scans file for malware using available scanning service
    */
   private async scanForMalware(buffer: Buffer, fileName: string): Promise<MalwareScanResult> {
-    // Try AWS GuardDuty Malware Protection first
+    // Check for known malware signatures first
+    const signatures = this.checkForKnownMalwareSignatures(buffer);
+    if (signatures.length > 0) {
+      return {
+        clean: false,
+        threat: `Known malware signatures: ${signatures.join(', ')}`,
+        scanEngine: 'Built-in signature detection',
+        scanTime: new Date(),
+      };
+    }
+
+    // Perform heuristic analysis
+    const heuristicResult = this.performHeuristicAnalysis(buffer, fileName);
+    if (!heuristicResult.clean) {
+      return {
+        clean: false,
+        threat: heuristicResult.threat,
+        scanEngine: 'Built-in heuristic analysis',
+        scanTime: new Date(),
+      };
+    }
+
+    // Try AWS GuardDuty Malware Protection
     try {
       return await this.scanWithAWSGuardDuty(buffer, fileName);
     } catch (error) {
@@ -428,7 +450,7 @@ export class FileUploadSecurityService {
   /**
    * Scans file using AWS GuardDuty Malware Protection
    */
-  private async scanWithAWSGuardDuty(_buffer: Buffer, fileName: string): Promise<MalwareScanResult> {
+  private async scanWithAWSGuardDuty(buffer: Buffer, fileName: string): Promise<MalwareScanResult> {
     // Note: This is a placeholder implementation
     // In a real implementation, you would:
     // 1. Upload file to a temporary S3 bucket configured for GuardDuty scanning
@@ -438,7 +460,18 @@ export class FileUploadSecurityService {
 
     logger.info('AWS GuardDuty malware scanning not implemented', { fileName });
     
-    // For now, return a clean result
+    // For testing purposes, perform basic signature checks
+    const signatures = this.checkForKnownMalwareSignatures(buffer);
+    if (signatures.length > 0) {
+      return {
+        clean: false,
+        threat: `Known malware signatures: ${signatures.join(', ')}`,
+        scanEngine: 'AWS GuardDuty (placeholder)',
+        scanTime: new Date(),
+      };
+    }
+    
+    // For now, return a clean result if no signatures found
     return {
       clean: true,
       scanEngine: 'AWS GuardDuty (placeholder)',

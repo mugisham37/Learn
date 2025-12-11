@@ -425,3 +425,14 @@ export {
   type FileUploadMiddlewareOptions,
   type RequestWithFileValidation,
 } from './fileUploadSecurity.js';
+
+// Export rate limiting middleware
+export {
+  registerGlobalRateLimit,
+  registerAdaptiveRateLimit,
+  createEndpointRateLimit,
+  EndpointRateLimits,
+  RateLimitConfig,
+  checkRateLimit,
+  checkRateLimitHealth,
+} from './rateLimiting.js';

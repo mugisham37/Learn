@@ -14,6 +14,7 @@ import Fastify, { FastifyInstance, FastifyServerOptions } from 'fastify';
 import { config } from './config/index.js';
 import { logger } from './shared/utils/logger.js';
 import { logRequest, logResponse } from './shared/middleware/index.js';
+import { registerGlobalRateLimit, registerAdaptiveRateLimit } from './shared/middleware/rateLimiting.js';
 import { createSocketServer, closeSocketServer } from './infrastructure/websocket/index.js';
 
 /**
@@ -54,6 +55,10 @@ export async function createServer(): Promise<FastifyInstance> {
     crossOriginOpenerPolicy: config.nodeEnv === 'production',
     crossOriginResourcePolicy: config.nodeEnv === 'production',
   });
+
+  // Register rate limiting middleware (before other middleware)
+  await registerGlobalRateLimit(server);
+  await registerAdaptiveRateLimit(server);
 
   // Add request logging hook using Winston
   server.addHook('onRequest', logRequest);

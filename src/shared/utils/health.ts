@@ -10,6 +10,7 @@
 import { checkDatabaseHealth } from '../../infrastructure/database/index.js';
 import { checkRedisHealth, checkSessionRedisHealth } from '../../infrastructure/cache/index.js';
 import { checkElasticsearchHealth } from '../../infrastructure/search/index.js';
+import { checkRateLimitHealth } from '../middleware/rateLimiting.js';
 
 /**
  * Overall health status
@@ -23,7 +24,7 @@ export interface ServiceHealth {
   healthy: boolean;
   latencyMs?: number;
   error?: string;
-  details?: Record<string, any>;
+  details?: Record<string, unknown>;
 }
 
 /**
@@ -39,6 +40,7 @@ export interface SystemHealth {
     redis: ServiceHealth;
     sessionRedis: ServiceHealth;
     elasticsearch: ServiceHealth;
+    rateLimit: ServiceHealth;
   };
   summary: {
     healthy: number;
@@ -57,7 +59,7 @@ const CRITICAL_SERVICES = ['database', 'redis'] as const;
  * Services that are important but not critical
  * If these fail, the overall status should be 'degraded'
  */
-const NON_CRITICAL_SERVICES = ['sessionRedis', 'elasticsearch'] as const;
+const NON_CRITICAL_SERVICES = ['sessionRedis', 'elasticsearch', 'rateLimit'] as const;
 
 /**
  * Performs comprehensive health checks on all infrastructure dependencies
@@ -71,11 +73,13 @@ export async function performSystemHealthCheck(): Promise<SystemHealth> {
     redisHealth,
     sessionRedisHealth,
     elasticsearchHealth,
+    rateLimitHealth,
   ] = await Promise.allSettled([
     checkDatabaseHealth(),
     checkRedisHealth(),
     checkSessionRedisHealth(),
     checkElasticsearchHealth(),
+    checkRateLimitHealth(),
   ]);
 
   // Process database health check result
@@ -142,11 +146,25 @@ export async function performSystemHealthCheck(): Promise<SystemHealth> {
           : 'Elasticsearch health check failed',
       };
 
+  // Process rate limiting health check result
+  const rateLimit: ServiceHealth = rateLimitHealth.status === 'fulfilled'
+    ? {
+        healthy: rateLimitHealth.value.healthy,
+        error: rateLimitHealth.value.error,
+      }
+    : {
+        healthy: false,
+        error: rateLimitHealth.reason instanceof Error 
+          ? rateLimitHealth.reason.message 
+          : 'Rate limiting health check failed',
+      };
+
   const services = {
     database,
     redis,
     sessionRedis,
     elasticsearch,
+    rateLimit,
   };
 
   // Calculate overall health status
