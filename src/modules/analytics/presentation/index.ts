@@ -6,3 +6,4 @@
  */
 
 export { analyticsTypeDefs } from './graphql/schema.js';
+export { analyticsResolvers } from './graphql/resolvers.js';

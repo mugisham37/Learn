@@ -1529,7 +1529,11 @@ This implementation plan breaks down the development of the educational learning
   - Create queries for courseAnalytics, studentAnalytics, dashboardMetrics, generateCourseReport, generateStudentReport
   - _Requirements: 21.1, 21.2_
 
-- [ ] 93. Implement GraphQL resolvers for analytics module
+- [x] 93. Implement GraphQL resolvers for analytics module
+
+
+
+
   - Implement analytics query resolvers with caching
   - Implement report generation resolvers
   - Implement dashboard metrics resolver with role-specific data
