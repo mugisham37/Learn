@@ -189,10 +189,10 @@ export class RateLimitError extends AppError {
   ) {
     const details: Record<string, unknown> = {};
     
-    if (limit !== undefined) details.limit = limit;
-    if (resetTime) details.resetTime = resetTime.toISOString();
-    if (remaining !== undefined) details.remaining = remaining;
-    if (retryAfter !== undefined) details.retryAfter = retryAfter;
+    if (limit !== undefined) details['limit'] = limit;
+    if (resetTime) details['resetTime'] = resetTime.toISOString();
+    if (remaining !== undefined) details['remaining'] = remaining;
+    if (retryAfter !== undefined) details['retryAfter'] = retryAfter;
     
     super(
       message,

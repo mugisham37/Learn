@@ -141,7 +141,7 @@ function rateLimitErrorHandler(request: FastifyRequest, context: any) {
  * Hook to add rate limit headers to all responses
  * Implements requirement 13.6 - include headers showing limit, remaining, reset time
  */
-function addRateLimitHeaders(request: FastifyRequest, reply: FastifyReply, context: any) {
+function addRateLimitHeaders(_request: FastifyRequest, reply: FastifyReply, context: any) {
   // Ensure all required headers are present (Requirement 13.6)
   reply.header('X-RateLimit-Limit', context.max);
   reply.header('X-RateLimit-Remaining', context.remaining || 0);
@@ -232,7 +232,7 @@ export async function registerGlobalRateLimit(server: FastifyInstance): Promise<
  * Allows different limits for different types of operations
  */
 export function createEndpointRateLimit(
-  limitConfig: typeof RateLimitConfig.EXPENSIVE_OPERATIONS,
+  limitConfig: { max: number; timeWindow: string; skipSuccessfulRequests: boolean; skipOnError: boolean },
   endpointType: string
 ) {
   return {
@@ -384,7 +384,7 @@ export async function registerAdaptiveRateLimit(server: FastifyInstance): Promis
       // Log rate limit violation
       logger.warn('Adaptive rate limit exceeded', {
         ip: request.ip,
-        userId: (request as any).user?.id,
+        userId: (request as unknown).user?.id,
         endpoint: `${request.method} ${request.url}`,
         isAuthenticated,
         limit: limitConfig.max,
@@ -423,12 +423,12 @@ export async function registerAdaptiveRateLimit(server: FastifyInstance): Promis
  */
 function parseTimeWindow(timeWindow: string): number {
   const match = timeWindow.match(/^(\d+)\s*(second|minute|hour|day)s?$/i);
-  if (!match) {
+  if (!match || match.length < 3) {
     throw new Error(`Invalid time window format: ${timeWindow}`);
   }
   
-  const value = parseInt(match[1], 10);
-  const unit = match[2].toLowerCase();
+  const value = parseInt(match[1]!, 10);
+  const unit = match[2]!.toLowerCase();
   
   const multipliers = {
     second: 1,
@@ -450,7 +450,7 @@ export async function checkRateLimitHealth(): Promise<{
   try {
     // Test basic rate limit functionality
     const testKey = 'health:check:ratelimit';
-    const result = await checkRateLimit(testKey, 1, 60);
+    await checkRateLimit(testKey, 1, 60);
     
     // Clean up test key
     await redis.del(`${testKey}:${Math.floor(Date.now() / 60000) * 60}`);
