@@ -401,3 +401,15 @@ export function requireOwnership(
 
 // Export request logging middleware
 export { logRequest, logResponse, logError } from './requestLogger.js';
+
+// Export validation middleware
+export {
+  createValidationMiddleware,
+  createFastifySchema,
+  zodToFastifySchema,
+  validationPlugin,
+  commonValidationSchemas,
+  type ValidationConfig,
+  type ValidationErrorDetail,
+  type ValidationResult,
+} from './validation.js';
