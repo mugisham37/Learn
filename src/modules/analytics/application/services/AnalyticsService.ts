@@ -11,6 +11,7 @@
 import { eq, and, gte, lte, count, avg, sum, desc } from 'drizzle-orm';
 
 import { cache, buildCacheKey, CachePrefix, CacheTTL } from '../../../../infrastructure/cache/index.js';
+import { analyticsCacheService } from '../../infrastructure/cache/AnalyticsCacheService.js';
 import { getReadDb } from '../../../../infrastructure/database/index.js';
 import { quizSubmissions } from '../../../../infrastructure/database/schema/assessments.schema.js';
 import { courses } from '../../../../infrastructure/database/schema/courses.schema.js';
@@ -66,6 +67,8 @@ export class AnalyticsService implements IAnalyticsService {
    * - Revenue metrics
    * - Engagement metrics
    * - Performance indicators
+   * 
+   * Implements cache-aside pattern with cache invalidation on updates.
    * 
    * @param courseId - Course ID to update analytics for
    * @returns Updated course analytics
@@ -157,7 +160,15 @@ export class AnalyticsService implements IAnalyticsService {
         lastUpdated: updatedAnalytics.lastUpdated
       };
 
-      return new CourseAnalytics(courseAnalyticsData);
+      const courseAnalytics = new CourseAnalytics(courseAnalyticsData);
+
+      // Cache the updated analytics and invalidate related caches
+      await Promise.all([
+        analyticsCacheService.setCourseAnalytics(courseId, courseAnalytics),
+        analyticsCacheService.invalidateCourseCache(courseId)
+      ]);
+
+      return courseAnalytics;
     } catch (error) {
       if (error instanceof NotFoundError) {
         throw error;
@@ -249,7 +260,15 @@ export class AnalyticsService implements IAnalyticsService {
         lastUpdated: updatedAnalytics.lastUpdated
       };
 
-      return new StudentAnalytics(studentAnalyticsData);
+      const studentAnalytics = new StudentAnalytics(studentAnalyticsData);
+
+      // Cache the updated analytics and invalidate related caches
+      await Promise.all([
+        analyticsCacheService.setStudentAnalytics(userId, studentAnalytics),
+        analyticsCacheService.invalidateStudentCache(userId)
+      ]);
+
+      return studentAnalytics;
     } catch (error) {
       if (error instanceof NotFoundError) {
         throw error;
@@ -265,6 +284,8 @@ export class AnalyticsService implements IAnalyticsService {
   /**
    * Generates comprehensive course report with enrollment trends, performance, and engagement
    * 
+   * Implements cache-aside pattern for expensive report generation.
+   * 
    * @param courseId - Course ID to generate report for
    * @param dateRange - Date range for the report
    * @returns Detailed course report
@@ -273,6 +294,12 @@ export class AnalyticsService implements IAnalyticsService {
    */
   async generateCourseReport(courseId: string, dateRange: DateRange): Promise<CourseReport> {
     try {
+      // Try cache first
+      const cached = await analyticsCacheService.getCourseReport(courseId, dateRange);
+      if (cached) {
+        return cached;
+      }
+
       // Get course details
       const [course] = await this.readDb
         .select({
@@ -311,7 +338,7 @@ export class AnalyticsService implements IAnalyticsService {
         this.generateDifficultContentAnalysis(courseId, dateRange)
       ]);
 
-      return {
+      const report: CourseReport = {
         courseId,
         courseName: course.title,
         instructorName: instructor?.fullName || 'Unknown',
@@ -322,6 +349,11 @@ export class AnalyticsService implements IAnalyticsService {
         revenueMetrics,
         difficultContent
       };
+
+      // Cache the generated report
+      await analyticsCacheService.setCourseReport(courseId, dateRange, report);
+
+      return report;
     } catch (error) {
       if (error instanceof NotFoundError) {
         throw error;
@@ -337,6 +369,8 @@ export class AnalyticsService implements IAnalyticsService {
   /**
    * Generates comprehensive student report with learning progress, performance, and recommendations
    * 
+   * Implements cache-aside pattern for expensive report generation.
+   * 
    * @param userId - User ID to generate report for
    * @param dateRange - Date range for the report
    * @returns Detailed student report
@@ -345,6 +379,12 @@ export class AnalyticsService implements IAnalyticsService {
    */
   async generateStudentReport(userId: string, dateRange: DateRange): Promise<StudentReport> {
     try {
+      // Try cache first
+      const cached = await analyticsCacheService.getStudentReport(userId, dateRange);
+      if (cached) {
+        return cached;
+      }
+
       // Get student details
       const [student] = await this.readDb
         .select({
@@ -375,7 +415,7 @@ export class AnalyticsService implements IAnalyticsService {
         this.generateStudentRecommendations(userId)
       ]);
 
-      return {
+      const report: StudentReport = {
         studentId: userId,
         studentName: student.fullName,
         reportPeriod: dateRange,
@@ -385,6 +425,11 @@ export class AnalyticsService implements IAnalyticsService {
         skillDevelopment,
         recommendations
       };
+
+      // Cache the generated report
+      await analyticsCacheService.setStudentReport(userId, dateRange, report);
+
+      return report;
     } catch (error) {
       if (error instanceof NotFoundError) {
         throw error;
@@ -400,6 +445,8 @@ export class AnalyticsService implements IAnalyticsService {
   /**
    * Gets dashboard metrics tailored to user role (student, educator, admin)
    * 
+   * Implements cache-aside pattern with cache warming for frequently accessed dashboards.
+   * 
    * @param userId - User ID requesting dashboard metrics
    * @param role - User role for role-specific data
    * @returns Role-specific dashboard metrics
@@ -407,11 +454,9 @@ export class AnalyticsService implements IAnalyticsService {
    * @throws DatabaseError if metrics calculation fails
    */
   async getDashboardMetrics(userId: string, role: Role): Promise<DashboardMetrics> {
-    const cacheKey = buildCacheKey(CachePrefix.ANALYTICS, 'dashboard', userId, role);
-
     try {
-      // Try cache first
-      const cached = await cache.get<DashboardMetrics>(cacheKey);
+      // Try cache first using analytics cache service
+      const cached = await analyticsCacheService.getDashboardMetrics(userId, role);
       if (cached) {
         return cached;
       }
@@ -433,8 +478,8 @@ export class AnalyticsService implements IAnalyticsService {
           throw new ValidationError('Invalid user role', [{ field: 'role', message: 'Must be student, educator, or admin' }]);
       }
 
-      // Cache the result
-      await cache.set(cacheKey, metrics, CacheTTL.ANALYTICS);
+      // Cache the result using analytics cache service
+      await analyticsCacheService.setDashboardMetrics(userId, role, metrics);
 
       return metrics;
     } catch (error) {
@@ -546,6 +591,8 @@ export class AnalyticsService implements IAnalyticsService {
   /**
    * Gets trending courses based on recent enrollment velocity
    * 
+   * Implements cache-aside pattern for expensive trending calculations.
+   * 
    * @param limit - Number of trending courses to return
    * @param dateRange - Date range to analyze trends
    * @returns Array of trending course analytics
@@ -553,6 +600,12 @@ export class AnalyticsService implements IAnalyticsService {
    */
   async getTrendingCourses(limit: number, dateRange: DateRange): Promise<CourseAnalytics[]> {
     try {
+      // Try cache first
+      const cached = await analyticsCacheService.getTrendingCourses(limit, dateRange);
+      if (cached) {
+        return cached;
+      }
+
       // Calculate enrollment velocity for each course
       const trendingCourseIds = await this.readDb
         .select({
@@ -575,7 +628,7 @@ export class AnalyticsService implements IAnalyticsService {
       const analytics = await this.analyticsRepository.courseAnalytics.findByCourseIds(courseIds);
 
       // Convert to domain entities and maintain order
-      return courseIds.map(courseId => {
+      const trendingCourses = courseIds.map(courseId => {
         const analyticsData = analytics.find(a => a.courseId === courseId);
         if (!analyticsData) {
           throw new DatabaseError(`Analytics not found for trending course ${courseId}`, 'getTrendingCourses');
@@ -596,6 +649,11 @@ export class AnalyticsService implements IAnalyticsService {
           lastUpdated: analyticsData.lastUpdated
         });
       });
+
+      // Cache the results
+      await analyticsCacheService.setTrendingCourses(limit, dateRange, trendingCourses);
+
+      return trendingCourses;
     } catch (error) {
       throw new DatabaseError(
         `Failed to get trending courses: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -607,15 +665,23 @@ export class AnalyticsService implements IAnalyticsService {
   /**
    * Gets top performing students based on completion rate and scores
    * 
+   * Implements cache-aside pattern for expensive performance calculations.
+   * 
    * @param limit - Number of top students to return
    * @returns Array of top student analytics
    * @throws DatabaseError if performance calculation fails
    */
   async getTopPerformingStudents(limit: number): Promise<StudentAnalytics[]> {
     try {
+      // Try cache first
+      const cached = await analyticsCacheService.getTopPerformers(limit);
+      if (cached) {
+        return cached;
+      }
+
       const topStudents = await this.analyticsRepository.studentAnalytics.findTopPerformers(limit);
 
-      return topStudents.map(student => new StudentAnalytics({
+      const topPerformers = topStudents.map(student => new StudentAnalytics({
         userId: student.userId,
         totalCoursesEnrolled: student.totalCoursesEnrolled,
         coursesCompleted: student.coursesCompleted,
@@ -628,6 +694,11 @@ export class AnalyticsService implements IAnalyticsService {
         skillRatings: (student.skillRatings as Record<string, number>) || {},
         lastUpdated: student.lastUpdated
       }));
+
+      // Cache the results
+      await analyticsCacheService.setTopPerformers(limit, topPerformers);
+
+      return topPerformers;
     } catch (error) {
       throw new DatabaseError(
         `Failed to get top performing students: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -638,6 +709,8 @@ export class AnalyticsService implements IAnalyticsService {
 
   /**
    * Calculates platform-wide metrics for admin dashboard
+   * 
+   * Implements cache-aside pattern for expensive platform-wide calculations.
    * 
    * @param dateRange - Date range for metrics calculation
    * @returns Platform-wide analytics summary
@@ -659,6 +732,12 @@ export class AnalyticsService implements IAnalyticsService {
     };
   }> {
     try {
+      // Try cache first
+      const cached = await analyticsCacheService.getPlatformMetrics(dateRange);
+      if (cached) {
+        return cached;
+      }
+
       // Calculate current period metrics
       const [currentMetrics] = await Promise.all([
         this.calculateCurrentPlatformMetrics(dateRange)
@@ -685,10 +764,15 @@ export class AnalyticsService implements IAnalyticsService {
         revenueGrowth: this.calculateGrowthRate(previousMetrics.totalRevenue, currentMetrics.totalRevenue)
       };
 
-      return {
+      const platformMetrics = {
         ...currentMetrics,
         growthMetrics
       };
+
+      // Cache the results
+      await analyticsCacheService.setPlatformMetrics(dateRange, platformMetrics);
+
+      return platformMetrics;
     } catch (error) {
       throw new DatabaseError(
         `Failed to get platform metrics: ${error instanceof Error ? error.message : 'Unknown error'}`,
