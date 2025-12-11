@@ -27,4 +27,5 @@ export * from './EmailTemplateService.js';
 export * from './SendGridEmailService.js';
 export * from './SESEmailService.js';
 export * from './EmailServiceFactory.js';
+export * from './EmailQueue.js';
 export * from './ServiceFactory.js';
