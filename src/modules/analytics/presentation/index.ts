@@ -5,5 +5,4 @@
  * including GraphQL resolvers and REST controllers.
  */
 
-// Presentation layer will be implemented in future tasks
-export {};
+export { analyticsTypeDefs } from './graphql/schema.js';

@@ -1506,6 +1506,7 @@ This implementation plan breaks down the development of the educational learning
 
 
 
+
   - Create BullMQ queues for analytics aggregation
   - Implement hourly job for real-time metrics
   - Implement daily job for course and student analytics
@@ -1514,7 +1515,11 @@ This implementation plan breaks down the development of the educational learning
   - Configure job scheduling with node-cron
   - _Requirements: 12.5, 14.3_
 
-- [ ] 92. Create GraphQL schema for analytics module
+- [x] 92. Create GraphQL schema for analytics module
+
+
+
+
   - Define CourseAnalytics type
   - Define StudentAnalytics type
   - Define DashboardMetrics type
