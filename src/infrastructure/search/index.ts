@@ -658,6 +658,11 @@ export async function closeElasticsearchConnection(): Promise<void> {
 export type { ISearchRepository } from './ISearchRepository.js';
 export { SearchRepository } from './SearchRepository.js';
 
+// Export Elasticsearch client interface and implementation
+export type { IElasticsearchClient } from './IElasticsearchClient.js';
+export { ElasticsearchClient } from './ElasticsearchClient.js';
+import { ElasticsearchClient } from './ElasticsearchClient.js';
+
 /**
  * Create a search repository instance
  * Factory function to create a properly configured search repository
@@ -665,4 +670,17 @@ export { SearchRepository } from './SearchRepository.js';
 export async function createSearchRepository(): Promise<ISearchRepository> {
   const { SearchRepository } = await import('./SearchRepository.js');
   return new SearchRepository();
+}
+
+/**
+ * Create an Elasticsearch client instance
+ * Factory function to create a properly configured Elasticsearch client wrapper
+ */
+export function createElasticsearchClient(retryConfig?: {
+  maxRetries?: number;
+  initialDelayMs?: number;
+  maxDelayMs?: number;
+  backoffMultiplier?: number;
+}): IElasticsearchClient {
+  return new ElasticsearchClient(elasticsearch, retryConfig);
 }
