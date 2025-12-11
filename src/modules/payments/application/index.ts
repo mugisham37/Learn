@@ -3,7 +3,17 @@
  * 
  * Contains use cases, application services, DTOs,
  * and orchestration logic for the payments domain.
- * These will be implemented in subsequent tasks.
+ * 
+ * This layer orchestrates payment operations between domain entities,
+ * repositories, and external services. It handles complex business
+ * workflows and ensures data consistency across payment, enrollment,
+ * and notification systems.
+ * 
+ * Requirements:
+ * - 11.1: Stripe checkout session creation and payment processing
+ * - 11.2: Webhook handling for payment events
+ * - 11.3: Payment failure handling and retry logic
+ * - 11.5: Refund processing with policy validation
  */
 
-// TODO: Implement payment application services in task 80
+export * from './services/index.js';
