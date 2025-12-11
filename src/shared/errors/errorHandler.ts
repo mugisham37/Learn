@@ -9,6 +9,7 @@ import { FastifyError, FastifyReply, FastifyRequest } from 'fastify';
 
 import {
   AppError,
+  RateLimitError,
   formatErrorResponse,
   getStatusCode,
   sanitizeError,
@@ -208,6 +209,14 @@ export async function errorHandler(
     request.id,
     isDevelopment
   );
+
+  // Add rate limit headers if this is a RateLimitError (Requirement 13.6)
+  if (error instanceof RateLimitError) {
+    const headers = error.getHeaders();
+    Object.entries(headers).forEach(([key, value]) => {
+      reply.header(key, value);
+    });
+  }
 
   // Send error response
   await reply

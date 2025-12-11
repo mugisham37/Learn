@@ -95,12 +95,9 @@ function generateRateLimitKey(request: FastifyRequest, prefix: string = 'global'
 
 /**
  * Custom error response handler for rate limit exceeded
- * Implements requirement 13.6 - return 429 with headers
+ * Implements requirement 13.6 - return 429 with headers and informative message
  */
 function rateLimitErrorHandler(request: FastifyRequest, context: any) {
-  const error = new Error('Rate limit exceeded');
-  (error as any).statusCode = 429;
-  
   // Log rate limit violation
   logger.warn('Rate limit exceeded', {
     ip: request.ip,
@@ -109,7 +106,33 @@ function rateLimitErrorHandler(request: FastifyRequest, context: any) {
     userAgent: request.headers['user-agent'],
     limit: context.max,
     timeWindow: context.timeWindow,
+    remaining: context.remaining || 0,
+    resetTime: context.resetTime,
   });
+  
+  // Calculate retry after time in seconds
+  const retryAfter = context.resetTime 
+    ? Math.ceil((context.resetTime - Date.now()) / 1000)
+    : 900; // Default to 15 minutes if not available
+  
+  // Create informative error response (Requirement 13.6)
+  const errorResponse = {
+    statusCode: 429,
+    error: 'Too Many Requests',
+    message: `Rate limit exceeded. You have made too many requests. Please try again in ${retryAfter} seconds.`,
+    details: {
+      limit: context.max,
+      remaining: context.remaining || 0,
+      resetTime: context.resetTime ? new Date(context.resetTime).toISOString() : null,
+      retryAfter,
+      policy: `${context.max} requests per ${context.timeWindow}`,
+    },
+    timestamp: new Date().toISOString(),
+  };
+  
+  const error = new Error(errorResponse.message);
+  (error as any).statusCode = 429;
+  (error as any).response = errorResponse;
   
   return error;
 }
@@ -119,13 +142,22 @@ function rateLimitErrorHandler(request: FastifyRequest, context: any) {
  * Implements requirement 13.6 - include headers showing limit, remaining, reset time
  */
 function addRateLimitHeaders(request: FastifyRequest, reply: FastifyReply, context: any) {
-  // Headers are automatically added by fastify-rate-limit plugin:
-  // X-RateLimit-Limit: maximum requests allowed
-  // X-RateLimit-Remaining: remaining requests in current window
-  // X-RateLimit-Reset: timestamp when the rate limit resets
+  // Ensure all required headers are present (Requirement 13.6)
+  reply.header('X-RateLimit-Limit', context.max);
+  reply.header('X-RateLimit-Remaining', context.remaining || 0);
   
-  // Additional custom header for better debugging
+  // Calculate reset time if not provided
+  const resetTime = context.resetTime || (Date.now() + (parseTimeWindow(context.timeWindow) * 1000));
+  reply.header('X-RateLimit-Reset', Math.floor(resetTime / 1000));
+  
+  // Additional informative headers
   reply.header('X-RateLimit-Policy', `${context.max} requests per ${context.timeWindow}`);
+  
+  // Add Retry-After header for 429 responses
+  if (reply.statusCode === 429) {
+    const retryAfter = Math.ceil((resetTime - Date.now()) / 1000);
+    reply.header('Retry-After', retryAfter);
+  }
 }
 
 /**
@@ -149,14 +181,25 @@ export async function registerGlobalRateLimit(server: FastifyInstance): Promise<
       // Custom key generator for IP/user-based limiting
       keyGenerator: (request: FastifyRequest) => generateRateLimitKey(request, 'global'),
       
-      // Custom error handler
-      errorResponseBuilder: rateLimitErrorHandler,
+      // Custom error response builder (Requirement 13.6)
+      errorResponseBuilder: (request: FastifyRequest, context: any) => {
+        const error = rateLimitErrorHandler(request, context);
+        
+        // Return the structured error response
+        return (error as any).response || {
+          statusCode: 429,
+          error: 'Too Many Requests',
+          message: error.message,
+          timestamp: new Date().toISOString(),
+        };
+      },
       
-      // Add headers to response
+      // Add headers to response (Requirement 13.6)
       addHeaders: {
         'x-ratelimit-limit': true,
         'x-ratelimit-remaining': true,
         'x-ratelimit-reset': true,
+        'retry-after': true,
       },
       
       // Hook to add custom headers
@@ -205,14 +248,25 @@ export function createEndpointRateLimit(
         keyGenerator: (request: FastifyRequest) => 
           generateRateLimitKey(request, endpointType),
         
-        // Custom error handler
-        errorResponseBuilder: rateLimitErrorHandler,
+        // Custom error response builder (Requirement 13.6)
+        errorResponseBuilder: (request: FastifyRequest, context: any) => {
+          const error = rateLimitErrorHandler(request, context);
+          
+          // Return the structured error response
+          return (error as any).response || {
+            statusCode: 429,
+            error: 'Too Many Requests',
+            message: error.message,
+            timestamp: new Date().toISOString(),
+          };
+        },
         
-        // Add headers
+        // Add headers (Requirement 13.6)
         addHeaders: {
           'x-ratelimit-limit': true,
           'x-ratelimit-remaining': true,
           'x-ratelimit-reset': true,
+          'retry-after': true,
         },
         
         // Hook to add custom headers
@@ -318,11 +372,14 @@ export async function registerAdaptiveRateLimit(server: FastifyInstance): Promis
     const rateLimitResult = await checkRateLimit(key, limitConfig.max, windowSeconds);
     
     if (!rateLimitResult.allowed) {
-      // Add rate limit headers
+      const retryAfter = Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000);
+      
+      // Add rate limit headers (Requirement 13.6)
       reply.header('X-RateLimit-Limit', limitConfig.max);
       reply.header('X-RateLimit-Remaining', rateLimitResult.remaining);
       reply.header('X-RateLimit-Reset', Math.floor(rateLimitResult.resetTime / 1000));
       reply.header('X-RateLimit-Policy', `${limitConfig.max} requests per ${limitConfig.timeWindow}`);
+      reply.header('Retry-After', retryAfter);
       
       // Log rate limit violation
       logger.warn('Adaptive rate limit exceeded', {
@@ -331,13 +388,24 @@ export async function registerAdaptiveRateLimit(server: FastifyInstance): Promis
         endpoint: `${request.method} ${request.url}`,
         isAuthenticated,
         limit: limitConfig.max,
+        remaining: rateLimitResult.remaining,
+        resetTime: rateLimitResult.resetTime,
       });
       
+      // Return structured error response (Requirement 13.6)
       return reply.code(429).send({
         statusCode: 429,
         error: 'Too Many Requests',
-        message: 'Rate limit exceeded. Please try again later.',
-        retryAfter: Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000),
+        message: `Rate limit exceeded. You have made too many requests. Please try again in ${retryAfter} seconds.`,
+        details: {
+          limit: limitConfig.max,
+          remaining: rateLimitResult.remaining,
+          resetTime: new Date(rateLimitResult.resetTime).toISOString(),
+          retryAfter,
+          policy: `${limitConfig.max} requests per ${limitConfig.timeWindow}`,
+          userType: isAuthenticated ? 'authenticated' : 'anonymous',
+        },
+        timestamp: new Date().toISOString(),
       });
     }
     

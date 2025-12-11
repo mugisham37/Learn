@@ -212,6 +212,43 @@ describe('Custom Error Classes', () => {
       expect(error.details?.limit).toBe(100);
       expect(error.details?.resetTime).toBe('2024-01-01T12:00:00.000Z');
     });
+
+    it('should include all rate limit parameters', () => {
+      const resetTime = new Date('2024-01-01T12:00:00Z');
+      const error = new RateLimitError('Rate limit exceeded', 100, resetTime, 5, 300);
+      
+      expect(error.limit).toBe(100);
+      expect(error.resetTime).toBe(resetTime);
+      expect(error.remaining).toBe(5);
+      expect(error.retryAfter).toBe(300);
+      expect(error.details?.limit).toBe(100);
+      expect(error.details?.resetTime).toBe('2024-01-01T12:00:00.000Z');
+      expect(error.details?.remaining).toBe(5);
+      expect(error.details?.retryAfter).toBe(300);
+    });
+
+    it('should generate correct headers for rate limit response', () => {
+      const resetTime = new Date('2024-01-01T12:00:00Z');
+      const error = new RateLimitError('Rate limit exceeded', 100, resetTime, 5, 300);
+      
+      const headers = error.getHeaders();
+      
+      expect(headers['X-RateLimit-Limit']).toBe(100);
+      expect(headers['X-RateLimit-Remaining']).toBe(5);
+      expect(headers['X-RateLimit-Reset']).toBe(1704110400); // Unix timestamp for 2024-01-01T12:00:00Z
+      expect(headers['Retry-After']).toBe(300);
+    });
+
+    it('should generate headers with only available parameters', () => {
+      const error = new RateLimitError('Rate limit exceeded', 50);
+      
+      const headers = error.getHeaders();
+      
+      expect(headers['X-RateLimit-Limit']).toBe(50);
+      expect(headers['X-RateLimit-Remaining']).toBeUndefined();
+      expect(headers['X-RateLimit-Reset']).toBeUndefined();
+      expect(headers['Retry-After']).toBeUndefined();
+    });
   });
 });
 

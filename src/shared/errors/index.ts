@@ -177,19 +177,55 @@ export class DatabaseError extends AppError {
  * RateLimitError
  * Indicates rate limit exceeded
  * HTTP Status: 429
+ * Implements requirement 13.6 - proper rate limit error with headers
  */
 export class RateLimitError extends AppError {
   constructor(
     message: string = 'Too many requests',
     public readonly limit?: number,
-    public readonly resetTime?: Date
+    public readonly resetTime?: Date,
+    public readonly remaining?: number,
+    public readonly retryAfter?: number
   ) {
+    const details: Record<string, unknown> = {};
+    
+    if (limit !== undefined) details.limit = limit;
+    if (resetTime) details.resetTime = resetTime.toISOString();
+    if (remaining !== undefined) details.remaining = remaining;
+    if (retryAfter !== undefined) details.retryAfter = retryAfter;
+    
     super(
       message,
       429,
       'RATE_LIMIT_EXCEEDED',
-      limit && resetTime ? { limit, resetTime: resetTime.toISOString() } : undefined
+      Object.keys(details).length > 0 ? details : undefined
     );
+  }
+  
+  /**
+   * Get headers that should be included in the response
+   * Implements requirement 13.6 - include rate limit headers
+   */
+  getHeaders(): Record<string, string | number> {
+    const headers: Record<string, string | number> = {};
+    
+    if (this.limit !== undefined) {
+      headers['X-RateLimit-Limit'] = this.limit;
+    }
+    
+    if (this.remaining !== undefined) {
+      headers['X-RateLimit-Remaining'] = this.remaining;
+    }
+    
+    if (this.resetTime) {
+      headers['X-RateLimit-Reset'] = Math.floor(this.resetTime.getTime() / 1000);
+    }
+    
+    if (this.retryAfter !== undefined) {
+      headers['Retry-After'] = this.retryAfter;
+    }
+    
+    return headers;
   }
 }
 
