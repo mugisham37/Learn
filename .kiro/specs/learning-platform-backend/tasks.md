@@ -1308,7 +1308,10 @@ This implementation plan breaks down the development of the educational learning
   - Implement payment history queries
   - _Requirements: 11.1, 11.5_
 
-- [ ] 79. Implement payment domain entities
+- [x] 79. Implement payment domain entities
+
+
+
   - Create Payment entity with validation
   - Create Subscription entity
   - Create Refund entity
