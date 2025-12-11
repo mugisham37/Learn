@@ -662,6 +662,8 @@ export { SearchRepository } from './SearchRepository.js';
 export type { IElasticsearchClient } from './IElasticsearchClient.js';
 export { ElasticsearchClient } from './ElasticsearchClient.js';
 import { ElasticsearchClient } from './ElasticsearchClient.js';
+import { IElasticsearchClient } from './IElasticsearchClient.js';
+import { IElasticsearchClient } from './IElasticsearchClient.js';
 
 /**
  * Create a search repository instance

@@ -33,6 +33,25 @@ export {
   createSearchRepository,
 } from '../../infrastructure/search/index.js';
 
+// Infrastructure layer exports for search indexing
+export { SearchIndexingService } from './infrastructure/events/SearchIndexingService.js';
+export { SearchIndexingEventHandlers } from './infrastructure/events/SearchIndexingEventHandlers.js';
+
+// Integration utilities
+export {
+  initializeSearchIndexing,
+  getSearchIndexingService,
+  shutdownSearchIndexing,
+  getSearchIndexingHealth,
+  indexCourse,
+  indexLesson,
+  removeCourse,
+  removeLesson,
+  bulkReindex,
+  refreshSearchIndices,
+} from './infrastructure/SearchIndexingIntegration.js';
+export type { SearchIndexingIntegrationConfig } from './infrastructure/SearchIndexingIntegration.js';
+
 /**
  * Create a configured search service instance
  * Factory function to create a search service with all dependencies
@@ -43,4 +62,20 @@ export async function createSearchService(): Promise<import('./application/servi
   
   const searchRepository = await createSearchRepository();
   return new SearchService(searchRepository);
+}
+
+/**
+ * Create a configured search indexing service instance
+ * Factory function to create a search indexing service with all dependencies
+ */
+export async function createSearchIndexingService(config?: {
+  enableEventHandlers?: boolean;
+  enableBulkReindexing?: boolean;
+  bulkReindexBatchSize?: number;
+  retryFailedJobs?: boolean;
+}): Promise<import('./infrastructure/events/SearchIndexingService.js').SearchIndexingService> {
+  const { SearchIndexingService } = await import('./infrastructure/events/SearchIndexingService.js');
+  
+  const searchService = await createSearchService();
+  return new SearchIndexingService(searchService, config);
 }

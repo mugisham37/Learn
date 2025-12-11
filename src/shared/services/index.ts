@@ -56,6 +56,31 @@ export { RealtimeService } from './RealtimeService.js';
 // Service factory
 export { ServiceFactory } from './ServiceFactory.js';
 
+// Startup integration
+export { 
+  initializeApplicationServices, 
+  shutdownApplicationServices,
+  CourseServiceWithSearchIntegration
+} from './startupIntegration.js';
+export type { StartupConfig } from './startupIntegration.js';
+
+// Event system
+export { EventBus, eventBus } from './EventBus.js';
+export type { DomainEvent, EventHandler, EventSubscription } from './EventBus.js';
+
+// Search indexing
+export { SearchIndexingQueue } from './SearchIndexingQueue.js';
+export type { 
+  SearchIndexingJobType,
+  SearchIndexingJobData,
+  IndexCourseJobData,
+  IndexLessonJobData,
+  RemoveCourseJobData,
+  RemoveLessonJobData,
+  RemoveLessonsByCourseJobData,
+  BulkReindexJobData
+} from './SearchIndexingQueue.js';
+
 // Interfaces
 export type { ICloudFrontService } from './ICloudFrontService.js';
 export type { IContentService } from './IContentService.js';
