@@ -446,3 +446,17 @@ export {
   registerCSRFProtection,
   requireCSRFProtection,
 } from './csrf.js';
+
+// Export HTTP caching middleware
+export {
+  createHttpCachingMiddleware,
+  addCachingToRoute,
+  registerHttpCaching,
+  generateETag,
+  buildCacheControlHeader,
+  parseIfNoneMatch,
+  etagsMatch,
+  CacheConfigs,
+  type CacheConfig,
+  type ETagOptions,
+} from './httpCaching.js';

@@ -28,6 +28,7 @@ import {
 import { complexityDirectiveTypeDefs } from './complexityDirectives.js';
 import { createExecutionTimeTracker } from './complexityMonitoring.js';
 import { complexityMonitoringSchema } from './complexitySchema.js';
+import { createGraphQLCachingPlugin, createCacheAwareContext } from './cachingPlugin.js';
 
 // Import all module schemas and resolvers
 import { userTypeDefs, userResolvers } from '../../modules/users/presentation/graphql/index.js';
@@ -242,6 +243,9 @@ export async function createApolloServer(fastify: FastifyInstance): Promise<{
       // Execution time tracking plugin
       createExecutionTimeTracker(),
       
+      // HTTP caching plugin for GraphQL responses
+      createGraphQLCachingPlugin(),
+      
       // Landing page configuration based on environment
       config.nodeEnv === 'production'
         ? ApolloServerPluginLandingPageProductionDefault({
@@ -369,5 +373,6 @@ export async function createGraphQLContext({ request }: { request: GraphQLReques
     // Continue without PubSub - subscription resolvers should handle gracefully
   }
 
-  return context;
+  // Add cache utilities to context
+  return createCacheAwareContext(context);
 }

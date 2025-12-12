@@ -102,6 +102,10 @@ export async function createServer(): Promise<FastifyInstance> {
   // Register CSRF protection middleware
   await registerCSRFProtection(server);
 
+  // Register HTTP caching middleware
+  const { registerHttpCaching } = await import('./shared/middleware/httpCaching.js');
+  await registerHttpCaching(server);
+
   // Add request logging hook using Winston
   server.addHook('onRequest', logRequest);
 
