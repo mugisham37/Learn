@@ -102,6 +102,14 @@ export async function createServer(): Promise<FastifyInstance> {
   // Register CSRF protection middleware
   await registerCSRFProtection(server);
 
+  // Register compression middleware
+  const { registerCompression } = await import('./shared/middleware/compression.js');
+  await registerCompression(server, {
+    threshold: 1024, // 1KB minimum
+    level: 6, // Balanced compression
+    preferBrotli: true,
+  });
+
   // Register HTTP caching middleware
   const { registerHttpCaching } = await import('./shared/middleware/httpCaching.js');
   await registerHttpCaching(server);

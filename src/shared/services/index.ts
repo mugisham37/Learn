@@ -58,6 +58,8 @@ export { ContentService } from './ContentService.js';
 export { S3Service } from './S3Service.js';
 export { FileUploadSecurityService } from './FileUploadSecurityService.js';
 export { SecureFileUploadService } from './SecureFileUploadService.js';
+export { AssetOptimizationService, createAssetOptimizationService } from './AssetOptimizationService.js';
+export { LazyLoadingService, lazyLoadingService } from './LazyLoadingService.js';
 
 // Email services
 export { EmailTemplateService } from './EmailTemplateService.js';

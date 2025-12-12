@@ -460,3 +460,13 @@ export {
   type CacheConfig,
   type ETagOptions,
 } from './httpCaching.js';
+
+// Export compression middleware
+export {
+  createCompressionMiddleware,
+  registerCompression,
+  getCompressionStats,
+  resetCompressionStats,
+  type CompressionOptions,
+  type CompressionStats,
+} from './compression.js';
