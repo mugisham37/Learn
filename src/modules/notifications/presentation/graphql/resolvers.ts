@@ -25,6 +25,7 @@ import {
   withFilter 
 } from '../../../../infrastructure/graphql/pubsub.js';
 import { requireAuth } from '../../../../infrastructure/graphql/utils.js';
+import { type GraphQLContext } from '../../../../infrastructure/graphql/apolloServer.js';
 import { INotificationService } from '../../application/services/INotificationService.js';
 import { INotificationPreferenceService } from '../../application/services/INotificationPreferenceService.js';
 import { INotificationRepository } from '../../infrastructure/repositories/INotificationRepository.js';
@@ -37,24 +38,7 @@ import {
 } from '../../../../infrastructure/database/schema/notifications.schema.js';
 import { NotificationPreferences } from '../../../users/domain/value-objects/UserProfile.js';
 
-/**
- * GraphQL context interface
- */
-interface GraphQLContext {
-  user?: {
-    id: string;
-    role: string;
-    email: string;
-  };
-  requestId: string;
-  dataSources?: {
-    notificationService: INotificationService;
-    notificationPreferenceService: INotificationPreferenceService;
-    notificationRepository: INotificationRepository;
-    realtimeService?: IRealtimeService;
-    userRepository: IUserRepository;
-  };
-}
+
 
 /**
  * Input types for GraphQL operations
@@ -109,15 +93,7 @@ interface PageInfo {
   endCursor?: string;
 }
 
-/**
- * Utility function to require authentication
- */
-function requireAuth(context: GraphQLContext): { id: string; role: string; email: string } {
-  if (!context.user) {
-    throw new AuthenticationError('Authentication required');
-  }
-  return context.user;
-}
+
 
 /**
  * Utility function to get data sources
@@ -866,97 +842,12 @@ export const notificationResolvers = {
 
           return createAsyncIterator(SUBSCRIPTION_EVENTS.UNREAD_COUNT_CHANGED);
         },
-        (payload: any, variables: any, context: GraphQLContext) => {
+        (payload: any, variables: unknown, context: GraphQLContext) => {
           // Users can only subscribe to their own unread count updates
           const user = requireAuth(context);
           return payload.userId === variables.userId && payload.userId === user.id;
         }
       )
-    }
-    },
-
-    /**
-     * Real-time notification read status updates
-     * 
-     * Requirements: 21.4
-     */
-    notificationRead: {
-      subscribe: async (
-        _parent: unknown,
-        args: { userId: string },
-        context: GraphQLContext,
-        _info: GraphQLResolveInfo
-      ) => {
-        try {
-          const user = requireAuth(context);
-
-          // Check authorization - users can only subscribe to their own notifications
-          if (args.userId !== user.id) {
-            throw new AuthorizationError('Can only subscribe to your own notifications');
-          }
-
-          logger.info('Setting up notification read status subscription', {
-            userId: args.userId,
-            requestId: context.requestId,
-          });
-
-          // Placeholder for subscription implementation
-          throw new GraphQLError('Subscription implementation pending', {
-            extensions: { code: 'NOT_IMPLEMENTED' },
-          });
-
-        } catch (error) {
-          logger.error('Failed to set up notification read status subscription', {
-            userId: args.userId,
-            error: error instanceof Error ? error.message : 'Unknown error',
-            requestId: context.requestId,
-          });
-
-          throw error;
-        }
-      },
-    },
-
-    /**
-     * Real-time unread count updates
-     * 
-     * Requirements: 21.4
-     */
-    unreadCountChanged: {
-      subscribe: async (
-        _parent: unknown,
-        args: { userId: string },
-        context: GraphQLContext,
-        _info: GraphQLResolveInfo
-      ) => {
-        try {
-          const user = requireAuth(context);
-
-          // Check authorization - users can only subscribe to their own unread count
-          if (args.userId !== user.id) {
-            throw new AuthorizationError('Can only subscribe to your own unread count');
-          }
-
-          logger.info('Setting up unread count subscription', {
-            userId: args.userId,
-            requestId: context.requestId,
-          });
-
-          // Placeholder for subscription implementation
-          throw new GraphQLError('Subscription implementation pending', {
-            extensions: { code: 'NOT_IMPLEMENTED' },
-          });
-
-        } catch (error) {
-          logger.error('Failed to set up unread count subscription', {
-            userId: args.userId,
-            error: error instanceof Error ? error.message : 'Unknown error',
-            requestId: context.requestId,
-          });
-
-          throw error;
-        }
-      },
     },
   },
 

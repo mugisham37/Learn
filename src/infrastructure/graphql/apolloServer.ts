@@ -29,6 +29,7 @@ import { complexityDirectiveTypeDefs } from './complexityDirectives.js';
 import { createExecutionTimeTracker } from './complexityMonitoring.js';
 import { complexityMonitoringSchema } from './complexitySchema.js';
 import { createGraphQLCachingPlugin, createCacheAwareContext } from './cachingPlugin.js';
+import { createResponseOptimizationPlugin, getEnvironmentOptimizationConfig } from './responseOptimization.js';
 
 // Import all module schemas and resolvers
 import { userTypeDefs, userResolvers } from '../../modules/users/presentation/graphql/index.js';
@@ -245,6 +246,9 @@ export async function createApolloServer(fastify: FastifyInstance): Promise<{
       
       // HTTP caching plugin for GraphQL responses
       createGraphQLCachingPlugin(),
+      
+      // Response optimization plugin for payload size reduction
+      createResponseOptimizationPlugin(getEnvironmentOptimizationConfig()),
       
       // Landing page configuration based on environment
       config.nodeEnv === 'production'
