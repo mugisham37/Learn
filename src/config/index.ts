@@ -46,6 +46,16 @@ export const config = {
     url: requireEnv('DATABASE_URL'),
     poolMin: parseInt(getEnv('DATABASE_POOL_MIN', '5'), 10),
     poolMax: parseInt(getEnv('DATABASE_POOL_MAX', '20'), 10),
+    // PgBouncer configuration
+    usePgBouncer: getEnv('USE_PGBOUNCER', 'false') === 'true',
+    pgBouncerUrl: getEnv('PGBOUNCER_URL', ''),
+    // Connection timeouts
+    connectionTimeoutMs: parseInt(getEnv('DATABASE_CONNECTION_TIMEOUT_MS', '10000'), 10),
+    idleTimeoutMs: parseInt(getEnv('DATABASE_IDLE_TIMEOUT_MS', '30000'), 10),
+    queryTimeoutMs: parseInt(getEnv('DATABASE_QUERY_TIMEOUT_MS', '60000'), 10),
+    // Connection monitoring
+    enableConnectionMonitoring: getEnv('ENABLE_CONNECTION_MONITORING', 'true') === 'true',
+    connectionMonitoringInterval: parseInt(getEnv('CONNECTION_MONITORING_INTERVAL_MS', '30000'), 10),
   },
 
   // Redis

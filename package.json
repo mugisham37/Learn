@@ -26,7 +26,12 @@
     "test:scheduler": "tsx scripts/test-scheduler.ts",
     "analyze:queries": "tsx scripts/analyze-query-performance.ts",
     "db:optimize": "tsx scripts/analyze-query-performance.ts --create-indexes --update-stats",
-    "db:analyze-indexes": "tsx scripts/analyze-query-performance.ts --analyze-queries --generate-report"
+    "db:analyze-indexes": "tsx scripts/analyze-query-performance.ts --analyze-queries --generate-report",
+    "optimize:pools": "tsx scripts/optimize-connection-pools.ts",
+    "optimize:pools:light": "tsx scripts/optimize-connection-pools.ts --preset light",
+    "optimize:pools:heavy": "tsx scripts/optimize-connection-pools.ts --preset heavy",
+    "optimize:pools:all": "tsx scripts/optimize-connection-pools.ts --all",
+    "stress:test": "tsx scripts/optimize-connection-pools.ts --stress"
   },
   "keywords": [
     "education",

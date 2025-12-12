@@ -7,10 +7,12 @@
  * Requirements: 17.1
  */
 
-import { checkDatabaseHealth } from '../../infrastructure/database/index.js';
 import { checkRedisHealth, checkSessionRedisHealth } from '../../infrastructure/cache/index.js';
+import { checkDatabaseHealth } from '../../infrastructure/database/index.js';
 import { checkElasticsearchHealth } from '../../infrastructure/search/index.js';
 import { checkRateLimitHealth } from '../middleware/rateLimiting.js';
+
+import { getConnectionHealth, getPoolPerformanceMetrics } from './connectionHealth.js';
 
 /**
  * Check secrets manager health
@@ -54,6 +56,20 @@ export interface SystemHealth {
     elasticsearch: ServiceHealth;
     rateLimit: ServiceHealth;
     secretsManager: ServiceHealth;
+  };
+  connectionPools?: {
+    monitoring: boolean;
+    writePool: {
+      utilization: number;
+      connections: number;
+      waiting: number;
+    };
+    readPool: {
+      utilization: number;
+      connections: number;
+      waiting: number;
+    };
+    recommendations: string[];
   };
   summary: {
     healthy: number;
@@ -222,12 +238,38 @@ export async function performSystemHealthCheck(): Promise<SystemHealth> {
 
   const totalLatency = Date.now() - startTime;
 
+  // Get connection pool information if monitoring is enabled
+  let connectionPools;
+  try {
+    if (process.env.ENABLE_CONNECTION_MONITORING === 'true') {
+      const connectionHealth = await getConnectionHealth();
+      connectionPools = {
+        monitoring: connectionHealth.monitoring.enabled,
+        writePool: {
+          utilization: connectionHealth.database.writePool.utilization,
+          connections: connectionHealth.database.writePool.totalConnections,
+          waiting: connectionHealth.database.writePool.waitingClients,
+        },
+        readPool: {
+          utilization: connectionHealth.database.readPool.utilization,
+          connections: connectionHealth.database.readPool.totalConnections,
+          waiting: connectionHealth.database.readPool.waitingClients,
+        },
+        recommendations: connectionHealth.monitoring.recommendations,
+      };
+    }
+  } catch (error) {
+    // Connection monitoring is optional, don't fail health check if it fails
+    console.warn('Failed to get connection pool information:', error);
+  }
+
   return {
     status,
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     environment: process.env.NODE_ENV || 'development',
     services,
+    connectionPools,
     summary: {
       healthy: healthyServices.length,
       total: totalServices,

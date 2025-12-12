@@ -2,7 +2,7 @@
  * Database Connection and Configuration
  * 
  * Manages PostgreSQL connection using Drizzle ORM with connection pooling,
- * retry logic, separate read/write pools, and transaction management.
+ * retry logic, separate read/write pools, transaction management, and PgBouncer support.
  * 
  * Requirements: 15.7, 16.3
  */
@@ -11,6 +11,7 @@ import { drizzle, NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { Pool, PoolClient, PoolConfig } from 'pg';
 
 import { config } from '../../config/index.js';
+import { connectionMonitor, ConnectionMonitor } from './ConnectionMonitor.js';
 
 /**
  * Connection retry configuration
@@ -75,17 +76,34 @@ async function createPoolWithRetry(poolConfig: PoolConfig, poolName: string): Pr
 }
 
 /**
- * Base pool configuration
+ * Get the appropriate database URL based on PgBouncer configuration
+ */
+function getDatabaseUrl(): string {
+  if (config.database.usePgBouncer && config.database.pgBouncerUrl) {
+    console.log('Using PgBouncer connection URL');
+    return config.database.pgBouncerUrl;
+  }
+  return config.database.url;
+}
+
+/**
+ * Base pool configuration with enhanced timeout handling
  */
 const basePoolConfig: PoolConfig = {
-  connectionString: config.database.url,
+  connectionString: getDatabaseUrl(),
   min: config.database.poolMin,
   max: config.database.poolMax,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 10000,
+  idleTimeoutMillis: config.database.idleTimeoutMs,
+  connectionTimeoutMillis: config.database.connectionTimeoutMs,
+  // Query timeout for individual queries
+  query_timeout: config.database.queryTimeoutMs,
   // Enable keep-alive for long-running connections
   keepAlive: true,
   keepAliveInitialDelayMillis: 10000,
+  // Statement timeout to prevent runaway queries
+  statement_timeout: config.database.queryTimeoutMs,
+  // Application name for connection tracking
+  application_name: `learning-platform-${config.nodeEnv}`,
 };
 
 /**
@@ -101,17 +119,27 @@ let writePool: Pool | null = null;
 let readPool: Pool | null = null;
 
 /**
- * Initialize database connection pools
+ * Initialize database connection pools with monitoring
  */
 export async function initializeDatabasePools(): Promise<void> {
   console.log('Initializing database connection pools...');
+
+  // Determine pool sizes based on PgBouncer usage
+  const writePoolSize = config.database.usePgBouncer 
+    ? Math.ceil(config.database.poolMax * 0.5) // Smaller pools when using PgBouncer
+    : Math.ceil(config.database.poolMax * 0.6);
+    
+  const readPoolSize = config.database.usePgBouncer
+    ? Math.floor(config.database.poolMax * 0.3)
+    : Math.floor(config.database.poolMax * 0.4);
 
   // Create write pool
   writePool = await createPoolWithRetry(
     {
       ...basePoolConfig,
-      // Write pool gets slightly higher max connections
-      max: Math.ceil(config.database.poolMax * 0.6),
+      max: writePoolSize,
+      // Write pool configuration
+      application_name: `learning-platform-${config.nodeEnv}-write`,
     },
     'Write pool'
   );
@@ -120,24 +148,51 @@ export async function initializeDatabasePools(): Promise<void> {
   // In production, this could point to a read replica
   const readPoolConfig = {
     ...basePoolConfig,
-    // Read pool gets remaining connections
-    max: Math.floor(config.database.poolMax * 0.4),
+    max: readPoolSize,
     // Read operations can have slightly longer timeout
-    connectionTimeoutMillis: 15000,
+    connectionTimeoutMillis: config.database.connectionTimeoutMs + 5000,
+    application_name: `learning-platform-${config.nodeEnv}-read`,
   };
 
   readPool = await createPoolWithRetry(readPoolConfig, 'Read pool');
 
-  // Set up error handlers
+  // Set up enhanced error handlers with monitoring
   writePool.on('error', (err) => {
     console.error('Unexpected error on write pool idle client', err);
+    connectionMonitor.emit('poolError', { pool: 'write', error: err });
   });
 
   readPool.on('error', (err) => {
     console.error('Unexpected error on read pool idle client', err);
+    connectionMonitor.emit('poolError', { pool: 'read', error: err });
   });
 
-  console.log('Database connection pools initialized successfully');
+  // Set up connection event monitoring
+  writePool.on('connect', (client) => {
+    console.log('New client connected to write pool');
+    connectionMonitor.emit('clientConnect', { pool: 'write', client });
+  });
+
+  readPool.on('connect', (client) => {
+    console.log('New client connected to read pool');
+    connectionMonitor.emit('clientConnect', { pool: 'read', client });
+  });
+
+  // Initialize connection monitoring
+  if (config.database.enableConnectionMonitoring) {
+    connectionMonitor.initialize(writePool, readPool);
+    connectionMonitor.startMonitoring();
+    
+    // Set up alert handling
+    connectionMonitor.on('alert', (alert) => {
+      console.warn(`[DB Connection Alert] ${alert.type}: ${alert.message}`);
+      // In production, this could send alerts to monitoring systems
+    });
+
+    console.log('Connection monitoring enabled');
+  }
+
+  console.log(`Database connection pools initialized successfully (PgBouncer: ${config.database.usePgBouncer ? 'enabled' : 'disabled'})`);
 }
 
 /**
@@ -346,6 +401,12 @@ export async function testDatabaseConnection(): Promise<boolean> {
 export async function closeDatabaseConnection(): Promise<void> {
   console.log('Closing database connection pools...');
 
+  // Stop connection monitoring
+  if (config.database.enableConnectionMonitoring) {
+    connectionMonitor.stopMonitoring();
+    console.log('Connection monitoring stopped');
+  }
+
   const closePromises: Promise<void>[] = [];
 
   if (writePool) {
@@ -368,4 +429,11 @@ export async function closeDatabaseConnection(): Promise<void> {
 
   await Promise.all(closePromises);
   console.log('All database connection pools closed');
+}
+
+/**
+ * Get connection monitor instance for external access
+ */
+export function getConnectionMonitor(): ConnectionMonitor {
+  return connectionMonitor;
 }

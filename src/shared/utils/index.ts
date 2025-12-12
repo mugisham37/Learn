@@ -76,3 +76,12 @@ export * from './sanitization.js';
 
 // Export secure configuration utilities
 export * from './secureConfig.js';
+
+// Export health check utilities
+export * from './health.js';
+
+// Export connection health utilities
+export * from './connectionHealth.js';
+
+// Export query optimization utilities
+export * from './queryOptimization.js';
