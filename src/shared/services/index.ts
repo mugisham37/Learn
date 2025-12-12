@@ -123,6 +123,31 @@ export type { LogPruningConfig } from './LogPruningService.js';
 export { cronJobService } from './CronJobService.js';
 export type { CronJobConfig } from './CronJobService.js';
 
+// Job monitoring services
+export { JobMonitoringService } from './JobMonitoringService.js';
+export type { 
+  JobDashboardData, 
+  JobRetryOptions, 
+  QueueManagementOptions 
+} from './JobMonitoringService.js';
+
+// Alerting services
+export { AlertingService } from './AlertingService.js';
+export type { 
+  Alert, 
+  AlertSeverity, 
+  AlertChannelConfig, 
+  AlertRule 
+} from './AlertingService.js';
+
+// Job event logging services
+export { JobEventLogger } from './JobEventLogger.js';
+export type { 
+  JobEvent, 
+  JobEventType, 
+  JobPerformanceMetrics 
+} from './JobEventLogger.js';
+
 // Interfaces
 export type { ICloudFrontService } from './ICloudFrontService.js';
 export type { IContentService } from './IContentService.js';
