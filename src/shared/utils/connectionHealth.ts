@@ -100,7 +100,7 @@ export async function getConnectionHealth(): Promise<ConnectionHealthStatus> {
   };
 
   // Check PgBouncer status if enabled
-  if (process.env.USE_PGBOUNCER === 'true') {
+  if (process.env['USE_PGBOUNCER'] === 'true') {
     status.pgbouncer = {
       enabled: true,
       status: await checkPgBouncerHealth(),
@@ -118,7 +118,7 @@ async function checkPgBouncerHealth(): Promise<'healthy' | 'unhealthy' | 'unknow
     // This would typically involve connecting to PgBouncer admin interface
     // For now, we'll do a simple connection test
     const { Pool } = await import('pg');
-    const pgBouncerUrl = process.env.PGBOUNCER_URL;
+    const pgBouncerUrl = process.env['PGBOUNCER_URL'];
     
     if (!pgBouncerUrl) {
       return 'unknown';
@@ -150,7 +150,7 @@ async function checkPgBouncerHealth(): Promise<'healthy' | 'unhealthy' | 'unknow
 export async function getBasicConnectionHealth(): Promise<{
   healthy: boolean;
   message: string;
-  details?: any;
+  details?: Record<string, unknown>;
 }> {
   try {
     const health = await getConnectionHealth();
@@ -208,7 +208,7 @@ export interface PoolPerformanceMetrics {
 /**
  * Get detailed performance metrics for connection pools
  */
-export async function getPoolPerformanceMetrics(): Promise<PoolPerformanceMetrics> {
+export function getPoolPerformanceMetrics(): PoolPerformanceMetrics {
   const monitor = getConnectionMonitor();
   const analysis = monitor.analyzeConnectionPools();
   const currentMetrics = monitor.getCurrentMetrics();

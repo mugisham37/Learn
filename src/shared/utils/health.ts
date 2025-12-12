@@ -12,7 +12,7 @@ import { checkDatabaseHealth } from '../../infrastructure/database/index.js';
 import { checkElasticsearchHealth } from '../../infrastructure/search/index.js';
 import { checkRateLimitHealth } from '../middleware/rateLimiting.js';
 
-import { getConnectionHealth, getPoolPerformanceMetrics } from './connectionHealth.js';
+import { getConnectionHealth } from './connectionHealth.js';
 
 /**
  * Check secrets manager health
@@ -23,6 +23,28 @@ async function checkSecretsManagerHealth(): Promise<boolean> {
     return await secretsManager.healthCheck();
   } catch (error) {
     return false;
+  }
+}
+
+/**
+ * Check S3 health
+ */
+async function checkS3Health(): Promise<{
+  healthy: boolean;
+  latencyMs?: number;
+  error?: string;
+  bucketAccessible?: boolean;
+}> {
+  try {
+    const { S3Service } = await import('../services/S3Service.js');
+    const s3Service = new S3Service();
+    return await s3Service.healthCheck();
+  } catch (error) {
+    return {
+      healthy: false,
+      error: error instanceof Error ? error.message : 'S3 service initialization failed',
+      bucketAccessible: false,
+    };
   }
 }
 
@@ -56,6 +78,7 @@ export interface SystemHealth {
     elasticsearch: ServiceHealth;
     rateLimit: ServiceHealth;
     secretsManager: ServiceHealth;
+    s3: ServiceHealth;
   };
   connectionPools?: {
     monitoring: boolean;
@@ -82,7 +105,7 @@ export interface SystemHealth {
  * Services that are critical for application functionality
  * If any of these fail, the overall status should be 'unhealthy'
  */
-const CRITICAL_SERVICES = ['database', 'redis', 'secretsManager'] as const;
+const CRITICAL_SERVICES = ['database', 'redis', 'secretsManager', 's3'] as const;
 
 /**
  * Services that are important but not critical
@@ -94,7 +117,6 @@ const NON_CRITICAL_SERVICES = ['sessionRedis', 'elasticsearch', 'rateLimit'] as 
  * Performs comprehensive health checks on all infrastructure dependencies
  */
 export async function performSystemHealthCheck(): Promise<SystemHealth> {
-  const startTime = Date.now();
   
   // Run all health checks in parallel for better performance
   const [
@@ -104,6 +126,7 @@ export async function performSystemHealthCheck(): Promise<SystemHealth> {
     elasticsearchHealth,
     rateLimitHealth,
     secretsManagerHealth,
+    s3Health,
   ] = await Promise.allSettled([
     checkDatabaseHealth(),
     checkRedisHealth(),
@@ -111,6 +134,7 @@ export async function performSystemHealthCheck(): Promise<SystemHealth> {
     checkElasticsearchHealth(),
     checkRateLimitHealth(),
     checkSecretsManagerHealth(),
+    checkS3Health(),
   ]);
 
   // Process database health check result
@@ -203,6 +227,23 @@ export async function performSystemHealthCheck(): Promise<SystemHealth> {
           : 'Secrets manager health check failed',
       };
 
+  // Process S3 health check result
+  const s3: ServiceHealth = s3Health.status === 'fulfilled'
+    ? {
+        healthy: s3Health.value.healthy,
+        latencyMs: s3Health.value.latencyMs,
+        error: s3Health.value.error,
+        details: {
+          bucketAccessible: s3Health.value.bucketAccessible,
+        },
+      }
+    : {
+        healthy: false,
+        error: s3Health.reason instanceof Error 
+          ? s3Health.reason.message 
+          : 'S3 health check failed',
+      };
+
   const services = {
     database,
     redis,
@@ -210,6 +251,7 @@ export async function performSystemHealthCheck(): Promise<SystemHealth> {
     elasticsearch,
     rateLimit,
     secretsManager,
+    s3,
   };
 
   // Calculate overall health status
@@ -236,12 +278,12 @@ export async function performSystemHealthCheck(): Promise<SystemHealth> {
     status = nonCriticalFailures.length > 0 ? 'degraded' : 'healthy';
   }
 
-  const totalLatency = Date.now() - startTime;
+
 
   // Get connection pool information if monitoring is enabled
   let connectionPools;
   try {
-    if (process.env.ENABLE_CONNECTION_MONITORING === 'true') {
+    if (process.env['ENABLE_CONNECTION_MONITORING'] === 'true') {
       const connectionHealth = await getConnectionHealth();
       connectionPools = {
         monitoring: connectionHealth.monitoring.enabled,
@@ -267,7 +309,7 @@ export async function performSystemHealthCheck(): Promise<SystemHealth> {
     status,
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
-    environment: process.env.NODE_ENV || 'development',
+    environment: process.env['NODE_ENV'] || 'development',
     services,
     connectionPools,
     summary: {
@@ -292,15 +334,17 @@ export async function performQuickHealthCheck(): Promise<{
   
   try {
     // Just check if we can connect to critical services quickly
-    const [databaseResult, redisResult] = await Promise.allSettled([
+    const [databaseResult, redisResult, s3Result] = await Promise.allSettled([
       checkDatabaseHealth(),
       checkRedisHealth(),
+      checkS3Health(),
     ]);
 
     const databaseHealthy = databaseResult.status === 'fulfilled' && databaseResult.value.healthy;
     const redisHealthy = redisResult.status === 'fulfilled' && redisResult.value.healthy;
+    const s3Healthy = s3Result.status === 'fulfilled' && s3Result.value.healthy;
 
-    const status = databaseHealthy && redisHealthy ? 'ok' : 'error';
+    const status = databaseHealthy && redisHealthy && s3Healthy ? 'ok' : 'error';
     const latencyMs = Date.now() - startTime;
 
     return {
@@ -355,11 +399,11 @@ export async function checkReadiness(): Promise<{
  * Gets service liveness status
  * Used for Kubernetes liveness probes
  */
-export async function checkLiveness(): Promise<{
+export function checkLiveness(): {
   alive: boolean;
   uptime: number;
   timestamp: string;
-}> {
+} {
   // Liveness is simpler - just check if the process is running
   // and can perform basic operations
   try {

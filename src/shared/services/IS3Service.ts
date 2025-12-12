@@ -83,4 +83,16 @@ export interface IS3Service {
    * @returns Public URL
    */
   getPublicUrl(key: string): string;
+
+  /**
+   * Health check for S3 connectivity
+   * 
+   * @returns Health check result with connectivity status
+   */
+  healthCheck(): Promise<{
+    healthy: boolean;
+    latencyMs?: number;
+    error?: string;
+    bucketAccessible?: boolean;
+  }>;
 }

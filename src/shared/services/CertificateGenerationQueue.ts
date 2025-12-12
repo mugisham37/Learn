@@ -8,40 +8,44 @@
  */
 
 import { Queue, Worker, Job, QueueOptions, WorkerOptions, JobsOptions } from 'bullmq';
+
 import { redis } from '../../infrastructure/cache/index.js';
-import { logger } from '../utils/logger.js';
 import { 
-  ExternalServiceError, 
-  NotFoundError, 
-  ValidationError 
-} from '../errors/index.js';
-import { ServiceFactory } from './ServiceFactory.js';
-import { IEmailService } from './IEmailService.js';
+  ICourseRepository 
+} from '../../modules/courses/infrastructure/repositories/ICourseRepository.js';
 import { 
   ICertificateGenerator,
   CertificateGenerationData
 } from '../../modules/enrollments/application/services/ICertificateGenerator.js';
 import { 
-  IEnrollmentRepository 
-} from '../../modules/enrollments/infrastructure/repositories/IEnrollmentRepository.js';
+  Enrollment 
+} from '../../modules/enrollments/domain/entities/Enrollment.js';
 import { 
   ICertificateRepository 
 } from '../../modules/enrollments/infrastructure/repositories/ICertificateRepository.js';
 import { 
-  IUserRepository 
-} from '../../modules/users/infrastructure/repositories/IUserRepository.js';
-import { 
-  IUserProfileService 
-} from '../../modules/users/application/services/IUserProfileService.js';
-import { 
-  ICourseRepository 
-} from '../../modules/courses/infrastructure/repositories/ICourseRepository.js';
+  IEnrollmentRepository 
+} from '../../modules/enrollments/infrastructure/repositories/IEnrollmentRepository.js';
 import { 
   INotificationService 
 } from '../../modules/notifications/application/services/INotificationService.js';
 import { 
-  Enrollment 
-} from '../../modules/enrollments/domain/entities/Enrollment.js';
+  IUserProfileService 
+} from '../../modules/users/application/services/IUserProfileService.js';
+import { 
+  IUserRepository 
+} from '../../modules/users/infrastructure/repositories/IUserRepository.js';
+
+import { 
+  ExternalServiceError, 
+  NotFoundError, 
+  ValidationError 
+} from '../errors/index.js';
+
+import { IEmailService } from './IEmailService.js';
+import { ServiceFactory } from './ServiceFactory.js';
+
+import { logger } from '../utils/logger.js';
 
 /**
  * Certificate generation job data interface
@@ -232,7 +236,7 @@ export class CertificateGenerationQueue {
         status: await job.getState(),
         progress: typeof job.progress === 'number' ? job.progress : 0,
         data: job.data,
-        result: job.returnvalue,
+        result: job.returnvalue as CertificateGenerationResult,
         failedReason: job.failedReason,
         processedOn: job.processedOn ? new Date(job.processedOn) : undefined,
         finishedOn: job.finishedOn ? new Date(job.finishedOn) : undefined,
@@ -405,7 +409,11 @@ export class CertificateGenerationQueue {
       };
 
       // Convert database record to domain entity
-      const enrollmentEntity = Enrollment.fromDatabase(enrollment);
+      const enrollmentEntity = Enrollment.fromDatabase({
+        ...enrollment,
+        completedAt: enrollment.completedAt ?? undefined,
+        progressPercentage: parseFloat(enrollment.progressPercentage),
+      });
       
       // Generate certificate with PDF
       const certificate = await this.certificateGenerator.generateCertificate(enrollmentEntity, certificateData);
@@ -503,16 +511,6 @@ export class CertificateGenerationQueue {
         error: error instanceof Error ? error.message : 'Unknown error',
       });
 
-      const result: CertificateGenerationResult = {
-        enrollmentId,
-        certificateId: '',
-        pdfUrl: '',
-        emailSent: false,
-        processingTimeMs,
-        status: 'failed',
-        errorMessage: error instanceof Error ? error.message : 'Unknown error',
-      };
-
       throw error;
     }
   }
@@ -521,7 +519,12 @@ export class CertificateGenerationQueue {
    * Sends certificate via email
    */
   private async sendCertificateEmail(
-    certificate: any,
+    certificate: {
+      certificateId: string;
+      issuedAt: Date;
+      verificationUrl: string;
+      pdfUrl: string;
+    },
     recipientEmail: string,
     recipientName: string,
     courseTitle: string

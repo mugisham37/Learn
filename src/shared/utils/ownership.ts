@@ -32,6 +32,8 @@
  * Requirements: 2.4
  */
 
+import { sql } from 'drizzle-orm';
+
 import { getReadDb } from '../../infrastructure/database/index.js';
 
 /**
@@ -50,8 +52,7 @@ export async function verifyCourseOwnership(
     
     // Query to check if user is the instructor of the course
     const result = await db.execute(
-      `SELECT instructor_id FROM courses WHERE id = $1 AND deleted_at IS NULL`,
-      [courseId]
+      sql`SELECT instructor_id FROM courses WHERE id = ${courseId} AND deleted_at IS NULL`
     );
 
     if (result.rows.length === 0) {
@@ -83,8 +84,7 @@ export async function verifyEnrollmentOwnership(
     
     // Query to check if user is the student in the enrollment
     const result = await db.execute(
-      `SELECT student_id FROM enrollments WHERE id = $1`,
-      [enrollmentId]
+      sql`SELECT student_id FROM enrollments WHERE id = ${enrollmentId}`
     );
 
     if (result.rows.length === 0) {
@@ -116,8 +116,7 @@ export async function verifyAssignmentSubmissionOwnership(
     
     // Query to check if user is the student who made the submission
     const result = await db.execute(
-      `SELECT student_id FROM assignment_submissions WHERE id = $1`,
-      [submissionId]
+      sql`SELECT student_id FROM assignment_submissions WHERE id = ${submissionId}`
     );
 
     if (result.rows.length === 0) {
@@ -149,8 +148,7 @@ export async function verifyQuizSubmissionOwnership(
     
     // Query to check if user is the student who made the submission
     const result = await db.execute(
-      `SELECT student_id FROM quiz_submissions WHERE id = $1`,
-      [submissionId]
+      sql`SELECT student_id FROM quiz_submissions WHERE id = ${submissionId}`
     );
 
     if (result.rows.length === 0) {
@@ -182,8 +180,7 @@ export async function verifyMessageOwnership(
     
     // Query to check if user is sender or recipient
     const result = await db.execute(
-      `SELECT sender_id, recipient_id FROM messages WHERE id = $1`,
-      [messageId]
+      sql`SELECT sender_id, recipient_id FROM messages WHERE id = ${messageId}`
     );
 
     if (result.rows.length === 0) {
@@ -215,8 +212,7 @@ export async function verifyDiscussionThreadOwnership(
     
     // Query to check if user is the author of the thread
     const result = await db.execute(
-      `SELECT author_id FROM discussion_threads WHERE id = $1`,
-      [threadId]
+      sql`SELECT author_id FROM discussion_threads WHERE id = ${threadId}`
     );
 
     if (result.rows.length === 0) {
@@ -248,8 +244,7 @@ export async function verifyDiscussionPostOwnership(
     
     // Query to check if user is the author of the post
     const result = await db.execute(
-      `SELECT author_id FROM discussion_posts WHERE id = $1`,
-      [postId]
+      sql`SELECT author_id FROM discussion_posts WHERE id = ${postId}`
     );
 
     if (result.rows.length === 0) {

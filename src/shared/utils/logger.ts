@@ -9,6 +9,7 @@ import winston from 'winston';
 import WinstonCloudWatch from 'winston-cloudwatch';
 
 import { config } from '../../config/index.js';
+
 import { secrets } from './secureConfig.js';
 
 /**
@@ -97,7 +98,7 @@ const developmentFormat = winston.format.combine(
   winston.format.errors({ stack: true }),
   redactFormat,
   winston.format.printf(({ timestamp, level, message, ...meta }) => {
-    let log = `${timestamp} [${level.toUpperCase()}]: ${message}`;
+    let log = `${String(timestamp)} [${level.toUpperCase()}]: ${String(message)}`;
     
     // Add metadata if present
     const metaKeys = Object.keys(meta).filter(key => 
@@ -187,7 +188,7 @@ function createLogger(): winston.Logger {
           awsRegion: awsConfig.region,
           awsAccessKeyId: awsConfig.accessKeyId,
           awsSecretKey: awsConfig.secretAccessKey,
-          messageFormatter: (logObject) => {
+          messageFormatter: (logObject: Record<string, unknown>): string => {
             // Format as JSON for CloudWatch
             return JSON.stringify(logObject);
           },
@@ -240,42 +241,42 @@ export const log = {
   /**
    * Log error message
    */
-  error: (message: string, meta?: Record<string, unknown>) => {
+  error: (message: string, meta?: Record<string, unknown>): void => {
     logger.error(message, meta);
   },
   
   /**
    * Log warning message
    */
-  warn: (message: string, meta?: Record<string, unknown>) => {
+  warn: (message: string, meta?: Record<string, unknown>): void => {
     logger.warn(message, meta);
   },
   
   /**
    * Log info message
    */
-  info: (message: string, meta?: Record<string, unknown>) => {
+  info: (message: string, meta?: Record<string, unknown>): void => {
     logger.info(message, meta);
   },
   
   /**
    * Log HTTP request/response
    */
-  http: (message: string, meta?: Record<string, unknown>) => {
+  http: (message: string, meta?: Record<string, unknown>): void => {
     logger.http(message, meta);
   },
   
   /**
    * Log debug message
    */
-  debug: (message: string, meta?: Record<string, unknown>) => {
+  debug: (message: string, meta?: Record<string, unknown>): void => {
     logger.debug(message, meta);
   },
   
   /**
    * Log with custom level
    */
-  log: (level: string, message: string, meta?: Record<string, unknown>) => {
+  log: (level: string, message: string, meta?: Record<string, unknown>): void => {
     logger.log(level, message, meta);
   },
 };
@@ -295,7 +296,7 @@ export function createChildLogger(context: Record<string, unknown>): winston.Log
  * Stream for Morgan or other middleware that expects a write method
  */
 export const logStream = {
-  write: (message: string) => {
+  write: (message: string): void => {
     logger.http(message.trim());
   },
 };

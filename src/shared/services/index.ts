@@ -135,12 +135,14 @@ export type {
 
 // Alerting services
 export { AlertingService } from './AlertingService.js';
+export { AlertingRulesService, getAlertingRulesService, initializeAlertingRules } from './AlertingRulesService.js';
 export type { 
   Alert, 
   AlertSeverity, 
   AlertChannelConfig, 
   AlertRule 
 } from './AlertingService.js';
+export type { IAlertingRulesService } from './AlertingRulesService.js';
 
 // Job event logging services
 export { JobEventLogger } from './JobEventLogger.js';
@@ -160,6 +162,30 @@ export {
 
 // Startup service
 export { startupService } from './StartupService.js';
+
+// CloudWatch services
+export { CloudWatchService, cloudWatchService, metrics } from './CloudWatchService.js';
+export { CloudWatchInitializer } from './CloudWatchInitializer.js';
+export { ApplicationMetricsService, applicationMetricsService } from './ApplicationMetricsService.js';
+export type { ICloudWatchService } from './CloudWatchService.js';
+export type { IApplicationMetricsService } from './ApplicationMetricsService.js';
+
+// Sentry services
+export { SentryService, sentryService } from './SentryService.js';
+export type { ISentryService } from './SentryService.js';
+
+// Request tracing services
+export { RequestTracingService, requestTracingService, trace, traceAsync } from './RequestTracingService.js';
+export type { 
+  IRequestTracingService, 
+  RequestTraceContext, 
+  TraceSpan, 
+  RequestTrace 
+} from './RequestTracingService.js';
+
+// Monitoring dashboard services
+export { MonitoringDashboardService, monitoringDashboardService, initializeMonitoringDashboards } from './MonitoringDashboardService.js';
+export type { IMonitoringDashboardService } from './MonitoringDashboardService.js';
 
 // Interfaces
 export type { ICloudFrontService } from './ICloudFrontService.js';

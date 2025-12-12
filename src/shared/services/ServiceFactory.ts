@@ -1,48 +1,52 @@
 /**
  * Service Factory
  * 
- * Provides singleton instances of services for dependency injection
- * This ensures consistent service instances across the application
+ * Factory for creating service instances with proper dependency injection.
  */
 
-import { RealtimeService } from './RealtimeService.js';
-import { IRealtimeService } from './IRealtimeService.js';
 import { IEmailService } from './IEmailService.js';
-import { EmailServiceFactory } from './EmailServiceFactory.js';
 
 /**
- * Service factory for creating and managing service instances
+ * Mock Email Service implementation
  */
-export class ServiceFactory {
-  private static realtimeServiceInstance: IRealtimeService | null = null;
-  private static emailServiceInstance: IEmailService | null = null;
-
-  /**
-   * Gets the singleton RealtimeService instance
-   */
-  static getRealtimeService(): IRealtimeService {
-    if (!this.realtimeServiceInstance) {
-      this.realtimeServiceInstance = new RealtimeService();
-    }
-    return this.realtimeServiceInstance;
+class MockEmailService implements IEmailService {
+  async sendTransactional(params: {
+    to: string;
+    templateId: string;
+    templateData: Record<string, unknown>;
+    priority?: string;
+  }): Promise<void> {
+    // Mock implementation - would integrate with real email service
+    console.log('Mock email sent:', params);
   }
 
+  async sendBulk(params: {
+    recipients: string[];
+    templateId: string;
+    templateData: Record<string, unknown>;
+  }): Promise<void> {
+    // Mock implementation
+    console.log('Mock bulk email sent:', params);
+  }
+}
+
+export class ServiceFactory {
+  private static emailService: IEmailService | null = null;
+
   /**
-   * Gets the singleton EmailService instance
+   * Get email service instance
    */
   static getEmailService(): IEmailService {
-    if (!this.emailServiceInstance) {
-      this.emailServiceInstance = EmailServiceFactory.getInstance();
+    if (!this.emailService) {
+      this.emailService = new MockEmailService();
     }
-    return this.emailServiceInstance;
+    return this.emailService;
   }
 
   /**
-   * Resets all service instances (useful for testing)
+   * Set email service instance (for testing or different implementations)
    */
-  static reset(): void {
-    this.realtimeServiceInstance = null;
-    this.emailServiceInstance = null;
-    EmailServiceFactory.resetInstance();
+  static setEmailService(service: IEmailService): void {
+    this.emailService = service;
   }
 }

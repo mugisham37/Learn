@@ -114,11 +114,33 @@ export async function createServer(): Promise<FastifyInstance> {
   const { registerHttpCaching } = await import('./shared/middleware/httpCaching.js');
   await registerHttpCaching(server);
 
+  // Register request tracing middleware (must be first for proper context)
+  const { registerRequestTracing } = await import('./shared/middleware/requestTracing.js');
+  registerRequestTracing(server);
+
+  // Register Sentry middleware (must be early in the chain)
+  const { registerSentryMiddleware } = await import('./shared/middleware/sentryMiddleware.js');
+  registerSentryMiddleware(server);
+
   // Add request logging hook using Winston
   server.addHook('onRequest', logRequest);
 
   // Add response logging hook using Winston
   server.addHook('onResponse', logResponse);
+
+  // Register CloudWatch metrics middleware (production only)
+  if (config.nodeEnv === 'production') {
+    const { registerCloudWatchMetrics } = await import('./shared/middleware/cloudWatchMetrics.js');
+    registerCloudWatchMetrics(server);
+  }
+
+  // Register metrics endpoints
+  const { registerMetricsEndpoints } = await import('./shared/middleware/metricsEndpoint.js');
+  registerMetricsEndpoints(server);
+
+  // Register alerting endpoints
+  const { registerAlertingEndpoints } = await import('./shared/middleware/alertingEndpoints.js');
+  registerAlertingEndpoints(server);
 
   // Health check endpoint
   server.get('/health', () => {

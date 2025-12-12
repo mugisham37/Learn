@@ -7,8 +7,8 @@
  * Requirements: 13.7
  */
 
-import { secretsManager } from '../services/SecretsManager.js';
 import { config } from '../../config/index.js';
+import { secretsManager } from '../services/SecretsManager.js';
 
 /**
  * Secure configuration interface that provides access to secrets
@@ -184,7 +184,7 @@ export const secrets = {
   /**
    * Get JWT configuration with secret
    */
-  getJwtConfig() {
+  getJwtConfig(): { secret: string; accessTokenExpiry: string; refreshTokenExpiry: string } {
     return {
       secret: secureConfig.getJwtSecret(),
       accessTokenExpiry: config.jwt.accessTokenExpiry,
@@ -195,7 +195,7 @@ export const secrets = {
   /**
    * Get AWS configuration with credentials
    */
-  getAwsConfig() {
+  getAwsConfig(): { region: string; accessKeyId: string | undefined; secretAccessKey: string | undefined } {
     return {
       region: config.aws.region,
       accessKeyId: secureConfig.getAwsAccessKeyId(),
@@ -206,7 +206,7 @@ export const secrets = {
   /**
    * Get Redis configuration with password
    */
-  getRedisConfig() {
+  getRedisConfig(): { host: string; port: number; password: string | undefined; db: number } {
     return {
       host: config.redis.host,
       port: config.redis.port,
@@ -218,7 +218,7 @@ export const secrets = {
   /**
    * Get BullMQ Redis configuration with password
    */
-  getBullMQRedisConfig() {
+  getBullMQRedisConfig(): { host: string; port: number; password: string | undefined } {
     return {
       host: config.bullmq.redis.host,
       port: config.bullmq.redis.port,
@@ -229,7 +229,7 @@ export const secrets = {
   /**
    * Get Stripe configuration with secrets
    */
-  getStripeConfig() {
+  getStripeConfig(): { secretKey: string | undefined; publishableKey: string; webhookSecret: string | undefined } {
     return {
       secretKey: secureConfig.getStripeSecretKey(),
       publishableKey: config.stripe.publishableKey,
@@ -240,7 +240,7 @@ export const secrets = {
   /**
    * Get SendGrid configuration with API key
    */
-  getSendGridConfig() {
+  getSendGridConfig(): { apiKey: string | undefined; fromEmail: string; fromName: string } {
     return {
       apiKey: secureConfig.getSendGridApiKey(),
       fromEmail: config.sendgrid.fromEmail,
@@ -251,7 +251,7 @@ export const secrets = {
   /**
    * Get Elasticsearch configuration with password
    */
-  getElasticsearchConfig() {
+  getElasticsearchConfig(): { node: string; username: string; password: string | undefined } {
     return {
       node: config.elasticsearch.node,
       username: config.elasticsearch.username,
@@ -262,7 +262,7 @@ export const secrets = {
   /**
    * Get Firebase configuration with private key
    */
-  getFirebaseConfig() {
+  getFirebaseConfig(): { projectId: string; privateKey: string | undefined; clientEmail: string } {
     return {
       projectId: config.firebase.projectId,
       privateKey: secureConfig.getFirebasePrivateKey(),
@@ -273,7 +273,7 @@ export const secrets = {
   /**
    * Get CloudFront configuration with private key
    */
-  getCloudFrontConfig() {
+  getCloudFrontConfig(): { domain: string; keyPairId: string; privateKeyPath: string | undefined } {
     return {
       domain: config.cloudfront.domain,
       keyPairId: config.cloudfront.keyPairId,

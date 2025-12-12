@@ -7,10 +7,12 @@
  * Requirements: 15.5
  */
 
+import { generateCDNCacheHeaders } from '../utils/cdnCaching.js';
+
 import { ICloudFrontService } from './ICloudFrontService.js';
 import { ImageProcessingService } from './ImageProcessingService.js';
 import { LazyLoadingService, LazyResource } from './LazyLoadingService.js';
-import { CDNCacheBehaviors, generateCDNCacheHeaders } from '../utils/cdnCaching.js';
+
 import { logger } from '../utils/logger.js';
 
 /**
@@ -71,7 +73,7 @@ export class AssetOptimizationService {
 
   constructor(
     private readonly cloudFrontService: ICloudFrontService,
-    private readonly imageProcessingService: ImageProcessingService,
+    private readonly _imageProcessingService: ImageProcessingService,
     private readonly lazyLoadingService: LazyLoadingService,
     config: AssetOptimizationConfig = {}
   ) {
@@ -93,7 +95,7 @@ export class AssetOptimizationService {
   /**
    * Optimize an asset for delivery
    */
-  async optimizeAsset(
+  optimizeAsset(
     s3Key: string,
     assetType: 'image' | 'video' | 'document' | 'static',
     options: {
@@ -102,7 +104,7 @@ export class AssetOptimizationService {
       dimensions?: { width: number; height: number };
       generateResponsive?: boolean;
     } = {}
-  ): Promise<OptimizedAsset> {
+  ): OptimizedAsset {
     try {
       logger.info('Optimizing asset', { s3Key, assetType, options });
 
@@ -134,7 +136,7 @@ export class AssetOptimizationService {
 
       // Handle image-specific optimizations
       if (assetType === 'image' && this.config.enableImageOptimization) {
-        await this.optimizeImageAsset(result, s3Key, options);
+        this.optimizeImageAsset(result, s3Key, options);
       }
 
       // Generate lazy loading configuration
@@ -169,7 +171,12 @@ export class AssetOptimizationService {
     assets: Array<{
       s3Key: string;
       type: 'image' | 'video' | 'document' | 'static';
-      options?: any;
+      options?: {
+        critical?: boolean;
+        priority?: number;
+        dimensions?: { width: number; height: number };
+        generateResponsive?: boolean;
+      };
     }>
   ): Promise<OptimizedAsset[]> {
     const results = await Promise.allSettled(
@@ -183,7 +190,10 @@ export class AssetOptimizationService {
       if (result.status === 'fulfilled') {
         optimizedAssets.push(result.value);
       } else {
-        errors.push(`Asset ${assets[index].s3Key}: ${result.reason}`);
+        const asset = assets[index];
+        if (asset) {
+          errors.push(`Asset ${asset.s3Key}: ${result.reason}`);
+        }
       }
     });
 
@@ -224,11 +234,16 @@ export class AssetOptimizationService {
   /**
    * Optimize image asset with responsive variants
    */
-  private async optimizeImageAsset(
+  private optimizeImageAsset(
     result: OptimizedAsset,
     s3Key: string,
-    options: any
-  ): Promise<void> {
+    options: {
+      critical?: boolean;
+      priority?: number;
+      dimensions?: { width: number; height: number };
+      generateResponsive?: boolean;
+    }
+  ): void {
     if (!this.config.enableResponsiveImages || !options.generateResponsive) {
       return;
     }
@@ -261,15 +276,24 @@ export class AssetOptimizationService {
    */
   private generateLazyLoadingConfig(
     asset: OptimizedAsset,
-    options: any
-  ): any {
+    options: {
+      critical?: boolean;
+      priority?: number;
+      dimensions?: { width: number; height: number };
+      generateResponsive?: boolean;
+    }
+  ): {
+    shouldLoad: boolean;
+    placeholder: string;
+    attributes: Record<string, string>;
+  } {
     const lazyResource: LazyResource = {
       id: asset.originalUrl,
       url: asset.optimizedUrl,
       type: this.getAssetTypeFromUrl(asset.originalUrl),
       dimensions: asset.metadata.dimensions,
-      priority: options.priority || 3,
-      critical: options.critical || false,
+      priority: options.priority ?? 3,
+      critical: options.critical ?? false,
     };
 
     return this.lazyLoadingService.generateLazyConfig(lazyResource);
@@ -282,7 +306,7 @@ export class AssetOptimizationService {
     s3Key: string,
     assetType: 'image' | 'video' | 'document' | 'static'
   ): Record<string, string> {
-    const cacheDuration = this.config.cacheDurations[assetType];
+    const cacheDuration = this.config.cacheDurations[assetType === 'video' ? 'videos' : assetType === 'image' ? 'images' : assetType === 'document' ? 'documents' : 'static'];
     const path = `/${assetType}s/${s3Key}`;
 
     return generateCDNCacheHeaders(path, {
@@ -304,7 +328,8 @@ export class AssetOptimizationService {
    */
   private getFileExtension(s3Key: string): string {
     const parts = s3Key.split('.');
-    return parts.length > 1 ? parts[parts.length - 1].toLowerCase() : '';
+    const lastPart = parts[parts.length - 1];
+    return parts.length > 1 && lastPart ? lastPart.toLowerCase() : '';
   }
 
   /**

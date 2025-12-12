@@ -143,9 +143,33 @@ export const CDNCacheBehaviors = {
 } as const;
 
 /**
+ * CloudFront behavior configuration interface
+ */
+export interface CloudFrontBehaviorConfig {
+  PathPattern: string;
+  TargetOriginId: string;
+  ViewerProtocolPolicy: string;
+  AllowedMethods: string[];
+  CachedMethods: string[];
+  Compress: boolean;
+  DefaultTTL: number;
+  MinTTL: number;
+  MaxTTL: number;
+  ForwardedValues: {
+    QueryString: boolean;
+    QueryStringCacheKeys: string[];
+    Headers: string[];
+    Cookies: {
+      Forward: string;
+      WhitelistedNames: string[];
+    };
+  };
+}
+
+/**
  * Generate CloudFront cache behavior configuration
  */
-export function generateCloudFrontBehavior(behavior: CDNCacheBehavior): any {
+export function generateCloudFrontBehavior(behavior: CDNCacheBehavior): CloudFrontBehaviorConfig {
   return {
     PathPattern: behavior.pathPattern,
     TargetOriginId: 'api-origin',
@@ -266,27 +290,81 @@ export function generateCDNCacheHeaders(
 }
 
 /**
+ * Request/Reply interface for middleware
+ */
+export interface MiddlewareRequest {
+  [key: string]: unknown;
+}
+
+export interface MiddlewareReply {
+  header(key: string, value: string): void;
+}
+
+export type MiddlewareNext = () => void;
+
+/**
  * Middleware to add CDN-optimized cache headers
  */
 export function addCDNCacheHeaders(
   path: string,
   customBehavior?: Partial<CDNCacheBehavior>
-) {
-  return function (request: any, reply: any, next: any) {
+): (request: MiddlewareRequest, reply: MiddlewareReply, next?: MiddlewareNext) => void {
+  return function (_request: MiddlewareRequest, reply: MiddlewareReply, next?: MiddlewareNext): void {
     const headers = generateCDNCacheHeaders(path, customBehavior);
     
     Object.entries(headers).forEach(([key, value]) => {
       reply.header(key, value);
     });
 
-    if (next) next();
+    if (next) {
+      next();
+    }
+  };
+}
+
+/**
+ * CloudFormation CDN configuration interface
+ */
+export interface CloudFormationCDNConfig {
+  Type: string;
+  Properties: {
+    DistributionConfig: {
+      Comment: string;
+      Enabled: boolean;
+      PriceClass: string;
+      HttpVersion: string;
+      IPV6Enabled: boolean;
+      Origins: Array<{
+        Id: string;
+        DomainName: string;
+        CustomOriginConfig: {
+          HTTPPort: number;
+          HTTPSPort: number;
+          OriginProtocolPolicy: string;
+          OriginSSLProtocols: string[];
+        };
+      }>;
+      DefaultCacheBehavior: CloudFrontBehaviorConfig;
+      CacheBehaviors: CloudFrontBehaviorConfig[];
+      ViewerCertificate: {
+        AcmCertificateArn: string;
+        SslSupportMethod: string;
+        MinimumProtocolVersion: string;
+      };
+      CustomErrorResponses: Array<{
+        ErrorCode: number;
+        ResponseCode: number;
+        ResponsePagePath: string;
+        ErrorCachingMinTTL: number;
+      }>;
+    };
   };
 }
 
 /**
  * Generate CloudFormation template for CDN distribution
  */
-export function generateCloudFormationCDNConfig(): any {
+export function generateCloudFormationCDNConfig(): CloudFormationCDNConfig {
   const behaviors = Object.entries(CDNCacheBehaviors).map(([name, behavior]) => ({
     ...generateCloudFrontBehavior(behavior),
     Comment: `Cache behavior for ${name}`,
@@ -339,4 +417,3 @@ export function generateCloudFormationCDNConfig(): any {
   };
 }
 
-export { CDNCacheBehaviors };

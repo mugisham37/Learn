@@ -9,8 +9,9 @@
 
 import crypto from 'crypto';
 
-import { secrets } from './secureConfig.js';
 import bcrypt from 'bcrypt';
+
+import { secrets } from './secureConfig.js';
 
 /**
  * JWT payload structure

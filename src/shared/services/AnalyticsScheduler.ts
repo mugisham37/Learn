@@ -12,10 +12,14 @@
  */
 
 import * as cron from 'node-cron';
-import { logger } from '../utils/logger.js';
-import { getAnalyticsQueue, initializeAnalyticsQueue } from './AnalyticsQueue.js';
+
 import { AnalyticsService } from '../../modules/analytics/application/services/AnalyticsService.js';
 import { MetricsCalculator } from '../../modules/analytics/application/services/MetricsCalculator.js';
+
+import { getAnalyticsQueue, initializeAnalyticsQueue } from './AnalyticsQueue.js';
+
+import { logger } from '../utils/logger.js';
+
 import type { DateRange } from '../types/index.js';
 
 /**
@@ -70,7 +74,7 @@ export class AnalyticsScheduler {
       await initializeAnalyticsQueue(analyticsService, metricsCalculator);
 
       // Schedule all analytics jobs
-      await this.scheduleAllJobs();
+      this.scheduleAllJobs();
 
       this.isInitialized = true;
       logger.info('Analytics scheduler initialized successfully', {
@@ -88,7 +92,7 @@ export class AnalyticsScheduler {
   /**
    * Schedule all analytics jobs based on configuration
    */
-  private async scheduleAllJobs(): Promise<void> {
+  private scheduleAllJobs(): void {
     // Schedule hourly real-time metrics (every hour at minute 0)
     if (this.config.enableHourlyMetrics) {
       this.scheduleHourlyMetrics();
@@ -501,7 +505,7 @@ export class AnalyticsScheduler {
   stopTask(taskName: string): boolean {
     const task = this.scheduledTasks.get(taskName);
     if (task) {
-      task.stop();
+      void task.stop();
       logger.info(`Stopped scheduled task: ${taskName}`);
       return true;
     }
@@ -516,7 +520,7 @@ export class AnalyticsScheduler {
   startTask(taskName: string): boolean {
     const task = this.scheduledTasks.get(taskName);
     if (task) {
-      task.start();
+      void task.start();
       logger.info(`Started scheduled task: ${taskName}`);
       return true;
     }
@@ -530,7 +534,7 @@ export class AnalyticsScheduler {
    */
   stopAllTasks(): void {
     for (const [name, task] of Array.from(this.scheduledTasks.entries())) {
-      task.stop();
+      void task.stop();
       logger.info(`Stopped scheduled task: ${name}`);
     }
     
@@ -542,7 +546,7 @@ export class AnalyticsScheduler {
    */
   startAllTasks(): void {
     for (const [name, task] of Array.from(this.scheduledTasks.entries())) {
-      task.start();
+      void task.start();
       logger.info(`Started scheduled task: ${name}`);
     }
     

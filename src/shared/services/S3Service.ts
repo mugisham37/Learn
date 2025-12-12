@@ -202,4 +202,70 @@ export class S3Service implements IS3Service {
   getPublicUrl(key: string): string {
     return `https://${this.bucketName}.s3.${config.s3.bucketRegion}.amazonaws.com/${key}`;
   }
+
+  /**
+   * Health check for S3 connectivity
+   * Tests basic S3 operations without creating actual files
+   */
+  async healthCheck(): Promise<{
+    healthy: boolean;
+    latencyMs?: number;
+    error?: string;
+    bucketAccessible?: boolean;
+  }> {
+    const startTime = Date.now();
+
+    try {
+      // Test S3 connectivity by attempting to list bucket contents
+      // This is a lightweight operation that verifies credentials and connectivity
+      const { ListObjectsV2Command } = await import('@aws-sdk/client-s3');
+      
+      const command = new ListObjectsV2Command({
+        Bucket: this.bucketName,
+        MaxKeys: 1, // Minimal request to test connectivity
+      });
+
+      await this.client.send(command);
+
+      const latencyMs = Date.now() - startTime;
+
+      return {
+        healthy: true,
+        latencyMs,
+        bucketAccessible: true,
+      };
+    } catch (error: any) {
+      const latencyMs = Date.now() - startTime;
+      
+      // Check if it's a permissions issue vs connectivity issue
+      const isPermissionError = error.name === 'AccessDenied' || 
+                               error.name === 'Forbidden' ||
+                               error.$metadata?.httpStatusCode === 403;
+      
+      const isNotFoundError = error.name === 'NoSuchBucket' ||
+                             error.$metadata?.httpStatusCode === 404;
+
+      let errorMessage = 'S3 health check failed';
+      if (isPermissionError) {
+        errorMessage = 'S3 access denied - check credentials and bucket permissions';
+      } else if (isNotFoundError) {
+        errorMessage = `S3 bucket not found: ${this.bucketName}`;
+      } else {
+        errorMessage = error instanceof Error ? error.message : 'Unknown S3 error';
+      }
+
+      logger.warn('S3 health check failed', {
+        error: errorMessage,
+        bucketName: this.bucketName,
+        latencyMs,
+      });
+
+      return {
+        healthy: false,
+        latencyMs,
+        error: errorMessage,
+        bucketAccessible: false,
+      };
+    }
+  }
 }

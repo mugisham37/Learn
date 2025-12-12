@@ -470,3 +470,52 @@ export {
   type CompressionOptions,
   type CompressionStats,
 } from './compression.js';
+
+// Export request deduplication middleware
+export {
+  createRequestDeduplicationMiddleware,
+  standardRequestDeduplication,
+  aggressiveRequestDeduplication,
+  conservativeRequestDeduplication,
+  registerRequestDeduplication,
+  getDeduplicationStats,
+  clearDeduplicationCache,
+  type RequestDeduplicationOptions,
+} from './requestDeduplication.js';
+
+// Export CloudWatch metrics middleware
+export {
+  registerCloudWatchMetrics,
+  recordDatabaseMetrics,
+  recordCacheMetrics,
+  recordExternalServiceMetrics,
+} from './cloudWatchMetrics.js';
+
+// Export metrics endpoint middleware
+export { registerMetricsEndpoints } from './metricsEndpoint.js';
+
+// Export alerting endpoint middleware
+export { registerAlertingEndpoints } from './alertingEndpoints.js';
+
+// Export request tracing middleware
+export {
+  registerRequestTracing,
+  getCurrentRequestId,
+  getCurrentTraceId,
+  addTraceMetadata,
+  createChildSpan,
+  traceDatabaseOperation,
+  traceExternalService,
+  traceCacheOperation,
+  tracedLogger,
+} from './requestTracing.js';
+
+// Export Sentry middleware
+export {
+  registerSentryMiddleware,
+  setupSentryErrorHandlers,
+  setSentryUserContext,
+  captureSentryError,
+  trackSentryPerformance,
+  sentryBreadcrumbs,
+} from './sentryMiddleware.js';

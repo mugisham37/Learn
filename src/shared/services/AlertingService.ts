@@ -5,8 +5,9 @@
  * Integrates with email, Slack, and other notification channels.
  */
 
-import { logger } from '../utils/logger.js';
 import { EventEmitter } from 'events';
+
+import { logger } from '../utils/logger.js';
 
 /**
  * Alert severity levels
@@ -119,7 +120,7 @@ export class AlertingService extends EventEmitter {
     source: string,
     metadata?: Record<string, unknown>
   ): Promise<Alert> {
-    const alertId = `${source}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const alertId = `${source}-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
     
     const alert: Alert = {
       id: alertId,
@@ -168,7 +169,7 @@ export class AlertingService extends EventEmitter {
     });
     
     // Send notifications
-    await this.sendNotifications(alert);
+    this.sendNotifications(alert);
     
     // Emit event
     this.emit('alert', alert);
@@ -264,35 +265,27 @@ export class AlertingService extends EventEmitter {
   /**
    * Send notifications through configured channels
    */
-  private async sendNotifications(alert: Alert): Promise<void> {
-    const promises: Promise<void>[] = [];
-    
+  private sendNotifications(alert: Alert): void {
     // Email notifications
     if (this.config.email?.enabled && this.shouldSendToChannel(alert.severity, this.config.email.severityThreshold)) {
-      promises.push(this.sendEmailAlert(alert));
+      this.sendEmailAlert(alert);
     }
     
     // Slack notifications
     if (this.config.slack?.enabled && this.shouldSendToChannel(alert.severity, this.config.slack.severityThreshold)) {
-      promises.push(this.sendSlackAlert(alert));
+      this.sendSlackAlert(alert);
     }
     
     // Webhook notifications
     if (this.config.webhook?.enabled && this.shouldSendToChannel(alert.severity, this.config.webhook.severityThreshold)) {
-      promises.push(this.sendWebhookAlert(alert));
-    }
-    
-    try {
-      await Promise.allSettled(promises);
-    } catch (error) {
-      logger.error('Failed to send alert notifications:', error);
+      this.sendWebhookAlert(alert);
     }
   }
   
   /**
    * Send email alert
    */
-  private async sendEmailAlert(alert: Alert): Promise<void> {
+  private sendEmailAlert(alert: Alert): void {
     try {
       // This would integrate with the email service
       logger.info('Email alert sent', {
@@ -307,14 +300,14 @@ export class AlertingService extends EventEmitter {
   /**
    * Send Slack alert
    */
-  private async sendSlackAlert(alert: Alert): Promise<void> {
+  private sendSlackAlert(alert: Alert): void {
     try {
       if (!this.config.slack?.webhookUrl) {
         return;
       }
       
       const color = this.getSeverityColor(alert.severity);
-      const payload = {
+      const _payload = {
         channel: this.config.slack.channel,
         username: 'Job Monitor',
         icon_emoji: ':warning:',
@@ -356,7 +349,7 @@ export class AlertingService extends EventEmitter {
   /**
    * Send webhook alert
    */
-  private async sendWebhookAlert(alert: Alert): Promise<void> {
+  private sendWebhookAlert(alert: Alert): void {
     try {
       if (!this.config.webhook?.url) {
         return;

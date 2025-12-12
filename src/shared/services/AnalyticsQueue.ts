@@ -11,14 +11,17 @@
  */
 
 import { Queue, Worker, Job, QueueOptions, WorkerOptions } from 'bullmq';
+import { eq } from 'drizzle-orm';
+
 import { redis } from '../../infrastructure/cache/index.js';
-import { logger } from '../utils/logger.js';
-import { AnalyticsService } from '../../modules/analytics/application/services/AnalyticsService.js';
-import { MetricsCalculator } from '../../modules/analytics/application/services/MetricsCalculator.js';
 import { getReadDb } from '../../infrastructure/database/index.js';
 import { courses } from '../../infrastructure/database/schema/courses.schema.js';
 import { users } from '../../infrastructure/database/schema/users.schema.js';
-import { eq } from 'drizzle-orm';
+import { AnalyticsService } from '../../modules/analytics/application/services/AnalyticsService.js';
+import { MetricsCalculator } from '../../modules/analytics/application/services/MetricsCalculator.js';
+
+import { logger } from '../utils/logger.js';
+
 import type { DateRange } from '../types/index.js';
 
 /**
@@ -127,11 +130,11 @@ export class AnalyticsQueue {
     });
 
     // Job completed successfully
-    this.worker.on('completed', (job: Job<AnalyticsJobData>, result: any) => {
+    this.worker.on('completed', (job: Job<AnalyticsJobData>, result: unknown) => {
       logger.info(`Analytics job ${job.id} completed successfully`, {
         jobId: job.id,
         type: job.data.type,
-        result: typeof result === 'object' ? Object.keys(result) : result,
+        result: typeof result === 'object' && result !== null ? Object.keys(result as Record<string, unknown>) : String(result),
       });
     });
 
@@ -170,23 +173,23 @@ export class AnalyticsQueue {
   /**
    * Process analytics job based on type
    */
-  private async processAnalyticsJob(job: Job<AnalyticsJobData>): Promise<any> {
+  private async processAnalyticsJob(job: Job<AnalyticsJobData>): Promise<unknown> {
     const { type } = job.data;
 
     try {
       switch (type) {
         case 'real-time-metrics':
-          return await this.processRealTimeMetrics(job.data as RealTimeMetricsJobData);
+          return await this.processRealTimeMetrics(job.data);
         case 'course-analytics':
-          return await this.processCourseAnalytics(job.data as CourseAnalyticsJobData);
+          return await this.processCourseAnalytics(job.data);
         case 'student-analytics':
-          return await this.processStudentAnalytics(job.data as StudentAnalyticsJobData);
+          return await this.processStudentAnalytics(job.data);
         case 'trend-reports':
-          return await this.processTrendReports(job.data as TrendReportsJobData);
+          return await this.processTrendReports(job.data);
         case 'executive-summary':
-          return await this.processExecutiveSummary(job.data as ExecutiveSummaryJobData);
+          return await this.processExecutiveSummary(job.data);
         default:
-          throw new Error(`Unknown analytics job type: ${type}`);
+          throw new Error(`Unknown analytics job type: ${type as string}`);
       }
     } catch (error) {
       logger.error(`Analytics job ${job.id} processing error`, {
@@ -441,7 +444,7 @@ export class AnalyticsQueue {
   private async processExecutiveSummary(data: ExecutiveSummaryJobData): Promise<{
     summaryGenerated: boolean;
     dateRange: DateRange;
-    keyMetrics: Record<string, any>;
+    keyMetrics: Record<string, unknown>;
   }> {
     logger.info('Processing executive summary', { 
       dateRange: data.dateRange,

@@ -24,6 +24,7 @@ import {
 } from './CertificateGenerationQueue.js';
 import { MediaConvertService } from './MediaConvertService.js';
 import { ContentRepository } from '../../modules/content/infrastructure/repositories/ContentRepository.js';
+import { CloudWatchInitializer } from './CloudWatchInitializer.js';
 
 /**
  * Application startup configuration
@@ -45,6 +46,9 @@ export interface StartupConfig {
     enabled?: boolean;
   };
   certificateGeneration?: {
+    enabled?: boolean;
+  };
+  cloudWatch?: {
     enabled?: boolean;
   };
 }
@@ -107,6 +111,31 @@ export async function initializeApplicationServices(
       
       logger.info('Certificate generation queue initialization skipped (requires DI setup)');
     }
+
+    // Initialize CloudWatch if enabled
+    if (config.cloudWatch?.enabled !== false) {
+      logger.info('Initializing CloudWatch integration...');
+      
+      await CloudWatchInitializer.initialize();
+
+      logger.info('CloudWatch integration initialized successfully');
+    }
+
+    // Initialize alerting rules
+    logger.info('Initializing alerting rules...');
+    
+    const { initializeAlertingRules } = await import('./AlertingRulesService.js');
+    initializeAlertingRules();
+
+    logger.info('Alerting rules initialized successfully');
+
+    // Initialize monitoring dashboards
+    logger.info('Initializing monitoring dashboards...');
+    
+    const { initializeMonitoringDashboards } = await import('./MonitoringDashboardService.js');
+    await initializeMonitoringDashboards();
+
+    logger.info('Monitoring dashboards initialized successfully');
 
     // Event bus is already initialized as a singleton
     if (config.eventBus?.enabled !== false) {

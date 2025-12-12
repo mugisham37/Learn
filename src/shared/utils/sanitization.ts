@@ -220,7 +220,7 @@ export const CONTENT_SANITIZATION_MAP = {
  */
 export function sanitizeByContentType(
   content: string, 
-  contentType: keyof typeof CONTENT_SANITIZATION_MAP | string
+  contentType: string
 ): string {
   const sanitizer = CONTENT_SANITIZATION_MAP[contentType as keyof typeof CONTENT_SANITIZATION_MAP] 
     || CONTENT_SANITIZATION_MAP.default;

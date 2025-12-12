@@ -24,6 +24,14 @@ async function bootstrap(): Promise<void> {
       port: config.port,
     });
     
+    // Initialize Sentry error tracking (must be first)
+    const { sentryService } = await import('./shared/services/SentryService.js');
+    sentryService.initialize();
+    
+    // Set up Sentry error handlers
+    const { setupSentryErrorHandlers } = await import('./shared/middleware/sentryMiddleware.js');
+    setupSentryErrorHandlers();
+    
     // Initialize startup service (includes secrets management, config validation, etc.)
     const { startupService } = await import('./shared/services/StartupService.js');
     await startupService.initialize();
@@ -34,6 +42,13 @@ async function bootstrap(): Promise<void> {
     // Initialize infrastructure (database, Redis, Elasticsearch)
     const { initializeInfrastructure } = await import('./infrastructure/index.js');
     await initializeInfrastructure();
+    
+    // Initialize CloudWatch integration
+    if (config.nodeEnv === 'production') {
+      const { CloudWatchInitializer } = await import('./shared/services/CloudWatchInitializer.js');
+      await CloudWatchInitializer.initialize();
+      logger.info('CloudWatch integration initialized successfully');
+    }
     
     // Initialize unified scheduler service (includes analytics, session cleanup, log pruning)
     const { initializeSchedulerService } = await import('./shared/services/SchedulerService.js');
@@ -88,6 +103,10 @@ async function shutdown(signal: string): Promise<void> {
       // Finally shutdown startup service
       const { startupService } = await import('./shared/services/StartupService.js');
       await startupService.shutdown();
+      
+      // Close Sentry and flush pending events
+      const { sentryService } = await import('./shared/services/SentryService.js');
+      await sentryService.close(2000);
       
       logger.info('Graceful shutdown completed');
       process.exit(0);

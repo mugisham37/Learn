@@ -9,6 +9,7 @@
 
 import { sql } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+
 import { logger } from './logger';
 
 /**
@@ -42,32 +43,55 @@ const PERFORMANCE_THRESHOLDS = {
  * Analyzes database queries using EXPLAIN ANALYZE and provides
  * optimization recommendations
  */
+/**
+ * Query plan node interface
+ */
+interface QueryPlanNode {
+  'Node Type': string;
+  'Total Cost'?: number;
+  'Actual Rows'?: number;
+  'Plan Rows'?: number;
+  'Index Name'?: string;
+  Plans?: QueryPlanNode[];
+}
+
+/**
+ * Query plan result interface
+ */
+interface QueryPlanResult {
+  'QUERY PLAN': Array<{
+    Plan: QueryPlanNode;
+    'Execution Time': number;
+    'Planning Time': number;
+  }>;
+}
+
 export class QueryOptimizer {
-  constructor(private db: NodePgDatabase<any>) {}
+  constructor(private db: NodePgDatabase<Record<string, never>>) {}
 
   /**
    * Analyze query performance using EXPLAIN ANALYZE
    */
-  async analyzeQuery(query: string, params: any[] = []): Promise<QueryAnalysis> {
+  async analyzeQuery(query: string, _params: unknown[] = []): Promise<QueryAnalysis> {
     try {
       // Execute EXPLAIN ANALYZE
       const explainQuery = `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) ${query}`;
-      const result = await this.db.execute(sql.raw(explainQuery, params));
+      const result = await this.db.execute(sql.raw(explainQuery)) as unknown as QueryPlanResult[];
       
-      const plan = result[0]?.['QUERY PLAN']?.[0];
-      if (!plan) {
+      const planData = result[0]?.['QUERY PLAN']?.[0];
+      if (!planData) {
         throw new Error('Failed to get query plan');
       }
 
       // Extract performance metrics
-      const executionTime = plan['Execution Time'] || 0;
-      const planningTime = plan['Planning Time'] || 0;
-      const totalCost = plan.Plan?.['Total Cost'] || 0;
-      const actualRows = plan.Plan?.['Actual Rows'] || 0;
-      const estimatedRows = plan.Plan?.['Plan Rows'] || 0;
+      const executionTime = planData['Execution Time'] || 0;
+      const planningTime = planData['Planning Time'] || 0;
+      const totalCost = planData.Plan?.['Total Cost'] || 0;
+      const actualRows = planData.Plan?.['Actual Rows'] || 0;
+      const estimatedRows = planData.Plan?.['Plan Rows'] || 0;
 
       // Extract indexes used
-      const indexesUsed = this.extractIndexesFromPlan(plan.Plan);
+      const indexesUsed = this.extractIndexesFromPlan(planData.Plan);
 
       // Generate recommendations
       const recommendations = this.generateRecommendations({
@@ -77,7 +101,7 @@ export class QueryOptimizer {
         actualRows,
         estimatedRows,
         indexesUsed,
-        plan: plan.Plan,
+        plan: planData.Plan,
       });
 
       const analysis: QueryAnalysis = {
@@ -112,10 +136,10 @@ export class QueryOptimizer {
   /**
    * Extract indexes used from query plan
    */
-  private extractIndexesFromPlan(plan: any): string[] {
+  private extractIndexesFromPlan(plan: QueryPlanNode): string[] {
     const indexes: string[] = [];
     
-    const extractFromNode = (node: any) => {
+    const extractFromNode = (node: QueryPlanNode): void => {
       if (node['Node Type'] === 'Index Scan' || node['Node Type'] === 'Index Only Scan') {
         if (node['Index Name']) {
           indexes.push(node['Index Name']);
@@ -141,7 +165,7 @@ export class QueryOptimizer {
     actualRows: number;
     estimatedRows: number;
     indexesUsed: string[];
-    plan: any;
+    plan: QueryPlanNode;
   }): string[] {
     const recommendations: string[] = [];
 
@@ -184,8 +208,8 @@ export class QueryOptimizer {
   /**
    * Check if query plan contains sequential scans
    */
-  private hasSequentialScan(plan: any): boolean {
-    const checkNode = (node: any): boolean => {
+  private hasSequentialScan(plan: QueryPlanNode): boolean {
+    const checkNode = (node: QueryPlanNode): boolean => {
       if (node['Node Type'] === 'Seq Scan') {
         return true;
       }
@@ -201,9 +225,9 @@ export class QueryOptimizer {
   /**
    * Check if query plan has expensive nested loops
    */
-  private hasExpensiveNestedLoop(plan: any): boolean {
-    const checkNode = (node: any): boolean => {
-      if (node['Node Type'] === 'Nested Loop' && node['Total Cost'] > 500) {
+  private hasExpensiveNestedLoop(plan: QueryPlanNode): boolean {
+    const checkNode = (node: QueryPlanNode): boolean => {
+      if (node['Node Type'] === 'Nested Loop' && (node['Total Cost'] || 0) > 500) {
         return true;
       }
       if (node.Plans) {
@@ -229,7 +253,7 @@ export class QueryOptimizer {
   /**
    * Batch analyze multiple queries
    */
-  async batchAnalyze(queries: Array<{ query: string; params?: any[] }>): Promise<QueryAnalysis[]> {
+  async batchAnalyze(queries: Array<{ query: string; params?: unknown[] }>): Promise<QueryAnalysis[]> {
     const results: QueryAnalysis[] = [];
     
     for (const { query, params = [] } of queries) {
@@ -289,12 +313,12 @@ export class QueryOptimizer {
  * Query caching utilities for expensive queries
  */
 export class QueryCache {
-  private cache = new Map<string, { result: any; timestamp: number; ttl: number }>();
+  private cache = new Map<string, { result: unknown; timestamp: number; ttl: number }>();
 
   /**
    * Get cached query result
    */
-  get(key: string): any | null {
+  get(key: string): unknown {
     const cached = this.cache.get(key);
     if (!cached) return null;
 
@@ -309,7 +333,7 @@ export class QueryCache {
   /**
    * Set cached query result
    */
-  set(key: string, result: any, ttlMs: number = 300000): void { // 5 minutes default
+  set(key: string, result: unknown, ttlMs: number = 300000): void { // 5 minutes default
     this.cache.set(key, {
       result,
       timestamp: Date.now(),
@@ -320,7 +344,7 @@ export class QueryCache {
   /**
    * Generate cache key from query and parameters
    */
-  generateKey(query: string, params: any[] = []): string {
+  generateKey(query: string, params: unknown[] = []): string {
     const normalizedQuery = query.replace(/\s+/g, ' ').trim();
     const paramsStr = JSON.stringify(params);
     return `${normalizedQuery}:${paramsStr}`;
@@ -377,7 +401,7 @@ export interface CursorPaginationResult<T> {
 /**
  * Generate cursor from record
  */
-export function generateCursor(record: any, orderBy: string): string {
+export function generateCursor(record: Record<string, unknown>, orderBy: string): string {
   const value = record[orderBy];
   if (value instanceof Date) {
     return Buffer.from(value.toISOString()).toString('base64');
@@ -403,7 +427,7 @@ export function buildCursorCondition(
   cursor: string | undefined,
   orderBy: string,
   direction: 'asc' | 'desc'
-): any {
+): ReturnType<typeof sql> | undefined {
   if (!cursor) return undefined;
 
   const cursorValue = parseCursor(cursor);

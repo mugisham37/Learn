@@ -5,12 +5,17 @@
  * Handles signed URL generation for private content delivery.
  */
 
-import { getSignedUrl } from '@aws-sdk/cloudfront-signer';
 import { readFileSync } from 'fs';
+
+import { getSignedUrl } from '@aws-sdk/cloudfront-signer';
+
 import { config } from '../../config/index.js';
-import { secrets } from '../utils/secureConfig.js';
+
 import { ExternalServiceError } from '../errors/index.js';
+
 import { logger } from '../utils/logger.js';
+import { secrets } from '../utils/secureConfig.js';
+
 import { 
   ICloudFrontService, 
   CloudFrontSignedUrlParams 
