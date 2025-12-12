@@ -148,6 +148,17 @@ export type {
   JobPerformanceMetrics 
 } from './JobEventLogger.js';
 
+// Comprehensive caching services
+export { 
+  comprehensiveCacheService, 
+  initializeComprehensiveCaching,
+  ComprehensiveCacheTTL,
+  ComprehensiveCacheKeys
+} from './ComprehensiveCacheService.js';
+
+// Startup service
+export { startupService } from './StartupService.js';
+
 // Interfaces
 export type { ICloudFrontService } from './ICloudFrontService.js';
 export type { IContentService } from './IContentService.js';

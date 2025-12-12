@@ -189,9 +189,27 @@ export class StartupService {
     
     try {
       // Import cache module dynamically to avoid circular dependencies
-      const { testConnection } = await import('../../infrastructure/cache/index.js');
-      await testConnection();
+      const { checkRedisHealth } = await import('../../infrastructure/cache/index.js');
+      const health = await checkRedisHealth();
+      
+      if (!health.healthy) {
+        throw new Error(`Cache health check failed: ${health.error}`);
+      }
+      
       logger.info('Cache connection initialization completed');
+
+      // Initialize comprehensive caching with cache warming
+      logger.info('Starting cache warming');
+      try {
+        const { initializeComprehensiveCaching } = await import('./ComprehensiveCacheService.js');
+        await initializeComprehensiveCaching();
+        logger.info('Cache warming completed successfully');
+      } catch (error) {
+        // Don't fail startup if cache warming fails
+        logger.warn('Cache warming failed, continuing startup', {
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
     } catch (error) {
       logger.error('Cache connection initialization failed', {
         error: error instanceof Error ? error.message : 'Unknown error',

@@ -10,6 +10,7 @@
 
 import type { ISearchRepository, CourseSearchDocument, LessonSearchDocument, SearchResult } from '../../../../infrastructure/search/ISearchRepository.js';
 import { ExternalServiceError } from '../../../../shared/errors/index.js';
+import { comprehensiveCacheService } from '../../../../shared/services/ComprehensiveCacheService.js';
 import type { Course } from '../../../courses/domain/entities/Course.js';
 import type { Lesson } from '../../../courses/domain/entities/Lesson.js';
 
@@ -101,6 +102,8 @@ export class SearchService implements ISearchService {
 
   /**
    * Search courses with filters and facets
+   * 
+   * Implements caching with 5-minute TTL and cache stampede prevention
    */
   async searchCourses(
     query: string,
@@ -110,42 +113,68 @@ export class SearchService implements ISearchService {
     includeFacets: boolean = true
   ): Promise<SearchResults<CourseSearchResult>> {
     try {
-      // Build search options for repository
-      const searchOptions = {
-        filters: {
-          category: filters.category,
-          difficulty: filters.difficulty,
-          priceRange: filters.priceRange,
-          rating: filters.rating,
-          status: filters.status || ['published'], // Default to published courses only
-        },
-        sort: {
-          field: this.mapSortField(sort.field),
-          order: sort.order,
-        },
-        pagination,
-        highlight: true, // Enable highlighting for better UX
-        includeFacets, // Pass facets flag to repository
-      };
-
-      // Perform search with facets
-      const searchResult = await this.searchCoursesWithFacets(query, searchOptions);
-
-      // Transform results
-      const transformedResults: SearchResults<CourseSearchResult> = {
-        documents: searchResult.documents.map((doc: CourseSearchDocument & { _highlight?: Record<string, string[]> }) => this.transformCourseSearchDocument(doc)),
-        total: searchResult.total,
-        took: searchResult.took,
-        maxScore: searchResult.maxScore,
-        facets: searchResult.facets,
-      };
-
-      // Add autocomplete suggestions for empty or short queries
-      if (query.trim().length <= 2) {
-        transformedResults.suggestions = await this.autocomplete(query, 5);
+      // Create cache key from search parameters
+      const filtersKey = JSON.stringify({ filters, sort, includeFacets });
+      const page = Math.floor((pagination.from || 0) / (pagination.size || 20)) + 1;
+      
+      // Check cache first
+      const cached = await comprehensiveCacheService.getCachedSearchResults<SearchResults<CourseSearchResult>>(
+        query, 
+        filtersKey, 
+        page
+      );
+      
+      if (cached) {
+        return cached;
       }
 
-      return transformedResults;
+      // Use cache stampede prevention for expensive search operations
+      const searchResult = await comprehensiveCacheService.withStampedePrevention(
+        `search:courses:${query}:${filtersKey}:${page}`,
+        async () => {
+          // Build search options for repository
+          const searchOptions = {
+            filters: {
+              category: filters.category,
+              difficulty: filters.difficulty,
+              priceRange: filters.priceRange,
+              rating: filters.rating,
+              status: filters.status || ['published'], // Default to published courses only
+            },
+            sort: {
+              field: this.mapSortField(sort.field),
+              order: sort.order,
+            },
+            pagination,
+            highlight: true, // Enable highlighting for better UX
+            includeFacets, // Pass facets flag to repository
+          };
+
+          // Perform search with facets
+          const result = await this.searchCoursesWithFacets(query, searchOptions);
+
+          // Transform results
+          const transformedResults: SearchResults<CourseSearchResult> = {
+            documents: result.documents.map((doc: CourseSearchDocument & { _highlight?: Record<string, string[]> }) => this.transformCourseSearchDocument(doc)),
+            total: result.total,
+            took: result.took,
+            maxScore: result.maxScore,
+            facets: result.facets,
+          };
+
+          // Add autocomplete suggestions for empty or short queries
+          if (query.trim().length <= 2) {
+            transformedResults.suggestions = await this.autocomplete(query, 5);
+          }
+
+          return transformedResults;
+        }
+      );
+
+      // Cache the result
+      await comprehensiveCacheService.cacheSearchResults(query, filtersKey, page, searchResult);
+
+      return searchResult;
     } catch (error) {
       if (error instanceof ExternalServiceError) {
         throw error;
@@ -208,11 +237,19 @@ export class SearchService implements ISearchService {
 
   /**
    * Get autocomplete suggestions for search queries
+   * 
+   * Implements caching with 5-minute TTL for better performance
    */
   async autocomplete(query: string, limit: number = 10): Promise<string[]> {
     try {
       if (!query.trim()) {
         return [];
+      }
+
+      // Check cache first
+      const cached = await comprehensiveCacheService.getCachedAutocomplete(query);
+      if (cached) {
+        return cached.slice(0, limit);
       }
 
       // Use course search with completion suggester
@@ -247,7 +284,12 @@ export class SearchService implements ISearchService {
         }
       });
 
-      return Array.from(suggestions).slice(0, limit);
+      const result = Array.from(suggestions).slice(0, limit);
+      
+      // Cache the result
+      await comprehensiveCacheService.cacheAutocomplete(query, result);
+
+      return result;
     } catch (error) {
       // Don't throw errors for autocomplete - return empty array instead
       console.error('Autocomplete failed:', error);
@@ -257,31 +299,56 @@ export class SearchService implements ISearchService {
 
   /**
    * Get trending search terms based on recent search activity
+   * 
+   * Implements caching with 30-minute TTL for trending data
    */
-  getTrendingSearches(limit: number = 10): Promise<string[]> {
-    // This is a simplified implementation
-    // In production, you would track search queries and their frequency
-    // For now, return popular course categories and trending topics
-    
-    const trendingTerms = [
-      'javascript',
-      'python',
-      'react',
-      'machine learning',
-      'web development',
-      'data science',
-      'nodejs',
-      'typescript',
-      'artificial intelligence',
-      'cloud computing',
-      'cybersecurity',
-      'mobile development',
-      'devops',
-      'blockchain',
-      'ui/ux design',
-    ];
+  async getTrendingSearches(limit: number = 10): Promise<string[]> {
+    try {
+      // Check cache first
+      const cached = await comprehensiveCacheService.getCachedTrendingSearches();
+      if (cached) {
+        return cached.slice(0, limit);
+      }
 
-    return Promise.resolve(trendingTerms.slice(0, limit));
+      // This is a simplified implementation
+      // In production, you would track search queries and their frequency
+      // For now, return popular course categories and trending topics
+      
+      const trendingTerms = [
+        'javascript',
+        'python',
+        'react',
+        'machine learning',
+        'web development',
+        'data science',
+        'nodejs',
+        'typescript',
+        'artificial intelligence',
+        'cloud computing',
+        'cybersecurity',
+        'mobile development',
+        'devops',
+        'blockchain',
+        'ui/ux design',
+      ];
+
+      const result = trendingTerms.slice(0, limit);
+      
+      // Cache the result
+      await comprehensiveCacheService.cacheTrendingSearches(result);
+
+      return result;
+    } catch (error) {
+      console.error('Failed to get trending searches:', error);
+      // Return fallback data
+      return [
+        'javascript',
+        'python',
+        'react',
+        'machine learning',
+        'web development',
+      ].slice(0, limit);
+    }
   }
 
   // Index management operations
