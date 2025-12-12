@@ -34,6 +34,12 @@ export type { SchedulerConfig } from './AnalyticsScheduler.js';
 // Video processing services
 export { VideoProcessingQueue } from './VideoProcessingQueue.js';
 export { VideoProcessingService } from './VideoProcessingService.js';
+export { 
+  getVideoProcessingQueue, 
+  initializeVideoProcessingQueue, 
+  shutdownVideoProcessingQueue 
+} from './VideoProcessingQueue.js';
+export type { VideoProcessingJobData, JobCompletionData } from './VideoProcessingQueue.js';
 
 // Content services
 export { CloudFrontService } from './CloudFrontService.js';

@@ -10,6 +10,12 @@
 import { logger } from '../utils/logger.js';
 import { initializeSearchIndexing, shutdownSearchIndexing } from '../../modules/search/index.js';
 import { eventBus } from './EventBus.js';
+import { 
+  initializeVideoProcessingQueue, 
+  shutdownVideoProcessingQueue 
+} from './VideoProcessingQueue.js';
+import { MediaConvertService } from './MediaConvertService.js';
+import { ContentRepository } from '../../modules/content/infrastructure/repositories/ContentRepository.js';
 
 /**
  * Application startup configuration
@@ -22,6 +28,9 @@ export interface StartupConfig {
     bulkReindexBatchSize?: number;
   };
   eventBus?: {
+    enabled?: boolean;
+  };
+  videoProcessing?: {
     enabled?: boolean;
   };
 }
@@ -49,6 +58,22 @@ export async function initializeApplicationServices(
       logger.info('Search indexing initialized successfully');
     }
 
+    // Initialize video processing queue if enabled
+    if (config.videoProcessing?.enabled !== false) {
+      logger.info('Initializing video processing queue...');
+      
+      // Create service instances
+      const mediaConvertService = new MediaConvertService();
+      const contentRepository = new ContentRepository();
+      
+      await initializeVideoProcessingQueue(
+        mediaConvertService,
+        contentRepository
+      );
+
+      logger.info('Video processing queue initialized successfully');
+    }
+
     // Event bus is already initialized as a singleton
     if (config.eventBus?.enabled !== false) {
       logger.info('Event bus is ready');
@@ -72,6 +97,9 @@ export async function shutdownApplicationServices(): Promise<void> {
 
     // Shutdown search indexing
     await shutdownSearchIndexing();
+
+    // Shutdown video processing queue
+    await shutdownVideoProcessingQueue();
 
     // Shutdown event bus
     await eventBus.shutdown();

@@ -16,6 +16,25 @@ vi.mock('../../../src/infrastructure/cache/index.js', () => ({
   },
 }));
 
+// Mock BullMQ
+vi.mock('bullmq', () => ({
+  Queue: vi.fn().mockImplementation(() => ({
+    add: vi.fn().mockResolvedValue({ id: 'test-job-id' }),
+    getJob: vi.fn().mockResolvedValue(null),
+    getWaiting: vi.fn().mockResolvedValue([]),
+    getActive: vi.fn().mockResolvedValue([]),
+    getCompleted: vi.fn().mockResolvedValue([]),
+    getFailed: vi.fn().mockResolvedValue([]),
+    getDelayed: vi.fn().mockResolvedValue([]),
+    close: vi.fn().mockResolvedValue(undefined),
+    on: vi.fn(),
+  })),
+  Worker: vi.fn().mockImplementation(() => ({
+    close: vi.fn().mockResolvedValue(undefined),
+    on: vi.fn(),
+  })),
+}));
+
 // Mock logger
 vi.mock('../../../src/shared/utils/logger.js', () => ({
   logger: {
@@ -135,7 +154,7 @@ describe('VideoProcessingQueue', () => {
         failed: 0,
         delayed: 0,
       });
-    }, 1000); // 1 second timeout
+    }, 5000); // 5 second timeout to allow for Redis connection attempts
   });
 
   describe('shutdown', () => {

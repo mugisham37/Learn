@@ -709,3 +709,50 @@ export class VideoProcessingQueue {
     }
   }
 }
+
+// Global instance management
+let videoProcessingQueueInstance: VideoProcessingQueue | null = null;
+
+/**
+ * Get the global video processing queue instance
+ */
+export function getVideoProcessingQueue(): VideoProcessingQueue {
+  if (!videoProcessingQueueInstance) {
+    throw new Error('VideoProcessingQueue not initialized. Call initializeVideoProcessingQueue first.');
+  }
+  return videoProcessingQueueInstance;
+}
+
+/**
+ * Initialize video processing queue (call this during application startup)
+ */
+export async function initializeVideoProcessingQueue(
+  mediaConvertService: IMediaConvertService,
+  contentRepository: IContentRepository
+): Promise<VideoProcessingQueue> {
+  if (videoProcessingQueueInstance) {
+    logger.warn('VideoProcessingQueue already initialized');
+    return videoProcessingQueueInstance;
+  }
+
+  videoProcessingQueueInstance = new VideoProcessingQueue(
+    mediaConvertService,
+    contentRepository
+  );
+
+  await videoProcessingQueueInstance.initialize();
+  
+  logger.info('Video processing queue initialized successfully');
+  return videoProcessingQueueInstance;
+}
+
+/**
+ * Shutdown video processing queue (call this during application shutdown)
+ */
+export async function shutdownVideoProcessingQueue(): Promise<void> {
+  if (videoProcessingQueueInstance) {
+    await videoProcessingQueueInstance.shutdown();
+    videoProcessingQueueInstance = null;
+    logger.info('Video processing queue shut down successfully');
+  }
+}
