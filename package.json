@@ -23,7 +23,10 @@
     "docker:down": "docker-compose down",
     "docker:logs": "docker-compose logs -f",
     "reindex:search": "tsx scripts/bulk-reindex-search.ts",
-    "test:scheduler": "tsx scripts/test-scheduler.ts"
+    "test:scheduler": "tsx scripts/test-scheduler.ts",
+    "analyze:queries": "tsx scripts/analyze-query-performance.ts",
+    "db:optimize": "tsx scripts/analyze-query-performance.ts --create-indexes --update-stats",
+    "db:analyze-indexes": "tsx scripts/analyze-query-performance.ts --analyze-queries --generate-report"
   },
   "keywords": [
     "education",
