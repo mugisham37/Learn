@@ -18,6 +18,13 @@ import {
   NotFoundError,
 } from '../../../../shared/errors/index.js';
 import { logger } from '../../../../shared/utils/logger.js';
+import { 
+  SUBSCRIPTION_EVENTS, 
+  createAsyncIterator, 
+  publishEvent, 
+  withFilter 
+} from '../../../../infrastructure/graphql/pubsub.js';
+import { requireAuth } from '../../../../infrastructure/graphql/utils.js';
 import { INotificationService } from '../../application/services/INotificationService.js';
 import { INotificationPreferenceService } from '../../application/services/INotificationPreferenceService.js';
 import { INotificationRepository } from '../../infrastructure/repositories/INotificationRepository.js';
@@ -530,6 +537,12 @@ export const notificationResolvers = {
           user.id
         );
 
+        // Publish notification read event
+        await publishEvent(SUBSCRIPTION_EVENTS.NOTIFICATION_READ, {
+          notificationRead: notification,
+          userId: user.id
+        });
+
         logger.info('Notification marked as read successfully', {
           notificationId: args.input.notificationId,
           userId: user.id,
@@ -793,61 +806,73 @@ export const notificationResolvers = {
      * Requirements: 21.4
      */
     notificationReceived: {
-      subscribe: async (
-        _parent: unknown,
-        args: { userId: string },
-        context: GraphQLContext,
-        _info: GraphQLResolveInfo
-      ) => {
-        try {
+      subscribe: withFilter(
+        (_parent: any, _args: any, context: GraphQLContext) => {
+          // Require authentication for subscriptions
           const user = requireAuth(context);
-          const { realtimeService } = getDataSources(context);
-
-          // Check authorization - users can only subscribe to their own notifications
-          if (args.userId !== user.id) {
-            throw new AuthorizationError('Can only subscribe to your own notifications');
-          }
-
-          if (!realtimeService) {
-            throw new GraphQLError('Real-time service not available');
-          }
-
-          logger.info('Setting up notification subscription', {
-            userId: args.userId,
-            requestId: context.requestId,
-          });
-
-          // Return async iterator for real-time notifications
-          // This would typically integrate with your WebSocket/subscription infrastructure
-          // For now, we'll return a placeholder that would be implemented with your specific
-          // subscription system (e.g., GraphQL subscriptions with Redis pub/sub)
           
-          throw new GraphQLError('Subscription implementation pending', {
-            extensions: { code: 'NOT_IMPLEMENTED' },
-          });
-
-        } catch (error) {
-          logger.error('Failed to set up notification subscription', {
-            userId: args.userId,
-            error: error instanceof Error ? error.message : 'Unknown error',
+          logger.info('Setting up notification subscription', {
+            userId: user.id,
             requestId: context.requestId,
           });
 
-          if (error instanceof AuthenticationError) {
-            throw new GraphQLError('Authentication required', {
-              extensions: { code: 'UNAUTHENTICATED' },
-            });
-          }
-
-          if (error instanceof AuthorizationError) {
-            throw new GraphQLError('Access denied', {
-              extensions: { code: 'FORBIDDEN' },
-            });
-          }
-
-          throw error;
+          return createAsyncIterator(SUBSCRIPTION_EVENTS.NOTIFICATION_RECEIVED);
+        },
+        (payload: any, variables: any, context: GraphQLContext) => {
+          // Users can only subscribe to their own notifications
+          const user = requireAuth(context);
+          return payload.userId === variables.userId && payload.userId === user.id;
         }
-      },
+      )
+    },
+
+    /**
+     * Real-time notification read status updates
+     */
+    notificationRead: {
+      subscribe: withFilter(
+        (_parent: any, _args: any, context: GraphQLContext) => {
+          // Require authentication for subscriptions
+          const user = requireAuth(context);
+          
+          logger.info('Setting up notification read subscription', {
+            userId: user.id,
+            requestId: context.requestId,
+          });
+
+          return createAsyncIterator(SUBSCRIPTION_EVENTS.NOTIFICATION_READ);
+        },
+        (payload: any, variables: any, context: GraphQLContext) => {
+          // Users can only subscribe to their own notification updates
+          const user = requireAuth(context);
+          return payload.userId === variables.userId && payload.userId === user.id;
+        }
+      )
+    },
+
+    /**
+     * Real-time unread count updates
+     */
+    unreadCountChanged: {
+      subscribe: withFilter(
+        (_parent: any, _args: any, context: GraphQLContext) => {
+          // Require authentication for subscriptions
+          const user = requireAuth(context);
+          
+          logger.info('Setting up unread count subscription', {
+            userId: user.id,
+            requestId: context.requestId,
+          });
+
+          return createAsyncIterator(SUBSCRIPTION_EVENTS.UNREAD_COUNT_CHANGED);
+        },
+        (payload: any, variables: any, context: GraphQLContext) => {
+          // Users can only subscribe to their own unread count updates
+          const user = requireAuth(context);
+          return payload.userId === variables.userId && payload.userId === user.id;
+        }
+      )
+    }
     },
 
     /**

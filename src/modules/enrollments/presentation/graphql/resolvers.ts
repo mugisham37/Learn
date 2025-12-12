@@ -8,6 +8,13 @@
  */
 
 import { GraphQLError } from 'graphql';
+import { 
+  SUBSCRIPTION_EVENTS, 
+  createAsyncIterator, 
+  publishEvent, 
+  withFilter 
+} from '../../../../infrastructure/graphql/pubsub.js';
+import { requireAuth } from '../../../../infrastructure/graphql/utils.js';
 
 import { ICourseRepository } from '../../../courses/infrastructure/repositories/ICourseRepository.js';
 import { IUserRepository } from '../../../users/infrastructure/repositories/IUserRepository.js';
@@ -818,6 +825,7 @@ export const enrollmentResolvers = {
       args: { input: UpdateLessonProgressInput },
       context: EnrollmentGraphQLContext
     ): Promise<LessonProgress> => {
+      const user = requireAuth(context);
       await requireEnrollmentAccess(args.input.enrollmentId, context);
 
       try {
@@ -852,6 +860,14 @@ export const enrollmentResolvers = {
         };
 
         const updatedProgress = await context.enrollmentService.updateLessonProgress(progressData);
+        
+        // Publish progress update event
+        await publishEvent(SUBSCRIPTION_EVENTS.LESSON_PROGRESS_UPDATED, {
+          lessonProgressUpdated: updatedProgress,
+          enrollmentId: args.input.enrollmentId,
+          studentId: user.id
+        });
+        
         return updatedProgress;
       } catch (error: unknown) {
         if (error instanceof GraphQLError) {
@@ -962,6 +978,7 @@ export const enrollmentResolvers = {
       args: { enrollmentId: string; lessonId: string },
       context: EnrollmentGraphQLContext
     ): Promise<LessonProgress> => {
+      const user = requireAuth(context);
       await requireEnrollmentAccess(args.enrollmentId, context);
 
       try {
@@ -974,6 +991,14 @@ export const enrollmentResolvers = {
         };
 
         const updatedProgress = await context.enrollmentService.updateLessonProgress(progressData);
+        
+        // Publish progress update event
+        await publishEvent(SUBSCRIPTION_EVENTS.LESSON_PROGRESS_UPDATED, {
+          lessonProgressUpdated: updatedProgress,
+          enrollmentId: args.enrollmentId,
+          studentId: user.id
+        });
+        
         return updatedProgress;
       } catch (error: unknown) {
         if (error instanceof GraphQLError) {
@@ -1040,6 +1065,7 @@ export const enrollmentResolvers = {
       args: { enrollmentId: string },
       context: EnrollmentGraphQLContext
     ): Promise<Certificate> => {
+      const user = requireAuth(context);
       await requireEnrollmentAccess(args.enrollmentId, context);
 
       try {
@@ -1092,6 +1118,14 @@ export const enrollmentResolvers = {
         };
 
         const certificate = await context.enrollmentService.completeCourse(completeCourseData);
+        
+        // Publish certificate generation event
+        await publishEvent(SUBSCRIPTION_EVENTS.CERTIFICATE_GENERATED, {
+          certificateGenerated: certificate,
+          enrollmentId: args.enrollmentId,
+          studentId: user.id
+        });
+        
         return certificate;
       } catch (error: unknown) {
         if (error instanceof GraphQLError) {
@@ -1371,6 +1405,87 @@ export const enrollmentResolvers = {
     isExpired: (_certificate: Certificate): boolean => {
       // Certificates don't expire in this implementation
       return false;
+    }
+  },
+
+  /**
+   * Subscription resolvers for real-time enrollment and progress updates
+   */
+  Subscription: {
+    /**
+     * Enrollment progress updated subscription
+     */
+    enrollmentProgressUpdated: {
+      subscribe: withFilter(
+        (_parent: any, _args: any, context: EnrollmentGraphQLContext) => {
+          // Require authentication for subscriptions
+          requireAuth(context);
+          return createAsyncIterator(SUBSCRIPTION_EVENTS.ENROLLMENT_PROGRESS_UPDATED);
+        },
+        (payload: any, variables: any, context: EnrollmentGraphQLContext) => {
+          // Users can only subscribe to their own enrollment progress
+          const user = requireAuth(context);
+          return payload.enrollmentId === variables.enrollmentId && 
+                 payload.studentId === user.id;
+        }
+      )
+    },
+
+    /**
+     * Lesson progress updated subscription
+     */
+    lessonProgressUpdated: {
+      subscribe: withFilter(
+        (_parent: any, _args: any, context: EnrollmentGraphQLContext) => {
+          // Require authentication for subscriptions
+          requireAuth(context);
+          return createAsyncIterator(SUBSCRIPTION_EVENTS.LESSON_PROGRESS_UPDATED);
+        },
+        (payload: any, variables: any, context: EnrollmentGraphQLContext) => {
+          // Users can only subscribe to their own lesson progress
+          const user = requireAuth(context);
+          return payload.enrollmentId === variables.enrollmentId && 
+                 payload.studentId === user.id;
+        }
+      )
+    },
+
+    /**
+     * Certificate generated subscription
+     */
+    certificateGenerated: {
+      subscribe: withFilter(
+        (_parent: any, _args: any, context: EnrollmentGraphQLContext) => {
+          // Require authentication for subscriptions
+          requireAuth(context);
+          return createAsyncIterator(SUBSCRIPTION_EVENTS.CERTIFICATE_GENERATED);
+        },
+        (payload: any, variables: any, context: EnrollmentGraphQLContext) => {
+          // Users can only subscribe to their own certificates
+          const user = requireAuth(context);
+          return payload.enrollmentId === variables.enrollmentId && 
+                 payload.studentId === user.id;
+        }
+      )
+    },
+
+    /**
+     * Course completed subscription
+     */
+    courseCompleted: {
+      subscribe: withFilter(
+        (_parent: any, _args: any, context: EnrollmentGraphQLContext) => {
+          // Require authentication for subscriptions
+          requireAuth(context);
+          return createAsyncIterator(SUBSCRIPTION_EVENTS.COURSE_COMPLETED);
+        },
+        (payload: any, variables: any, context: EnrollmentGraphQLContext) => {
+          // Users can only subscribe to their own course completions
+          const user = requireAuth(context);
+          return payload.enrollmentId === variables.enrollmentId && 
+                 payload.studentId === user.id;
+        }
+      )
     }
   }
 }; 

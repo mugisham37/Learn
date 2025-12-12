@@ -14,6 +14,8 @@ import { FastifyInstance } from 'fastify';
 import { GraphQLSchema } from 'graphql';
 import { mergeTypeDefs, mergeResolvers } from '@graphql-tools/merge';
 import { makeExecutableSchema } from '@graphql-tools/schema';
+import { createSubscriptionServer } from './subscriptionServer.js';
+import { createPubSub } from './pubsub.js';
 
 import { config } from '../../config/index.js';
 import { logger } from '../../shared/utils/logger.js';
@@ -79,6 +81,7 @@ export interface GraphQLContext {
     role: string;
   };
   requestId: string;
+  pubsub?: any; // PubSub instance for subscriptions
   dataloaders?: {
     // User data loaders
     users?: UserDataLoaders;
@@ -178,10 +181,27 @@ function createMergedSchema(): GraphQLSchema {
 }
 
 /**
- * Creates and configures Apollo Server instance
+ * Creates and configures Apollo Server instance with subscription support
  */
-export async function createApolloServer(fastify: FastifyInstance): Promise<ApolloServer<GraphQLContext>> {
+export async function createApolloServer(fastify: FastifyInstance): Promise<{
+  server: ApolloServer<GraphQLContext>;
+  schema: GraphQLSchema;
+  subscriptionCleanup?: () => Promise<void>;
+}> {
   const schema = createMergedSchema();
+
+  // Create subscription server for WebSocket support
+  let subscriptionCleanup: (() => Promise<void>) | undefined;
+  
+  try {
+    const { cleanup } = createSubscriptionServer(fastify.server, schema);
+    subscriptionCleanup = cleanup;
+    logger.info('GraphQL subscription server created successfully');
+  } catch (error) {
+    logger.warn('Failed to create subscription server, subscriptions will not be available', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
 
   const server = new ApolloServer<GraphQLContext>({
     schema,
@@ -218,9 +238,10 @@ export async function createApolloServer(fastify: FastifyInstance): Promise<Apol
   logger.info('Apollo Server created successfully', {
     introspection: config.nodeEnv !== 'production',
     environment: config.nodeEnv,
+    subscriptions: !!subscriptionCleanup,
   });
 
-  return server;
+  return { server, schema, subscriptionCleanup };
 }
 
 // Import DataLoader factory
@@ -305,6 +326,17 @@ export async function createGraphQLContext({ request }: { request: GraphQLReques
       requestId: context.requestId,
     });
     // Continue without data loaders - resolvers should handle gracefully
+  }
+
+  // Add PubSub instance to context for subscriptions
+  try {
+    context.pubsub = createPubSub();
+  } catch (error) {
+    logger.error('Failed to create PubSub for GraphQL context', {
+      error: error instanceof Error ? error.message : String(error),
+      requestId: context.requestId,
+    });
+    // Continue without PubSub - subscription resolvers should handle gracefully
   }
 
   return context;

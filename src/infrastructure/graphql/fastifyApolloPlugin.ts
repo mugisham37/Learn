@@ -31,8 +31,8 @@ const apolloServerPlugin: FastifyPluginAsync<ApolloServerPluginOptions> = async 
 ) => {
   const { path = '/graphql', cors = true } = options;
 
-  // Create Apollo Server instance
-  const apolloServer = await createApolloServer(fastify);
+  // Create Apollo Server instance with subscription support
+  const { server: apolloServer, subscriptionCleanup } = await createApolloServer(fastify);
 
   // Start Apollo Server
   await apolloServer.start();
@@ -127,6 +127,13 @@ const apolloServerPlugin: FastifyPluginAsync<ApolloServerPluginOptions> = async 
   // Graceful shutdown
   fastify.addHook('onClose', async () => {
     logger.info('Stopping Apollo Server...');
+    
+    // Clean up subscription server first
+    if (subscriptionCleanup) {
+      await subscriptionCleanup();
+      logger.info('Subscription server stopped successfully');
+    }
+    
     await apolloServer.stop();
     logger.info('Apollo Server stopped successfully');
   });

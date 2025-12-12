@@ -27,6 +27,10 @@ import {
 } from '../../../../shared/services/IRealtimeService.js';
 import { logger } from '../../../../shared/utils/logger.js';
 import { 
+  SUBSCRIPTION_EVENTS, 
+  publishEvent 
+} from '../../../../infrastructure/graphql/pubsub.js';
+import { 
   NotificationPreferences 
 } from '../../../users/domain/value-objects/UserProfile.js';
 import { 
@@ -102,6 +106,12 @@ export class NotificationService implements INotificationService {
       };
 
       const notification = await this.notificationRepository.create(notificationDto);
+
+      // Publish notification received event for GraphQL subscriptions
+      await publishEvent(SUBSCRIPTION_EVENTS.NOTIFICATION_RECEIVED, {
+        notificationReceived: notification,
+        userId: data.recipientId
+      });
 
       // Initialize delivery result
       const result: NotificationDeliveryResult = {

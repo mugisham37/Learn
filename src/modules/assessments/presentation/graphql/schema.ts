@@ -289,29 +289,193 @@ export const assessmentTypeDefs = gql`
   # Mutations
   type Mutation {
     # Quiz mutations
+    """
+    Create a new quiz for a lesson with configuration settings.
+    
+    Example:
+    mutation {
+      createQuiz(input: {
+        lessonId: "lesson-123"
+        title: "React Fundamentals Quiz"
+        quizType: SUMMATIVE
+        config: {
+          timeLimitMinutes: 30
+          passingScorePercentage: 70
+          maxAttempts: 3
+          randomizeQuestions: true
+        }
+      }) {
+        id
+        title
+        config {
+          timeLimitMinutes
+          maxAttempts
+        }
+      }
+    }
+    
+    Requirements: 6.1, 6.2
+    """
     createQuiz(input: CreateQuizInput!): Quiz!
-    updateQuiz(id: ID!, input: UpdateQuizInput!): Quiz!
-    deleteQuiz(id: ID!): Boolean!
     
-    # Question mutations
-    addQuestion(input: CreateQuestionInput!): Question!
-    updateQuestion(id: ID!, input: UpdateQuestionInput!): Question!
-    deleteQuestion(id: ID!): Boolean!
+    """
+    Start a new quiz attempt for a student.
     
-    # Quiz attempt mutations
+    Example:
+    mutation {
+      startQuizAttempt(quizId: "quiz-123") {
+        id
+        attemptNumber
+        startedAt
+        quiz {
+          title
+          config {
+            timeLimitMinutes
+          }
+        }
+      }
+    }
+    
+    Requirements: 6.3
+    """
     startQuizAttempt(quizId: ID!): QuizSubmission!
+    
+    """
+    Submit answer for a specific question during quiz attempt.
+    
+    Example:
+    mutation {
+      submitQuizAnswer(
+        submissionId: "submission-123"
+        input: {
+          questionId: "question-456"
+          answer: ["Option A", "Option C"]
+        }
+      )
+    }
+    
+    Requirements: 6.3
+    """
     submitQuizAnswer(submissionId: ID!, input: SubmitQuizAnswerInput!): Boolean!
+    
+    """
+    Submit completed quiz for grading and scoring.
+    
+    Example:
+    mutation {
+      submitQuiz(submissionId: "submission-123") {
+        id
+        submittedAt
+        scorePercentage
+        gradingStatus
+        pointsEarned
+      }
+    }
+    
+    Requirements: 6.4, 6.5
+    """
     submitQuiz(submissionId: ID!): QuizSubmission!
-    gradeQuizSubmission(submissionId: ID!, input: GradeQuizInput!): QuizSubmission!
     
     # Assignment mutations
-    createAssignment(input: CreateAssignmentInput!): Assignment!
-    updateAssignment(id: ID!, input: UpdateAssignmentInput!): Assignment!
-    deleteAssignment(id: ID!): Boolean!
+    """
+    Create a new assignment for a lesson with requirements and rubric.
     
-    # Assignment submission mutations
+    Example:
+    mutation {
+      createAssignment(input: {
+        lessonId: "lesson-123"
+        title: "Build a React Component"
+        instructions: "Create a reusable button component with props"
+        config: {
+          dueDate: "2024-02-15T23:59:59Z"
+          maxPoints: 100
+          requiresFileUpload: true
+          allowedFileTypes: ["zip", "tar.gz"]
+        }
+      }) {
+        id
+        title
+        config {
+          dueDate
+          maxPoints
+        }
+      }
+    }
+    
+    Requirements: 7.1
+    """
+    createAssignment(input: CreateAssignmentInput!): Assignment!
+    
+    """
+    Submit assignment with file upload or text response.
+    
+    Example:
+    mutation {
+      submitAssignment(input: {
+        assignmentId: "assignment-123"
+        file: {
+          url: "https://s3.amazonaws.com/uploads/student-work.zip"
+          name: "react-component.zip"
+          sizeBytes: 1024000
+        }
+        submissionText: "This component implements the requirements..."
+      }) {
+        id
+        submittedAt
+        isLate
+        file {
+          name
+          url
+        }
+      }
+    }
+    
+    Requirements: 7.2, 7.3
+    """
     submitAssignment(input: SubmitAssignmentInput!): AssignmentSubmission!
+    
+    """
+    Grade assignment submission with points and feedback.
+    
+    Example:
+    mutation {
+      gradeAssignment(
+        submissionId: "submission-123"
+        input: {
+          pointsAwarded: 85
+          feedback: "Good implementation, consider error handling"
+        }
+      ) {
+        id
+        pointsAwarded
+        feedback
+        gradingStatus
+        gradedAt
+      }
+    }
+    
+    Requirements: 7.4, 7.7
+    """
     gradeAssignment(submissionId: ID!, input: GradeAssignmentInput!): AssignmentSubmission!
+    
+    """
+    Request revision on assignment submission with specific feedback.
+    
+    Example:
+    mutation {
+      requestRevision(
+        submissionId: "submission-123"
+        feedback: "Please add unit tests and improve documentation"
+      ) {
+        id
+        gradingStatus
+        feedback
+        revisionNumber
+      }
+    }
+    
+    Requirements: 7.5, 7.6
+    """
     requestRevision(submissionId: ID!, feedback: String!): AssignmentSubmission!
   }
 

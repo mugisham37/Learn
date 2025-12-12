@@ -9,31 +9,13 @@
  */
 
 import { GraphQLError } from 'graphql';
-// Note: graphql-subscriptions would be installed as a dependency
-// For now, we'll create a simple mock implementation
-interface PubSub {
-  publish(event: string, payload: any): void;
-  asyncIterator(events: string[]): any;
-}
-
-// Simple mock implementation for development
-const createMockPubSub = (): PubSub => ({
-  publish: (event: string, payload: any) => {
-    console.log(`PubSub publish: ${event}`, payload);
-  },
-  asyncIterator: (events: string[]) => {
-    console.log(`PubSub asyncIterator: ${events.join(', ')}`);
-    return {};
-  }
-});
-
-// Mock withFilter function
-const withFilter = (asyncIteratorFn: () => any, filterFn: (payload: any, variables: any) => boolean) => {
-  return {
-    subscribe: asyncIteratorFn,
-    resolve: (payload: any) => payload
-  };
-};
+import { 
+  SUBSCRIPTION_EVENTS, 
+  createAsyncIterator, 
+  publishEvent, 
+  withFilter 
+} from '../../../../infrastructure/graphql/pubsub.js';
+import { requireSubscriptionAuth } from '../../../../infrastructure/graphql/subscriptionServer.js';
 
 import { ValidationError, AuthorizationError, NotFoundError } from '../../../../shared/errors/index.js';
 import { IRealtimeService, PresenceStatus } from '../../../../shared/services/IRealtimeService.js';
@@ -195,10 +177,7 @@ function toConnection<T>(items: T[], totalCount: number, pagination: { limit: nu
   };
 }
 
-/**
- * Create PubSub instance for subscriptions
- */
-const pubsub = createMockPubSub();
+// PubSub instance will be provided through GraphQL context
 
 /**
  * GraphQL resolvers for communication module
@@ -597,7 +576,7 @@ export const communicationResolvers = {
         );
         
         // Publish to subscriptions
-        pubsub.publish('MESSAGE_RECEIVED', {
+        await publishEvent(SUBSCRIPTION_EVENTS.MESSAGE_RECEIVED, {
           messageReceived: result.message,
           userId: args.recipientId
         });
@@ -790,7 +769,7 @@ export const communicationResolvers = {
         const result = await context.discussionService.createThread(createData);
         
         // Publish to subscriptions
-        pubsub.publish('THREAD_CREATED', {
+        await publishEvent(SUBSCRIPTION_EVENTS.THREAD_UPDATED, {
           threadCreated: result.thread,
           courseId: args.courseId
         });
@@ -868,7 +847,7 @@ export const communicationResolvers = {
         const result = await context.discussionService.replyToThread(replyData);
         
         // Publish to subscriptions
-        pubsub.publish('NEW_DISCUSSION_POST', {
+        await publishEvent(SUBSCRIPTION_EVENTS.NEW_DISCUSSION_POST, {
           newDiscussionPost: result.post,
           threadId: args.threadId
         });
@@ -939,7 +918,7 @@ export const communicationResolvers = {
         };
         
         // Publish to subscriptions
-        pubsub.publish('POST_VOTED', {
+        await publishEvent(SUBSCRIPTION_EVENTS.POST_VOTED, {
           postVoted: mockUpdatedPost,
           postId: args.postId
         });
@@ -1002,7 +981,7 @@ export const communicationResolvers = {
         const result = await context.discussionService.markSolution(solutionData);
         
         // Publish to subscriptions
-        pubsub.publish('SOLUTION_MARKED', {
+        await publishEvent(SUBSCRIPTION_EVENTS.POST_VOTED, {
           solutionMarked: result.post,
           postId: args.postId
         });
@@ -1089,7 +1068,7 @@ export const communicationResolvers = {
         
         // Publish to subscriptions if published immediately
         if (result.announcement && result.announcement.publishedAt) {
-          pubsub.publish('ANNOUNCEMENT_PUBLISHED', {
+          await publishEvent(SUBSCRIPTION_EVENTS.ANNOUNCEMENT_PUBLISHED, {
             announcementPublished: result.announcement,
             courseId: args.courseId
           });
@@ -1141,7 +1120,7 @@ export const communicationResolvers = {
         
         // Publish to subscriptions
         if (args.courseId) {
-          pubsub.publish('USER_PRESENCE', {
+          await publishEvent(SUBSCRIPTION_EVENTS.USER_PRESENCE, {
             userPresence: {
               userId: user.id,
               user: { id: user.id },
@@ -1187,14 +1166,14 @@ export const communicationResolvers = {
         };
         
         if (args.conversationId) {
-          pubsub.publish('TYPING_INDICATOR', {
+          await publishEvent(SUBSCRIPTION_EVENTS.TYPING_INDICATOR, {
             typingIndicator: typingData,
             conversationId: args.conversationId
           });
         }
         
         if (args.threadId) {
-          pubsub.publish('TYPING_INDICATOR', {
+          await publishEvent(SUBSCRIPTION_EVENTS.TYPING_INDICATOR, {
             typingIndicator: typingData,
             threadId: args.threadId
           });
@@ -1229,14 +1208,14 @@ export const communicationResolvers = {
         };
         
         if (args.conversationId) {
-          pubsub.publish('TYPING_INDICATOR', {
+          await publishEvent(SUBSCRIPTION_EVENTS.TYPING_INDICATOR, {
             typingIndicator: typingData,
             conversationId: args.conversationId
           });
         }
         
         if (args.threadId) {
-          pubsub.publish('TYPING_INDICATOR', {
+          await publishEvent(SUBSCRIPTION_EVENTS.TYPING_INDICATOR, {
             typingIndicator: typingData,
             threadId: args.threadId
           });
@@ -1255,9 +1234,15 @@ export const communicationResolvers = {
      */
     messageReceived: {
       subscribe: withFilter(
-        () => pubsub.asyncIterator(['MESSAGE_RECEIVED']),
-        (payload: any, variables: any) => {
-          return payload.userId === variables.userId;
+        (_parent: any, _args: any, context: CommunicationGraphQLContext) => {
+          // Require authentication for subscriptions
+          requireSubscriptionAuth(context);
+          return createAsyncIterator(SUBSCRIPTION_EVENTS.MESSAGE_RECEIVED);
+        },
+        (payload: any, variables: any, context: CommunicationGraphQLContext) => {
+          // Users can only subscribe to their own messages
+          const user = requireSubscriptionAuth(context);
+          return payload.userId === variables.userId && payload.userId === user.id;
         }
       )
     },
@@ -1267,7 +1252,11 @@ export const communicationResolvers = {
      */
     newDiscussionPost: {
       subscribe: withFilter(
-        () => pubsub.asyncIterator(['NEW_DISCUSSION_POST']),
+        (_parent: any, _args: any, context: CommunicationGraphQLContext) => {
+          // Require authentication for subscriptions
+          requireSubscriptionAuth(context);
+          return createAsyncIterator(SUBSCRIPTION_EVENTS.NEW_DISCUSSION_POST);
+        },
         (payload: any, variables: any) => {
           return payload.threadId === variables.threadId;
         }
@@ -1279,7 +1268,11 @@ export const communicationResolvers = {
      */
     announcementPublished: {
       subscribe: withFilter(
-        () => pubsub.asyncIterator(['ANNOUNCEMENT_PUBLISHED']),
+        (_parent: any, _args: any, context: CommunicationGraphQLContext) => {
+          // Require authentication for subscriptions
+          requireSubscriptionAuth(context);
+          return createAsyncIterator(SUBSCRIPTION_EVENTS.ANNOUNCEMENT_PUBLISHED);
+        },
         (payload: any, variables: any) => {
           return payload.courseId === variables.courseId;
         }
@@ -1291,7 +1284,11 @@ export const communicationResolvers = {
      */
     userPresence: {
       subscribe: withFilter(
-        () => pubsub.asyncIterator(['USER_PRESENCE']),
+        (_parent: any, _args: any, context: CommunicationGraphQLContext) => {
+          // Require authentication for subscriptions
+          requireSubscriptionAuth(context);
+          return createAsyncIterator(SUBSCRIPTION_EVENTS.USER_PRESENCE);
+        },
         (payload: any, variables: any) => {
           return payload.courseId === variables.courseId;
         }
@@ -1303,7 +1300,11 @@ export const communicationResolvers = {
      */
     typingIndicator: {
       subscribe: withFilter(
-        () => pubsub.asyncIterator(['TYPING_INDICATOR']),
+        (_parent: any, _args: any, context: CommunicationGraphQLContext) => {
+          // Require authentication for subscriptions
+          requireSubscriptionAuth(context);
+          return createAsyncIterator(SUBSCRIPTION_EVENTS.TYPING_INDICATOR);
+        },
         (payload: any, variables: any) => {
           return (
             (variables.conversationId && payload.conversationId === variables.conversationId) ||
