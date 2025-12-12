@@ -9,6 +9,9 @@
 
 import cron from 'node-cron';
 import { secretRotationService } from './SecretRotationService.js';
+import { getSessionCleanupService } from './SessionCleanupService.js';
+import { getLogPruningService } from './LogPruningService.js';
+import { getAnalyticsScheduler } from './AnalyticsScheduler.js';
 import { logger } from '../utils/logger.js';
 import { config } from '../../config/index.js';
 
@@ -107,10 +110,65 @@ export class CronJobService {
    * Initialize default cron jobs
    */
   public initializeDefaultJobs(): void {
-    // Secret rotation job - daily at 2 AM UTC
+    // Daily analytics updates - midnight UTC (handled by AnalyticsScheduler)
+    this.scheduleJob({
+      name: 'daily-analytics-updates',
+      schedule: '0 0 * * *',
+      task: async () => {
+        const analyticsScheduler = getAnalyticsScheduler();
+        await analyticsScheduler.triggerDailyAnalytics();
+      },
+      enabled: this.isEnabled,
+    });
+
+    // Weekly trend reports - Sunday at 1 AM UTC (handled by AnalyticsScheduler)
+    this.scheduleJob({
+      name: 'weekly-trend-reports',
+      schedule: '0 1 * * 0',
+      task: async () => {
+        const analyticsScheduler = getAnalyticsScheduler();
+        await analyticsScheduler.triggerWeeklyReports();
+      },
+      enabled: this.isEnabled,
+    });
+
+    // Monthly executive summaries - 1st of month at 2 AM UTC (handled by AnalyticsScheduler)
+    this.scheduleJob({
+      name: 'monthly-executive-summaries',
+      schedule: '0 2 1 * *',
+      task: async () => {
+        const analyticsScheduler = getAnalyticsScheduler();
+        await analyticsScheduler.triggerMonthlyReports();
+      },
+      enabled: this.isEnabled,
+    });
+
+    // Daily session cleanup - 3 AM UTC
+    this.scheduleJob({
+      name: 'daily-session-cleanup',
+      schedule: '0 3 * * *',
+      task: async () => {
+        const sessionCleanupService = getSessionCleanupService();
+        await sessionCleanupService.executeCleanup();
+      },
+      enabled: this.isEnabled,
+    });
+
+    // Daily log pruning - 4 AM UTC
+    this.scheduleJob({
+      name: 'daily-log-pruning',
+      schedule: '0 4 * * *',
+      task: async () => {
+        const logPruningService = getLogPruningService();
+        await logPruningService.executePruning();
+      },
+      enabled: this.isEnabled,
+    });
+
+    // Secret rotation job - 5 AM UTC
     this.scheduleJob({
       name: 'secret-rotation',
-      schedule: '0 2 * * *',
+      schedule: '0 5 * * *',
       task: async () => {
         await secretRotationService.rotateExpiredSecrets();
       },
@@ -120,6 +178,7 @@ export class CronJobService {
     logger.info('Default cron jobs initialized', {
       enabled: this.isEnabled,
       environment: config.nodeEnv,
+      jobs: Array.from(this.jobs.keys()),
     });
   }
 

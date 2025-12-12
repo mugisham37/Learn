@@ -100,6 +100,29 @@ export type {
   BulkReindexJobData
 } from './SearchIndexingQueue.js';
 
+// Scheduler services
+export { 
+  getSchedulerService, 
+  initializeSchedulerService, 
+  shutdownSchedulerService 
+} from './SchedulerService.js';
+export type { UnifiedSchedulerConfig, SchedulerStatus } from './SchedulerService.js';
+
+export { 
+  getSessionCleanupService, 
+  initializeSessionCleanupService 
+} from './SessionCleanupService.js';
+export type { SessionCleanupConfig } from './SessionCleanupService.js';
+
+export { 
+  getLogPruningService, 
+  initializeLogPruningService 
+} from './LogPruningService.js';
+export type { LogPruningConfig } from './LogPruningService.js';
+
+export { cronJobService } from './CronJobService.js';
+export type { CronJobConfig } from './CronJobService.js';
+
 // Interfaces
 export type { ICloudFrontService } from './ICloudFrontService.js';
 export type { IContentService } from './IContentService.js';

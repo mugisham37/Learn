@@ -35,11 +35,14 @@ async function bootstrap(): Promise<void> {
     const { initializeInfrastructure } = await import('./infrastructure/index.js');
     await initializeInfrastructure();
     
-    // Initialize analytics aggregation queue and scheduler
-    const { initializeAnalytics, getDefaultSchedulerConfig } = await import('./shared/services/initializeAnalytics.js');
-    const schedulerConfig = getDefaultSchedulerConfig(config.nodeEnv as 'development' | 'staging' | 'production');
-    await initializeAnalytics(schedulerConfig);
-    logger.info('Analytics aggregation queue and scheduler initialized successfully');
+    // Initialize unified scheduler service (includes analytics, session cleanup, log pruning)
+    const { initializeSchedulerService } = await import('./shared/services/SchedulerService.js');
+    const schedulerService = initializeSchedulerService({
+      enabled: config.nodeEnv === 'production',
+      timezone: 'UTC',
+    });
+    await schedulerService.initialize();
+    logger.info('Unified scheduler service initialized successfully');
     
     // Register module routes
     const { registerModules } = await import('./modules/index.js');
@@ -74,9 +77,9 @@ async function shutdown(signal: string): Promise<void> {
       // Stop the server first
       await stopServer(server);
       
-      // Shutdown analytics scheduler
-      const { shutdownAnalyticsScheduler } = await import('./shared/services/AnalyticsScheduler.js');
-      await shutdownAnalyticsScheduler();
+      // Shutdown unified scheduler service
+      const { shutdownSchedulerService } = await import('./shared/services/SchedulerService.js');
+      await shutdownSchedulerService();
       
       // Then shutdown infrastructure
       const { shutdownInfrastructure } = await import('./infrastructure/index.js');

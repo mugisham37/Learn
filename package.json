@@ -22,7 +22,8 @@
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down",
     "docker:logs": "docker-compose logs -f",
-    "reindex:search": "tsx scripts/bulk-reindex-search.ts"
+    "reindex:search": "tsx scripts/bulk-reindex-search.ts",
+    "test:scheduler": "tsx scripts/test-scheduler.ts"
   },
   "keywords": [
     "education",
