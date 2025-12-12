@@ -14,6 +14,10 @@ import {
   initializeVideoProcessingQueue, 
   shutdownVideoProcessingQueue 
 } from './VideoProcessingQueue.js';
+import { 
+  initializeEmailQueue, 
+  shutdownEmailQueue 
+} from './EmailQueue.js';
 import { MediaConvertService } from './MediaConvertService.js';
 import { ContentRepository } from '../../modules/content/infrastructure/repositories/ContentRepository.js';
 
@@ -31,6 +35,9 @@ export interface StartupConfig {
     enabled?: boolean;
   };
   videoProcessing?: {
+    enabled?: boolean;
+  };
+  emailQueue?: {
     enabled?: boolean;
   };
 }
@@ -74,6 +81,15 @@ export async function initializeApplicationServices(
       logger.info('Video processing queue initialized successfully');
     }
 
+    // Initialize email queue if enabled
+    if (config.emailQueue?.enabled !== false) {
+      logger.info('Initializing email queue...');
+      
+      await initializeEmailQueue();
+
+      logger.info('Email queue initialized successfully');
+    }
+
     // Event bus is already initialized as a singleton
     if (config.eventBus?.enabled !== false) {
       logger.info('Event bus is ready');
@@ -100,6 +116,9 @@ export async function shutdownApplicationServices(): Promise<void> {
 
     // Shutdown video processing queue
     await shutdownVideoProcessingQueue();
+
+    // Shutdown email queue
+    await shutdownEmailQueue();
 
     // Shutdown event bus
     await eventBus.shutdown();
@@ -227,7 +246,7 @@ export class CourseServiceWithSearchIntegration {
   /**
    * Archives a course and publishes an event for search removal
    */
-  async archiveCourse(courseId: string): Promise<any> {
+  async archiveCourse(courseId: string): Promise<unknown> {
     try {
       // Archive the course using the existing service
       const course = await this.courseService.archiveCourse(courseId);
