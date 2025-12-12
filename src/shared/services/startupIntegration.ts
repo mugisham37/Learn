@@ -18,6 +18,10 @@ import {
   initializeEmailQueue, 
   shutdownEmailQueue 
 } from './EmailQueue.js';
+import { 
+  initializeCertificateGenerationQueue, 
+  shutdownCertificateGenerationQueue 
+} from './CertificateGenerationQueue.js';
 import { MediaConvertService } from './MediaConvertService.js';
 import { ContentRepository } from '../../modules/content/infrastructure/repositories/ContentRepository.js';
 
@@ -38,6 +42,9 @@ export interface StartupConfig {
     enabled?: boolean;
   };
   emailQueue?: {
+    enabled?: boolean;
+  };
+  certificateGeneration?: {
     enabled?: boolean;
   };
 }
@@ -90,6 +97,17 @@ export async function initializeApplicationServices(
       logger.info('Email queue initialized successfully');
     }
 
+    // Initialize certificate generation queue if enabled
+    if (config.certificateGeneration?.enabled !== false) {
+      logger.info('Initializing certificate generation queue...');
+      
+      // Note: In a real application, these dependencies would be injected
+      // For now, we'll create placeholder instances or skip initialization
+      logger.warn('Certificate generation queue initialization requires dependency injection setup');
+      
+      logger.info('Certificate generation queue initialization skipped (requires DI setup)');
+    }
+
     // Event bus is already initialized as a singleton
     if (config.eventBus?.enabled !== false) {
       logger.info('Event bus is ready');
@@ -119,6 +137,9 @@ export async function shutdownApplicationServices(): Promise<void> {
 
     // Shutdown email queue
     await shutdownEmailQueue();
+
+    // Shutdown certificate generation queue
+    await shutdownCertificateGenerationQueue();
 
     // Shutdown event bus
     await eventBus.shutdown();

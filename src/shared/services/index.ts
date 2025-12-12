@@ -9,6 +9,17 @@
 export { getEmailQueue, initializeEmailQueue, shutdownEmailQueue } from './EmailQueue.js';
 export type { EmailJobData, EmailDeliveryStatus, WebhookData } from './EmailQueue.js';
 
+// Certificate generation services
+export { 
+  getCertificateGenerationQueue, 
+  initializeCertificateGenerationQueue, 
+  shutdownCertificateGenerationQueue 
+} from './CertificateGenerationQueue.js';
+export type { 
+  CertificateGenerationJobData, 
+  CertificateGenerationResult 
+} from './CertificateGenerationQueue.js';
+
 // Analytics services
 export { 
   getAnalyticsQueue, 

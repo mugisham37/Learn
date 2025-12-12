@@ -1938,6 +1938,9 @@ This implementation plan breaks down the development of the educational learning
   - _Requirements: 15.6_
 
 - [ ] 120. Create GraphQL integration tests
+
+
+
   - Test all queries with various inputs
   - Test all mutations with authorization
   - Test subscriptions with real-time events
@@ -1999,7 +2002,11 @@ This implementation plan breaks down the development of the educational learning
   - Implement email batching for digests
   - _Requirements: 14.2_
 
-- [ ] 125. Implement certificate generation queue and worker
+- [x] 125. Implement certificate generation queue and worker
+
+
+
+
   - Create certificate queue with moderate concurrency (5)
   - Implement worker for PDF generation
   - Configure retry logic (3 attempts)

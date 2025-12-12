@@ -10,3 +10,4 @@ export * from './IProgressCalculator.js';
 export * from './ProgressCalculatorService.js';
 export * from './ICertificateGenerator.js';
 export * from './CertificateGeneratorService.js';
+export * from './CertificateQueueService.js';
