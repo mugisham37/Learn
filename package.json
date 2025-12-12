@@ -68,6 +68,7 @@
     "fastify": "^4.25.2",
     "fastify-plugin": "^5.1.0",
     "graphql": "^16.8.1",
+    "graphql-query-complexity": "^1.1.0",
     "graphql-redis-subscriptions": "^2.7.0",
     "graphql-scalars": "^1.22.4",
     "graphql-subscriptions": "^3.0.0",
@@ -90,6 +91,7 @@
   "devDependencies": {
     "@types/aws-lambda": "^8.10.159",
     "@types/bcrypt": "^5.0.2",
+    "@types/graphql-query-complexity": "^0.1.4",
     "@types/node": "^20.10.6",
     "@types/pdfkit": "^0.17.4",
     "@types/pg": "^8.10.9",

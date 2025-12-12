@@ -20,6 +20,14 @@ import { createPubSub } from './pubsub.js';
 import { config } from '../../config/index.js';
 import { logger } from '../../shared/utils/logger.js';
 import { formatGraphQLError } from './errorFormatter.js';
+import { 
+  createComplexityAnalysisRule, 
+  createComplexityAnalysisPlugin, 
+  getComplexityConfig 
+} from './complexityAnalysis.js';
+import { complexityDirectiveTypeDefs } from './complexityDirectives.js';
+import { createExecutionTimeTracker } from './complexityMonitoring.js';
+import { complexityMonitoringSchema } from './complexitySchema.js';
 
 // Import all module schemas and resolvers
 import { userTypeDefs, userResolvers } from '../../modules/users/presentation/graphql/index.js';
@@ -38,6 +46,7 @@ function safeImportResolvers(): any[] {
   const resolvers = [];
   
   // Always available resolvers
+  resolvers.push(complexityMonitoringSchema.resolvers);
   resolvers.push(userResolvers);
   resolvers.push(courseResolvers);
   resolvers.push(contentResolvers);
@@ -154,9 +163,11 @@ function createMergedSchema(): GraphQLSchema {
     }
   `;
 
-  // Merge all type definitions
+  // Merge all type definitions including complexity directives and monitoring
   const mergedTypeDefs = mergeTypeDefs([
     baseTypeDefs,
+    complexityDirectiveTypeDefs,
+    complexityMonitoringSchema.typeDefs,
     userTypeDefs,
     courseTypeDefs,
     contentTypeDefs,
@@ -173,7 +184,7 @@ function createMergedSchema(): GraphQLSchema {
   const availableResolvers = safeImportResolvers();
   const mergedResolvers = mergeResolvers(availableResolvers);
 
-  // Create executable schema
+  // Create executable schema with complexity analysis
   return makeExecutableSchema({
     typeDefs: mergedTypeDefs,
     resolvers: mergedResolvers,
@@ -203,16 +214,30 @@ export async function createApolloServer(fastify: FastifyInstance): Promise<{
     });
   }
 
+  // Get complexity configuration for current environment
+  const complexityConfig = getComplexityConfig();
+  
   const server = new ApolloServer<GraphQLContext>({
     schema,
     
     // Configure introspection based on environment
     introspection: config.nodeEnv !== 'production',
     
+    // Add validation rules including complexity analysis
+    validationRules: [
+      createComplexityAnalysisRule(complexityConfig),
+    ],
+    
     // Plugins configuration
     plugins: [
       // Drain HTTP server plugin for graceful shutdown
       ApolloServerPluginDrainHttpServer({ httpServer: fastify.server }),
+      
+      // Query complexity analysis plugin for monitoring
+      createComplexityAnalysisPlugin(complexityConfig),
+      
+      // Execution time tracking plugin
+      createExecutionTimeTracker(),
       
       // Landing page configuration based on environment
       config.nodeEnv === 'production'
@@ -239,6 +264,8 @@ export async function createApolloServer(fastify: FastifyInstance): Promise<{
     introspection: config.nodeEnv !== 'production',
     environment: config.nodeEnv,
     subscriptions: !!subscriptionCleanup,
+    complexityLimit: complexityConfig.maximumComplexity,
+    maxDepth: complexityConfig.maximumDepth,
   });
 
   return { server, schema, subscriptionCleanup };
