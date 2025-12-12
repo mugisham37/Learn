@@ -35,6 +35,12 @@ async function bootstrap(): Promise<void> {
     const { initializeInfrastructure } = await import('./infrastructure/index.js');
     await initializeInfrastructure();
     
+    // Initialize analytics aggregation queue and scheduler
+    const { initializeAnalytics, getDefaultSchedulerConfig } = await import('./shared/services/initializeAnalytics.js');
+    const schedulerConfig = getDefaultSchedulerConfig(config.nodeEnv as 'development' | 'staging' | 'production');
+    await initializeAnalytics(schedulerConfig);
+    logger.info('Analytics aggregation queue and scheduler initialized successfully');
+    
     // Register module routes
     const { registerModules } = await import('./modules/index.js');
     await registerModules(server);
@@ -67,6 +73,10 @@ async function shutdown(signal: string): Promise<void> {
     try {
       // Stop the server first
       await stopServer(server);
+      
+      // Shutdown analytics scheduler
+      const { shutdownAnalyticsScheduler } = await import('./shared/services/AnalyticsScheduler.js');
+      await shutdownAnalyticsScheduler();
       
       // Then shutdown infrastructure
       const { shutdownInfrastructure } = await import('./infrastructure/index.js');

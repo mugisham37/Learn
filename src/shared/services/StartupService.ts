@@ -248,6 +248,21 @@ export class StartupService {
       });
     }
 
+    // Analytics queue health check (if initialized)
+    healthChecks.push({
+      name: 'analytics-queue',
+      check: async () => {
+        try {
+          const { getAnalyticsQueue } = await import('./AnalyticsQueue.js');
+          const analyticsQueue = getAnalyticsQueue();
+          return await analyticsQueue.healthCheck();
+        } catch {
+          // Analytics queue might not be initialized yet during startup
+          return true;
+        }
+      },
+    });
+
     // Run all health checks
     const results = await Promise.allSettled(
       healthChecks.map(async ({ name, check }) => {
@@ -322,6 +337,17 @@ export class StartupService {
         logger.info('Cache connections closed');
       } catch (error) {
         logger.error('Error closing cache connections', {
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+
+      // Shutdown analytics scheduler and queue
+      try {
+        const { shutdownAnalyticsScheduler } = await import('./AnalyticsScheduler.js');
+        await shutdownAnalyticsScheduler();
+        logger.info('Analytics scheduler and queue shutdown completed');
+      } catch (error) {
+        logger.error('Error shutting down analytics scheduler', {
           error: error instanceof Error ? error.message : 'Unknown error',
         });
       }

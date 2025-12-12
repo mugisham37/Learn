@@ -2016,7 +2016,7 @@ This implementation plan breaks down the development of the educational learning
   - Send certificates via email
   - _Requirements: 14.3_
 
-- [-] 126. Implement analytics aggregation queue and worker
+- [x] 126. Implement analytics aggregation queue and worker
 
 
 
