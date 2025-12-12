@@ -1959,7 +1959,7 @@ This implementation plan breaks down the development of the educational learning
 
 ## Phase 16: Background Jobs and Task Scheduling
 
-- [ ] 122. Set up BullMQ infrastructure
+- [x] 122. Set up BullMQ infrastructure
 
 
 
@@ -2016,7 +2016,10 @@ This implementation plan breaks down the development of the educational learning
   - Send certificates via email
   - _Requirements: 14.3_
 
-- [ ] 126. Implement analytics aggregation queue and worker
+- [-] 126. Implement analytics aggregation queue and worker
+
+
+
   - Create analytics queue for scheduled jobs
   - Implement worker for course analytics calculation
   - Implement worker for student analytics calculation

@@ -2,9 +2,9 @@
  * Infrastructure Initialization
  * 
  * Centralized initialization of all infrastructure components including
- * database, Redis, and Elasticsearch with proper error handling and retry logic.
+ * database, Redis, Elasticsearch, and BullMQ queues with proper error handling and retry logic.
  * 
- * Requirements: 15.7, 16.3, 8.1
+ * Requirements: 15.7, 16.3, 8.1, 14.1
  */
 
 import { logger } from '../shared/utils/logger.js';
@@ -52,6 +52,13 @@ export async function initializeInfrastructure(): Promise<void> {
       await initializeElasticsearchIndices();
       logger.info('✓ Elasticsearch indices initialized');
     }
+
+    // Initialize BullMQ queue infrastructure
+    logger.info('Initializing BullMQ queue infrastructure...');
+    const { QueueManager } = await import('./queue/index.js');
+    const queueManager = QueueManager.getInstance();
+    await queueManager.initialize();
+    logger.info('✓ BullMQ queue infrastructure initialized');
 
     logger.info('All infrastructure components initialized successfully');
   } catch (error) {
@@ -117,6 +124,21 @@ export async function shutdownInfrastructure(): Promise<void> {
     logger.error('Error importing search module for shutdown', { error });
   }
 
+  // Shutdown BullMQ queue infrastructure
+  try {
+    const { QueueManager } = await import('./queue/index.js');
+    const queueManager = QueueManager.getInstance();
+    shutdownPromises.push(
+      queueManager.shutdown().then(() => {
+        logger.info('✓ BullMQ queue infrastructure shutdown');
+      }).catch((error) => {
+        logger.error('Error shutting down queue infrastructure', { error });
+      })
+    );
+  } catch (error) {
+    logger.error('Error importing queue module for shutdown', { error });
+  }
+
   // Wait for all shutdown operations to complete
   await Promise.allSettled(shutdownPromises);
   logger.info('Infrastructure shutdown completed');
@@ -133,6 +155,7 @@ export async function checkInfrastructureHealth(): Promise<{
     redis: boolean;
     sessionRedis: boolean;
     elasticsearch: boolean;
+    queues: boolean;
   };
   errors: string[];
 }> {
@@ -142,6 +165,7 @@ export async function checkInfrastructureHealth(): Promise<{
     redis: false,
     sessionRedis: false,
     elasticsearch: false,
+    queues: false,
   };
 
   // Check database health
@@ -192,9 +216,22 @@ export async function checkInfrastructureHealth(): Promise<{
     errors.push(`Elasticsearch: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 
-  // Overall health is true if critical components (database, redis) are healthy
+  // Check BullMQ queue health
+  try {
+    const { QueueManager } = await import('./queue/index.js');
+    const queueManager = QueueManager.getInstance();
+    const queueHealth = await queueManager.getHealthStatus();
+    components.queues = queueHealth.healthy;
+    if (!queueHealth.healthy) {
+      errors.push(`Queues: ${queueHealth.alerts.map(a => a.message).join(', ')}`);
+    }
+  } catch (error) {
+    errors.push(`Queues: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+
+  // Overall health is true if critical components (database, redis, queues) are healthy
   // Elasticsearch is not critical for basic functionality
-  const healthy = components.database && components.redis;
+  const healthy = components.database && components.redis && components.queues;
 
   return {
     healthy,
