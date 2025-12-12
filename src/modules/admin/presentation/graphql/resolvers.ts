@@ -158,6 +158,34 @@ export const adminResolvers = {
         logger.error('Failed to get queue health:', error);
         throw new GraphQLError('Failed to retrieve queue health status');
       }
+    },
+    
+    /**
+     * Get detailed job information
+     */
+    jobDetails: async (
+      _: any,
+      { queueName, jobId }: { queueName: string; jobId: string },
+      context: AdminGraphQLContext
+    ) => {
+      const admin = requireAdmin(context);
+      
+      try {
+        const jobMonitoringService = JobMonitoringService.getInstance();
+        const jobDetails = await jobMonitoringService.getJobDetails(queueName, jobId);
+        
+        logger.info('Job details accessed', {
+          adminId: admin.id,
+          queueName,
+          jobId
+        });
+        
+        return jobDetails;
+        
+      } catch (error) {
+        logger.error('Failed to get job details:', error);
+        throw new GraphQLError('Failed to retrieve job details');
+      }
     }
   },
   

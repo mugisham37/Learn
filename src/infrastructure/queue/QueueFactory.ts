@@ -193,6 +193,142 @@ export class QueueFactory {
   }
   
   /**
+   * Retry failed jobs in a specific queue
+   */
+  public async retryFailedJobs(queueName: string, jobId?: string, maxRetries?: number): Promise<{ retriedCount: number }> {
+    const queue = this.queues.get(queueName);
+    if (!queue) {
+      throw new Error(`Queue '${queueName}' not found`);
+    }
+
+    try {
+      let retriedCount = 0;
+
+      if (jobId) {
+        // Retry specific job
+        const job = await queue.getJob(jobId);
+        if (job && job.isFailed()) {
+          await job.retry();
+          retriedCount = 1;
+          logger.info(`Retried job ${jobId} in queue ${queueName}`);
+        }
+      } else {
+        // Retry all failed jobs
+        const failedJobs = await queue.getFailed();
+        for (const job of failedJobs) {
+          try {
+            await job.retry();
+            retriedCount++;
+          } catch (error) {
+            logger.error(`Failed to retry job ${job.id}:`, error);
+          }
+        }
+        logger.info(`Retried ${retriedCount} failed jobs in queue ${queueName}`);
+      }
+
+      return { retriedCount };
+    } catch (error) {
+      logger.error(`Failed to retry jobs in queue ${queueName}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Manage queue operations (pause, resume, clear, drain)
+   */
+  public async manageQueue(queueName: string, action: string, jobStatus?: string): Promise<{ success: boolean; message: string }> {
+    const queue = this.queues.get(queueName);
+    if (!queue) {
+      throw new Error(`Queue '${queueName}' not found`);
+    }
+
+    try {
+      switch (action.toLowerCase()) {
+        case 'pause':
+          await queue.pause();
+          logger.info(`Paused queue ${queueName}`);
+          return { success: true, message: `Queue ${queueName} paused successfully` };
+
+        case 'resume':
+          await queue.resume();
+          logger.info(`Resumed queue ${queueName}`);
+          return { success: true, message: `Queue ${queueName} resumed successfully` };
+
+        case 'clear':
+          if (jobStatus) {
+            // Clear specific job status
+            const statusMap: Record<string, any> = {
+              'waiting': 'waiting',
+              'active': 'active', 
+              'completed': 'completed',
+              'failed': 'failed'
+            };
+            const status = statusMap[jobStatus.toLowerCase()];
+            if (status) {
+              await queue.clean(0, status);
+              logger.info(`Cleared ${jobStatus} jobs from queue ${queueName}`);
+              return { success: true, message: `Cleared ${jobStatus} jobs from queue ${queueName}` };
+            } else {
+              throw new Error(`Invalid job status: ${jobStatus}`);
+            }
+          } else {
+            // Clear all jobs
+            await Promise.all([
+              queue.clean(0, 'completed'),
+              queue.clean(0, 'failed'),
+              queue.clean(0, 'waiting'),
+              queue.clean(0, 'active')
+            ]);
+            logger.info(`Cleared all jobs from queue ${queueName}`);
+            return { success: true, message: `Cleared all jobs from queue ${queueName}` };
+          }
+
+        case 'drain':
+          await queue.drain();
+          logger.info(`Drained queue ${queueName}`);
+          return { success: true, message: `Queue ${queueName} drained successfully` };
+
+        default:
+          throw new Error(`Invalid queue action: ${action}`);
+      }
+    } catch (error) {
+      logger.error(`Failed to ${action} queue ${queueName}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get detailed job information
+   */
+  public async getJobDetails(queueName: string, jobId: string): Promise<any> {
+    const queue = this.queues.get(queueName);
+    if (!queue) {
+      throw new Error(`Queue '${queueName}' not found`);
+    }
+
+    const job = await queue.getJob(jobId);
+    if (!job) {
+      throw new Error(`Job '${jobId}' not found in queue '${queueName}'`);
+    }
+
+    return {
+      id: job.id,
+      name: job.name,
+      data: job.data,
+      opts: job.opts,
+      progress: job.progress,
+      delay: job.delay,
+      timestamp: job.timestamp,
+      attemptsMade: job.attemptsMade,
+      failedReason: job.failedReason,
+      stacktrace: job.stacktrace,
+      returnvalue: job.returnvalue,
+      finishedOn: job.finishedOn,
+      processedOn: job.processedOn
+    };
+  }
+
+  /**
    * Gracefully shutdown all queues and workers
    */
   public async shutdown(): Promise<void> {

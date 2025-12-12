@@ -5,10 +5,10 @@
  * Integrates with QueueManager and QueueMonitor for comprehensive job oversight.
  */
 
-import { logger } from '../utils/logger.js';
 import { QueueManager } from '../../infrastructure/queue/QueueManager.js';
 import { QueueMonitor } from '../../infrastructure/queue/QueueMonitor.js';
 import { QueueStats } from '../../infrastructure/queue/types.js';
+import { logger } from '../utils/logger.js';
 
 /**
  * Job monitoring dashboard data
@@ -163,18 +163,26 @@ export class JobMonitoringService {
     try {
       const queueFactory = this.queueManager.getQueueFactory();
       
-      // This would need to be implemented in QueueFactory
-      // For now, return a placeholder response
-      logger.info('Job retry requested', options);
+      const result = await queueFactory.retryFailedJobs(
+        options.queueName,
+        options.jobId,
+        options.maxRetries
+      );
+      
+      logger.info('Job retry completed', {
+        queueName: options.queueName,
+        jobId: options.jobId,
+        retriedCount: result.retriedCount
+      });
       
       return {
         success: true,
-        retriedCount: 0 // Would be actual count from queue operations
+        retriedCount: result.retriedCount
       };
       
     } catch (error) {
       logger.error('Failed to retry jobs:', error);
-      throw new Error('Failed to retry jobs');
+      throw new Error(`Failed to retry jobs: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
   
@@ -185,18 +193,24 @@ export class JobMonitoringService {
     try {
       const queueFactory = this.queueManager.getQueueFactory();
       
-      // This would need to be implemented in QueueFactory
-      // For now, return a placeholder response
-      logger.info('Queue management requested', options);
+      const result = await queueFactory.manageQueue(
+        options.queueName,
+        options.action,
+        options.jobStatus
+      );
       
-      return {
-        success: true,
-        message: `Queue ${options.queueName} ${options.action} operation completed`
-      };
+      logger.info('Queue management completed', {
+        queueName: options.queueName,
+        action: options.action,
+        jobStatus: options.jobStatus,
+        success: result.success
+      });
+      
+      return result;
       
     } catch (error) {
       logger.error('Failed to manage queue:', error);
-      throw new Error(`Failed to ${options.action} queue ${options.queueName}`);
+      throw new Error(`Failed to ${options.action} queue ${options.queueName}: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
   
@@ -251,6 +265,28 @@ export class JobMonitoringService {
       }));
   }
   
+  /**
+   * Get detailed job information
+   */
+  public async getJobDetails(queueName: string, jobId: string): Promise<any> {
+    try {
+      const queueFactory = this.queueManager.getQueueFactory();
+      
+      const jobDetails = await queueFactory.getJobDetails(queueName, jobId);
+      
+      logger.info('Job details retrieved', {
+        queueName,
+        jobId
+      });
+      
+      return jobDetails;
+      
+    } catch (error) {
+      logger.error('Failed to get job details:', error);
+      throw new Error(`Failed to get job details: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
   /**
    * Export monitoring data for analysis
    */

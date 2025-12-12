@@ -40,6 +40,7 @@ import { notificationTypeDefs } from '../../modules/notifications/presentation/i
 import { analyticsTypeDefs, analyticsResolvers } from '../../modules/analytics/presentation/index.js';
 import { paymentTypeDefs, paymentResolvers } from '../../modules/payments/presentation/graphql/index.js';
 import { searchTypeDefs, searchResolvers } from '../../modules/search/presentation/graphql/index.js';
+import { adminTypeDefs, adminResolvers } from '../../modules/admin/presentation/graphql/index.js';
 
 // Helper function to safely import resolvers
 function safeImportResolvers(): any[] {
@@ -55,6 +56,7 @@ function safeImportResolvers(): any[] {
   resolvers.push(analyticsResolvers);
   resolvers.push(paymentResolvers);
   resolvers.push(searchResolvers);
+  resolvers.push(adminResolvers);
   
   // Try to import communication resolvers if available
   try {
@@ -178,6 +180,7 @@ function createMergedSchema(): GraphQLSchema {
     analyticsTypeDefs,
     paymentTypeDefs,
     searchTypeDefs,
+    adminTypeDefs,
   ]);
 
   // Merge all resolvers (safely handle missing ones)

@@ -117,6 +117,21 @@ export const adminTypeDefs = `
     downloadUrl: String!
   }
   
+  type JobDetails {
+    id: String!
+    name: String!
+    data: JSON
+    progress: Int
+    delay: Int
+    timestamp: DateTime
+    attemptsMade: Int
+    failedReason: String
+    stacktrace: [String!]
+    returnvalue: JSON
+    finishedOn: DateTime
+    processedOn: DateTime
+  }
+  
   # Input types
   
   input JobRetryInput {
@@ -154,6 +169,7 @@ export const adminTypeDefs = `
     realtimeQueueStats: RealtimeStats!
     jobEventHistory(queueName: String, limit: Int): [JobEvent!]!
     queueHealth(queueName: String): QueueHealth
+    jobDetails(queueName: String!, jobId: String!): JobDetails
   }
   
   extend type Mutation {
