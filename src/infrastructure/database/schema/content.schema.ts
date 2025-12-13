@@ -23,8 +23,9 @@ import {
   index,
   uniqueIndex,
 } from 'drizzle-orm/pg-core';
-import { users } from './users.schema.js';
+
 import { courses, lessons } from './courses.schema.js';
+import { users } from './users.schema.js';
 
 /**
  * Processing Status Enum

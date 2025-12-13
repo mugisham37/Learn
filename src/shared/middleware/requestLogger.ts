@@ -148,7 +148,7 @@ function getLogLevel(statusCode: number): string {
  *
  * @param request - Fastify request
  */
-export async function logRequest(request: FastifyRequest, _reply: FastifyReply): Promise<void> {
+export function logRequest(request: FastifyRequest, _reply: FastifyReply): void {
   const context = buildRequestContext(request);
 
   logger.http('Incoming request', context);
@@ -161,7 +161,7 @@ export async function logRequest(request: FastifyRequest, _reply: FastifyReply):
  * @param request - Fastify request
  * @param reply - Fastify reply
  */
-export async function logResponse(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+export function logResponse(request: FastifyRequest, reply: FastifyReply): void {
   const context = buildResponseContext(request, reply);
   const level = getLogLevel(reply.statusCode);
 

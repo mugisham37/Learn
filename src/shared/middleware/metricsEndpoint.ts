@@ -9,10 +9,9 @@
 
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 
-import { logger } from '../utils/logger.js';
-
 import { applicationMetricsService } from '../services/ApplicationMetricsService.js';
 import { cloudWatchService } from '../services/CloudWatchService.js';
+import { logger } from '../utils/logger.js';
 
 import { requireAuth, requireRole } from './index.js';
 
@@ -79,7 +78,7 @@ export function registerMetricsEndpoints(server: FastifyInstance): void {
   // Public metrics endpoint (basic metrics only)
   server.get('/metrics', async (_request: FastifyRequest, reply: FastifyReply) => {
     try {
-      const metrics = await getBasicMetrics();
+      const metrics = getBasicMetrics();
       return reply.send(metrics);
     } catch (error) {
       logger.error('Failed to get basic metrics', { error });
@@ -95,7 +94,7 @@ export function registerMetricsEndpoints(server: FastifyInstance): void {
     },
     async (_request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const metrics = await getDetailedMetrics();
+        const metrics = getDetailedMetrics();
         return reply.send(metrics);
       } catch (error) {
         logger.error('Failed to get detailed metrics', { error });
@@ -122,7 +121,7 @@ export function registerMetricsEndpoints(server: FastifyInstance): void {
   // Prometheus-style metrics endpoint
   server.get('/metrics/prometheus', async (_request: FastifyRequest, reply: FastifyReply) => {
     try {
-      const prometheusMetrics = await getPrometheusMetrics();
+      const prometheusMetrics = getPrometheusMetrics();
       return reply
         .header('Content-Type', 'text/plain; version=0.0.4; charset=utf-8')
         .send(prometheusMetrics);
@@ -138,7 +137,7 @@ export function registerMetricsEndpoints(server: FastifyInstance): void {
 /**
  * Get basic metrics (public endpoint)
  */
-async function getBasicMetrics(): Promise<Partial<MetricsResponse>> {
+function getBasicMetrics(): Partial<MetricsResponse> {
   const responseTimeMetrics = applicationMetricsService.getResponseTimePercentiles();
   const throughputMetrics = applicationMetricsService.getThroughputMetrics();
   const resourceMetrics = applicationMetricsService.getResourceMetrics();
@@ -176,7 +175,7 @@ async function getBasicMetrics(): Promise<Partial<MetricsResponse>> {
 /**
  * Get detailed metrics (admin endpoint)
  */
-async function getDetailedMetrics(): Promise<MetricsResponse> {
+function getDetailedMetrics(): MetricsResponse {
   const responseTimeMetrics = applicationMetricsService.getResponseTimePercentiles();
   const throughputMetrics = applicationMetricsService.getThroughputMetrics();
   const errorMetrics = applicationMetricsService.getErrorRateMetrics();
@@ -278,7 +277,7 @@ async function getDetailedMetrics(): Promise<MetricsResponse> {
 /**
  * Get metrics health status
  */
-async function getMetricsHealth(): Promise<{ healthy: boolean; details: Record<string, any> }> {
+async function getMetricsHealth(): Promise<{ healthy: boolean; details: Record<string, unknown> }> {
   const cloudWatchHealthy = await cloudWatchService.isHealthy();
   const resourceMetrics = applicationMetricsService.getResourceMetrics();
 
@@ -315,7 +314,7 @@ async function getMetricsHealth(): Promise<{ healthy: boolean; details: Record<s
 /**
  * Get Prometheus-formatted metrics
  */
-async function getPrometheusMetrics(): Promise<string> {
+function getPrometheusMetrics(): string {
   const responseTimeMetrics = applicationMetricsService.getResponseTimePercentiles();
   const throughputMetrics = applicationMetricsService.getThroughputMetrics();
   const errorMetrics = applicationMetricsService.getErrorRateMetrics();

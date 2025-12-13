@@ -13,67 +13,72 @@ import {
   ApolloServerPluginLandingPageLocalDefault,
   ApolloServerPluginLandingPageProductionDefault,
 } from '@apollo/server/plugin/landingPage/default';
+import { mergeResolvers, mergeTypeDefs } from '@graphql-tools/merge';
+import { makeExecutableSchema } from '@graphql-tools/schema';
 import { FastifyInstance } from 'fastify';
 import { GraphQLSchema } from 'graphql';
-import { mergeTypeDefs, mergeResolvers } from '@graphql-tools/merge';
-import { makeExecutableSchema } from '@graphql-tools/schema';
-import { createSubscriptionServer } from './subscriptionServer.js';
-import { createPubSub } from './pubsub.js';
 
 import { config } from '../../config/index.js';
-import { logger } from '../../shared/utils/logger.js';
-import { formatGraphQLError } from './errorFormatter.js';
+
+import { adminTypeDefs, adminResolvers } from '../../modules/admin/presentation/graphql/index.js';
 import {
-  createComplexityAnalysisRule,
+  analyticsResolvers,
+  analyticsTypeDefs,
+} from '../../modules/analytics/presentation/index.js';
+import {
+  assessmentResolvers,
+  assessmentTypeDefs,
+} from '../../modules/assessments/presentation/graphql/index.js';
+import {
+  communicationResolvers,
+  communicationTypeDefs,
+} from '../../modules/communication/presentation/graphql/index.js';
+import { contentResolvers, contentTypeDefs } from '../../modules/content/presentation/index.js';
+import {
+  courseResolvers,
+  courseTypeDefs,
+} from '../../modules/courses/presentation/graphql/index.js';
+import { CourseDataLoaders } from '../../modules/courses/presentation/graphql/dataloaders.js';
+import { EnrollmentDataLoaders } from '../../modules/enrollments/presentation/graphql/dataloaders.js';
+import {
+  enrollmentResolvers,
+  enrollmentTypeDefs,
+} from '../../modules/enrollments/presentation/graphql/index.js';
+import { notificationTypeDefs } from '../../modules/notifications/presentation/index.js';
+import {
+  paymentResolvers,
+  paymentTypeDefs,
+} from '../../modules/payments/presentation/graphql/index.js';
+import {
+  searchResolvers,
+  searchTypeDefs,
+} from '../../modules/search/presentation/graphql/index.js';
+import { userResolvers, userTypeDefs } from '../../modules/users/presentation/graphql/index.js';
+import { UserDataLoaders } from '../../modules/users/presentation/graphql/dataloaders.js';
+
+import { logger } from '../../shared/utils/logger.js';
+
+import { createGraphQLCachingPlugin, createCacheAwareContext } from './cachingPlugin.js';
+import {
   createComplexityAnalysisPlugin,
+  createComplexityAnalysisRule,
   getComplexityConfig,
 } from './complexityAnalysis.js';
 import { complexityDirectiveTypeDefs } from './complexityDirectives.js';
 import { createExecutionTimeTracker } from './complexityMonitoring.js';
 import { complexityMonitoringSchema } from './complexitySchema.js';
-import { createGraphQLCachingPlugin, createCacheAwareContext } from './cachingPlugin.js';
+import { createDataLoaders as createDataLoadersFactory } from './dataLoaderFactory.js';
+import { formatGraphQLError } from './errorFormatter.js';
+import { createPubSub } from './pubsub.js';
 import {
   createResponseOptimizationPlugin,
   getEnvironmentOptimizationConfig,
 } from './responseOptimization.js';
-
-// Import all module schemas and resolvers
-import { userTypeDefs, userResolvers } from '../../modules/users/presentation/graphql/index.js';
-import {
-  courseTypeDefs,
-  courseResolvers,
-} from '../../modules/courses/presentation/graphql/index.js';
-import { contentTypeDefs, contentResolvers } from '../../modules/content/presentation/index.js';
-import {
-  assessmentTypeDefs,
-  assessmentResolvers,
-} from '../../modules/assessments/presentation/graphql/index.js';
-import {
-  enrollmentTypeDefs,
-  enrollmentResolvers,
-} from '../../modules/enrollments/presentation/graphql/index.js';
-import {
-  communicationTypeDefs,
-  communicationResolvers,
-} from '../../modules/communication/presentation/graphql/index.js';
-import { notificationTypeDefs } from '../../modules/notifications/presentation/index.js';
-import {
-  analyticsTypeDefs,
-  analyticsResolvers,
-} from '../../modules/analytics/presentation/index.js';
-import {
-  paymentTypeDefs,
-  paymentResolvers,
-} from '../../modules/payments/presentation/graphql/index.js';
-import {
-  searchTypeDefs,
-  searchResolvers,
-} from '../../modules/search/presentation/graphql/index.js';
-import { adminTypeDefs, adminResolvers } from '../../modules/admin/presentation/graphql/index.js';
+import { createSubscriptionServer } from './subscriptionServer.js';
 
 // Helper function to safely import resolvers
-function safeImportResolvers(): any[] {
-  const resolvers = [];
+function safeImportResolvers(): Record<string, unknown>[] {
+  const resolvers: Record<string, unknown>[] = [];
 
   // Always available resolvers
   resolvers.push(complexityMonitoringSchema.resolvers);
@@ -106,10 +111,25 @@ function safeImportResolvers(): any[] {
   return resolvers.filter(Boolean);
 }
 
-// Import DataLoader types and implementations
-import { UserDataLoaders } from '../../modules/users/presentation/graphql/dataloaders.js';
-import { CourseDataLoaders } from '../../modules/courses/presentation/graphql/dataloaders.js';
-import { EnrollmentDataLoaders } from '../../modules/enrollments/presentation/graphql/dataloaders.js';
+/**
+ * PubSub interface for subscriptions
+ */
+interface PubSubInstance {
+  publish: (triggerName: string, payload: Record<string, unknown>) => Promise<void>;
+  subscribe: (triggerName: string) => AsyncIterator<unknown>;
+  asyncIterator: (triggers: string | string[]) => AsyncIterator<unknown>;
+}
+
+/**
+ * DataLoader interface for type safety
+ */
+interface DataLoader<K, V> {
+  load: (key: K) => Promise<V>;
+  loadMany: (keys: K[]) => Promise<(V | Error)[]>;
+  clear: (key: K) => DataLoader<K, V>;
+  clearAll: () => DataLoader<K, V>;
+  prime: (key: K, value: V) => DataLoader<K, V>;
+}
 
 /**
  * GraphQL Context interface
@@ -121,7 +141,7 @@ export interface GraphQLContext {
     role: string;
   };
   requestId: string;
-  pubsub?: any; // PubSub instance for subscriptions
+  pubsub?: PubSubInstance;
   dataloaders?: {
     // User data loaders
     users?: UserDataLoaders;
@@ -133,17 +153,17 @@ export interface GraphQLContext {
     enrollments?: EnrollmentDataLoaders;
 
     // Legacy individual loaders for backward compatibility
-    userById?: any;
-    usersByIds?: any;
-    courseById?: any;
-    coursesByInstructorId?: any;
-    modulesByCourseId?: any;
-    moduleById?: any;
-    lessonsByModuleId?: any;
-    lessonById?: any;
-    enrollmentById?: any;
-    enrollmentsByStudentId?: any;
-    enrollmentsByCourseId?: unknown;
+    userById?: DataLoader<string, Record<string, unknown>>;
+    usersByIds?: DataLoader<string[], Record<string, unknown>[]>;
+    courseById?: DataLoader<string, Record<string, unknown>>;
+    coursesByInstructorId?: DataLoader<string, Record<string, unknown>[]>;
+    modulesByCourseId?: DataLoader<string, Record<string, unknown>[]>;
+    moduleById?: DataLoader<string, Record<string, unknown>>;
+    lessonsByModuleId?: DataLoader<string, Record<string, unknown>[]>;
+    lessonById?: DataLoader<string, Record<string, unknown>>;
+    enrollmentById?: DataLoader<string, Record<string, unknown>>;
+    enrollmentsByStudentId?: DataLoader<string, Record<string, unknown>[]>;
+    enrollmentsByCourseId?: DataLoader<string, Record<string, unknown>[]>;
   };
 }
 

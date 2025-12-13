@@ -102,7 +102,7 @@ export const CacheConfigs = {
 /**
  * Generate ETag for response data
  */
-export function generateETag(data: any, options: ETagOptions = {}): string {
+export function generateETag(data: string | Buffer | Record<string, unknown>, options: ETagOptions = {}): string {
   const { weak = false, algorithm = 'sha256' } = options;
 
   try {
@@ -205,7 +205,7 @@ export function etagsMatch(etag1: string, etag2: string): boolean {
   }
 
   // Normalize ETags (remove W/ prefix for comparison)
-  const normalize = (etag: string) => etag.replace(/^W\//, '');
+  const normalize = (etag: string): string => etag.replace(/^W\//, '');
 
   return normalize(etag1) === normalize(etag2);
 }
@@ -215,12 +215,12 @@ export function etagsMatch(etag1: string, etag2: string): boolean {
  */
 export function createHttpCachingMiddleware(
   config: CacheConfig,
-  etagOptions: ETagOptions = {}
+  _etagOptions: ETagOptions = {}
 ): preHandlerHookHandler {
-  return async function httpCachingMiddleware(
+  return function httpCachingMiddleware(
     request: FastifyRequest,
     reply: FastifyReply
-  ): Promise<void> {
+  ): void {
     const requestId = request.id;
 
     try {
@@ -231,12 +231,12 @@ export function createHttpCachingMiddleware(
 
       // Skip caching if no-cache is configured
       if (config.noCache && config.noStore) {
-        reply.header('Cache-Control', buildCacheControlHeader(config));
+        void reply.header('Cache-Control', buildCacheControlHeader(config));
         return;
       }
 
       // Set basic cache headers
-      reply.header('Cache-Control', buildCacheControlHeader(config));
+      void reply.header('Cache-Control', buildCacheControlHeader(config));
 
       // Handle conditional requests
       const ifNoneMatch = request.headers['if-none-match'];
@@ -274,7 +274,7 @@ export function addCachingToRoute(
   method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH',
   url: string,
   config: CacheConfig,
-  handler: unknown,
+  handler: (request: FastifyRequest, reply: FastifyReply) => unknown,
   etagOptions?: ETagOptions
 ): void {
   const routeOptions = {
@@ -292,20 +292,24 @@ export function addCachingToRoute(
 /**
  * Register HTTP caching plugin for Fastify
  */
-export async function registerHttpCaching(fastify: FastifyInstance): Promise<void> {
+export function registerHttpCaching(fastify: FastifyInstance): void {
   // Add caching utilities to Fastify instance
   fastify.decorate('cache', {
     generateETag,
     buildCacheControlHeader,
     createMiddleware: createHttpCachingMiddleware,
-    addToRoute: (
-      method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH',
-      url: string,
-      config: CacheConfig,
-      handler: unknown,
-      etagOptions?: ETagOptions
-    ) => addCachingToRoute(fastify, method, url, config, handler, etagOptions),
     configs: CacheConfigs,
+  });
+
+  // Add the addToRoute method separately
+  fastify.decorate('addCachingToRoute', (
+    method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH',
+    url: string,
+    config: CacheConfig,
+    handler: (request: FastifyRequest, reply: FastifyReply) => unknown,
+    etagOptions?: ETagOptions
+  ) => {
+    addCachingToRoute(fastify, method, url, config, handler, etagOptions);
   });
 
   logger.info('HTTP caching plugin registered successfully');
@@ -320,8 +324,14 @@ declare module 'fastify' {
       generateETag: typeof generateETag;
       buildCacheControlHeader: typeof buildCacheControlHeader;
       createMiddleware: typeof createHttpCachingMiddleware;
-      addToRoute: typeof addCachingToRoute;
       configs: typeof CacheConfigs;
     };
+    addCachingToRoute: (
+      method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH',
+      url: string,
+      config: CacheConfig,
+      handler: (request: FastifyRequest, reply: FastifyReply) => unknown,
+      etagOptions?: ETagOptions
+    ) => void;
   }
 }

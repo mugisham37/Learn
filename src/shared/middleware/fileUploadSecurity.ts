@@ -7,8 +7,7 @@
  * Requirements: 13.4
  */
 
-import { FastifyRequest, FastifyReply } from 'fastify';
-import { MultipartFile } from '@fastify/multipart';
+import { FastifyReply } from 'fastify';
 
 import { ValidationError } from '../errors/index.js';
 import {
@@ -16,13 +15,11 @@ import {
   FileUploadContext,
   FileValidationResult,
 } from '../services/FileUploadSecurityService.js';
-import { logger } from '../utils/logger.js';
 import { 
-  ExtendedFastifyRequest, 
-  MultipartFile, 
-  isMultipartRequest,
+  FastifyRequestWithMultipart,
   isAuthenticatedRequest 
 } from '../types/fastify.js';
+import { logger } from '../utils/logger.js';
 
 /**
  * File upload middleware options
@@ -37,7 +34,10 @@ export interface FileUploadMiddlewareOptions {
 /**
  * Extended request with file validation result
  */
-export interface RequestWithFileValidation extends ExtendedFastifyRequest {
+export interface RequestWithFileValidation extends FastifyRequestWithMultipart {
+  user?: import('../types/index.js').UserContext;
+  traceContext?: import('../types/fastify.js').TraceContext;
+  sentryTransaction?: import('@sentry/node').Transaction;
   fileValidation?: FileValidationResult;
   securityService?: FileUploadSecurityService;
 }
@@ -49,7 +49,7 @@ export function createFileUploadSecurityMiddleware(
   securityService: FileUploadSecurityService,
   options: FileUploadMiddlewareOptions
 ): (request: RequestWithFileValidation, reply: FastifyReply) => Promise<void> {
-  return async (request: RequestWithFileValidation, reply: FastifyReply) => {
+  return async (request: RequestWithFileValidation, reply: FastifyReply): Promise<void> => {
     try {
       const userId = isAuthenticatedRequest(request) ? request.user.id : undefined;
       
@@ -63,7 +63,7 @@ export function createFileUploadSecurityMiddleware(
       request.securityService = securityService;
 
       // Check if file upload is required
-      const hasFile = await checkForFile(request, options.fieldName || 'file');
+      const hasFile = await checkForFile(request as FastifyRequestWithMultipart, options.fieldName || 'file');
 
       if (!hasFile) {
         if (options.required) {
@@ -76,7 +76,7 @@ export function createFileUploadSecurityMiddleware(
       }
 
       // Extract file data from request
-      const fileData = await extractFileData(request, options.fieldName || 'file');
+      const fileData = await extractFileData(request as FastifyRequestWithMultipart, options.fieldName || 'file');
 
       if (!fileData) {
         throw new ValidationError('Failed to extract file data from request', [
@@ -113,26 +113,29 @@ export function createFileUploadSecurityMiddleware(
 
       // Log warnings if any
       if (validationResult.warnings.length > 0) {
+        const authenticatedUserId = isAuthenticatedRequest(request) ? request.user.id : undefined;
         logger.warn('File upload validation warnings', {
           fileName: fileData.fileName,
           context: options.context,
           warnings: validationResult.warnings,
-          userId: (request as any).user?.id,
+          userId: authenticatedUserId,
         });
       }
 
+      const authenticatedUserId = isAuthenticatedRequest(request) ? request.user.id : undefined;
       logger.info('File upload security validation passed', {
         fileName: fileData.fileName,
         uniqueFileName: validationResult.uniqueFileName,
         context: options.context,
         warningCount: validationResult.warnings.length,
-        userId: (request as any).user?.id,
+        userId: authenticatedUserId,
       });
     } catch (error) {
+      const authenticatedUserId = isAuthenticatedRequest(request) ? request.user.id : undefined;
       logger.error('File upload security validation failed', {
         context: options.context,
         fieldName: options.fieldName || 'file',
-        userId: (request as any).user?.id,
+        userId: authenticatedUserId,
         error: error instanceof Error ? error.message : 'Unknown error',
       });
 
@@ -166,7 +169,7 @@ interface FileData {
 /**
  * Checks if request contains a file
  */
-async function checkForFile(request: FastifyRequest, _fieldName: string): Promise<boolean> {
+async function checkForFile(request: FastifyRequestWithMultipart, _fieldName: string): Promise<boolean> {
   // Check if request is multipart
   if (!request.isMultipart()) {
     return false;
@@ -174,7 +177,7 @@ async function checkForFile(request: FastifyRequest, _fieldName: string): Promis
 
   try {
     // Try to get the file part
-    const file = await request.file();
+    const file = await request.file() as unknown;
     return !!file;
   } catch (error) {
     // If no file is found, file() throws an error
@@ -186,7 +189,7 @@ async function checkForFile(request: FastifyRequest, _fieldName: string): Promis
  * Extracts file data from multipart request
  */
 async function extractFileData(
-  request: FastifyRequest,
+  request: FastifyRequestWithMultipart,
   _fieldName: string
 ): Promise<FileData | null> {
   try {
@@ -194,18 +197,25 @@ async function extractFileData(
       return null;
     }
 
-    const file = await request.file();
+    const file = await request.file() as unknown;
     if (!file) {
       return null;
     }
 
+    // Type assertion to ensure proper typing
+    const typedFile = file as {
+      filename: string;
+      mimetype: string;
+      toBuffer(): Promise<Buffer>;
+    };
+
     // Read file buffer
-    const buffer = await file.toBuffer();
+    const buffer = await typedFile.toBuffer();
 
     return {
-      fileName: file.filename || 'unknown',
+      fileName: typedFile.filename || 'unknown',
       buffer,
-      mimeType: file.mimetype || 'application/octet-stream',
+      mimeType: typedFile.mimetype || 'application/octet-stream',
       size: buffer.length,
     };
   } catch (error) {
@@ -219,7 +229,9 @@ async function extractFileData(
 /**
  * Helper function to create avatar upload middleware
  */
-export function createAvatarUploadMiddleware(securityService: FileUploadSecurityService): (request: RequestWithFileValidation, reply: FastifyReply) => Promise<void> {
+export function createAvatarUploadMiddleware(
+  securityService: FileUploadSecurityService
+): (request: RequestWithFileValidation, reply: FastifyReply) => Promise<void> {
   return createFileUploadSecurityMiddleware(securityService, {
     context: 'avatar',
     required: true,
@@ -230,7 +242,9 @@ export function createAvatarUploadMiddleware(securityService: FileUploadSecurity
 /**
  * Helper function to create course resource upload middleware
  */
-export function createCourseResourceUploadMiddleware(securityService: FileUploadSecurityService): (request: RequestWithFileValidation, reply: FastifyReply) => Promise<void> {
+export function createCourseResourceUploadMiddleware(
+  securityService: FileUploadSecurityService
+): (request: RequestWithFileValidation, reply: FastifyReply) => Promise<void> {
   return createFileUploadSecurityMiddleware(securityService, {
     context: 'course_resource',
     required: true,
@@ -254,7 +268,9 @@ export function createAssignmentSubmissionUploadMiddleware(
 /**
  * Helper function to create video content upload middleware
  */
-export function createVideoContentUploadMiddleware(securityService: FileUploadSecurityService): (request: RequestWithFileValidation, reply: FastifyReply) => Promise<void> {
+export function createVideoContentUploadMiddleware(
+  securityService: FileUploadSecurityService
+): (request: RequestWithFileValidation, reply: FastifyReply) => Promise<void> {
   return createFileUploadSecurityMiddleware(securityService, {
     context: 'video_content',
     required: true,
@@ -265,7 +281,9 @@ export function createVideoContentUploadMiddleware(securityService: FileUploadSe
 /**
  * Helper function to create document upload middleware
  */
-export function createDocumentUploadMiddleware(securityService: FileUploadSecurityService): (request: RequestWithFileValidation, reply: FastifyReply) => Promise<void> {
+export function createDocumentUploadMiddleware(
+  securityService: FileUploadSecurityService
+): (request: RequestWithFileValidation, reply: FastifyReply) => Promise<void> {
   return createFileUploadSecurityMiddleware(securityService, {
     context: 'document',
     required: true,

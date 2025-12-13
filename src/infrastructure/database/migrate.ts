@@ -4,10 +4,11 @@
  * Runs pending database migrations using Drizzle Kit
  */
 
+import dotenv from 'dotenv';
+
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { Pool } from 'pg';
-import dotenv from 'dotenv';
 
 dotenv.config();
 

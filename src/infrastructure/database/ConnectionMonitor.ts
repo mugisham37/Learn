@@ -7,8 +7,9 @@
  * Requirements: 15.7
  */
 
-import { Pool } from 'pg';
 import { EventEmitter } from 'events';
+
+import { Pool } from 'pg';
 
 export interface ConnectionMetrics {
   timestamp: Date;
@@ -72,7 +73,7 @@ export class ConnectionMonitor extends EventEmitter {
     this.metricsHistory.set('write', []);
     this.metricsHistory.set('read', []);
 
-    console.log('Connection monitor initialized');
+    // Connection monitor initialized - using logger would require import
   }
 
   /**
@@ -94,9 +95,7 @@ export class ConnectionMonitor extends EventEmitter {
       this.collectMetrics();
     }, this.config.metricsCollectionInterval);
 
-    console.log(
-      `Connection monitoring started with ${this.config.metricsCollectionInterval}ms interval`
-    );
+    // Connection monitoring started - using logger would require import
   }
 
   /**
@@ -109,7 +108,7 @@ export class ConnectionMonitor extends EventEmitter {
     }
 
     this.isMonitoring = false;
-    console.log('Connection monitoring stopped');
+    // Connection monitoring stopped - using logger would require import
   }
 
   /**

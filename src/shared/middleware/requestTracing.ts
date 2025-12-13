@@ -8,7 +8,9 @@
  */
 
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+
 import { requestTracingService } from '../services/RequestTracingService.js';
+import { FastifyRequestWithTracing } from '../types/fastify.js';
 import { logger } from '../utils/logger.js';
 
 /**
@@ -26,11 +28,11 @@ export function registerRequestTracing(server: FastifyInstance): void {
     // Add trace headers to response
     const traceHeaders = requestTracingService.injectTraceHeaders(traceContext);
     Object.entries(traceHeaders).forEach(([key, value]) => {
-      reply.header(key, value);
+      void reply.header(key, value);
     });
 
     // Store trace context in request for later use
-    (request as any).traceContext = traceContext;
+    (request as FastifyRequestWithTracing).traceContext = traceContext;
 
     logger.debug('Request tracing context created', {
       requestId: traceContext.requestId,
@@ -43,7 +45,7 @@ export function registerRequestTracing(server: FastifyInstance): void {
 
   // Response handler to finish request span
   server.addHook('onResponse', async (request: FastifyRequest, reply: FastifyReply) => {
-    const traceContext = (request as any).traceContext;
+    const traceContext = (request as FastifyRequestWithTracing).traceContext;
     if (!traceContext) return;
 
     // Finish the request span
@@ -69,8 +71,8 @@ export function registerRequestTracing(server: FastifyInstance): void {
   });
 
   // Error handler to mark span as error
-  server.addHook('onError', async (request: FastifyRequest, reply: FastifyReply, error: Error) => {
-    const traceContext = (request as any).traceContext;
+  server.addHook('onError', async (request: FastifyRequest, _reply: FastifyReply, error: Error) => {
+    const traceContext = (request as FastifyRequestWithTracing).traceContext;
     if (!traceContext) return;
 
     // Add error information to span
@@ -111,7 +113,7 @@ export function getCurrentTraceId(): string | undefined {
 /**
  * Add metadata to current trace
  */
-export function addTraceMetadata(key: string, value: any): void {
+export function addTraceMetadata(key: string, value: unknown): void {
   const context = requestTracingService.getCurrentContext();
   if (context) {
     context.metadata[key] = value;
@@ -121,7 +123,12 @@ export function addTraceMetadata(key: string, value: any): void {
 /**
  * Create child span for operation tracking
  */
-export function createChildSpan(operationName: string, tags?: Record<string, any>) {
+export function createChildSpan(operationName: string, tags?: Record<string, unknown>): {
+  spanId: string;
+  finish: (status?: 'ok' | 'error' | 'timeout', error?: Error) => void;
+  addTag: (key: string, value: unknown) => void;
+  addLog: (level: string, message: string, fields?: Record<string, unknown>) => void;
+} {
   const span = requestTracingService.startSpan(operationName);
 
   if (tags) {
@@ -132,13 +139,13 @@ export function createChildSpan(operationName: string, tags?: Record<string, any
 
   return {
     spanId: span.spanId,
-    finish: (status?: 'ok' | 'error' | 'timeout', error?: Error) => {
+    finish: (status?: 'ok' | 'error' | 'timeout', error?: Error): void => {
       requestTracingService.finishSpan(span.spanId, status, error);
     },
-    addTag: (key: string, value: any) => {
+    addTag: (key: string, value: unknown): void => {
       requestTracingService.addSpanTag(span.spanId, key, value);
     },
-    addLog: (level: string, message: string, fields?: Record<string, any>) => {
+    addLog: (level: string, message: string, fields?: Record<string, unknown>): void => {
       requestTracingService.addSpanLog(span.spanId, level, message, fields);
     },
   };
@@ -163,14 +170,16 @@ export function traceDatabaseOperation<T>(
       span.finish('ok');
       return result;
     })
-    .catch((error) => {
+    .catch((error: unknown) => {
       span.addTag('error', true);
-      span.addLog('error', `Database error: ${error.message}`, {
-        errorName: error.name,
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorName = error instanceof Error ? error.name : 'Unknown';
+      span.addLog('error', `Database error: ${errorMessage}`, {
+        errorName,
         operation,
         table,
       });
-      span.finish('error', error);
+      span.finish('error', error instanceof Error ? error : new Error(String(error)));
       throw error;
     });
 }
@@ -194,14 +203,16 @@ export function traceExternalService<T>(
       span.finish('ok');
       return result;
     })
-    .catch((error) => {
+    .catch((error: unknown) => {
       span.addTag('service.success', false);
-      span.addLog('error', `External service error: ${error.message}`, {
-        errorName: error.name,
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorName = error instanceof Error ? error.name : 'Unknown';
+      span.addLog('error', `External service error: ${errorMessage}`, {
+        errorName,
         serviceName,
         operation,
       });
-      span.finish('error', error);
+      span.finish('error', error instanceof Error ? error : new Error(String(error)));
       throw error;
     });
 }
@@ -225,13 +236,15 @@ export function traceCacheOperation<T>(
       span.finish('ok');
       return result;
     })
-    .catch((error) => {
-      span.addLog('error', `Cache error: ${error.message}`, {
-        errorName: error.name,
+    .catch((error: unknown) => {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorName = error instanceof Error ? error.name : 'Unknown';
+      span.addLog('error', `Cache error: ${errorMessage}`, {
+        errorName,
         operation,
         key,
       });
-      span.finish('error', error);
+      span.finish('error', error instanceof Error ? error : new Error(String(error)));
       throw error;
     });
 }
@@ -240,7 +253,7 @@ export function traceCacheOperation<T>(
  * Enhanced logger that includes trace context
  */
 export const tracedLogger = {
-  debug: (message: string, meta?: Record<string, any>) => {
+  debug: (message: string, meta?: Record<string, unknown>): void => {
     const context = requestTracingService.getCurrentContext();
     logger.debug(message, {
       ...meta,
@@ -249,7 +262,7 @@ export const tracedLogger = {
     });
   },
 
-  info: (message: string, meta?: Record<string, any>) => {
+  info: (message: string, meta?: Record<string, unknown>): void => {
     const context = requestTracingService.getCurrentContext();
     logger.info(message, {
       ...meta,
@@ -258,7 +271,7 @@ export const tracedLogger = {
     });
   },
 
-  warn: (message: string, meta?: Record<string, any>) => {
+  warn: (message: string, meta?: Record<string, unknown>): void => {
     const context = requestTracingService.getCurrentContext();
     logger.warn(message, {
       ...meta,
@@ -267,7 +280,7 @@ export const tracedLogger = {
     });
   },
 
-  error: (message: string, meta?: Record<string, any>) => {
+  error: (message: string, meta?: Record<string, unknown>): void => {
     const context = requestTracingService.getCurrentContext();
     logger.error(message, {
       ...meta,

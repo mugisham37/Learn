@@ -7,8 +7,9 @@
  * Requirements: 15.7
  */
 
-import { Pool } from 'pg';
 import { performance } from 'perf_hooks';
+
+import { Pool } from 'pg';
 
 export interface LoadTestConfig {
   // Test parameters

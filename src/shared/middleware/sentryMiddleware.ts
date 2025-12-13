@@ -7,9 +7,11 @@
  * Requirements: 17.2
  */
 
-import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import * as Sentry from '@sentry/node';
+import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+
 import { sentryService } from '../services/SentryService.js';
+import { FastifyRequestWithSentry, isAuthenticatedRequest } from '../types/fastify.js';
 import { logger } from '../utils/logger.js';
 
 /**
@@ -22,7 +24,7 @@ export function registerSentryMiddleware(server: FastifyInstance): void {
   }
 
   // Request handler to set up Sentry context
-  server.addHook('onRequest', async (request: FastifyRequest, reply: FastifyReply) => {
+  server.addHook('onRequest', async (request: FastifyRequest, _reply: FastifyReply) => {
     // Start transaction for performance monitoring
     const transaction = sentryService.startTransaction(
       `${request.method} ${getRouteName(request.url)}`,
@@ -30,7 +32,7 @@ export function registerSentryMiddleware(server: FastifyInstance): void {
     );
 
     // Store transaction in request context
-    (request as any).sentryTransaction = transaction;
+    (request as FastifyRequestWithSentry).sentryTransaction = transaction as Sentry.Transaction;
 
     // Set request context
     sentryService.setRequestContext(request);
@@ -46,7 +48,7 @@ export function registerSentryMiddleware(server: FastifyInstance): void {
 
   // Response handler to finish transaction
   server.addHook('onResponse', async (request: FastifyRequest, reply: FastifyReply) => {
-    const transaction = (request as any).sentryTransaction as Sentry.Transaction;
+    const transaction = (request as FastifyRequestWithSentry).sentryTransaction;
 
     if (transaction) {
       // Set response context
@@ -54,11 +56,7 @@ export function registerSentryMiddleware(server: FastifyInstance): void {
       transaction.setTag('http.method', request.method);
 
       // Set status based on response code
-      if (reply.statusCode >= 400) {
-        transaction.setStatus('failed_precondition');
-      } else {
-        transaction.setStatus('ok');
-      }
+      transaction.setTag('http.response.status_code', reply.statusCode.toString());
 
       // Finish transaction
       transaction.finish();
@@ -78,10 +76,10 @@ export function registerSentryMiddleware(server: FastifyInstance): void {
 
   // Error handler to capture exceptions
   server.addHook('onError', async (request: FastifyRequest, reply: FastifyReply, error: Error) => {
-    const transaction = (request as any).sentryTransaction as Sentry.Transaction;
+    const transaction = (request as FastifyRequestWithSentry).sentryTransaction;
 
     if (transaction) {
-      transaction.setStatus('internal_error');
+      transaction.setTag('error', 'true');
     }
 
     // Capture exception with context
@@ -126,13 +124,13 @@ export function setupSentryErrorHandlers(): void {
   });
 
   // Handle unhandled promise rejections
-  process.on('unhandledRejection', (reason: any, promise: Promise<any>) => {
+  process.on('unhandledRejection', (reason: unknown, _promise: Promise<unknown>) => {
     const error = reason instanceof Error ? reason : new Error(String(reason));
 
     sentryService.captureException(error, {
       level: 'error',
       source: 'unhandledRejection',
-      promise: promise.toString(),
+      promise: '[Promise object]',
     });
 
     logger.error('Unhandled rejection captured by Sentry', { reason });
@@ -150,19 +148,18 @@ export function setSentryUserContext(request: FastifyRequest): void {
   }
 
   // Set user context if request is authenticated
-  if ('user' in request && request.user) {
-    const user = request.user as any;
+  if (isAuthenticatedRequest(request)) {
+    const user = request.user;
 
     sentryService.setUserContext({
-      id: user.userId || user.id,
+      id: user.id,
       email: user.email,
-      role: user.role,
       ip_address: request.ip,
     });
 
     // Add user breadcrumb
     sentryService.addBreadcrumb('User authenticated', 'auth', 'info', {
-      userId: user.userId || user.id,
+      userId: user.id,
       role: user.role,
     });
   }
@@ -178,14 +175,14 @@ export function captureSentryError(
     module?: string;
     userId?: string;
     requestId?: string;
-    [key: string]: any;
+    [key: string]: unknown;
   }
 ): string {
   if (!sentryService.isEnabled()) {
     return '';
   }
 
-  return sentryService.withScope((scope) => {
+  return Sentry.withScope((scope) => {
     // Set operation and module tags
     if (context.operation) {
       scope.setTag('operation', context.operation);
@@ -218,13 +215,13 @@ export function captureSentryError(
 export function trackSentryPerformance<T>(
   operationName: string,
   operation: () => Promise<T>,
-  context?: Record<string, any>
+  context?: Record<string, unknown>
 ): Promise<T> {
   if (!sentryService.isEnabled()) {
     return operation();
   }
 
-  const transaction = sentryService.startTransaction(operationName, 'task');
+  const transaction = Sentry.startTransaction({ name: operationName, op: 'task' });
 
   if (context) {
     Object.entries(context).forEach(([key, value]) => {
@@ -234,12 +231,13 @@ export function trackSentryPerformance<T>(
 
   return operation()
     .then((result) => {
-      transaction.setStatus('ok');
+      transaction.setTag('status', 'success');
       return result;
     })
-    .catch((error) => {
-      transaction.setStatus('internal_error');
-      sentryService.captureException(error, { operation: operationName, ...context });
+    .catch((error: unknown) => {
+      transaction.setTag('status', 'error');
+      const errorToCapture = error instanceof Error ? error : new Error(String(error));
+      sentryService.captureException(errorToCapture, { operation: operationName, ...context });
       throw error;
     })
     .finally(() => {
@@ -252,16 +250,14 @@ export function trackSentryPerformance<T>(
  */
 function getRouteName(url: string): string {
   // Remove query parameters
-  const path = url.split('?')[0];
+  const path = url.split('?')[0] || url;
 
   // Replace dynamic segments with placeholders
-  return (
-    path
-      .replace(/\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, '/:id') // UUIDs
-      .replace(/\/\d+/g, '/:id') // Numeric IDs
-      .replace(/\/[a-zA-Z0-9-_]+\.(jpg|jpeg|png|gif|pdf|mp4|webm)/gi, '/:file') || // Files
-    '/'
-  );
+  return path
+    .replace(/\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, '/:id') // UUIDs
+    .replace(/\/\d+/g, '/:id') // Numeric IDs
+    .replace(/\/[a-zA-Z0-9-_]+\.(jpg|jpeg|png|gif|pdf|mp4|webm)/gi, '/:file') || // Files
+    '/';
 }
 
 /**
@@ -271,7 +267,7 @@ export const sentryBreadcrumbs = {
   /**
    * Add database operation breadcrumb
    */
-  database: (operation: string, table: string, duration?: number) => {
+  database: (operation: string, table: string, duration?: number): void => {
     sentryService.addBreadcrumb(`Database ${operation}`, 'database', 'info', {
       operation,
       table,
@@ -282,7 +278,7 @@ export const sentryBreadcrumbs = {
   /**
    * Add cache operation breadcrumb
    */
-  cache: (operation: 'hit' | 'miss' | 'set' | 'delete', key: string, cacheType?: string) => {
+  cache: (operation: 'hit' | 'miss' | 'set' | 'delete', key: string, cacheType?: string): void => {
     sentryService.addBreadcrumb(`Cache ${operation}`, 'cache', 'info', {
       operation,
       key,
@@ -293,7 +289,7 @@ export const sentryBreadcrumbs = {
   /**
    * Add external service call breadcrumb
    */
-  externalService: (service: string, operation: string, duration?: number, success?: boolean) => {
+  externalService: (service: string, operation: string, duration?: number, success?: boolean): void => {
     sentryService.addBreadcrumb(
       `External service: ${service}`,
       'http',
@@ -305,7 +301,7 @@ export const sentryBreadcrumbs = {
   /**
    * Add business logic breadcrumb
    */
-  business: (action: string, module: string, data?: any) => {
-    sentryService.addBreadcrumb(action, 'business', 'info', { module, ...data });
+  business: (action: string, module: string, data?: Record<string, unknown>): void => {
+    sentryService.addBreadcrumb(action, 'business', 'info', { module, ...(data || {}) });
   },
 };

@@ -5,10 +5,11 @@
  */
 
 import { FastifyRequest } from 'fastify';
+
 import { UserContext } from './index.js';
 
 /**
- * Multipart file interface (from @fastify/multipart)
+ * Multipart file interface (compatible with @fastify/multipart)
  */
 export interface MultipartFile {
   filename: string;
@@ -21,6 +22,7 @@ export interface MultipartFile {
 
 /**
  * Extended FastifyRequest with multipart support
+ * Note: These methods are added by @fastify/multipart plugin
  */
 export interface FastifyRequestWithMultipart extends FastifyRequest {
   isMultipart(): boolean;
@@ -49,17 +51,8 @@ export interface FastifyRequestWithTracing extends FastifyRequest {
   traceContext?: TraceContext;
 }
 
-/**
- * Extended FastifyRequest with Sentry transaction
- */
-export interface SentryTransaction {
-  setTag(key: string, value: string): void;
-  setStatus(status: string): void;
-  finish(): void;
-}
-
 export interface FastifyRequestWithSentry extends FastifyRequest {
-  sentryTransaction?: SentryTransaction;
+  sentryTransaction?: import('@sentry/node').Transaction;
 }
 
 /**
@@ -68,10 +61,7 @@ export interface FastifyRequestWithSentry extends FastifyRequest {
 export interface ExtendedFastifyRequest extends FastifyRequest {
   user?: UserContext;
   traceContext?: TraceContext;
-  sentryTransaction?: SentryTransaction;
-  isMultipart?(): boolean;
-  file?(): Promise<MultipartFile | undefined>;
-  files?(): AsyncIterableIterator<MultipartFile>;
+  sentryTransaction?: import('@sentry/node').Transaction;
 }
 
 /**
