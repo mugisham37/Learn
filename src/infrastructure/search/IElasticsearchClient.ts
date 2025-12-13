@@ -1,10 +1,10 @@
 /**
  * Elasticsearch Client Interface
- * 
+ *
  * Defines the contract for low-level Elasticsearch operations.
  * Provides a clean abstraction over the Elasticsearch client with
  * error handling, retries, and type safety.
- * 
+ *
  * Requirements: 8.1, 8.7
  */
 
@@ -15,10 +15,12 @@ export interface SearchResponse {
   took: number;
   timed_out: boolean;
   hits: {
-    total: {
-      value: number;
-      relation: string;
-    } | number;
+    total:
+      | {
+          value: number;
+          relation: string;
+        }
+      | number;
     max_score: number | null;
     hits: Array<{
       _index: string;
@@ -72,14 +74,14 @@ export interface IndexConfiguration {
 
 /**
  * Elasticsearch Client Interface
- * 
+ *
  * Provides methods for all low-level Elasticsearch operations
  * with proper error handling and retry logic.
  */
 export interface IElasticsearchClient {
   /**
    * Index a single document
-   * 
+   *
    * @param index - Index name
    * @param id - Document ID
    * @param document - Document to index
@@ -106,20 +108,22 @@ export interface IElasticsearchClient {
 
   /**
    * Bulk index multiple documents
-   * 
+   *
    * @param operations - Array of bulk operations
    * @returns Promise resolving to bulk operation result
    * @throws ExternalServiceError if operation fails
    */
-  bulkIndex(operations: Array<{
-    index: string;
-    id: string;
-    document: any;
-  }>): Promise<BulkOperationResult>;
+  bulkIndex(
+    operations: Array<{
+      index: string;
+      id: string;
+      document: any;
+    }>
+  ): Promise<BulkOperationResult>;
 
   /**
    * Search documents with query DSL
-   * 
+   *
    * @param index - Index name or pattern
    * @param query - Elasticsearch query DSL
    * @param options - Search options
@@ -142,7 +146,7 @@ export interface IElasticsearchClient {
 
   /**
    * Delete an index
-   * 
+   *
    * @param index - Index name
    * @returns Promise resolving when index is deleted
    * @throws ExternalServiceError if operation fails
@@ -153,7 +157,7 @@ export interface IElasticsearchClient {
 
   /**
    * Create an index with mappings and settings
-   * 
+   *
    * @param index - Index name
    * @param configuration - Index configuration
    * @returns Promise resolving when index is created
@@ -170,7 +174,7 @@ export interface IElasticsearchClient {
 
   /**
    * Check if an index exists
-   * 
+   *
    * @param index - Index name
    * @returns Promise resolving to existence status
    * @throws ExternalServiceError if operation fails
@@ -179,7 +183,7 @@ export interface IElasticsearchClient {
 
   /**
    * Delete a document by ID
-   * 
+   *
    * @param index - Index name
    * @param id - Document ID
    * @param options - Delete options
@@ -202,7 +206,7 @@ export interface IElasticsearchClient {
 
   /**
    * Delete documents by query
-   * 
+   *
    * @param index - Index name
    * @param query - Query to match documents for deletion
    * @returns Promise resolving to delete result
@@ -221,7 +225,7 @@ export interface IElasticsearchClient {
 
   /**
    * Refresh one or more indices
-   * 
+   *
    * @param indices - Index names (optional, defaults to all)
    * @returns Promise resolving when refresh is complete
    * @throws ExternalServiceError if operation fails
@@ -236,7 +240,7 @@ export interface IElasticsearchClient {
 
   /**
    * Get cluster health information
-   * 
+   *
    * @returns Promise resolving to cluster health
    * @throws ExternalServiceError if operation fails
    */
@@ -255,30 +259,33 @@ export interface IElasticsearchClient {
 
   /**
    * Get index statistics
-   * 
+   *
    * @param index - Index name
    * @returns Promise resolving to index stats
    * @throws ExternalServiceError if operation fails
    */
   getIndexStats(index: string): Promise<{
-    indices: Record<string, {
-      total: {
-        docs: {
-          count: number;
-          deleted: number;
+    indices: Record<
+      string,
+      {
+        total: {
+          docs: {
+            count: number;
+            deleted: number;
+          };
+          store: {
+            size_in_bytes: number;
+          };
+          indexing: {
+            index_total: number;
+            index_time_in_millis: number;
+          };
+          search: {
+            query_total: number;
+            query_time_in_millis: number;
+          };
         };
-        store: {
-          size_in_bytes: number;
-        };
-        indexing: {
-          index_total: number;
-          index_time_in_millis: number;
-        };
-        search: {
-          query_total: number;
-          query_time_in_millis: number;
-        };
-      };
-    }>;
+      }
+    >;
   }>;
 }

@@ -1,9 +1,9 @@
 /**
  * Search Query Builder
- * 
+ *
  * Provides a fluent interface for building Elasticsearch queries with
  * full-text search, filters, facets, sorting, highlighting, and pagination.
- * 
+ *
  * Requirements: 8.1, 8.2, 8.3, 8.4, 8.5
  */
 
@@ -15,7 +15,7 @@ export interface SearchQueryOptions {
   query?: string;
   fields?: string[];
   fuzziness?: 'AUTO' | '0' | '1' | '2';
-  
+
   // Filters
   filters?: {
     terms?: Record<string, string[]>;
@@ -24,18 +24,18 @@ export interface SearchQueryOptions {
     exists?: string[];
     missing?: string[];
   };
-  
+
   // Sorting
   sort?: Array<{
     field: string;
     order: 'asc' | 'desc';
     mode?: 'min' | 'max' | 'sum' | 'avg' | 'median';
   }>;
-  
+
   // Pagination
   from?: number;
   size?: number;
-  
+
   // Highlighting
   highlight?: {
     fields: string[];
@@ -44,22 +44,25 @@ export interface SearchQueryOptions {
     fragmentSize?: number;
     numberOfFragments?: number;
   };
-  
+
   // Aggregations/Facets
-  aggregations?: Record<string, {
-    type: 'terms' | 'range' | 'date_histogram' | 'stats';
-    field: string;
-    size?: number;
-    ranges?: Array<{ from?: number; to?: number; key?: string }>;
-    interval?: string;
-  }>;
-  
+  aggregations?: Record<
+    string,
+    {
+      type: 'terms' | 'range' | 'date_histogram' | 'stats';
+      field: string;
+      size?: number;
+      ranges?: Array<{ from?: number; to?: number; key?: string }>;
+      interval?: string;
+    }
+  >;
+
   // Source filtering
   source?: string[] | boolean;
-  
+
   // Query boost
   boost?: number;
-  
+
   // Minimum should match for boolean queries
   minimumShouldMatch?: string | number;
 }
@@ -79,7 +82,7 @@ export interface BuiltQuery {
 
 /**
  * Search Query Builder
- * 
+ *
  * Fluent interface for building complex Elasticsearch queries with
  * proper query structure, filters, aggregations, and search features.
  */
@@ -113,7 +116,10 @@ export class SearchQueryBuilder {
   /**
    * Add range filters (numeric or date ranges)
    */
-  filterRange(field: string, range: { gte?: number; lte?: number; gt?: number; lt?: number }): this {
+  filterRange(
+    field: string,
+    range: { gte?: number; lte?: number; gt?: number; lt?: number }
+  ): this {
     if (!this.options.filters) {
       this.options.filters = {};
     }
@@ -163,7 +169,11 @@ export class SearchQueryBuilder {
   /**
    * Add sorting configuration
    */
-  sortBy(field: string, order: 'asc' | 'desc' = 'desc', mode?: 'min' | 'max' | 'sum' | 'avg' | 'median'): this {
+  sortBy(
+    field: string,
+    order: 'asc' | 'desc' = 'desc',
+    mode?: 'min' | 'max' | 'sum' | 'avg' | 'median'
+  ): this {
     if (!this.options.sort) {
       this.options.sort = [];
     }
@@ -629,7 +639,11 @@ export function buildFacetedQuery(
   fields: string[],
   facets: {
     terms?: Array<{ name: string; field: string; size?: number }>;
-    ranges?: Array<{ name: string; field: string; ranges: Array<{ from?: number; to?: number; key?: string }> }>;
+    ranges?: Array<{
+      name: string;
+      field: string;
+      ranges: Array<{ from?: number; to?: number; key?: string }>;
+    }>;
   },
   options: {
     from?: number;
@@ -738,13 +752,14 @@ export function buildCourseSearchQuery(
     if (options.sort.field === 'relevance') {
       builder.sortBy('_score', options.sort.order);
     } else {
-      const sortField = {
-        popularity: 'popularityScore',
-        rating: 'averageRating',
-        price: 'price',
-        created: 'createdAt',
-        updated: 'updatedAt',
-      }[options.sort.field] || options.sort.field;
+      const sortField =
+        {
+          popularity: 'popularityScore',
+          rating: 'averageRating',
+          price: 'price',
+          created: 'createdAt',
+          updated: 'updatedAt',
+        }[options.sort.field] || options.sort.field;
 
       builder.sortBy(sortField, options.sort.order);
       builder.sortBy('_score', 'desc'); // Secondary sort by relevance
@@ -756,12 +771,7 @@ export function buildCourseSearchQuery(
 
   // Add highlighting
   if (options.highlight) {
-    builder.highlightFields([
-      'title',
-      'description',
-      'modules.title',
-      'modules.description',
-    ], {
+    builder.highlightFields(['title', 'description', 'modules.title', 'modules.description'], {
       preTags: ['<mark>'],
       postTags: ['</mark>'],
       fragmentSize: 150,
@@ -812,12 +822,7 @@ export function buildLessonSearchQuery(
   const builder = createSearchQueryBuilder();
 
   // Set search fields with boosting
-  const searchFields = [
-    'title^3',
-    'description^2',
-    'contentText^2',
-    'courseTitle',
-  ];
+  const searchFields = ['title^3', 'description^2', 'contentText^2', 'courseTitle'];
 
   // Add main query
   if (query.trim()) {
@@ -844,11 +849,12 @@ export function buildLessonSearchQuery(
     if (options.sort.field === 'relevance') {
       builder.sortBy('_score', options.sort.order);
     } else {
-      const sortField = {
-        order: 'orderNumber',
-        created: 'createdAt',
-        updated: 'updatedAt',
-      }[options.sort.field] || options.sort.field;
+      const sortField =
+        {
+          order: 'orderNumber',
+          created: 'createdAt',
+          updated: 'updatedAt',
+        }[options.sort.field] || options.sort.field;
 
       builder.sortBy(sortField, options.sort.order);
     }
@@ -864,11 +870,7 @@ export function buildLessonSearchQuery(
 
   // Add highlighting
   if (options.highlight) {
-    builder.highlightFields([
-      'title',
-      'description',
-      'contentText',
-    ], {
+    builder.highlightFields(['title', 'description', 'contentText'], {
       preTags: ['<mark>'],
       postTags: ['</mark>'],
       fragmentSize: 150,

@@ -1,28 +1,29 @@
 /**
  * Assignment Repository Implementation
- * 
+ *
  * Implements assignment data access operations with Drizzle ORM queries,
  * Redis caching with 5-minute TTL, and cache invalidation on updates.
  * Handles database errors and maps them to domain errors.
- * 
+ *
  * Requirements: 7.1, 7.2
  */
 
 import { eq, and, desc, count, gte, lte } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
-import { cache, buildCacheKey, CachePrefix, CacheTTL } from '../../../../infrastructure/cache/index.js';
-import { getWriteDb, getReadDb } from '../../../../infrastructure/database/index.js';
-import { 
-  assignments, 
-  Assignment, 
-  NewAssignment
-} from '../../../../infrastructure/database/schema/assessments.schema.js';
 import {
-  DatabaseError,
-  NotFoundError,
-  ValidationError,
-} from '../../../../shared/errors/index.js';
+  cache,
+  buildCacheKey,
+  CachePrefix,
+  CacheTTL,
+} from '../../../../infrastructure/cache/index.js';
+import { getWriteDb, getReadDb } from '../../../../infrastructure/database/index.js';
+import {
+  assignments,
+  Assignment,
+  NewAssignment,
+} from '../../../../infrastructure/database/schema/assessments.schema.js';
+import { DatabaseError, NotFoundError, ValidationError } from '../../../../shared/errors/index.js';
 
 import {
   IAssignmentRepository,
@@ -35,7 +36,7 @@ import {
 
 /**
  * Assignment Repository Implementation
- * 
+ *
  * Provides data access methods for assignment entities with:
  * - Drizzle ORM for type-safe queries
  * - Redis caching with 5-minute TTL
@@ -63,8 +64,8 @@ export class AssignmentRepository implements IAssignmentRepository {
    * Builds cache key for lesson assignments list
    */
   private getLessonAssignmentsCacheKey(
-    lessonId: string, 
-    page: number, 
+    lessonId: string,
+    page: number,
     limit: number,
     filters?: AssignmentFilters
   ): string {
@@ -76,7 +77,7 @@ export class AssignmentRepository implements IAssignmentRepository {
    * Builds cache key for all assignments list
    */
   private getAllAssignmentsCacheKey(
-    page: number, 
+    page: number,
     limit: number,
     filters?: AssignmentFilters
   ): string {
@@ -86,7 +87,7 @@ export class AssignmentRepository implements IAssignmentRepository {
 
   /**
    * Creates a new assignment in the database
-   * 
+   *
    * @param data - Assignment creation data
    * @returns The created assignment
    * @throws ValidationError if lesson doesn't exist
@@ -117,10 +118,7 @@ export class AssignmentRepository implements IAssignmentRepository {
         .returning();
 
       if (!createdAssignment) {
-        throw new DatabaseError(
-          'Failed to create assignment',
-          'insert'
-        );
+        throw new DatabaseError('Failed to create assignment', 'insert');
       }
 
       // Invalidate lesson assignments cache
@@ -136,10 +134,9 @@ export class AssignmentRepository implements IAssignmentRepository {
       // Handle database constraint violations
       if (error instanceof Error) {
         if (error.message.includes('foreign key') || error.message.includes('lesson')) {
-          throw new ValidationError(
-            'Invalid lesson ID',
-            [{ field: 'lessonId', message: 'Lesson does not exist' }]
-          );
+          throw new ValidationError('Invalid lesson ID', [
+            { field: 'lessonId', message: 'Lesson does not exist' },
+          ]);
         }
       }
 
@@ -154,7 +151,7 @@ export class AssignmentRepository implements IAssignmentRepository {
 
   /**
    * Finds an assignment by its unique ID
-   * 
+   *
    * @param id - Assignment ID
    * @returns The assignment if found, null otherwise
    * @throws DatabaseError if database operation fails
@@ -164,7 +161,7 @@ export class AssignmentRepository implements IAssignmentRepository {
       // Check cache first
       const cacheKey = this.getAssignmentCacheKey(id);
       const cachedAssignment = await cache.get<Assignment>(cacheKey);
-      
+
       if (cachedAssignment) {
         return cachedAssignment;
       }
@@ -195,7 +192,7 @@ export class AssignmentRepository implements IAssignmentRepository {
 
   /**
    * Finds assignments by lesson with pagination
-   * 
+   *
    * @param lessonId - Lesson ID
    * @param pagination - Pagination parameters
    * @param filters - Optional filters
@@ -210,42 +207,40 @@ export class AssignmentRepository implements IAssignmentRepository {
     try {
       // Check cache first
       const cacheKey = this.getLessonAssignmentsCacheKey(
-        lessonId, 
-        pagination.page, 
-        pagination.limit, 
+        lessonId,
+        pagination.page,
+        pagination.limit,
         filters
       );
       const cachedResult = await cache.get<PaginatedResult<Assignment>>(cacheKey);
-      
+
       if (cachedResult) {
         return cachedResult;
       }
 
       // Build where conditions
       const whereConditions = [eq(assignments.lessonId, lessonId)];
-      
+
       if (filters?.dueAfter) {
         whereConditions.push(gte(assignments.dueDate, filters.dueAfter));
       }
-      
+
       if (filters?.dueBefore) {
         whereConditions.push(lte(assignments.dueDate, filters.dueBefore));
       }
-      
+
       if (filters?.requiresFileUpload !== undefined) {
         whereConditions.push(eq(assignments.requiresFileUpload, filters.requiresFileUpload));
       }
 
-      const whereClause = whereConditions.length > 1 
-        ? and(...whereConditions) 
-        : whereConditions[0];
+      const whereClause = whereConditions.length > 1 ? and(...whereConditions) : whereConditions[0];
 
       // Get total count
       const [totalResult] = await this.readDb
         .select({ total: count() })
         .from(assignments)
         .where(whereClause);
-      
+
       const total = totalResult?.total || 0;
 
       // Get paginated results
@@ -281,7 +276,7 @@ export class AssignmentRepository implements IAssignmentRepository {
 
   /**
    * Finds all assignments with pagination and filtering
-   * 
+   *
    * @param pagination - Pagination parameters
    * @param filters - Optional filters
    * @returns Paginated assignment results
@@ -293,48 +288,45 @@ export class AssignmentRepository implements IAssignmentRepository {
   ): Promise<PaginatedResult<Assignment>> {
     try {
       // Check cache first
-      const cacheKey = this.getAllAssignmentsCacheKey(
-        pagination.page, 
-        pagination.limit, 
-        filters
-      );
+      const cacheKey = this.getAllAssignmentsCacheKey(pagination.page, pagination.limit, filters);
       const cachedResult = await cache.get<PaginatedResult<Assignment>>(cacheKey);
-      
+
       if (cachedResult) {
         return cachedResult;
       }
 
       // Build where conditions
       const whereConditions = [];
-      
+
       if (filters?.lessonId) {
         whereConditions.push(eq(assignments.lessonId, filters.lessonId));
       }
-      
+
       if (filters?.dueAfter) {
         whereConditions.push(gte(assignments.dueDate, filters.dueAfter));
       }
-      
+
       if (filters?.dueBefore) {
         whereConditions.push(lte(assignments.dueDate, filters.dueBefore));
       }
-      
+
       if (filters?.requiresFileUpload !== undefined) {
         whereConditions.push(eq(assignments.requiresFileUpload, filters.requiresFileUpload));
       }
 
-      const whereClause = whereConditions.length > 1 
-        ? and(...whereConditions) 
-        : whereConditions.length === 1 
-        ? whereConditions[0] 
-        : undefined;
+      const whereClause =
+        whereConditions.length > 1
+          ? and(...whereConditions)
+          : whereConditions.length === 1
+            ? whereConditions[0]
+            : undefined;
 
       // Get total count
       const [totalResult] = await this.readDb
         .select({ total: count() })
         .from(assignments)
         .where(whereClause);
-      
+
       const total = totalResult?.total || 0;
 
       // Get paginated results
@@ -370,7 +362,7 @@ export class AssignmentRepository implements IAssignmentRepository {
 
   /**
    * Updates an assignment's data
-   * 
+   *
    * @param id - Assignment ID
    * @param data - Update data
    * @returns The updated assignment
@@ -399,10 +391,7 @@ export class AssignmentRepository implements IAssignmentRepository {
         .returning();
 
       if (!updatedAssignment) {
-        throw new DatabaseError(
-          'Failed to update assignment',
-          'update'
-        );
+        throw new DatabaseError('Failed to update assignment', 'update');
       }
 
       // Invalidate all cache entries for this assignment
@@ -412,10 +401,7 @@ export class AssignmentRepository implements IAssignmentRepository {
       return updatedAssignment;
     } catch (error) {
       // Re-throw known errors
-      if (
-        error instanceof NotFoundError ||
-        error instanceof DatabaseError
-      ) {
+      if (error instanceof NotFoundError || error instanceof DatabaseError) {
         throw error;
       }
 
@@ -431,7 +417,7 @@ export class AssignmentRepository implements IAssignmentRepository {
   /**
    * Deletes an assignment from the database
    * This cascades to delete all submissions
-   * 
+   *
    * @param id - Assignment ID
    * @returns void
    * @throws NotFoundError if assignment doesn't exist
@@ -452,10 +438,7 @@ export class AssignmentRepository implements IAssignmentRepository {
         .returning();
 
       if (!result || result.length === 0) {
-        throw new DatabaseError(
-          'Failed to delete assignment',
-          'delete'
-        );
+        throw new DatabaseError('Failed to delete assignment', 'delete');
       }
 
       // Invalidate all cache entries
@@ -478,7 +461,7 @@ export class AssignmentRepository implements IAssignmentRepository {
 
   /**
    * Checks if an assignment exists
-   * 
+   *
    * @param id - Assignment ID
    * @returns True if assignment exists, false otherwise
    * @throws DatabaseError if database operation fails
@@ -498,7 +481,7 @@ export class AssignmentRepository implements IAssignmentRepository {
 
   /**
    * Checks if an assignment is past due
-   * 
+   *
    * @param id - Assignment ID
    * @returns True if assignment is past due, false otherwise
    * @throws NotFoundError if assignment doesn't exist
@@ -529,7 +512,7 @@ export class AssignmentRepository implements IAssignmentRepository {
   /**
    * Invalidates cache for a specific assignment
    * Should be called after any update operation
-   * 
+   *
    * @param id - Assignment ID
    * @returns void
    */
@@ -546,7 +529,7 @@ export class AssignmentRepository implements IAssignmentRepository {
   /**
    * Invalidates cache for assignments by lesson
    * Should be called after operations that affect lesson assignment lists
-   * 
+   *
    * @param lessonId - Lesson ID
    * @returns void
    */
@@ -555,7 +538,7 @@ export class AssignmentRepository implements IAssignmentRepository {
       // Invalidate lesson assignment list cache entries
       const lessonPattern = buildCacheKey(CachePrefix.ASSIGNMENT, 'lesson', lessonId, '*');
       await cache.deletePattern(lessonPattern);
-      
+
       // Also invalidate all assignments cache as it might be affected
       const allPattern = buildCacheKey(CachePrefix.ASSIGNMENT, 'all', '*');
       await cache.deletePattern(allPattern);

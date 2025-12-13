@@ -1,22 +1,22 @@
 /**
  * Search Repository Implementation
- * 
+ *
  * Implements search operations using Elasticsearch client.
  * Provides methods for indexing, searching, and managing documents
  * with proper error handling and performance optimization.
- * 
+ *
  * Requirements: 8.1, 8.7
  */
 
-import type { 
+import type {
   ISearchRepository,
   CourseSearchDocument,
   LessonSearchDocument,
   BulkIndexResult,
   SearchResult,
-  IndexStats
+  IndexStats,
 } from './ISearchRepository.js';
-import { 
+import {
   elasticsearch,
   ElasticsearchIndex,
   ElasticsearchAlias,
@@ -24,19 +24,18 @@ import {
   deleteByQuery,
   refreshIndices,
   getIndexStats,
-  checkElasticsearchHealth
+  checkElasticsearchHealth,
 } from './index.js';
 import { ExternalServiceError } from '../../shared/errors/index.js';
 import { createSearchQueryBuilder } from '../../modules/search/infrastructure/query/SearchQueryBuilder.js';
 
 /**
  * Search Repository Implementation
- * 
+ *
  * Concrete implementation of ISearchRepository using Elasticsearch.
  * Handles all search operations with proper error handling and logging.
  */
 export class SearchRepository implements ISearchRepository {
-  
   // Document indexing operations
 
   /**
@@ -90,7 +89,7 @@ export class SearchRepository implements ISearchRepository {
    */
   async bulkIndexCourses(documents: CourseSearchDocument[]): Promise<BulkIndexResult> {
     try {
-      const bulkDocs = documents.map(doc => ({
+      const bulkDocs = documents.map((doc) => ({
         id: doc.id,
         body: doc,
       }));
@@ -110,7 +109,10 @@ export class SearchRepository implements ISearchRepository {
       throw new ExternalServiceError(
         'Failed to bulk index course documents',
         'ELASTICSEARCH_BULK_INDEX_ERROR',
-        { documentCount: documents.length, error: error instanceof Error ? error.message : 'Unknown error' }
+        {
+          documentCount: documents.length,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        }
       );
     }
   }
@@ -120,7 +122,7 @@ export class SearchRepository implements ISearchRepository {
    */
   async bulkIndexLessons(documents: LessonSearchDocument[]): Promise<BulkIndexResult> {
     try {
-      const bulkDocs = documents.map(doc => ({
+      const bulkDocs = documents.map((doc) => ({
         id: doc.id,
         body: doc,
       }));
@@ -140,7 +142,10 @@ export class SearchRepository implements ISearchRepository {
       throw new ExternalServiceError(
         'Failed to bulk index lesson documents',
         'ELASTICSEARCH_BULK_INDEX_ERROR',
-        { documentCount: documents.length, error: error instanceof Error ? error.message : 'Unknown error' }
+        {
+          documentCount: documents.length,
+          error: error instanceof Error ? error.message : 'Unknown error',
+        }
       );
     }
   }
@@ -233,16 +238,17 @@ export class SearchRepository implements ISearchRepository {
       if (sort.field === 'relevance') {
         queryBuilder.sortBy('_score', sort.order);
       } else {
-        const sortField = {
-          popularity: 'popularityScore',
-          rating: 'averageRating',
-          price: 'price',
-          created: 'createdAt',
-          updated: 'updatedAt',
-        }[sort.field] || sort.field;
+        const sortField =
+          {
+            popularity: 'popularityScore',
+            rating: 'averageRating',
+            price: 'price',
+            created: 'createdAt',
+            updated: 'updatedAt',
+          }[sort.field] || sort.field;
 
         queryBuilder.sortBy(sortField, sort.order);
-        
+
         // Add secondary sort by relevance score
         queryBuilder.sortBy('_score', 'desc');
       }
@@ -252,17 +258,15 @@ export class SearchRepository implements ISearchRepository {
 
       // Add highlighting
       if (highlight) {
-        queryBuilder.highlightFields([
-          'title',
-          'description',
-          'modules.title',
-          'modules.description',
-        ], {
-          preTags: ['<mark>'],
-          postTags: ['</mark>'],
-          fragmentSize: 150,
-          numberOfFragments: 3,
-        });
+        queryBuilder.highlightFields(
+          ['title', 'description', 'modules.title', 'modules.description'],
+          {
+            preTags: ['<mark>'],
+            postTags: ['</mark>'],
+            fragmentSize: 150,
+            numberOfFragments: 3,
+          }
+        );
       }
 
       // Build the final query
@@ -282,9 +286,10 @@ export class SearchRepository implements ISearchRepository {
 
       return {
         documents,
-        total: typeof response.hits.total === 'number' 
-          ? response.hits.total 
-          : response.hits.total?.value || 0,
+        total:
+          typeof response.hits.total === 'number'
+            ? response.hits.total
+            : response.hits.total?.value || 0,
         took: response.took,
         maxScore: response.hits.max_score,
       };
@@ -332,12 +337,7 @@ export class SearchRepository implements ISearchRepository {
       const queryBuilder = createSearchQueryBuilder();
 
       // Set main search query with boosted fields
-      const searchFields = [
-        'title^3',
-        'description^2',
-        'contentText^2',
-        'courseTitle',
-      ];
+      const searchFields = ['title^3', 'description^2', 'contentText^2', 'courseTitle'];
 
       if (query.trim()) {
         queryBuilder.query(query.trim(), searchFields, 'AUTO');
@@ -362,11 +362,12 @@ export class SearchRepository implements ISearchRepository {
       if (sort.field === 'relevance') {
         queryBuilder.sortBy('_score', sort.order);
       } else {
-        const sortField = {
-          order: 'orderNumber',
-          created: 'createdAt',
-          updated: 'updatedAt',
-        }[sort.field] || sort.field;
+        const sortField =
+          {
+            order: 'orderNumber',
+            created: 'createdAt',
+            updated: 'updatedAt',
+          }[sort.field] || sort.field;
 
         queryBuilder.sortBy(sortField, sort.order);
       }
@@ -381,11 +382,7 @@ export class SearchRepository implements ISearchRepository {
 
       // Add highlighting
       if (highlight) {
-        queryBuilder.highlightFields([
-          'title',
-          'description',
-          'contentText',
-        ], {
+        queryBuilder.highlightFields(['title', 'description', 'contentText'], {
           preTags: ['<mark>'],
           postTags: ['</mark>'],
           fragmentSize: 150,
@@ -410,9 +407,10 @@ export class SearchRepository implements ISearchRepository {
 
       return {
         documents,
-        total: typeof response.hits.total === 'number' 
-          ? response.hits.total 
-          : response.hits.total?.value || 0,
+        total:
+          typeof response.hits.total === 'number'
+            ? response.hits.total
+            : response.hits.total?.value || 0,
         took: response.took,
         maxScore: response.hits.max_score,
       };
@@ -553,7 +551,7 @@ export class SearchRepository implements ISearchRepository {
   }> {
     try {
       const health = await checkElasticsearchHealth();
-      
+
       return {
         healthy: health.healthy,
         indices: health.indices || { courses: false, lessons: false },
@@ -591,14 +589,16 @@ export class SearchRepository implements ISearchRepository {
       };
       highlight?: boolean;
     } = {}
-  ): Promise<SearchResult<CourseSearchDocument> & { 
-    facets: {
-      categories: Array<{ key: string; count: number }>;
-      difficulties: Array<{ key: string; count: number }>;
-      priceRanges: Array<{ key: string; count: number; from?: number; to?: number }>;
-      ratings: Array<{ key: string; count: number; from?: number }>;
+  ): Promise<
+    SearchResult<CourseSearchDocument> & {
+      facets: {
+        categories: Array<{ key: string; count: number }>;
+        difficulties: Array<{ key: string; count: number }>;
+        priceRanges: Array<{ key: string; count: number; from?: number; to?: number }>;
+        ratings: Array<{ key: string; count: number; from?: number }>;
+      };
     }
-  }> {
+  > {
     try {
       const {
         filters = {},
@@ -661,13 +661,14 @@ export class SearchRepository implements ISearchRepository {
       if (sort.field === 'relevance') {
         queryBuilder.sortBy('_score', sort.order);
       } else {
-        const sortField = {
-          popularity: 'popularityScore',
-          rating: 'averageRating',
-          price: 'price',
-          created: 'createdAt',
-          updated: 'updatedAt',
-        }[sort.field] || sort.field;
+        const sortField =
+          {
+            popularity: 'popularityScore',
+            rating: 'averageRating',
+            price: 'price',
+            created: 'createdAt',
+            updated: 'updatedAt',
+          }[sort.field] || sort.field;
 
         queryBuilder.sortBy(sortField, sort.order);
         queryBuilder.sortBy('_score', 'desc');
@@ -678,17 +679,15 @@ export class SearchRepository implements ISearchRepository {
 
       // Add highlighting
       if (highlight) {
-        queryBuilder.highlightFields([
-          'title',
-          'description',
-          'modules.title',
-          'modules.description',
-        ], {
-          preTags: ['<mark>'],
-          postTags: ['</mark>'],
-          fragmentSize: 150,
-          numberOfFragments: 3,
-        });
+        queryBuilder.highlightFields(
+          ['title', 'description', 'modules.title', 'modules.description'],
+          {
+            preTags: ['<mark>'],
+            postTags: ['</mark>'],
+            fragmentSize: 150,
+            numberOfFragments: 3,
+          }
+        );
       }
 
       // Add facet aggregations
@@ -734,9 +733,10 @@ export class SearchRepository implements ISearchRepository {
 
       return {
         documents,
-        total: typeof response.hits.total === 'number' 
-          ? response.hits.total 
-          : response.hits.total?.value || 0,
+        total:
+          typeof response.hits.total === 'number'
+            ? response.hits.total
+            : response.hits.total?.value || 0,
         took: response.took,
         maxScore: response.hits.max_score,
         facets,
@@ -768,7 +768,9 @@ export class SearchRepository implements ISearchRepository {
   /**
    * Process range aggregation into facet format
    */
-  private processRangeFacetAggregation(aggregation: any): Array<{ key: string; count: number; from?: number; to?: number }> {
+  private processRangeFacetAggregation(
+    aggregation: any
+  ): Array<{ key: string; count: number; from?: number; to?: number }> {
     if (!aggregation?.buckets) {
       return [];
     }

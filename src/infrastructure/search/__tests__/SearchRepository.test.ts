@@ -1,9 +1,9 @@
 /**
  * Search Repository Tests
- * 
+ *
  * Tests for the SearchRepository implementation to ensure proper
  * Elasticsearch integration and error handling.
- * 
+ *
  * Requirements: 8.1, 8.7
  */
 
@@ -109,7 +109,9 @@ describe('SearchRepository', () => {
       mockElasticsearch.index.mockRejectedValue(new Error('Elasticsearch error'));
 
       // Act & Assert
-      await expect(searchRepository.indexCourse(courseDoc)).rejects.toThrow('Failed to index course document');
+      await expect(searchRepository.indexCourse(courseDoc)).rejects.toThrow(
+        'Failed to index course document'
+      );
     });
   });
 

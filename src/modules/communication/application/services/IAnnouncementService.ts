@@ -1,6 +1,6 @@
 /**
  * Announcement Service Interface
- * 
+ *
  * Defines business operations for course announcements
  */
 
@@ -73,10 +73,7 @@ export interface IAnnouncementService {
   /**
    * Get announcement by ID with authorization check
    */
-  getAnnouncementById(
-    announcementId: string,
-    userId: string
-  ): Promise<Announcement | null>;
+  getAnnouncementById(announcementId: string, userId: string): Promise<Announcement | null>;
 }
 
 export interface AnnouncementCreationResult {

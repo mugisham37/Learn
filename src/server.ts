@@ -1,6 +1,6 @@
 /**
  * Fastify Server Configuration
- * 
+ *
  * This module creates and configures the Fastify server instance with all
  * required plugins, middleware, and security settings.
  */
@@ -14,7 +14,10 @@ import Fastify, { FastifyInstance, FastifyServerOptions } from 'fastify';
 import { config } from './config/index.js';
 import { logger } from './shared/utils/logger.js';
 import { logRequest, logResponse } from './shared/middleware/index.js';
-import { registerGlobalRateLimit, registerAdaptiveRateLimit } from './shared/middleware/rateLimiting.js';
+import {
+  registerGlobalRateLimit,
+  registerAdaptiveRateLimit,
+} from './shared/middleware/rateLimiting.js';
 import { registerCSRFProtection } from './shared/middleware/csrf.js';
 import { createSocketServer, closeSocketServer } from './infrastructure/websocket/index.js';
 
@@ -45,50 +48,64 @@ export async function createServer(): Promise<FastifyInstance> {
     origin: config.cors.origin,
     credentials: config.cors.credentials,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Request-ID', 'X-CSRF-Token', 'X-Requested-With'],
-    exposedHeaders: ['X-Request-ID', 'X-RateLimit-Limit', 'X-RateLimit-Remaining', 'X-RateLimit-Reset'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'X-Request-ID',
+      'X-CSRF-Token',
+      'X-Requested-With',
+    ],
+    exposedHeaders: [
+      'X-Request-ID',
+      'X-RateLimit-Limit',
+      'X-RateLimit-Remaining',
+      'X-RateLimit-Reset',
+    ],
   });
 
   // Register Helmet for security headers
   await server.register(helmet, {
     // Content Security Policy - comprehensive policy for production
-    contentSecurityPolicy: config.nodeEnv === 'production' ? {
-      directives: {
-        defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
-        imgSrc: ["'self'", "data:", "https:"],
-        connectSrc: ["'self'"],
-        fontSrc: ["'self'"],
-        objectSrc: ["'none'"],
-        mediaSrc: ["'self'"],
-        frameSrc: ["'none'"],
-      },
-    } : false,
-    
+    contentSecurityPolicy:
+      config.nodeEnv === 'production'
+        ? {
+            directives: {
+              defaultSrc: ["'self'"],
+              scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+              styleSrc: ["'self'", "'unsafe-inline'"],
+              imgSrc: ["'self'", 'data:', 'https:'],
+              connectSrc: ["'self'"],
+              fontSrc: ["'self'"],
+              objectSrc: ["'none'"],
+              mediaSrc: ["'self'"],
+              frameSrc: ["'none'"],
+            },
+          }
+        : false,
+
     // HTTP Strict Transport Security - enforce HTTPS for 1 year
     hsts: {
       maxAge: 31536000, // 1 year in seconds
       includeSubDomains: true,
       preload: true,
     },
-    
+
     // X-Content-Type-Options - prevent MIME type sniffing
     noSniff: true,
-    
+
     // X-Frame-Options - prevent clickjacking attacks
     frameguard: {
       action: 'deny',
     },
-    
+
     // X-XSS-Protection - enable XSS filtering
     xssFilter: true,
-    
+
     // Additional security headers
     crossOriginEmbedderPolicy: config.nodeEnv === 'production',
     crossOriginOpenerPolicy: config.nodeEnv === 'production',
     crossOriginResourcePolicy: config.nodeEnv === 'production',
-    
+
     // Referrer Policy - control referrer information
     referrerPolicy: {
       policy: 'strict-origin-when-cross-origin',
@@ -157,12 +174,11 @@ export async function createServer(): Promise<FastifyInstance> {
     try {
       const { performSystemHealthCheck } = await import('./shared/utils/health.js');
       const health = await performSystemHealthCheck();
-      
+
       // Set appropriate HTTP status based on health
-      const statusCode = health.status === 'healthy' ? 200 
-        : health.status === 'degraded' ? 200 
-        : 503;
-      
+      const statusCode =
+        health.status === 'healthy' ? 200 : health.status === 'degraded' ? 200 : 503;
+
       return reply.code(statusCode).send(health);
     } catch (error) {
       logger.error('Health check failed', { error });
@@ -179,7 +195,7 @@ export async function createServer(): Promise<FastifyInstance> {
     try {
       const { checkReadiness } = await import('./shared/utils/health.js');
       const readiness = await checkReadiness();
-      
+
       const statusCode = readiness.ready ? 200 : 503;
       return reply.code(statusCode).send(readiness);
     } catch (error) {
@@ -196,7 +212,7 @@ export async function createServer(): Promise<FastifyInstance> {
     try {
       const { checkLiveness } = await import('./shared/utils/health.js');
       const liveness = await checkLiveness();
-      
+
       const statusCode = liveness.alive ? 200 : 503;
       return reply.code(statusCode).send(liveness);
     } catch (error) {
@@ -243,14 +259,16 @@ export async function createServer(): Promise<FastifyInstance> {
   logger.info('Socket.io server initialized successfully');
 
   // Register authentication REST routes
-  const { registerAuthRoutes } = await import('./modules/users/presentation/rest/authController.js');
+  const { registerAuthRoutes } =
+    await import('./modules/users/presentation/rest/authController.js');
   const { AuthService } = await import('./modules/users/application/services/AuthService.js');
-  const { UserRepository } = await import('./modules/users/infrastructure/repositories/UserRepository.js');
-  
+  const { UserRepository } =
+    await import('./modules/users/infrastructure/repositories/UserRepository.js');
+
   // Create auth service instance
   const userRepository = new UserRepository();
   const authService = new AuthService(userRepository);
-  
+
   // Register auth routes
   await registerAuthRoutes(server, authService);
   logger.info('Authentication REST routes registered successfully');
@@ -276,21 +294,21 @@ export async function startServer(server: FastifyInstance): Promise<void> {
       host: config.host,
     });
 
-    logger.info(
-      `Server listening on ${config.host}:${config.port} in ${config.nodeEnv} mode`,
-      {
-        host: config.host,
-        port: config.port,
-        environment: config.nodeEnv,
-      }
-    );
+    logger.info(`Server listening on ${config.host}:${config.port} in ${config.nodeEnv} mode`, {
+      host: config.host,
+      port: config.port,
+      environment: config.nodeEnv,
+    });
   } catch (error) {
     logger.error('Failed to start server', {
-      error: error instanceof Error ? {
-        name: error.name,
-        message: error.message,
-        stack: error.stack,
-      } : String(error),
+      error:
+        error instanceof Error
+          ? {
+              name: error.name,
+              message: error.message,
+              stack: error.stack,
+            }
+          : String(error),
     });
     throw error;
   }
@@ -302,21 +320,24 @@ export async function startServer(server: FastifyInstance): Promise<void> {
 export async function stopServer(server: FastifyInstance): Promise<void> {
   try {
     logger.info('Shutting down server gracefully...');
-    
+
     // Close Socket.io server first
     await closeSocketServer();
-    
+
     // Close the server (stops accepting new connections)
     await server.close();
-    
+
     logger.info('Server shut down successfully');
   } catch (error) {
     logger.error('Error during server shutdown', {
-      error: error instanceof Error ? {
-        name: error.name,
-        message: error.message,
-        stack: error.stack,
-      } : String(error),
+      error:
+        error instanceof Error
+          ? {
+              name: error.name,
+              message: error.message,
+              stack: error.stack,
+            }
+          : String(error),
     });
     throw error;
   }

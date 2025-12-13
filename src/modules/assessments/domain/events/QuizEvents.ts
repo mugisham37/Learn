@@ -1,9 +1,9 @@
 /**
  * Quiz Domain Events
- * 
+ *
  * Events emitted during quiz lifecycle for event-driven communication
  * and integration with other modules.
- * 
+ *
  * Requirements: 6.1, 6.2
  */
 
@@ -36,7 +36,7 @@ export class QuizCreatedEvent implements DomainEvent {
   get eventData(): Record<string, unknown> {
     return {
       lessonId: this.lessonId,
-      title: this.title
+      title: this.title,
     };
   }
 }
@@ -58,7 +58,7 @@ export class QuizPublishedEvent implements DomainEvent {
 
   get eventData(): Record<string, unknown> {
     return {
-      lessonId: this.lessonId
+      lessonId: this.lessonId,
     };
   }
 }
@@ -80,7 +80,7 @@ export class QuizDeletedEvent implements DomainEvent {
 
   get eventData(): Record<string, unknown> {
     return {
-      lessonId: this.lessonId
+      lessonId: this.lessonId,
     };
   }
 }
@@ -104,7 +104,7 @@ export class QuestionAddedEvent implements DomainEvent {
   get eventData(): Record<string, unknown> {
     return {
       quizId: this.quizId,
-      questionType: this.questionType
+      questionType: this.questionType,
     };
   }
 }
@@ -130,7 +130,7 @@ export class QuizAttemptStartedEvent implements DomainEvent {
     return {
       quizId: this.quizId,
       studentId: this.studentId,
-      attemptNumber: this.attemptNumber
+      attemptNumber: this.attemptNumber,
     };
   }
 }
@@ -158,7 +158,7 @@ export class QuizSubmittedEvent implements DomainEvent {
       quizId: this.quizId,
       studentId: this.studentId,
       scorePercentage: this.scorePercentage,
-      gradingStatus: this.gradingStatus
+      gradingStatus: this.gradingStatus,
     };
   }
 }
@@ -186,7 +186,7 @@ export class QuizGradedEvent implements DomainEvent {
       quizId: this.quizId,
       studentId: this.studentId,
       finalScore: this.finalScore,
-      gradedBy: this.gradedBy
+      gradedBy: this.gradedBy,
     };
   }
 }

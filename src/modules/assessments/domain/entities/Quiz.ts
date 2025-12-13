@@ -1,9 +1,9 @@
 /**
  * Quiz Domain Entity
- * 
+ *
  * Represents a quiz assessment with questions, configuration, and validation rules.
  * Implements business logic for quiz creation, validation, and lifecycle management.
- * 
+ *
  * Requirements: 6.1, 6.2
  */
 
@@ -47,7 +47,7 @@ export class Quiz {
   static create(data: CreateQuizData): Quiz {
     // Validate quiz configuration
     this.validateQuizConfig(data.config);
-    
+
     const quiz = new Quiz(
       crypto.randomUUID(),
       data.lessonId,
@@ -61,7 +61,7 @@ export class Quiz {
 
     // Add domain event
     quiz._domainEvents.push(new QuizCreatedEvent(quiz.id, quiz.lessonId, quiz.title));
-    
+
     return quiz;
   }
 
@@ -106,15 +106,15 @@ export class Quiz {
    */
   isAvailable(): boolean {
     const now = new Date();
-    
+
     if (this.config.availableFrom && now < this.config.availableFrom) {
       return false;
     }
-    
+
     if (this.config.availableUntil && now > this.config.availableUntil) {
       return false;
     }
-    
+
     return true;
   }
 
@@ -125,11 +125,11 @@ export class Quiz {
     if (!this.isAvailable()) {
       return false;
     }
-    
+
     if (this.config.maxAttempts === 0) {
       return true; // Unlimited attempts
     }
-    
+
     return currentAttempts < this.config.maxAttempts;
   }
 
@@ -139,7 +139,7 @@ export class Quiz {
   updateConfig(newConfig: Partial<QuizConfig>): Quiz {
     const updatedConfig = { ...this.config, ...newConfig };
     Quiz.validateQuizConfig(updatedConfig);
-    
+
     return new Quiz(
       this.id,
       this.lessonId,
@@ -168,7 +168,7 @@ export class Quiz {
     );
 
     publishedQuiz._domainEvents.push(new QuizPublishedEvent(this.id, this.lessonId));
-    
+
     return publishedQuiz;
   }
 

@@ -1,6 +1,6 @@
 /**
  * Alerting Service
- * 
+ *
  * Handles alert notifications for job monitoring and system health.
  * Integrates with email, Slack, and other notification channels.
  */
@@ -73,33 +73,31 @@ export class AlertingService extends EventEmitter {
   private alerts = new Map<string, Alert>();
   private alertHistory: Alert[] = [];
   private lastAlertTimes = new Map<string, Date>();
-  
+
   private readonly defaultConfig: AlertChannelConfig = {
     email: {
       enabled: false,
       recipients: [],
-      severityThreshold: 'warning'
+      severityThreshold: 'warning',
     },
     slack: {
       enabled: false,
       webhookUrl: '',
       channel: '#alerts',
-      severityThreshold: 'error'
+      severityThreshold: 'error',
     },
     webhook: {
       enabled: false,
       url: '',
-      severityThreshold: 'error'
-    }
+      severityThreshold: 'error',
+    },
   };
-  
-  private constructor(
-    private readonly config: AlertChannelConfig = {}
-  ) {
+
+  private constructor(private readonly config: AlertChannelConfig = {}) {
     super();
     this.config = { ...this.defaultConfig, ...config };
   }
-  
+
   /**
    * Get singleton instance
    */
@@ -109,7 +107,7 @@ export class AlertingService extends EventEmitter {
     }
     return AlertingService.instance;
   }
-  
+
   /**
    * Create and send an alert
    */
@@ -121,7 +119,7 @@ export class AlertingService extends EventEmitter {
     metadata?: Record<string, unknown>
   ): Alert {
     const alertId = `${source}-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
-    
+
     const alert: Alert = {
       id: alertId,
       severity,
@@ -130,57 +128,57 @@ export class AlertingService extends EventEmitter {
       source,
       timestamp: new Date(),
       metadata,
-      resolved: false
+      resolved: false,
     };
-    
+
     // Check cooldown period
     const cooldownKey = `${source}-${severity}`;
     const lastAlertTime = this.lastAlertTimes.get(cooldownKey);
     const cooldownMinutes = this.getCooldownForSeverity(severity);
-    
+
     if (lastAlertTime) {
       const timeSinceLastAlert = Date.now() - lastAlertTime.getTime();
       const cooldownMs = cooldownMinutes * 60 * 1000;
-      
+
       if (timeSinceLastAlert < cooldownMs) {
         logger.debug('Alert suppressed due to cooldown', {
           alertId,
           source,
           severity,
           timeSinceLastAlert,
-          cooldownMs
+          cooldownMs,
         });
         return alert;
       }
     }
-    
+
     // Store alert
     this.alerts.set(alertId, alert);
     this.alertHistory.push(alert);
     this.lastAlertTimes.set(cooldownKey, alert.timestamp);
-    
+
     // Log alert
     logger.info('Alert created', {
       alertId,
       severity,
       title,
       source,
-      metadata
+      metadata,
     });
-    
+
     // Send notifications
     this.sendNotifications(alert);
-    
+
     // Emit event
     this.emit('alert', alert);
     this.emit(`alert:${severity}`, alert);
-    
+
     // Cleanup old alerts
     this.cleanupOldAlerts();
-    
+
     return alert;
   }
-  
+
   /**
    * Resolve an alert
    */
@@ -189,29 +187,29 @@ export class AlertingService extends EventEmitter {
     if (!alert) {
       return false;
     }
-    
+
     alert.resolved = true;
     alert.resolvedAt = new Date();
-    
+
     logger.info('Alert resolved', {
       alertId,
-      resolvedAt: alert.resolvedAt
+      resolvedAt: alert.resolvedAt,
     });
-    
+
     this.emit('alert:resolved', alert);
-    
+
     return true;
   }
-  
+
   /**
    * Get active alerts
    */
   public getActiveAlerts(): Alert[] {
     return Array.from(this.alerts.values())
-      .filter(alert => !alert.resolved)
+      .filter((alert) => !alert.resolved)
       .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
   }
-  
+
   /**
    * Get alert history
    */
@@ -220,16 +218,16 @@ export class AlertingService extends EventEmitter {
       .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
       .slice(0, limit);
   }
-  
+
   /**
    * Get alerts by severity
    */
   public getAlertsBySeverity(severity: AlertSeverity): Alert[] {
     return Array.from(this.alerts.values())
-      .filter(alert => alert.severity === severity && !alert.resolved)
+      .filter((alert) => alert.severity === severity && !alert.resolved)
       .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
   }
-  
+
   /**
    * Get alert statistics
    */
@@ -240,48 +238,57 @@ export class AlertingService extends EventEmitter {
     bySeverity: Record<AlertSeverity, number>;
   } {
     const alerts = Array.from(this.alerts.values());
-    const active = alerts.filter(a => !a.resolved);
-    const resolved = alerts.filter(a => a.resolved);
-    
+    const active = alerts.filter((a) => !a.resolved);
+    const resolved = alerts.filter((a) => a.resolved);
+
     const bySeverity: Record<AlertSeverity, number> = {
       info: 0,
       warning: 0,
       error: 0,
-      critical: 0
+      critical: 0,
     };
-    
-    active.forEach(alert => {
+
+    active.forEach((alert) => {
       bySeverity[alert.severity]++;
     });
-    
+
     return {
       total: alerts.length,
       active: active.length,
       resolved: resolved.length,
-      bySeverity
+      bySeverity,
     };
   }
-  
+
   /**
    * Send notifications through configured channels
    */
   private sendNotifications(alert: Alert): void {
     // Email notifications
-    if (this.config.email?.enabled && this.shouldSendToChannel(alert.severity, this.config.email.severityThreshold)) {
+    if (
+      this.config.email?.enabled &&
+      this.shouldSendToChannel(alert.severity, this.config.email.severityThreshold)
+    ) {
       this.sendEmailAlert(alert);
     }
-    
+
     // Slack notifications
-    if (this.config.slack?.enabled && this.shouldSendToChannel(alert.severity, this.config.slack.severityThreshold)) {
+    if (
+      this.config.slack?.enabled &&
+      this.shouldSendToChannel(alert.severity, this.config.slack.severityThreshold)
+    ) {
       this.sendSlackAlert(alert);
     }
-    
+
     // Webhook notifications
-    if (this.config.webhook?.enabled && this.shouldSendToChannel(alert.severity, this.config.webhook.severityThreshold)) {
+    if (
+      this.config.webhook?.enabled &&
+      this.shouldSendToChannel(alert.severity, this.config.webhook.severityThreshold)
+    ) {
       this.sendWebhookAlert(alert);
     }
   }
-  
+
   /**
    * Send email alert
    */
@@ -290,13 +297,13 @@ export class AlertingService extends EventEmitter {
       // This would integrate with the email service
       logger.info('Email alert sent', {
         alertId: alert.id,
-        recipients: this.config.email?.recipients
+        recipients: this.config.email?.recipients,
       });
     } catch (error) {
       logger.error('Failed to send email alert:', error);
     }
   }
-  
+
   /**
    * Send Slack alert
    */
@@ -305,50 +312,51 @@ export class AlertingService extends EventEmitter {
       if (!this.config.slack?.webhookUrl) {
         return;
       }
-      
+
       const color = this.getSeverityColor(alert.severity);
       const _payload = {
         channel: this.config.slack.channel,
         username: 'Job Monitor',
         icon_emoji: ':warning:',
-        attachments: [{
-          color,
-          title: alert.title,
-          text: alert.message,
-          fields: [
-            {
-              title: 'Severity',
-              value: alert.severity.toUpperCase(),
-              short: true
-            },
-            {
-              title: 'Source',
-              value: alert.source,
-              short: true
-            },
-            {
-              title: 'Time',
-              value: alert.timestamp.toISOString(),
-              short: true
-            }
-          ]
-        }]
+        attachments: [
+          {
+            color,
+            title: alert.title,
+            text: alert.message,
+            fields: [
+              {
+                title: 'Severity',
+                value: alert.severity.toUpperCase(),
+                short: true,
+              },
+              {
+                title: 'Source',
+                value: alert.source,
+                short: true,
+              },
+              {
+                title: 'Time',
+                value: alert.timestamp.toISOString(),
+                short: true,
+              },
+            ],
+          },
+        ],
       };
-      
+
       // This would make an HTTP request to Slack webhook
       // In a real implementation, you would use the payload here
-      
+
       // This would make an HTTP request to Slack webhook
       logger.info('Slack alert sent', {
         alertId: alert.id,
-        channel: this.config.slack.channel
+        channel: this.config.slack.channel,
       });
-      
     } catch (error) {
       logger.error('Failed to send Slack alert:', error);
     }
   }
-  
+
   /**
    * Send webhook alert
    */
@@ -357,18 +365,17 @@ export class AlertingService extends EventEmitter {
       if (!this.config.webhook?.url) {
         return;
       }
-      
+
       // This would make an HTTP request to the webhook URL
       logger.info('Webhook alert sent', {
         alertId: alert.id,
-        url: this.config.webhook.url
+        url: this.config.webhook.url,
       });
-      
     } catch (error) {
       logger.error('Failed to send webhook alert:', error);
     }
   }
-  
+
   /**
    * Check if alert should be sent to channel based on severity threshold
    */
@@ -377,12 +384,12 @@ export class AlertingService extends EventEmitter {
       info: 1,
       warning: 2,
       error: 3,
-      critical: 4
+      critical: 4,
     };
-    
+
     return severityLevels[alertSeverity] >= severityLevels[threshold];
   }
-  
+
   /**
    * Get color for Slack based on severity
    */
@@ -399,7 +406,7 @@ export class AlertingService extends EventEmitter {
         return '#36a64f';
     }
   }
-  
+
   /**
    * Get cooldown period for severity level
    */
@@ -416,27 +423,27 @@ export class AlertingService extends EventEmitter {
         return 60; // 60 minutes
     }
   }
-  
+
   /**
    * Clean up old alerts to prevent memory leaks
    */
   private cleanupOldAlerts(): void {
     const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000); // 24 hours
-    
+
     // Remove old alerts from active map
     for (const [alertId, alert] of this.alerts.entries()) {
       if (alert.timestamp < cutoff && alert.resolved) {
         this.alerts.delete(alertId);
       }
     }
-    
+
     // Keep only recent history
     if (this.alertHistory.length > 1000) {
       this.alertHistory = this.alertHistory
         .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
         .slice(0, 500);
     }
-    
+
     // Clean up last alert times
     for (const [key, timestamp] of this.lastAlertTimes.entries()) {
       if (timestamp < cutoff) {

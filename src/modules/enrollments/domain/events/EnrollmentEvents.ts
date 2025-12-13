@@ -1,6 +1,6 @@
 /**
  * Domain Events for Enrollment Lifecycle
- * 
+ *
  * These events are published when significant enrollment-related actions occur
  * Requirements: 5.1, 5.4, 5.5, 5.6
  */

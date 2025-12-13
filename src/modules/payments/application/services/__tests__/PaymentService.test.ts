@@ -1,6 +1,6 @@
 /**
  * Payment Service Tests
- * 
+ *
  * Basic tests to verify the payment service functionality.
  * These tests focus on core business logic and error handling.
  */
@@ -16,7 +16,7 @@ describe('PaymentService', () => {
     // Basic validation test
     const invalidEmail = '';
     const validEmail = 'test@example.com';
-    
+
     expect(invalidEmail).toBe('');
     expect(validEmail).toContain('@');
   });

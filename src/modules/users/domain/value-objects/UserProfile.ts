@@ -1,9 +1,9 @@
 /**
  * UserProfile Value Object
- * 
+ *
  * Immutable value object representing user profile information.
  * Contains extended user data beyond core authentication details.
- * 
+ *
  * Requirements: 1.1
  */
 
@@ -62,7 +62,7 @@ export interface UserProfileProps {
 
 /**
  * UserProfile value object
- * 
+ *
  * Represents user profile information with validation.
  * Immutable once created - use update methods to create new instances.
  */
@@ -77,7 +77,7 @@ export class UserProfile {
 
   /**
    * Creates a new UserProfile value object
-   * 
+   *
    * @param props - User profile properties
    */
   private constructor(props: UserProfileProps) {
@@ -92,7 +92,7 @@ export class UserProfile {
 
   /**
    * Factory method to create a UserProfile value object
-   * 
+   *
    * @param props - User profile properties
    * @returns UserProfile value object
    * @throws Error if validation fails
@@ -195,7 +195,7 @@ export class UserProfile {
 
   /**
    * Creates a new UserProfile with updated full name
-   * 
+   *
    * @param fullName - New full name
    * @returns New UserProfile instance
    */
@@ -213,7 +213,7 @@ export class UserProfile {
 
   /**
    * Creates a new UserProfile with updated bio
-   * 
+   *
    * @param bio - New bio
    * @returns New UserProfile instance
    */
@@ -231,7 +231,7 @@ export class UserProfile {
 
   /**
    * Creates a new UserProfile with updated avatar URL
-   * 
+   *
    * @param avatarUrl - New avatar URL
    * @returns New UserProfile instance
    */
@@ -249,7 +249,7 @@ export class UserProfile {
 
   /**
    * Creates a new UserProfile with updated notification preferences
-   * 
+   *
    * @param preferences - New notification preferences
    * @returns New UserProfile instance
    */
@@ -267,7 +267,7 @@ export class UserProfile {
 
   /**
    * Creates a new UserProfile with updated privacy settings
-   * 
+   *
    * @param settings - New privacy settings
    * @returns New UserProfile instance
    */
@@ -285,7 +285,7 @@ export class UserProfile {
 
   /**
    * Converts to plain object for persistence
-   * 
+   *
    * @returns Plain object representation
    */
   toObject(): UserProfileProps {
@@ -302,7 +302,7 @@ export class UserProfile {
 
   /**
    * Returns JSON representation
-   * 
+   *
    * @returns JSON object
    */
   toJSON(): UserProfileProps {

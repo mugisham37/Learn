@@ -1,9 +1,9 @@
 /**
  * Elasticsearch Client Tests
- * 
+ *
  * Tests for the ElasticsearchClient implementation to ensure proper
  * error handling, retries, and Elasticsearch operations.
- * 
+ *
  * Requirements: 8.1, 8.7
  */
 
@@ -120,7 +120,7 @@ describe('ElasticsearchClient', () => {
       // Arrange
       const retryableError = new Error('Connection error');
       (retryableError as any).name = 'ConnectionError';
-      
+
       const mockResponse = {
         _id: 'doc-1',
         _index: 'test-index',
@@ -146,16 +146,16 @@ describe('ElasticsearchClient', () => {
       // Arrange
       const retryableError = new Error('Connection error');
       (retryableError as any).name = 'ConnectionError';
-      
+
       (mockElasticsearchClient.index as any).mockRejectedValue(retryableError);
 
       const document = { title: 'Test Document' };
 
       // Act & Assert
-      await expect(
-        elasticsearchClient.index('test-index', 'doc-1', document)
-      ).rejects.toThrow(ExternalServiceError);
-      
+      await expect(elasticsearchClient.index('test-index', 'doc-1', document)).rejects.toThrow(
+        ExternalServiceError
+      );
+
       expect(mockElasticsearchClient.index).toHaveBeenCalledTimes(2); // maxRetries = 2
     });
 
@@ -163,16 +163,16 @@ describe('ElasticsearchClient', () => {
       // Arrange
       const nonRetryableError = new Error('Bad request');
       (nonRetryableError as any).statusCode = 400;
-      
+
       (mockElasticsearchClient.index as any).mockRejectedValue(nonRetryableError);
 
       const document = { title: 'Test Document' };
 
       // Act & Assert
-      await expect(
-        elasticsearchClient.index('test-index', 'doc-1', document)
-      ).rejects.toThrow(ExternalServiceError);
-      
+      await expect(elasticsearchClient.index('test-index', 'doc-1', document)).rejects.toThrow(
+        ExternalServiceError
+      );
+
       expect(mockElasticsearchClient.index).toHaveBeenCalledTimes(1); // No retries
     });
   });
@@ -183,10 +183,7 @@ describe('ElasticsearchClient', () => {
       const mockResponse = {
         took: 5,
         errors: false,
-        items: [
-          { index: { _id: 'doc-1', status: 201 } },
-          { index: { _id: 'doc-2', status: 201 } },
-        ],
+        items: [{ index: { _id: 'doc-1', status: 201 } }, { index: { _id: 'doc-2', status: 201 } }],
       };
       (mockElasticsearchClient.bulk as any).mockResolvedValue(mockResponse);
 

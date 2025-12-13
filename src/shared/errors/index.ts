@@ -1,6 +1,6 @@
 /**
  * Custom Error Classes
- * 
+ *
  * Standardized error classes for consistent error handling across the application.
  * Implements hierarchical error handling strategy as per Requirements 13.1 and 17.2.
  */
@@ -38,12 +38,7 @@ export class ValidationError extends AppError {
     message: string,
     public readonly fields?: Array<{ field: string; message: string }>
   ) {
-    super(
-      message,
-      400,
-      'VALIDATION_ERROR',
-      fields ? { fields } : undefined
-    );
+    super(message, 400, 'VALIDATION_ERROR', fields ? { fields } : undefined);
   }
 }
 
@@ -57,12 +52,7 @@ export class AuthenticationError extends AppError {
     message: string = 'Authentication failed',
     public readonly reason?: string
   ) {
-    super(
-      message,
-      401,
-      'AUTHENTICATION_ERROR',
-      reason ? { reason } : undefined
-    );
+    super(message, 401, 'AUTHENTICATION_ERROR', reason ? { reason } : undefined);
   }
 }
 
@@ -115,12 +105,7 @@ export class ConflictError extends AppError {
     message: string,
     public readonly conflictField?: string
   ) {
-    super(
-      message,
-      409,
-      'CONFLICT',
-      conflictField ? { conflictField } : undefined
-    );
+    super(message, 409, 'CONFLICT', conflictField ? { conflictField } : undefined);
   }
 }
 
@@ -136,15 +121,10 @@ export class ExternalServiceError extends AppError {
     public readonly originalError?: Error,
     statusCode: number = 502
   ) {
-    super(
-      `${serviceName} error: ${message}`,
-      statusCode,
-      'EXTERNAL_SERVICE_ERROR',
-      {
-        serviceName,
-        originalError: originalError?.message
-      }
-    );
+    super(`${serviceName} error: ${message}`, statusCode, 'EXTERNAL_SERVICE_ERROR', {
+      serviceName,
+      originalError: originalError?.message,
+    });
   }
 }
 
@@ -166,7 +146,7 @@ export class DatabaseError extends AppError {
       {
         operation,
         // Sanitize error to avoid exposing schema details
-        error: originalError?.message
+        error: originalError?.message,
       },
       false // Database errors are not operational
     );
@@ -188,12 +168,12 @@ export class RateLimitError extends AppError {
     public readonly retryAfter?: number
   ) {
     const details: Record<string, unknown> = {};
-    
+
     if (limit !== undefined) details['limit'] = limit;
     if (resetTime) details['resetTime'] = resetTime.toISOString();
     if (remaining !== undefined) details['remaining'] = remaining;
     if (retryAfter !== undefined) details['retryAfter'] = retryAfter;
-    
+
     super(
       message,
       429,
@@ -201,30 +181,30 @@ export class RateLimitError extends AppError {
       Object.keys(details).length > 0 ? details : undefined
     );
   }
-  
+
   /**
    * Get headers that should be included in the response
    * Implements requirement 13.6 - include rate limit headers
    */
   getHeaders(): Record<string, string | number> {
     const headers: Record<string, string | number> = {};
-    
+
     if (this.limit !== undefined) {
       headers['X-RateLimit-Limit'] = this.limit;
     }
-    
+
     if (this.remaining !== undefined) {
       headers['X-RateLimit-Remaining'] = this.remaining;
     }
-    
+
     if (this.resetTime) {
       headers['X-RateLimit-Reset'] = Math.floor(this.resetTime.getTime() / 1000);
     }
-    
+
     if (this.retryAfter !== undefined) {
       headers['Retry-After'] = this.retryAfter;
     }
-    
+
     return headers;
   }
 }
@@ -246,7 +226,7 @@ export interface ErrorResponse {
 /**
  * Format error for API response
  * Implements consistent error response structure as per Requirements 13.1 and 17.2
- * 
+ *
  * @param error - The error to format
  * @param requestId - Request ID for correlation
  * @param isDevelopment - Whether to include debug information
@@ -302,7 +282,7 @@ export function formatErrorResponse(
 /**
  * Sanitize error for production
  * Removes sensitive information from error messages and details
- * 
+ *
  * @param error - The error to sanitize
  * @returns Sanitized error
  */
@@ -313,19 +293,13 @@ export function sanitizeError(error: Error): Error {
   }
 
   // For non-operational errors, create a generic error
-  return new AppError(
-    'An unexpected error occurred',
-    500,
-    'INTERNAL_ERROR',
-    undefined,
-    false
-  );
+  return new AppError('An unexpected error occurred', 500, 'INTERNAL_ERROR', undefined, false);
 }
 
 /**
  * Check if error is operational
  * Operational errors are expected and can be safely shown to users
- * 
+ *
  * @param error - The error to check
  * @returns True if error is operational
  */
@@ -338,7 +312,7 @@ export function isOperationalError(error: Error): boolean {
 
 /**
  * Extract HTTP status code from error
- * 
+ *
  * @param error - The error to extract status from
  * @returns HTTP status code
  */

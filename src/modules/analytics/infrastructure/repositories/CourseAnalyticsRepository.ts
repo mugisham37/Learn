@@ -1,28 +1,30 @@
 /**
  * Course Analytics Repository Implementation
- * 
+ *
  * Implements course analytics data access operations with Drizzle ORM queries,
  * Redis caching with 5-minute TTL, and cache invalidation on updates.
  * Handles database errors and maps them to domain errors.
- * 
+ *
  * Requirements: 12.1, 12.7
  */
 
 import { eq, inArray, desc, count } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
-import { cache, buildCacheKey, CachePrefix, CacheTTL } from '../../../../infrastructure/cache/index.js';
+import {
+  cache,
+  buildCacheKey,
+  CachePrefix,
+  CacheTTL,
+} from '../../../../infrastructure/cache/index.js';
 import { getWriteDb, getReadDb } from '../../../../infrastructure/database/index.js';
-import { 
+import {
   courseAnalytics,
   type CourseAnalytics,
-  type NewCourseAnalytics
+  type NewCourseAnalytics,
 } from '../../../../infrastructure/database/schema/analytics.schema.js';
 import { courses } from '../../../../infrastructure/database/schema/courses.schema.js';
-import {
-  DatabaseError,
-  NotFoundError,
-} from '../../../../shared/errors/index.js';
+import { DatabaseError, NotFoundError } from '../../../../shared/errors/index.js';
 
 import {
   ICourseAnalyticsRepository,
@@ -33,7 +35,7 @@ import {
 
 /**
  * Course Analytics Repository Implementation
- * 
+ *
  * Provides data access methods for course analytics entities with:
  * - Drizzle ORM for type-safe queries
  * - Redis caching with 5-minute TTL
@@ -61,8 +63,8 @@ export class CourseAnalyticsRepository implements ICourseAnalyticsRepository {
    * Builds cache key for instructor course analytics list
    */
   private getInstructorAnalyticsCacheKey(
-    instructorId: string, 
-    page: number, 
+    instructorId: string,
+    page: number,
     limit: number
   ): string {
     return buildCacheKey(CachePrefix.ANALYTICS, 'instructor', instructorId, page, limit);
@@ -77,10 +79,10 @@ export class CourseAnalyticsRepository implements ICourseAnalyticsRepository {
 
   /**
    * Creates or updates course analytics record
-   * 
+   *
    * Uses PostgreSQL UPSERT (ON CONFLICT) to handle both create and update cases.
    * Automatically updates the lastUpdated timestamp.
-   * 
+   *
    * @param courseId - Course ID
    * @param data - Analytics data
    * @returns The created/updated course analytics
@@ -125,10 +127,7 @@ export class CourseAnalyticsRepository implements ICourseAnalyticsRepository {
         .returning();
 
       if (!upsertedAnalytics) {
-        throw new DatabaseError(
-          'Failed to upsert course analytics',
-          'upsert'
-        );
+        throw new DatabaseError('Failed to upsert course analytics', 'upsert');
       }
 
       // Invalidate relevant caches
@@ -151,10 +150,10 @@ export class CourseAnalyticsRepository implements ICourseAnalyticsRepository {
 
   /**
    * Finds course analytics by course ID
-   * 
+   *
    * Uses Redis caching with 5-minute TTL for performance.
    * Falls back to database query if cache miss.
-   * 
+   *
    * @param courseId - Course ID
    * @returns The course analytics if found, null otherwise
    * @throws DatabaseError if database operation fails
@@ -192,10 +191,10 @@ export class CourseAnalyticsRepository implements ICourseAnalyticsRepository {
 
   /**
    * Finds course analytics for multiple courses
-   * 
+   *
    * Efficiently queries multiple course analytics in a single database call.
    * Does not use caching due to variable nature of the query.
-   * 
+   *
    * @param courseIds - Array of course IDs
    * @returns Array of course analytics
    * @throws DatabaseError if database operation fails
@@ -222,10 +221,10 @@ export class CourseAnalyticsRepository implements ICourseAnalyticsRepository {
 
   /**
    * Finds all course analytics with pagination
-   * 
+   *
    * Uses Redis caching for paginated results with 5-minute TTL.
    * Orders by last updated timestamp descending for most recent first.
-   * 
+   *
    * @param pagination - Pagination parameters
    * @returns Paginated course analytics results
    * @throws DatabaseError if database operation fails
@@ -250,9 +249,7 @@ export class CourseAnalyticsRepository implements ICourseAnalyticsRepository {
           .orderBy(desc(courseAnalytics.lastUpdated))
           .limit(limit)
           .offset(offset),
-        this.readDb
-          .select({ total: count() })
-          .from(courseAnalytics)
+        this.readDb.select({ total: count() }).from(courseAnalytics),
       ]);
 
       const result: PaginatedResult<CourseAnalytics> = {
@@ -277,16 +274,19 @@ export class CourseAnalyticsRepository implements ICourseAnalyticsRepository {
 
   /**
    * Finds course analytics by instructor
-   * 
+   *
    * Joins with courses table to filter by instructor ID.
    * Uses Redis caching for paginated results with 5-minute TTL.
-   * 
+   *
    * @param instructorId - Instructor user ID
    * @param pagination - Pagination parameters
    * @returns Paginated course analytics results
    * @throws DatabaseError if database operation fails
    */
-  async findByInstructor(instructorId: string, pagination: PaginationParams): Promise<PaginatedResult<CourseAnalytics>> {
+  async findByInstructor(
+    instructorId: string,
+    pagination: PaginationParams
+  ): Promise<PaginatedResult<CourseAnalytics>> {
     const { page, limit } = pagination;
     const offset = (page - 1) * limit;
     const cacheKey = this.getInstructorAnalyticsCacheKey(instructorId, page, limit);
@@ -325,7 +325,7 @@ export class CourseAnalyticsRepository implements ICourseAnalyticsRepository {
           .select({ total: count() })
           .from(courseAnalytics)
           .innerJoin(courses, eq(courseAnalytics.courseId, courses.id))
-          .where(eq(courses.instructorId, instructorId))
+          .where(eq(courses.instructorId, instructorId)),
       ]);
 
       const result: PaginatedResult<CourseAnalytics> = {
@@ -350,7 +350,7 @@ export class CourseAnalyticsRepository implements ICourseAnalyticsRepository {
 
   /**
    * Updates course analytics last updated timestamp
-   * 
+   *
    * @param courseId - Course ID
    * @returns The updated course analytics
    * @throws NotFoundError if course analytics doesn't exist
@@ -365,11 +365,7 @@ export class CourseAnalyticsRepository implements ICourseAnalyticsRepository {
         .returning();
 
       if (!updatedAnalytics) {
-        throw new NotFoundError(
-          'Course analytics not found',
-          'CourseAnalytics',
-          courseId
-        );
+        throw new NotFoundError('Course analytics not found', 'CourseAnalytics', courseId);
       }
 
       // Invalidate cache
@@ -391,16 +387,14 @@ export class CourseAnalyticsRepository implements ICourseAnalyticsRepository {
 
   /**
    * Deletes course analytics record
-   * 
+   *
    * @param courseId - Course ID
    * @returns void
    * @throws DatabaseError if database operation fails
    */
   async delete(courseId: string): Promise<void> {
     try {
-      await this.writeDb
-        .delete(courseAnalytics)
-        .where(eq(courseAnalytics.courseId, courseId));
+      await this.writeDb.delete(courseAnalytics).where(eq(courseAnalytics.courseId, courseId));
 
       // Invalidate cache
       await this.invalidateCache(courseId);
@@ -414,7 +408,7 @@ export class CourseAnalyticsRepository implements ICourseAnalyticsRepository {
 
   /**
    * Invalidates cache for course analytics
-   * 
+   *
    * @param courseId - Course ID
    * @returns void
    */
@@ -433,7 +427,7 @@ export class CourseAnalyticsRepository implements ICourseAnalyticsRepository {
 
   /**
    * Invalidates cache for instructor course analytics
-   * 
+   *
    * @param instructorId - Instructor user ID
    * @returns void
    */

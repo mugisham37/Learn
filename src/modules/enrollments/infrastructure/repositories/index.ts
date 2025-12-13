@@ -1,6 +1,6 @@
 /**
  * Enrollments Repository Exports
- * 
+ *
  * Exports all repository interfaces and implementations for the enrollments module.
  */
 

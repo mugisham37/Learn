@@ -1,17 +1,17 @@
 /**
  * Payment Repository Interface
- * 
+ *
  * Defines the contract for payment data access operations.
  * Abstracts database operations behind a clean interface following
  * the Repository pattern for domain independence.
- * 
+ *
  * Requirements: 11.1, 11.5
  */
 
-import { 
-  Payment, 
-  Subscription, 
-  Refund 
+import {
+  Payment,
+  Subscription,
+  Refund,
 } from '../../../../infrastructure/database/schema/payments.schema.js';
 
 /**
@@ -120,14 +120,14 @@ export interface PaymentHistoryFilter {
 
 /**
  * Payment Repository Interface
- * 
+ *
  * Provides methods for all payment data access operations with caching support.
  * Implementations must handle database errors and map them to domain errors.
  */
 export interface IPaymentRepository {
   /**
    * Creates a new payment in the database
-   * 
+   *
    * @param data - Payment creation data
    * @returns The created payment
    * @throws DatabaseError if database operation fails
@@ -136,7 +136,7 @@ export interface IPaymentRepository {
 
   /**
    * Finds a payment by its unique ID
-   * 
+   *
    * @param id - Payment ID
    * @returns The payment if found, null otherwise
    * @throws DatabaseError if database operation fails
@@ -145,7 +145,7 @@ export interface IPaymentRepository {
 
   /**
    * Finds a payment by Stripe payment intent ID
-   * 
+   *
    * @param stripePaymentIntentId - Stripe payment intent ID
    * @returns The payment if found, null otherwise
    * @throws DatabaseError if database operation fails
@@ -154,7 +154,7 @@ export interface IPaymentRepository {
 
   /**
    * Finds a payment by Stripe checkout session ID
-   * 
+   *
    * @param stripeCheckoutSessionId - Stripe checkout session ID
    * @returns The payment if found, null otherwise
    * @throws DatabaseError if database operation fails
@@ -163,7 +163,7 @@ export interface IPaymentRepository {
 
   /**
    * Updates a payment's data
-   * 
+   *
    * @param id - Payment ID
    * @param data - Update data
    * @returns The updated payment
@@ -174,7 +174,7 @@ export interface IPaymentRepository {
 
   /**
    * Gets payment history for a user with pagination
-   * 
+   *
    * @param userId - User ID
    * @param pagination - Pagination parameters
    * @returns Paginated payment history
@@ -184,20 +184,20 @@ export interface IPaymentRepository {
 
   /**
    * Gets payment history with filters and pagination
-   * 
+   *
    * @param filter - Filter criteria
    * @param pagination - Pagination parameters
    * @returns Paginated filtered payment history
    * @throws DatabaseError if database operation fails
    */
   getFilteredPaymentHistory(
-    filter: PaymentHistoryFilter, 
+    filter: PaymentHistoryFilter,
     pagination: PaginationDTO
   ): Promise<PaginatedResult<Payment>>;
 
   /**
    * Gets payments by status
-   * 
+   *
    * @param status - Payment status
    * @param pagination - Pagination parameters
    * @returns Paginated payments with specified status
@@ -210,7 +210,7 @@ export interface IPaymentRepository {
 
   /**
    * Gets total revenue for a course
-   * 
+   *
    * @param courseId - Course ID
    * @returns Total revenue amount
    * @throws DatabaseError if database operation fails
@@ -219,7 +219,7 @@ export interface IPaymentRepository {
 
   /**
    * Gets total revenue for a user (instructor)
-   * 
+   *
    * @param userId - User ID
    * @returns Total revenue amount
    * @throws DatabaseError if database operation fails
@@ -229,7 +229,7 @@ export interface IPaymentRepository {
   /**
    * Invalidates cache for a specific payment
    * Should be called after any update operation
-   * 
+   *
    * @param id - Payment ID
    * @returns void
    */
@@ -238,13 +238,13 @@ export interface IPaymentRepository {
 
 /**
  * Subscription Repository Interface
- * 
+ *
  * Provides methods for subscription data access operations.
  */
 export interface ISubscriptionRepository {
   /**
    * Creates a new subscription in the database
-   * 
+   *
    * @param data - Subscription creation data
    * @returns The created subscription
    * @throws DatabaseError if database operation fails
@@ -253,7 +253,7 @@ export interface ISubscriptionRepository {
 
   /**
    * Finds a subscription by its unique ID
-   * 
+   *
    * @param id - Subscription ID
    * @returns The subscription if found, null otherwise
    * @throws DatabaseError if database operation fails
@@ -262,7 +262,7 @@ export interface ISubscriptionRepository {
 
   /**
    * Finds a subscription by Stripe subscription ID
-   * 
+   *
    * @param stripeSubscriptionId - Stripe subscription ID
    * @returns The subscription if found, null otherwise
    * @throws DatabaseError if database operation fails
@@ -271,7 +271,7 @@ export interface ISubscriptionRepository {
 
   /**
    * Finds subscriptions by user ID
-   * 
+   *
    * @param userId - User ID
    * @returns Array of user's subscriptions
    * @throws DatabaseError if database operation fails
@@ -280,7 +280,7 @@ export interface ISubscriptionRepository {
 
   /**
    * Updates a subscription's data
-   * 
+   *
    * @param id - Subscription ID
    * @param data - Update data
    * @returns The updated subscription
@@ -291,7 +291,7 @@ export interface ISubscriptionRepository {
 
   /**
    * Gets subscriptions expiring soon (within specified days)
-   * 
+   *
    * @param days - Number of days to look ahead
    * @returns Array of expiring subscriptions
    * @throws DatabaseError if database operation fails
@@ -300,7 +300,7 @@ export interface ISubscriptionRepository {
 
   /**
    * Gets active subscriptions for a user
-   * 
+   *
    * @param userId - User ID
    * @returns Array of active subscriptions
    * @throws DatabaseError if database operation fails
@@ -310,7 +310,7 @@ export interface ISubscriptionRepository {
   /**
    * Invalidates cache for a specific subscription
    * Should be called after any update operation
-   * 
+   *
    * @param id - Subscription ID
    * @returns void
    */
@@ -319,13 +319,13 @@ export interface ISubscriptionRepository {
 
 /**
  * Refund Repository Interface
- * 
+ *
  * Provides methods for refund data access operations.
  */
 export interface IRefundRepository {
   /**
    * Creates a new refund in the database
-   * 
+   *
    * @param data - Refund creation data
    * @returns The created refund
    * @throws DatabaseError if database operation fails
@@ -334,7 +334,7 @@ export interface IRefundRepository {
 
   /**
    * Finds a refund by its unique ID
-   * 
+   *
    * @param id - Refund ID
    * @returns The refund if found, null otherwise
    * @throws DatabaseError if database operation fails
@@ -343,7 +343,7 @@ export interface IRefundRepository {
 
   /**
    * Finds a refund by Stripe refund ID
-   * 
+   *
    * @param stripeRefundId - Stripe refund ID
    * @returns The refund if found, null otherwise
    * @throws DatabaseError if database operation fails
@@ -352,7 +352,7 @@ export interface IRefundRepository {
 
   /**
    * Finds refunds by payment ID
-   * 
+   *
    * @param paymentId - Payment ID
    * @returns Array of refunds for the payment
    * @throws DatabaseError if database operation fails
@@ -361,7 +361,7 @@ export interface IRefundRepository {
 
   /**
    * Finds refunds by enrollment ID
-   * 
+   *
    * @param enrollmentId - Enrollment ID
    * @returns Array of refunds for the enrollment
    * @throws DatabaseError if database operation fails
@@ -370,7 +370,7 @@ export interface IRefundRepository {
 
   /**
    * Updates a refund's data
-   * 
+   *
    * @param id - Refund ID
    * @param data - Update data
    * @returns The updated refund
@@ -381,7 +381,7 @@ export interface IRefundRepository {
 
   /**
    * Gets refunds by status
-   * 
+   *
    * @param status - Refund status
    * @param pagination - Pagination parameters
    * @returns Paginated refunds with specified status
@@ -394,7 +394,7 @@ export interface IRefundRepository {
 
   /**
    * Gets total refunded amount for a payment
-   * 
+   *
    * @param paymentId - Payment ID
    * @returns Total refunded amount
    * @throws DatabaseError if database operation fails
@@ -404,7 +404,7 @@ export interface IRefundRepository {
   /**
    * Invalidates cache for a specific refund
    * Should be called after any update operation
-   * 
+   *
    * @param id - Refund ID
    * @returns void
    */

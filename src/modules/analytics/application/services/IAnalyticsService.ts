@@ -1,17 +1,17 @@
 /**
  * Analytics Service Interface
- * 
+ *
  * Defines the contract for analytics application services.
  * Provides methods for updating analytics, generating reports, and tracking events.
- * 
+ *
  * Requirements: 12.1, 12.2, 12.3, 12.4, 12.7
  */
 
 import type { Role, DateRange } from '../../../../shared/types/index.js';
-import type { 
-  CourseAnalytics, 
-  StudentAnalytics, 
-  AnalyticsEvent 
+import type {
+  CourseAnalytics,
+  StudentAnalytics,
+  AnalyticsEvent,
 } from '../../domain/entities/index.js';
 
 /**
@@ -123,7 +123,7 @@ export interface DashboardMetrics {
   role: Role;
   userId: string;
   generatedAt: Date;
-  
+
   // Common metrics for all roles
   overview: {
     totalUsers?: number;
@@ -238,14 +238,14 @@ export interface DashboardMetrics {
 
 /**
  * Analytics Service Interface
- * 
+ *
  * Provides methods for analytics data aggregation, report generation,
  * dashboard metrics, and event tracking.
  */
 export interface IAnalyticsService {
   /**
    * Updates course analytics by aggregating data from enrollments, progress, and payments
-   * 
+   *
    * @param courseId - Course ID to update analytics for
    * @returns Updated course analytics
    * @throws NotFoundError if course doesn't exist
@@ -255,7 +255,7 @@ export interface IAnalyticsService {
 
   /**
    * Updates student analytics by aggregating data from enrollments, submissions, and progress
-   * 
+   *
    * @param userId - User ID to update analytics for
    * @returns Updated student analytics
    * @throws NotFoundError if user doesn't exist
@@ -265,7 +265,7 @@ export interface IAnalyticsService {
 
   /**
    * Generates comprehensive course report with enrollment trends, performance, and engagement
-   * 
+   *
    * @param courseId - Course ID to generate report for
    * @param dateRange - Date range for the report
    * @returns Detailed course report
@@ -276,7 +276,7 @@ export interface IAnalyticsService {
 
   /**
    * Generates comprehensive student report with learning progress, performance, and recommendations
-   * 
+   *
    * @param userId - User ID to generate report for
    * @param dateRange - Date range for the report
    * @returns Detailed student report
@@ -287,7 +287,7 @@ export interface IAnalyticsService {
 
   /**
    * Gets dashboard metrics tailored to user role (student, educator, admin)
-   * 
+   *
    * @param userId - User ID requesting dashboard metrics
    * @param role - User role for role-specific data
    * @returns Role-specific dashboard metrics
@@ -298,7 +298,7 @@ export interface IAnalyticsService {
 
   /**
    * Tracks user action by creating analytics event for logging and analysis
-   * 
+   *
    * @param event - Analytics event to track
    * @returns Created analytics event
    * @throws ValidationError if event data is invalid
@@ -308,7 +308,7 @@ export interface IAnalyticsService {
 
   /**
    * Batch updates multiple course analytics (for scheduled jobs)
-   * 
+   *
    * @param courseIds - Array of course IDs to update
    * @returns Array of updated course analytics
    * @throws DatabaseError if batch update fails
@@ -317,7 +317,7 @@ export interface IAnalyticsService {
 
   /**
    * Batch updates multiple student analytics (for scheduled jobs)
-   * 
+   *
    * @param userIds - Array of user IDs to update
    * @returns Array of updated student analytics
    * @throws DatabaseError if batch update fails
@@ -326,7 +326,7 @@ export interface IAnalyticsService {
 
   /**
    * Gets trending courses based on recent enrollment velocity
-   * 
+   *
    * @param limit - Number of trending courses to return
    * @param dateRange - Date range to analyze trends
    * @returns Array of trending course analytics
@@ -336,7 +336,7 @@ export interface IAnalyticsService {
 
   /**
    * Gets top performing students based on completion rate and scores
-   * 
+   *
    * @param limit - Number of top students to return
    * @returns Array of top student analytics
    * @throws DatabaseError if performance calculation fails
@@ -345,7 +345,7 @@ export interface IAnalyticsService {
 
   /**
    * Calculates platform-wide metrics for admin dashboard
-   * 
+   *
    * @param dateRange - Date range for metrics calculation
    * @returns Platform-wide analytics summary
    * @throws DatabaseError if metrics calculation fails

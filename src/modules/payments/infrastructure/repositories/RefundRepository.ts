@@ -1,28 +1,30 @@
 /**
  * Refund Repository Implementation
- * 
+ *
  * Implements refund data access operations with Drizzle ORM queries,
  * Redis caching with 5-minute TTL, and cache invalidation on updates.
  * Handles database errors and maps them to domain errors.
- * 
+ *
  * Requirements: 11.1, 11.5
  */
 
 import { eq, desc, count, sum } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
-import { cache, buildCacheKey, CachePrefix, CacheTTL } from '../../../../infrastructure/cache/index.js';
+import {
+  cache,
+  buildCacheKey,
+  CachePrefix,
+  CacheTTL,
+} from '../../../../infrastructure/cache/index.js';
 import { getWriteDb, getReadDb } from '../../../../infrastructure/database/index.js';
-import { 
-  refunds, 
-  Refund, 
-  NewRefund 
+import {
+  refunds,
+  Refund,
+  NewRefund,
 } from '../../../../infrastructure/database/schema/payments.schema.js';
 
-import {
-  DatabaseError,
-  NotFoundError,
-} from '../../../../shared/errors/index.js';
+import { DatabaseError, NotFoundError } from '../../../../shared/errors/index.js';
 import {
   IRefundRepository,
   CreateRefundDTO,
@@ -33,7 +35,7 @@ import {
 
 /**
  * Refund Repository Implementation
- * 
+ *
  * Provides data access methods for refund entities with:
  * - Drizzle ORM for type-safe queries
  * - Redis caching with 5-minute TTL
@@ -80,7 +82,7 @@ export class RefundRepository implements IRefundRepository {
 
   /**
    * Creates a new refund in the database
-   * 
+   *
    * @param data - Refund creation data
    * @returns The created refund
    * @throws DatabaseError if database operation fails
@@ -98,16 +100,10 @@ export class RefundRepository implements IRefundRepository {
       };
 
       // Insert refund into database
-      const [createdRefund] = await this.writeDb
-        .insert(refunds)
-        .values(newRefund)
-        .returning();
+      const [createdRefund] = await this.writeDb.insert(refunds).values(newRefund).returning();
 
       if (!createdRefund) {
-        throw new DatabaseError(
-          'Failed to create refund',
-          'insert'
-        );
+        throw new DatabaseError('Failed to create refund', 'insert');
       }
 
       // Invalidate related caches
@@ -145,10 +141,10 @@ export class RefundRepository implements IRefundRepository {
 
   /**
    * Finds a refund by its unique ID
-   * 
+   *
    * Implements caching with 5-minute TTL.
    * Uses read database for query optimization.
-   * 
+   *
    * @param id - Refund ID
    * @returns The refund if found, null otherwise
    * @throws DatabaseError if database operation fails
@@ -158,17 +154,13 @@ export class RefundRepository implements IRefundRepository {
       // Check cache first
       const cacheKey = this.getRefundCacheKey(id);
       const cachedRefund = await cache.get<Refund>(cacheKey);
-      
+
       if (cachedRefund) {
         return cachedRefund;
       }
 
       // Query database if not in cache
-      const [refund] = await this.readDb
-        .select()
-        .from(refunds)
-        .where(eq(refunds.id, id))
-        .limit(1);
+      const [refund] = await this.readDb.select().from(refunds).where(eq(refunds.id, id)).limit(1);
 
       if (!refund) {
         return null;
@@ -189,9 +181,9 @@ export class RefundRepository implements IRefundRepository {
 
   /**
    * Finds a refund by Stripe refund ID
-   * 
+   *
    * Implements caching with 5-minute TTL.
-   * 
+   *
    * @param stripeRefundId - Stripe refund ID
    * @returns The refund if found, null otherwise
    * @throws DatabaseError if database operation fails
@@ -201,7 +193,7 @@ export class RefundRepository implements IRefundRepository {
       // Check cache first
       const cacheKey = this.getRefundStripeIdCacheKey(stripeRefundId);
       const cachedRefund = await cache.get<Refund>(cacheKey);
-      
+
       if (cachedRefund) {
         return cachedRefund;
       }
@@ -236,9 +228,9 @@ export class RefundRepository implements IRefundRepository {
 
   /**
    * Finds refunds by payment ID
-   * 
+   *
    * Implements caching with 5-minute TTL.
-   * 
+   *
    * @param paymentId - Payment ID
    * @returns Array of refunds for the payment
    * @throws DatabaseError if database operation fails
@@ -248,7 +240,7 @@ export class RefundRepository implements IRefundRepository {
       // Check cache first
       const cacheKey = this.getPaymentRefundsCacheKey(paymentId);
       const cachedRefunds = await cache.get<Refund[]>(cacheKey);
-      
+
       if (cachedRefunds) {
         return cachedRefunds;
       }
@@ -275,9 +267,9 @@ export class RefundRepository implements IRefundRepository {
 
   /**
    * Finds refunds by enrollment ID
-   * 
+   *
    * Implements caching with 5-minute TTL.
-   * 
+   *
    * @param enrollmentId - Enrollment ID
    * @returns Array of refunds for the enrollment
    * @throws DatabaseError if database operation fails
@@ -287,7 +279,7 @@ export class RefundRepository implements IRefundRepository {
       // Check cache first
       const cacheKey = this.getEnrollmentRefundsCacheKey(enrollmentId);
       const cachedRefunds = await cache.get<Refund[]>(cacheKey);
-      
+
       if (cachedRefunds) {
         return cachedRefunds;
       }
@@ -314,9 +306,9 @@ export class RefundRepository implements IRefundRepository {
 
   /**
    * Updates a refund's data
-   * 
+   *
    * Invalidates all related cache entries after successful update.
-   * 
+   *
    * @param id - Refund ID
    * @param data - Update data
    * @returns The updated refund
@@ -348,10 +340,7 @@ export class RefundRepository implements IRefundRepository {
         .returning();
 
       if (!updatedRefund) {
-        throw new DatabaseError(
-          'Failed to update refund',
-          'update'
-        );
+        throw new DatabaseError('Failed to update refund', 'update');
       }
 
       // Invalidate all cache entries for this refund
@@ -367,10 +356,7 @@ export class RefundRepository implements IRefundRepository {
       return updatedRefund;
     } catch (error) {
       // Re-throw known errors
-      if (
-        error instanceof NotFoundError ||
-        error instanceof DatabaseError
-      ) {
+      if (error instanceof NotFoundError || error instanceof DatabaseError) {
         throw error;
       }
 
@@ -385,7 +371,7 @@ export class RefundRepository implements IRefundRepository {
 
   /**
    * Gets refunds by status
-   * 
+   *
    * @param status - Refund status
    * @param pagination - Pagination parameters
    * @returns Paginated refunds with specified status
@@ -433,7 +419,7 @@ export class RefundRepository implements IRefundRepository {
 
   /**
    * Gets total refunded amount for a payment
-   * 
+   *
    * @param paymentId - Payment ID
    * @returns Total refunded amount
    * @throws DatabaseError if database operation fails
@@ -458,7 +444,7 @@ export class RefundRepository implements IRefundRepository {
   /**
    * Invalidates cache for a specific refund
    * Should be called after any update operation
-   * 
+   *
    * @param id - Refund ID
    * @returns void
    */
@@ -474,7 +460,7 @@ export class RefundRepository implements IRefundRepository {
 
   /**
    * Invalidates cache for a refund by Stripe ID
-   * 
+   *
    * @param stripeRefundId - Stripe refund ID
    * @returns void
    */
@@ -489,7 +475,7 @@ export class RefundRepository implements IRefundRepository {
 
   /**
    * Invalidates cache for payment refunds
-   * 
+   *
    * @param paymentId - Payment ID
    * @returns void
    */
@@ -504,7 +490,7 @@ export class RefundRepository implements IRefundRepository {
 
   /**
    * Invalidates cache for enrollment refunds
-   * 
+   *
    * @param enrollmentId - Enrollment ID
    * @returns void
    */
@@ -513,7 +499,10 @@ export class RefundRepository implements IRefundRepository {
       const cacheKey = this.getEnrollmentRefundsCacheKey(enrollmentId);
       await cache.delete(cacheKey);
     } catch (error) {
-      console.error(`Failed to invalidate enrollment refunds cache for enrollment ${enrollmentId}:`, error);
+      console.error(
+        `Failed to invalidate enrollment refunds cache for enrollment ${enrollmentId}:`,
+        error
+      );
     }
   }
 }

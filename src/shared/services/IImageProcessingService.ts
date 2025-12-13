@@ -1,6 +1,6 @@
 /**
  * Image Processing Service Interface
- * 
+ *
  * Defines the contract for image processing operations.
  * Handles image optimization, resizing, and format conversion.
  */
@@ -29,14 +29,14 @@ export interface ProcessedImageResult {
 
 /**
  * Image Processing Service Interface
- * 
+ *
  * Provides methods for image processing operations including
  * resizing, optimization, and format conversion.
  */
 export interface IImageProcessingService {
   /**
    * Processes an image with the specified options
-   * 
+   *
    * @param buffer - Input image buffer
    * @param options - Processing options
    * @returns Processed image result
@@ -47,7 +47,7 @@ export interface IImageProcessingService {
 
   /**
    * Validates if a buffer contains a valid image
-   * 
+   *
    * @param buffer - Image buffer to validate
    * @returns True if valid image, false otherwise
    */
@@ -55,7 +55,7 @@ export interface IImageProcessingService {
 
   /**
    * Gets image metadata
-   * 
+   *
    * @param buffer - Image buffer
    * @returns Image metadata
    * @throws ValidationError if image is invalid
@@ -69,7 +69,7 @@ export interface IImageProcessingService {
 
   /**
    * Creates an optimized avatar image
-   * 
+   *
    * @param buffer - Input image buffer
    * @returns Optimized avatar buffer
    */
@@ -77,7 +77,7 @@ export interface IImageProcessingService {
 
   /**
    * Creates a thumbnail image
-   * 
+   *
    * @param buffer - Input image buffer
    * @returns Thumbnail buffer
    */

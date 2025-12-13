@@ -1,6 +1,6 @@
 /**
  * Queue Configuration
- * 
+ *
  * Centralized configuration for all BullMQ queues with predefined
  * settings for different job types based on requirements.
  */
@@ -10,7 +10,7 @@ import { QueueConfigurations } from './types.js';
 /**
  * Predefined queue configurations based on requirements:
  * - Video processing: Low concurrency (2), 3 retries
- * - Email sending: High concurrency (10), 5 retries  
+ * - Email sending: High concurrency (10), 5 retries
  * - Certificate generation: Moderate concurrency (5), 3 retries
  * - Analytics aggregation: Batch processing, 3 retries
  * - Search indexing: Moderate concurrency (3), 5 retries
@@ -26,7 +26,7 @@ export const QUEUE_CONFIGURATIONS: QueueConfigurations = {
     stalledInterval: 30000,
     maxStalledCount: 1,
   },
-  
+
   emailSending: {
     name: 'email-sending',
     concurrency: 10,
@@ -37,7 +37,7 @@ export const QUEUE_CONFIGURATIONS: QueueConfigurations = {
     stalledInterval: 15000,
     maxStalledCount: 2,
   },
-  
+
   certificateGeneration: {
     name: 'certificate-generation',
     concurrency: 5,
@@ -48,7 +48,7 @@ export const QUEUE_CONFIGURATIONS: QueueConfigurations = {
     stalledInterval: 20000,
     maxStalledCount: 1,
   },
-  
+
   analyticsAggregation: {
     name: 'analytics-aggregation',
     concurrency: 3,
@@ -59,7 +59,7 @@ export const QUEUE_CONFIGURATIONS: QueueConfigurations = {
     stalledInterval: 60000,
     maxStalledCount: 1,
   },
-  
+
   searchIndexing: {
     name: 'search-indexing',
     concurrency: 3,

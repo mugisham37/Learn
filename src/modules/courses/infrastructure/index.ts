@@ -1,6 +1,6 @@
 /**
  * Course Infrastructure Layer
- * 
+ *
  * Exports all infrastructure components for the courses module.
  * Includes repositories for data access operations.
  */

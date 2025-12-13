@@ -1,22 +1,25 @@
 /**
  * Course Mapper
- * 
+ *
  * Maps between database schema types and domain entities.
  * Handles conversion between plain objects from Drizzle ORM and rich domain objects.
  */
 
 import { Course as CourseEntity, CourseProps } from '../../domain/entities/Course.js';
-import { CourseModule as CourseModuleEntity, CourseModuleProps } from '../../domain/entities/CourseModule.js';
+import {
+  CourseModule as CourseModuleEntity,
+  CourseModuleProps,
+} from '../../domain/entities/CourseModule.js';
 import { Lesson as LessonEntity, LessonProps } from '../../domain/entities/Lesson.js';
-import { 
+import {
   Course as CourseSchema,
   CourseModule as CourseModuleSchema,
-  Lesson as LessonSchema
+  Lesson as LessonSchema,
 } from '../../../../infrastructure/database/schema/courses.schema.js';
 
 /**
  * Course Mapper
- * 
+ *
  * Provides static methods to convert between database schema types and domain entities.
  */
 export class CourseMapper {
@@ -52,7 +55,7 @@ export class CourseMapper {
    * Maps array of database course schemas to domain entities
    */
   static toDomainArray(coursesData: CourseSchema[]): CourseEntity[] {
-    return coursesData.map(courseData => this.toDomain(courseData));
+    return coursesData.map((courseData) => this.toDomain(courseData));
   }
 
   /**
@@ -111,7 +114,7 @@ export class CourseModuleMapper {
    * Maps array of database course module schemas to domain entities
    */
   static toDomainArray(modulesData: CourseModuleSchema[]): CourseModuleEntity[] {
-    return modulesData.map(moduleData => this.toDomain(moduleData));
+    return modulesData.map((moduleData) => this.toDomain(moduleData));
   }
 
   /**
@@ -163,7 +166,7 @@ export class LessonMapper {
    * Maps array of database lesson schemas to domain entities
    */
   static toDomainArray(lessonsData: LessonSchema[]): LessonEntity[] {
-    return lessonsData.map(lessonData => this.toDomain(lessonData));
+    return lessonsData.map((lessonData) => this.toDomain(lessonData));
   }
 
   /**

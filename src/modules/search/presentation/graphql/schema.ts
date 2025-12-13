@@ -1,9 +1,9 @@
 /**
  * GraphQL Schema for Search Module
- * 
+ *
  * Defines GraphQL types, inputs, and schema for search operations
  * including course search, lesson search, autocomplete, and trending searches.
- * 
+ *
  * Requirements: 21.1, 21.2
  */
 
@@ -193,22 +193,13 @@ export const searchTypeDefs = gql`
     ): SearchResult!
 
     # Lesson search within a course or across all courses
-    searchLessons(
-      query: String!
-      courseId: ID
-      pagination: SearchPagination
-    ): LessonSearchResults!
+    searchLessons(query: String!, courseId: ID, pagination: SearchPagination): LessonSearchResults!
 
     # Autocomplete suggestions for search queries
-    autocomplete(
-      query: String!
-      limit: Int
-    ): [String!]!
+    autocomplete(query: String!, limit: Int): [String!]!
 
     # Trending search terms based on recent activity
-    trendingSearches(
-      limit: Int
-    ): [String!]!
+    trendingSearches(limit: Int): [String!]!
 
     # Search health and statistics
     searchHealth: SearchHealthResult!

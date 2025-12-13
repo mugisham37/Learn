@@ -1,9 +1,9 @@
 /**
  * CDN Caching Configuration Utilities
- * 
+ *
  * Provides utilities for configuring CloudFront and other CDN caching
  * behaviors for static content and API responses.
- * 
+ *
  * Requirements: 15.4, 15.5
  */
 
@@ -224,7 +224,7 @@ export function getCacheBehaviorForPath(path: string): CDNCacheBehavior | null {
   for (const [name, behavior] of Object.entries(CDNCacheBehaviors)) {
     const pattern = behavior.pathPattern.replace('*', '.*');
     const regex = new RegExp(`^${pattern}$`);
-    
+
     if (regex.test(path)) {
       logger.debug('Matched CDN cache behavior', {
         path,
@@ -247,7 +247,7 @@ export function generateCDNCacheHeaders(
   customBehavior?: Partial<CDNCacheBehavior>
 ): Record<string, string> {
   const behavior = getCacheBehaviorForPath(path);
-  
+
   if (!behavior) {
     return {};
   }
@@ -259,15 +259,16 @@ export function generateCDNCacheHeaders(
 
   // Add Cache-Control header
   const cacheDirectives: string[] = [];
-  
+
   if (finalBehavior.ttl > 0) {
     cacheDirectives.push(`max-age=${finalBehavior.ttl}`);
-    
+
     // Add s-maxage for shared caches (CDN)
-    if (finalBehavior.ttl > 300) { // Only for longer cache durations
+    if (finalBehavior.ttl > 300) {
+      // Only for longer cache durations
       cacheDirectives.push(`s-maxage=${finalBehavior.ttl}`);
     }
-    
+
     cacheDirectives.push('public');
   } else {
     cacheDirectives.push('no-cache', 'no-store', 'must-revalidate');
@@ -309,9 +310,13 @@ export function addCDNCacheHeaders(
   path: string,
   customBehavior?: Partial<CDNCacheBehavior>
 ): (request: MiddlewareRequest, reply: MiddlewareReply, next?: MiddlewareNext) => void {
-  return function (_request: MiddlewareRequest, reply: MiddlewareReply, next?: MiddlewareNext): void {
+  return function (
+    _request: MiddlewareRequest,
+    reply: MiddlewareReply,
+    next?: MiddlewareNext
+  ): void {
     const headers = generateCDNCacheHeaders(path, customBehavior);
-    
+
     Object.entries(headers).forEach(([key, value]) => {
       reply.header(key, value);
     });
@@ -416,4 +421,3 @@ export function generateCloudFormationCDNConfig(): CloudFormationCDNConfig {
     },
   };
 }
-

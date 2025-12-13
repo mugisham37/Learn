@@ -1,6 +1,6 @@
 /**
  * Course Application Services
- * 
+ *
  * Exports all course-related application services and interfaces.
  */
 

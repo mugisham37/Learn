@@ -1,6 +1,6 @@
 /**
  * Payment Routes
- * 
+ *
  * REST endpoints for payment-related operations.
  */
 

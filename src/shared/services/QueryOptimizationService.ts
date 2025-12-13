@@ -1,6 +1,6 @@
 /**
  * Query Optimization Service
- * 
+ *
  * Provides centralized query optimization, caching, and N+1 prevention
  * Implements requirement 15.1 for database query optimization
  */
@@ -11,7 +11,11 @@ import { Redis } from 'ioredis';
 
 import * as schema from '../../infrastructure/database/schema/index.js';
 import { logger } from '../utils/logger.js';
-import { QueryOptimizer, QueryCache, CursorPaginationOptions, CursorPaginationResult } from '../utils/queryOptimization.js';
+import {
+  QueryOptimizer,
+  CursorPaginationOptions,
+  CursorPaginationResult,
+} from '../utils/queryOptimization.js';
 
 /**
  * Batch loading configuration
@@ -37,15 +41,14 @@ interface PromiseWithResolvers<T> extends Promise<T> {
  */
 export class QueryOptimizationService {
   private queryOptimizer: QueryOptimizer;
-  private queryCache: QueryCache;
   private batchLoaders = new Map<string, BatchLoader<unknown, unknown>>();
 
   constructor(
     private readonly db: NodePgDatabase<typeof schema>,
     private redis: Redis
   ) {
-    this.queryOptimizer = new QueryOptimizer(db as NodePgDatabase<Record<string, never>>);
-    this.queryCache = new QueryCache();
+    // Create a generic QueryOptimizer that accepts any database schema
+    this.queryOptimizer = new QueryOptimizer(this.db as unknown as NodePgDatabase<Record<string, never>>);
   }
 
   /**
@@ -60,7 +63,11 @@ export class QueryOptimizationService {
       enableAnalysis?: boolean;
     } = {}
   ): Promise<T> {
-    const { enableCaching = false, cacheTTL = 300000, enableAnalysis: _enableAnalysis = false } = options;
+    const {
+      enableCaching = false,
+      cacheTTL = 300000,
+      enableAnalysis: _enableAnalysis = false,
+    } = options;
 
     // Check cache first if enabled
     if (enableCaching) {
@@ -73,7 +80,7 @@ export class QueryOptimizationService {
     }
 
     const startTime = Date.now();
-    
+
     try {
       // Execute query
       const result = await queryFn();
@@ -95,7 +102,11 @@ export class QueryOptimizationService {
 
       return result;
     } catch (error) {
-      logger.error('Query execution failed', { queryName, error, executionTime: Date.now() - startTime });
+      logger.error('Query execution failed', {
+        queryName,
+        error,
+        executionTime: Date.now() - startTime,
+      });
       throw error;
     }
   }
@@ -103,10 +114,7 @@ export class QueryOptimizationService {
   /**
    * Create batch loader for N+1 prevention
    */
-  createBatchLoader<K, V>(
-    name: string,
-    config: BatchLoaderConfig<K, V>
-  ): BatchLoader<K, V> {
+  createBatchLoader<K, V>(name: string, config: BatchLoaderConfig<K, V>): BatchLoader<K, V> {
     if (this.batchLoaders.has(name)) {
       return this.batchLoaders.get(name) as BatchLoader<K, V>;
     }
@@ -143,9 +151,10 @@ export class QueryOptimizationService {
 
     // Generate next cursor if we have more items
     const hasMore = items.length === limit;
-    const nextCursor = hasMore && items.length > 0 
-      ? this.generateCursor(items[items.length - 1] as Record<string, unknown>, orderBy)
-      : undefined;
+    const nextCursor =
+      hasMore && items.length > 0
+        ? this.generateCursor(items[items.length - 1] as Record<string, unknown>, orderBy)
+        : undefined;
 
     return {
       items,
@@ -191,7 +200,7 @@ export class QueryOptimizationService {
    * Analyze query performance
    */
   async analyzeQuery(query: string, params: unknown[] = []): Promise<unknown> {
-    return this.queryOptimizer.analyzeQuery(query, params);
+    return await this.queryOptimizer.analyzeQuery(query, params);
   }
 
   /**
@@ -255,7 +264,7 @@ export class BatchLoader<K, V> {
     // Create promise for this key
     const promise = new Promise<V | null>((resolve, reject) => {
       this.pendingKeys.add(key);
-      
+
       // Set up batch execution
       if (!this.batchTimeout) {
         this.batchTimeout = setTimeout(() => {
@@ -276,7 +285,7 @@ export class BatchLoader<K, V> {
    * Load multiple items
    */
   async loadMany(keys: K[]): Promise<Array<V | null>> {
-    return Promise.all(keys.map(key => this.load(key)));
+    return Promise.all(keys.map((key) => this.load(key)));
   }
 
   /**
@@ -295,7 +304,7 @@ export class BatchLoader<K, V> {
 
     const keys = Array.from(this.pendingKeys);
     const promises = Array.from(this.pendingPromises.values());
-    
+
     // Clear pending state
     this.pendingKeys.clear();
     this.pendingPromises.clear();
@@ -304,20 +313,19 @@ export class BatchLoader<K, V> {
     try {
       // Execute batch loader
       const results = await this.config.loader(keys);
-      
+
       // Cache results
       await this.cacheResults(keys, results);
 
       // Resolve promises
       promises.forEach((promise, index) => {
         const result = results[index] || null;
-        (promise as PromiseWithResolvers<V | null>)._resolve?.(result);
+        promise._resolve?.(result);
       });
-
     } catch (error) {
       // Reject all promises
-      promises.forEach(promise => {
-        (promise as PromiseWithResolvers<V | null>)._reject?.(error);
+      promises.forEach((promise) => {
+        promise._reject?.(error);
       });
     }
   }
@@ -340,16 +348,12 @@ export class BatchLoader<K, V> {
    */
   private async cacheResults(keys: K[], results: V[]): Promise<void> {
     const pipeline = this.redis.pipeline();
-    
+
     keys.forEach((key, index) => {
       const result = results[index];
       if (result !== null && result !== undefined) {
         const cacheKey = `${this.config.cacheKeyPrefix}:${String(key)}`;
-        pipeline.setex(
-          cacheKey,
-          Math.floor(this.config.cacheTTL / 1000),
-          JSON.stringify(result)
-        );
+        pipeline.setex(cacheKey, Math.floor(this.config.cacheTTL / 1000), JSON.stringify(result));
       }
     });
 
@@ -377,12 +381,13 @@ export class BatchLoadersFactory {
       cacheTTL: 300000, // 5 minutes
       loader: async (userIds: string[]) => {
         // Implementation would use proper Drizzle query
-        const users = await this.db.select().from(schema.users).where(
-          inArray(schema.users.id, userIds)
-        );
-        
+        const users = await this.db
+          .select()
+          .from(schema.users)
+          .where(inArray(schema.users.id, userIds));
+
         // Return results in same order as requested keys
-        return userIds.map(id => users.find(user => user.id === id) || null);
+        return userIds.map((id) => users.find((user) => user.id === id) || null);
       },
     });
   }
@@ -397,11 +402,12 @@ export class BatchLoadersFactory {
       cacheKeyPrefix: 'course',
       cacheTTL: 600000, // 10 minutes
       loader: async (courseIds: string[]) => {
-        const courses = await this.db.select().from(schema.courses).where(
-          inArray(schema.courses.id, courseIds)
-        );
-        
-        return courseIds.map(id => courses.find(course => course.id === id) || null);
+        const courses = await this.db
+          .select()
+          .from(schema.courses)
+          .where(inArray(schema.courses.id, courseIds));
+
+        return courseIds.map((id) => courses.find((course) => course.id === id) || null);
       },
     });
   }
@@ -416,11 +422,14 @@ export class BatchLoadersFactory {
       cacheKeyPrefix: 'enrollment',
       cacheTTL: 180000, // 3 minutes
       loader: async (enrollmentIds: string[]) => {
-        const enrollments = await this.db.select().from(schema.enrollments).where(
-          inArray(schema.enrollments.id, enrollmentIds)
+        const enrollments = await this.db
+          .select()
+          .from(schema.enrollments)
+          .where(inArray(schema.enrollments.id, enrollmentIds));
+
+        return enrollmentIds.map(
+          (id) => enrollments.find((enrollment) => enrollment.id === id) || null
         );
-        
-        return enrollmentIds.map(id => enrollments.find(enrollment => enrollment.id === id) || null);
       },
     });
   }
@@ -436,15 +445,15 @@ export function withQueryOptimization<T extends object>(
   return new Proxy(repository, {
     get(target, prop, receiver): unknown {
       const originalMethod = Reflect.get(target, prop, receiver);
-      
+
       if (typeof originalMethod === 'function' && typeof prop === 'string') {
         // Wrap repository methods with optimization
-        return function(this: T, ...args: unknown[]): unknown {
+        return async function (this: T, ...args: unknown[]): Promise<unknown> {
           const methodName = `${target.constructor.name}.${prop}`;
-          
-          return optimizationService.executeOptimizedQuery(
+
+          return await optimizationService.executeOptimizedQuery(
             methodName,
-            () => (originalMethod as (...args: unknown[]) => unknown).apply(this, args),
+            async () => await Promise.resolve((originalMethod as (...args: unknown[]) => unknown).apply(this, args)),
             {
               enableCaching: prop.startsWith('find') || prop.startsWith('get'),
               cacheTTL: 300000, // 5 minutes default
@@ -453,7 +462,7 @@ export function withQueryOptimization<T extends object>(
           );
         };
       }
-      
+
       return originalMethod;
     },
   });

@@ -1,9 +1,9 @@
 /**
  * Email Queue Implementation
- * 
+ *
  * Implements BullMQ queue for email sending jobs with retry logic,
  * bounce/complaint webhook handling, and delivery status tracking.
- * 
+ *
  * Requirements:
  * - 10.2: Email template system with dynamic data population
  * - 14.2: Email queue with high concurrency and retry logic
@@ -14,7 +14,13 @@ import { Queue, Worker, Job, QueueOptions, WorkerOptions, JobsOptions } from 'bu
 import { redis } from '../../infrastructure/cache/index.js';
 import { logger } from '../utils/logger.js';
 
-import { IEmailService, EmailOptions, EmailResult, BulkEmailResult, EmailTemplateData } from './IEmailService.js';
+import {
+  IEmailService,
+  EmailOptions,
+  EmailResult,
+  BulkEmailResult,
+  EmailTemplateData,
+} from './IEmailService.js';
 import { ServiceFactory } from './ServiceFactory.js';
 
 /**
@@ -86,7 +92,7 @@ const EMAIL_WORKER_OPTIONS: WorkerOptions = {
 
 /**
  * Email Queue Implementation
- * 
+ *
  * Manages email sending jobs with BullMQ, implements retry logic,
  * tracks delivery status, and handles bounce/complaint webhooks.
  */
@@ -194,11 +200,7 @@ export class EmailQueue {
       if (type === 'single' && options) {
         return await this.emailService.sendTransactional(options);
       } else if (type === 'bulk' && recipients && templateId) {
-        return await this.emailService.sendBulk(
-          recipients,
-          templateId,
-          templateData || {}
-        );
+        return await this.emailService.sendBulk(recipients, templateId, templateData || {});
       } else {
         throw new Error('Invalid email job data');
       }
@@ -401,7 +403,7 @@ export class EmailQueue {
     try {
       // Clean completed jobs older than 24 hours
       await this.queue.clean(24 * 60 * 60 * 1000, 100, 'completed');
-      
+
       // Clean failed jobs older than 7 days
       await this.queue.clean(7 * 24 * 60 * 60 * 1000, 50, 'failed');
 
@@ -418,7 +420,7 @@ export class EmailQueue {
    */
   async shutdown(): Promise<void> {
     logger.info('Shutting down email queue...');
-    
+
     try {
       await this.worker.close();
       await this.queue.close();
@@ -524,10 +526,10 @@ export function getEmailQueue(): EmailQueue {
  */
 export async function initializeEmailQueue(): Promise<EmailQueue> {
   const queue = getEmailQueue();
-  
+
   // Perform any initialization tasks
   await queue.healthCheck();
-  
+
   logger.info('Email queue initialized successfully');
   return queue;
 }

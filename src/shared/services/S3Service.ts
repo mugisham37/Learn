@@ -1,16 +1,16 @@
 /**
  * S3 Service Implementation
- * 
+ *
  * Implements S3 file operations using AWS SDK v3.
  * Handles file uploads, deletions, and presigned URL generation.
  */
 
-import { 
-  S3Client, 
-  PutObjectCommand, 
-  DeleteObjectCommand, 
+import {
+  S3Client,
+  PutObjectCommand,
+  DeleteObjectCommand,
   HeadObjectCommand,
-  PutObjectCommandInput 
+  PutObjectCommandInput,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
@@ -19,16 +19,16 @@ import { ExternalServiceError } from '../errors/index.js';
 import { logger } from '../utils/logger.js';
 import { secrets } from '../utils/secureConfig.js';
 
-import { 
-  IS3Service, 
-  UploadFileParams, 
-  UploadFileResult, 
-  PresignedUrlParams 
+import {
+  IS3Service,
+  UploadFileParams,
+  UploadFileResult,
+  PresignedUrlParams,
 } from './IS3Service.js';
 
 /**
  * S3 Service Implementation
- * 
+ *
  * Provides S3 file operations with error handling and logging.
  */
 export class S3Service implements IS3Service {
@@ -39,10 +39,13 @@ export class S3Service implements IS3Service {
     const awsConfig = secrets.getAwsConfig();
     this.client = new S3Client({
       region: config.s3.bucketRegion,
-      credentials: awsConfig.accessKeyId && awsConfig.secretAccessKey ? {
-        accessKeyId: awsConfig.accessKeyId,
-        secretAccessKey: awsConfig.secretAccessKey,
-      } : undefined, // Use default credential chain if not provided
+      credentials:
+        awsConfig.accessKeyId && awsConfig.secretAccessKey
+          ? {
+              accessKeyId: awsConfig.accessKeyId,
+              secretAccessKey: awsConfig.secretAccessKey,
+            }
+          : undefined, // Use default credential chain if not provided
     });
     this.bucketName = config.s3.bucketName;
 
@@ -222,7 +225,7 @@ export class S3Service implements IS3Service {
       // Test S3 connectivity by attempting to list bucket contents
       // This is a lightweight operation that verifies credentials and connectivity
       const { ListObjectsV2Command } = await import('@aws-sdk/client-s3');
-      
+
       const command = new ListObjectsV2Command({
         Bucket: this.bucketName,
         MaxKeys: 1, // Minimal request to test connectivity
@@ -239,15 +242,16 @@ export class S3Service implements IS3Service {
       };
     } catch (error: unknown) {
       const latencyMs = Date.now() - startTime;
-      
+
       // Check if it's a permissions issue vs connectivity issue
       const errorObj = error as { name?: string; $metadata?: { httpStatusCode?: number } };
-      const isPermissionError = errorObj.name === 'AccessDenied' || 
-                               errorObj.name === 'Forbidden' ||
-                               errorObj.$metadata?.httpStatusCode === 403;
-      
-      const isNotFoundError = errorObj.name === 'NoSuchBucket' ||
-                             errorObj.$metadata?.httpStatusCode === 404;
+      const isPermissionError =
+        errorObj.name === 'AccessDenied' ||
+        errorObj.name === 'Forbidden' ||
+        errorObj.$metadata?.httpStatusCode === 403;
+
+      const isNotFoundError =
+        errorObj.name === 'NoSuchBucket' || errorObj.$metadata?.httpStatusCode === 404;
 
       let errorMessage = 'S3 health check failed';
       if (isPermissionError) {

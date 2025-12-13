@@ -1,9 +1,9 @@
 /**
  * Socket.io WebSocket Configuration
- * 
+ *
  * Manages real-time communication infrastructure with authentication,
  * room management, and Redis adapter for horizontal scaling.
- * 
+ *
  * Requirements: 9.6, 9.7, 9.8
  */
 
@@ -32,23 +32,23 @@ export interface AuthenticatedSocket extends Socket {
 export const SocketRooms = {
   // User-specific room for private notifications
   user: (userId: string) => `user:${userId}`,
-  
+
   // Course-specific room for course-wide communications
   course: (courseId: string) => `course:${courseId}`,
-  
+
   // Direct conversation between two users
   conversation: (userId1: string, userId2: string) => {
     // Ensure consistent room naming regardless of parameter order
     const [user1, user2] = [userId1, userId2].sort();
     return `conversation:${user1}:${user2}`;
   },
-  
+
   // Discussion thread room for thread-specific updates
   thread: (threadId: string) => `thread:${threadId}`,
-  
+
   // Lesson-specific room for lesson activities
   lesson: (lessonId: string) => `lesson:${lessonId}`,
-  
+
   // Quiz session room for real-time quiz interactions
   quiz: (quizId: string, userId: string) => `quiz:${quizId}:${userId}`,
 } as const;
@@ -63,7 +63,7 @@ let io: SocketIOServer | null = null;
  */
 export async function createSocketServer(fastify: FastifyInstance): Promise<SocketIOServer> {
   // Note: Socket.io creates its own HTTP server, no need to register WebSocket plugin
-  
+
   // Create Socket.io server instance
   io = new SocketIOServer(fastify.server, {
     path: config.websocket.path,
@@ -89,7 +89,7 @@ export async function createSocketServer(fastify: FastifyInstance): Promise<Sock
   // Configure Redis adapter for horizontal scaling (requirement 9.8)
   const pubClient = redis.duplicate();
   const subClient = redis.duplicate();
-  
+
   // Wait for Redis clients to be ready
   await Promise.all([
     new Promise<void>((resolve) => {
@@ -184,7 +184,7 @@ async function authenticateSocket(socket: any, next: (err?: Error) => void): Pro
   try {
     // Extract token from auth header or query parameter
     const token = socket.handshake.auth?.token || socket.handshake.query?.token;
-    
+
     if (!token) {
       throw new Error('No authentication token provided');
     }
@@ -216,13 +216,13 @@ function setupSocketEventHandlers(socket: AuthenticatedSocket): void {
     try {
       // TODO: Validate user has access to course
       await socket.join(SocketRooms.course(courseId));
-      
+
       logger.info('User joined course room', {
         userId: socket.userId,
         courseId,
         socketId: socket.id,
       });
-      
+
       socket.emit('joined-course', { courseId });
     } catch (error) {
       logger.error('Error joining course room', {
@@ -230,7 +230,7 @@ function setupSocketEventHandlers(socket: AuthenticatedSocket): void {
         courseId,
         error: error instanceof Error ? error.message : String(error),
       });
-      
+
       socket.emit('error', { message: 'Failed to join course room' });
     }
   });
@@ -239,13 +239,13 @@ function setupSocketEventHandlers(socket: AuthenticatedSocket): void {
   socket.on('leave-course', async (courseId: string) => {
     try {
       await socket.leave(SocketRooms.course(courseId));
-      
+
       logger.info('User left course room', {
         userId: socket.userId,
         courseId,
         socketId: socket.id,
       });
-      
+
       socket.emit('left-course', { courseId });
     } catch (error) {
       logger.error('Error leaving course room', {
@@ -261,14 +261,14 @@ function setupSocketEventHandlers(socket: AuthenticatedSocket): void {
     try {
       const conversationRoom = SocketRooms.conversation(socket.userId, otherUserId);
       await socket.join(conversationRoom);
-      
+
       logger.info('User joined conversation room', {
         userId: socket.userId,
         otherUserId,
         conversationRoom,
         socketId: socket.id,
       });
-      
+
       socket.emit('joined-conversation', { otherUserId, room: conversationRoom });
     } catch (error) {
       logger.error('Error joining conversation room', {
@@ -276,7 +276,7 @@ function setupSocketEventHandlers(socket: AuthenticatedSocket): void {
         otherUserId,
         error: error instanceof Error ? error.message : String(error),
       });
-      
+
       socket.emit('error', { message: 'Failed to join conversation room' });
     }
   });
@@ -285,13 +285,13 @@ function setupSocketEventHandlers(socket: AuthenticatedSocket): void {
   socket.on('join-thread', async (threadId: string) => {
     try {
       await socket.join(SocketRooms.thread(threadId));
-      
+
       logger.info('User joined thread room', {
         userId: socket.userId,
         threadId,
         socketId: socket.id,
       });
-      
+
       socket.emit('joined-thread', { threadId });
     } catch (error) {
       logger.error('Error joining thread room', {
@@ -299,7 +299,7 @@ function setupSocketEventHandlers(socket: AuthenticatedSocket): void {
         threadId,
         error: error instanceof Error ? error.message : String(error),
       });
-      
+
       socket.emit('error', { message: 'Failed to join thread room' });
     }
   });
@@ -307,11 +307,11 @@ function setupSocketEventHandlers(socket: AuthenticatedSocket): void {
   // Typing indicator for conversations
   socket.on('typing-start', (data: { conversationId?: string; threadId?: string }) => {
     try {
-      const room = data.conversationId 
+      const room = data.conversationId
         ? SocketRooms.conversation(socket.userId, data.conversationId)
-        : data.threadId 
-        ? SocketRooms.thread(data.threadId)
-        : null;
+        : data.threadId
+          ? SocketRooms.thread(data.threadId)
+          : null;
 
       if (room) {
         socket.to(room).emit('user-typing', {
@@ -331,11 +331,11 @@ function setupSocketEventHandlers(socket: AuthenticatedSocket): void {
   // Stop typing indicator
   socket.on('typing-stop', (data: { conversationId?: string; threadId?: string }) => {
     try {
-      const room = data.conversationId 
+      const room = data.conversationId
         ? SocketRooms.conversation(socket.userId, data.conversationId)
-        : data.threadId 
-        ? SocketRooms.thread(data.threadId)
-        : null;
+        : data.threadId
+          ? SocketRooms.thread(data.threadId)
+          : null;
 
       if (room) {
         socket.to(room).emit('user-typing', {
@@ -357,7 +357,7 @@ function setupSocketEventHandlers(socket: AuthenticatedSocket): void {
     try {
       const quizRoom = SocketRooms.quiz(quizId, socket.userId);
       await socket.join(quizRoom);
-      
+
       socket.emit('joined-quiz', { quizId, room: quizRoom });
     } catch (error) {
       logger.error('Error joining quiz room', {
@@ -372,7 +372,10 @@ function setupSocketEventHandlers(socket: AuthenticatedSocket): void {
 /**
  * Handles user presence updates and broadcasts to relevant rooms
  */
-async function handleUserPresence(socket: AuthenticatedSocket, status: 'online' | 'offline'): Promise<void> {
+async function handleUserPresence(
+  socket: AuthenticatedSocket,
+  status: 'online' | 'offline'
+): Promise<void> {
   try {
     // Broadcast presence to course rooms
     if (socket.enrolledCourses && socket.enrolledCourses.length > 0) {
@@ -388,11 +391,16 @@ async function handleUserPresence(socket: AuthenticatedSocket, status: 'online' 
     // Store presence in Redis for persistence
     const presenceKey = `presence:${socket.userId}`;
     if (status === 'online') {
-      await redis.setex(presenceKey, 300, JSON.stringify({ // 5-minute TTL
-        status,
-        lastSeen: new Date().toISOString(),
-        socketId: socket.id,
-      }));
+      await redis.setex(
+        presenceKey,
+        300,
+        JSON.stringify({
+          // 5-minute TTL
+          status,
+          lastSeen: new Date().toISOString(),
+          socketId: socket.id,
+        })
+      );
     } else {
       await redis.del(presenceKey);
     }
@@ -430,7 +438,7 @@ export async function emitToUser(userId: string, event: string, data: any): Prom
     }
 
     io.to(SocketRooms.user(userId)).emit(event, data);
-    
+
     logger.debug('Event emitted to user', {
       userId,
       event,
@@ -455,7 +463,7 @@ export async function emitToRoom(room: string, event: string, data: any): Promis
     }
 
     io.to(room).emit(event, data);
-    
+
     logger.debug('Event emitted to room', {
       room,
       event,
@@ -480,7 +488,12 @@ export async function emitToCourse(courseId: string, event: string, data: any): 
 /**
  * Emits an event to a conversation between two users
  */
-export async function emitToConversation(userId1: string, userId2: string, event: string, data: any): Promise<void> {
+export async function emitToConversation(
+  userId1: string,
+  userId2: string,
+  event: string,
+  data: any
+): Promise<void> {
   return emitToRoom(SocketRooms.conversation(userId1, userId2), event, data);
 }
 
@@ -521,7 +534,7 @@ export async function getUserPresence(userId: string): Promise<{
   try {
     const presenceKey = `presence:${userId}`;
     const presence = await redis.get(presenceKey);
-    
+
     if (!presence) {
       return { status: 'offline' };
     }

@@ -1,61 +1,47 @@
 /**
  * Metrics Calculator Service Implementation
- * 
+ *
  * Implements metrics calculation services using efficient SQL aggregations
  * and time-series analysis. Provides comprehensive analytics calculations
  * for completion rates, scores, engagement, and trends.
- * 
+ *
  * Requirements: 12.1, 12.2
  */
 
-import { 
-  eq, 
-  and, 
-  gte, 
-  lte, 
-  count, 
-  avg, 
+import {
+  eq,
+  and,
+  gte,
+  lte,
+  count,
+  avg,
   sum,
   sql,
   inArray,
   isNotNull,
-  countDistinct
+  countDistinct,
 } from 'drizzle-orm';
 
 import { getReadDb } from '../../../../infrastructure/database/index.js';
-import { 
-  analyticsEvents 
-} from '../../../../infrastructure/database/schema/analytics.schema.js';
-import { 
+import { analyticsEvents } from '../../../../infrastructure/database/schema/analytics.schema.js';
+import {
   quizSubmissions,
-  assignmentSubmissions
+  assignmentSubmissions,
 } from '../../../../infrastructure/database/schema/assessments.schema.js';
-import { 
-  discussionPosts 
-} from '../../../../infrastructure/database/schema/communication.schema.js';
-import { 
-  courses 
-} from '../../../../infrastructure/database/schema/courses.schema.js';
-import { 
-  enrollments, 
-  lessonProgress 
+import { discussionPosts } from '../../../../infrastructure/database/schema/communication.schema.js';
+import { courses } from '../../../../infrastructure/database/schema/courses.schema.js';
+import {
+  enrollments,
+  lessonProgress,
 } from '../../../../infrastructure/database/schema/enrollments.schema.js';
-import { 
-  NotFoundError, 
-  DatabaseError, 
-  ValidationError 
-} from '../../../../shared/errors/index.js';
+import { NotFoundError, DatabaseError, ValidationError } from '../../../../shared/errors/index.js';
 
 import type { DateRange } from '../../../../shared/types/index.js';
-import type { 
-  IMetricsCalculator, 
-  TrendData, 
-  EngagementComponents 
-} from './IMetricsCalculator.js';
+import type { IMetricsCalculator, TrendData, EngagementComponents } from './IMetricsCalculator.js';
 
 /**
  * Metrics Calculator Service Implementation
- * 
+ *
  * Provides efficient SQL-based calculations for various analytics metrics
  * including completion rates, scores, engagement, and trend analysis.
  */
@@ -64,7 +50,7 @@ export class MetricsCalculator implements IMetricsCalculator {
 
   /**
    * Calculates completion rate for a specific course
-   * 
+   *
    * @param courseId - Course ID to calculate completion rate for
    * @returns Completion rate as a percentage (0-100)
    */
@@ -87,7 +73,7 @@ export class MetricsCalculator implements IMetricsCalculator {
           totalEnrollments: count(),
           completedEnrollments: sum(
             sql`CASE WHEN ${enrollments.status} = 'completed' THEN 1 ELSE 0 END`
-          ).mapWith(Number)
+          ).mapWith(Number),
         })
         .from(enrollments)
         .where(eq(enrollments.courseId, courseId));
@@ -118,7 +104,7 @@ export class MetricsCalculator implements IMetricsCalculator {
 
   /**
    * Calculates average quiz score for a specific user across all courses
-   * 
+   *
    * @param userId - User ID to calculate average score for
    * @returns Average score as a percentage (0-100)
    */
@@ -127,7 +113,7 @@ export class MetricsCalculator implements IMetricsCalculator {
       // Get average score from quiz submissions
       const result = await this.db
         .select({
-          averageScore: avg(quizSubmissions.scorePercentage)
+          averageScore: avg(quizSubmissions.scorePercentage),
         })
         .from(quizSubmissions)
         .where(
@@ -139,7 +125,7 @@ export class MetricsCalculator implements IMetricsCalculator {
         );
 
       const averageScore = result[0]?.averageScore;
-      
+
       if (averageScore === null || averageScore === undefined) {
         return 0;
       }
@@ -156,7 +142,7 @@ export class MetricsCalculator implements IMetricsCalculator {
 
   /**
    * Calculates engagement score for a specific user based on multiple factors
-   * 
+   *
    * @param userId - User ID to calculate engagement score for
    * @returns Engagement score components and overall score (0-100)
    */
@@ -165,7 +151,7 @@ export class MetricsCalculator implements IMetricsCalculator {
       // Get video watch time (from lesson progress)
       const videoTimeResult = await this.db
         .select({
-          totalVideoTime: sum(lessonProgress.timeSpentSeconds)
+          totalVideoTime: sum(lessonProgress.timeSpentSeconds),
         })
         .from(lessonProgress)
         .innerJoin(enrollments, eq(lessonProgress.enrollmentId, enrollments.id))
@@ -176,7 +162,7 @@ export class MetricsCalculator implements IMetricsCalculator {
       // Get discussion participation (posts count)
       const discussionResult = await this.db
         .select({
-          postCount: count()
+          postCount: count(),
         })
         .from(discussionPosts)
         .where(eq(discussionPosts.authorId, userId));
@@ -186,7 +172,7 @@ export class MetricsCalculator implements IMetricsCalculator {
       // Get assignment submissions count
       const assignmentResult = await this.db
         .select({
-          submissionCount: count()
+          submissionCount: count(),
         })
         .from(assignmentSubmissions)
         .where(eq(assignmentSubmissions.studentId, userId));
@@ -196,7 +182,7 @@ export class MetricsCalculator implements IMetricsCalculator {
       // Get quiz attempts count
       const quizResult = await this.db
         .select({
-          attemptCount: count()
+          attemptCount: count(),
         })
         .from(quizSubmissions)
         .where(eq(quizSubmissions.studentId, userId));
@@ -209,14 +195,11 @@ export class MetricsCalculator implements IMetricsCalculator {
 
       const sessionResult = await this.db
         .select({
-          uniqueDays: countDistinct(sql`DATE(${analyticsEvents.timestamp})`)
+          uniqueDays: countDistinct(sql`DATE(${analyticsEvents.timestamp})`),
         })
         .from(analyticsEvents)
         .where(
-          and(
-            eq(analyticsEvents.userId, userId),
-            gte(analyticsEvents.timestamp, thirtyDaysAgo)
-          )
+          and(eq(analyticsEvents.userId, userId), gte(analyticsEvents.timestamp, thirtyDaysAgo))
         );
 
       const sessionFrequency = Number(sessionResult[0]?.uniqueDays || 0);
@@ -229,13 +212,15 @@ export class MetricsCalculator implements IMetricsCalculator {
       const sessionScore = Math.min(sessionFrequency * 3.33, 100); // 30 days = 100 points
 
       // Calculate weighted overall score
-      const overallScore = Math.round(
-        (videoWatchTime * 0.3 + 
-         discussionScore * 0.2 + 
-         assignmentScore * 0.25 + 
-         quizScore * 0.15 + 
-         sessionScore * 0.1) * 100
-      ) / 100;
+      const overallScore =
+        Math.round(
+          (videoWatchTime * 0.3 +
+            discussionScore * 0.2 +
+            assignmentScore * 0.25 +
+            quizScore * 0.15 +
+            sessionScore * 0.1) *
+            100
+        ) / 100;
 
       return {
         videoWatchTime: Math.round(videoWatchTime * 100) / 100,
@@ -243,7 +228,7 @@ export class MetricsCalculator implements IMetricsCalculator {
         assignmentSubmissions: Math.round(assignmentScore * 100) / 100,
         quizAttempts: Math.round(quizScore * 100) / 100,
         sessionFrequency: Math.round(sessionScore * 100) / 100,
-        overallScore
+        overallScore,
       };
     } catch (error) {
       throw new DatabaseError(
@@ -256,16 +241,24 @@ export class MetricsCalculator implements IMetricsCalculator {
 
   /**
    * Identifies trends for a specific metric over a date range using time-series analysis
-   * 
+   *
    * @param metric - Metric name to analyze
    * @param dateRange - Date range for trend analysis
    * @returns Trend data with time-series points and analysis
    */
   async identifyTrends(metric: string, dateRange: DateRange): Promise<TrendData> {
-    const supportedMetrics = ['enrollments', 'completions', 'revenue', 'quiz_attempts', 'discussion_posts'];
-    
+    const supportedMetrics = [
+      'enrollments',
+      'completions',
+      'revenue',
+      'quiz_attempts',
+      'discussion_posts',
+    ];
+
     if (!supportedMetrics.includes(metric)) {
-      throw new ValidationError(`Unsupported metric: ${metric}. Supported metrics: ${supportedMetrics.join(', ')}`);
+      throw new ValidationError(
+        `Unsupported metric: ${metric}. Supported metrics: ${supportedMetrics.join(', ')}`
+      );
     }
 
     try {
@@ -290,8 +283,9 @@ export class MetricsCalculator implements IMetricsCalculator {
       }
 
       // Calculate trend analysis
-      const values = dataPoints.map(point => point.value);
-      const averageValue = values.length > 0 ? values.reduce((a, b) => a + b, 0) / values.length : 0;
+      const values = dataPoints.map((point) => point.value);
+      const averageValue =
+        values.length > 0 ? values.reduce((a, b) => a + b, 0) / values.length : 0;
       const minValue = values.length > 0 ? Math.min(...values) : 0;
       const maxValue = values.length > 0 ? Math.max(...values) : 0;
 
@@ -307,17 +301,13 @@ export class MetricsCalculator implements IMetricsCalculator {
         changePercentage: Math.round(changePercentage * 100) / 100,
         averageValue: Math.round(averageValue * 100) / 100,
         minValue,
-        maxValue
+        maxValue,
       };
     } catch (error) {
       if (error instanceof ValidationError) {
         throw error;
       }
-      throw new DatabaseError(
-        'Failed to identify trends',
-        'identifyTrends',
-        error as Error
-      );
+      throw new DatabaseError('Failed to identify trends', 'identifyTrends', error as Error);
     }
   }
 
@@ -336,7 +326,7 @@ export class MetricsCalculator implements IMetricsCalculator {
           totalEnrollments: count(),
           completedEnrollments: sum(
             sql`CASE WHEN ${enrollments.status} = 'completed' THEN 1 ELSE 0 END`
-          ).mapWith(Number)
+          ).mapWith(Number),
         })
         .from(enrollments)
         .where(inArray(enrollments.courseId, courseIds))
@@ -345,9 +335,10 @@ export class MetricsCalculator implements IMetricsCalculator {
       const completionRates = new Map<string, number>();
 
       for (const result of results) {
-        const rate = result.totalEnrollments > 0 
-          ? Math.round((result.completedEnrollments / result.totalEnrollments) * 100 * 100) / 100
-          : 0;
+        const rate =
+          result.totalEnrollments > 0
+            ? Math.round((result.completedEnrollments / result.totalEnrollments) * 100 * 100) / 100
+            : 0;
         completionRates.set(result.courseId, rate);
       }
 
@@ -380,7 +371,7 @@ export class MetricsCalculator implements IMetricsCalculator {
       const results = await this.db
         .select({
           studentId: quizSubmissions.studentId,
-          averageScore: avg(quizSubmissions.scorePercentage)
+          averageScore: avg(quizSubmissions.scorePercentage),
         })
         .from(quizSubmissions)
         .where(
@@ -419,7 +410,9 @@ export class MetricsCalculator implements IMetricsCalculator {
   /**
    * Calculates engagement scores for multiple users in batch
    */
-  async batchCalculateEngagementScores(userIds: string[]): Promise<Map<string, EngagementComponents>> {
+  async batchCalculateEngagementScores(
+    userIds: string[]
+  ): Promise<Map<string, EngagementComponents>> {
     const engagementScores = new Map<string, EngagementComponents>();
 
     // For batch processing, we'll calculate each user individually
@@ -436,7 +429,7 @@ export class MetricsCalculator implements IMetricsCalculator {
           assignmentSubmissions: 0,
           quizAttempts: 0,
           sessionFrequency: 0,
-          overallScore: 0
+          overallScore: 0,
         });
       }
     }
@@ -466,7 +459,7 @@ export class MetricsCalculator implements IMetricsCalculator {
       // Get average quiz score for the course
       const quizScoreResult = await this.db
         .select({
-          averageScore: avg(quizSubmissions.scorePercentage)
+          averageScore: avg(quizSubmissions.scorePercentage),
         })
         .from(quizSubmissions)
         .innerJoin(enrollments, eq(quizSubmissions.enrollmentId, enrollments.id))
@@ -485,7 +478,8 @@ export class MetricsCalculator implements IMetricsCalculator {
       const completionDifficulty = 100 - completionRate; // Invert completion rate
       const quizDifficulty = 100 - averageQuizScore; // Invert quiz score
 
-      const difficultyScore = Math.round((completionDifficulty * 0.6 + quizDifficulty * 0.4) * 100) / 100;
+      const difficultyScore =
+        Math.round((completionDifficulty * 0.6 + quizDifficulty * 0.4) * 100) / 100;
 
       return Math.max(0, Math.min(100, difficultyScore));
     } catch (error) {
@@ -508,20 +502,17 @@ export class MetricsCalculator implements IMetricsCalculator {
       // Get enrollments at the start of the period
       const initialEnrollments = await this.db
         .select({
-          count: count()
+          count: count(),
         })
         .from(enrollments)
         .where(
-          and(
-            eq(enrollments.courseId, courseId),
-            lte(enrollments.enrolledAt, dateRange.startDate)
-          )
+          and(eq(enrollments.courseId, courseId), lte(enrollments.enrolledAt, dateRange.startDate))
         );
 
       // Get enrollments still active at the end of the period
       const retainedEnrollments = await this.db
         .select({
-          count: count()
+          count: count(),
         })
         .from(enrollments)
         .where(
@@ -534,7 +525,7 @@ export class MetricsCalculator implements IMetricsCalculator {
 
       const initialData = initialEnrollments[0];
       const retainedData = retainedEnrollments[0];
-      
+
       const initial = initialData ? Number(initialData.count) : 0;
       const retained = retainedData ? Number(retainedData.count) : 0;
 
@@ -567,7 +558,7 @@ export class MetricsCalculator implements IMetricsCalculator {
       const completions = await this.db
         .select({
           enrolledAt: enrollments.enrolledAt,
-          completedAt: enrollments.completedAt
+          completedAt: enrollments.completedAt,
         })
         .from(enrollments)
         .where(
@@ -584,12 +575,12 @@ export class MetricsCalculator implements IMetricsCalculator {
           medianDays: 0,
           minDays: 0,
           maxDays: 0,
-          completionCount: 0
+          completionCount: 0,
         };
       }
 
       // Calculate completion times in days
-      const completionTimes = completions.map(completion => {
+      const completionTimes = completions.map((completion) => {
         const enrolled = new Date(completion.enrolledAt);
         const completed = new Date(completion.completedAt!);
         return Math.ceil((completed.getTime() - enrolled.getTime()) / (1000 * 60 * 60 * 24));
@@ -597,8 +588,10 @@ export class MetricsCalculator implements IMetricsCalculator {
 
       completionTimes.sort((a, b) => a - b);
 
-      const averageDays = Math.round(completionTimes.reduce((a, b) => a + b, 0) / completionTimes.length * 100) / 100;
-      
+      const averageDays =
+        Math.round((completionTimes.reduce((a, b) => a + b, 0) / completionTimes.length) * 100) /
+        100;
+
       let medianDays = 0;
       if (completionTimes.length > 0) {
         if (completionTimes.length % 2 === 0) {
@@ -609,7 +602,7 @@ export class MetricsCalculator implements IMetricsCalculator {
           medianDays = completionTimes[Math.floor(completionTimes.length / 2)] || 0;
         }
       }
-      
+
       const minDays = completionTimes.length > 0 ? completionTimes[0] : 0;
       const maxDays = completionTimes.length > 0 ? completionTimes[completionTimes.length - 1] : 0;
 
@@ -618,7 +611,7 @@ export class MetricsCalculator implements IMetricsCalculator {
         medianDays: Number(medianDays) || 0,
         minDays: Number(minDays) || 0,
         maxDays: Number(maxDays) || 0,
-        completionCount: completions.length
+        completionCount: completions.length,
       };
     } catch (error) {
       throw new DatabaseError(
@@ -631,11 +624,13 @@ export class MetricsCalculator implements IMetricsCalculator {
 
   // Private helper methods for trend analysis
 
-  private async getEnrollmentTrends(dateRange: DateRange): Promise<Array<{ date: Date; value: number }>> {
+  private async getEnrollmentTrends(
+    dateRange: DateRange
+  ): Promise<Array<{ date: Date; value: number }>> {
     const result = await this.db
       .select({
         date: sql<string>`DATE(${enrollments.enrolledAt})`,
-        count: count()
+        count: count(),
       })
       .from(enrollments)
       .where(
@@ -647,17 +642,19 @@ export class MetricsCalculator implements IMetricsCalculator {
       .groupBy(sql`DATE(${enrollments.enrolledAt})`)
       .orderBy(sql`DATE(${enrollments.enrolledAt})`);
 
-    return result.map(row => ({
+    return result.map((row) => ({
       date: new Date(row.date),
-      value: Number(row.count)
+      value: Number(row.count),
     }));
   }
 
-  private async getCompletionTrends(dateRange: DateRange): Promise<Array<{ date: Date; value: number }>> {
+  private async getCompletionTrends(
+    dateRange: DateRange
+  ): Promise<Array<{ date: Date; value: number }>> {
     const result = await this.db
       .select({
         date: sql<string>`DATE(${enrollments.completedAt})`,
-        count: count()
+        count: count(),
       })
       .from(enrollments)
       .where(
@@ -671,9 +668,9 @@ export class MetricsCalculator implements IMetricsCalculator {
       .groupBy(sql`DATE(${enrollments.completedAt})`)
       .orderBy(sql`DATE(${enrollments.completedAt})`);
 
-    return result.map(row => ({
+    return result.map((row) => ({
       date: new Date(row.date),
-      value: Number(row.count)
+      value: Number(row.count),
     }));
   }
 
@@ -683,11 +680,13 @@ export class MetricsCalculator implements IMetricsCalculator {
     return Promise.resolve([]);
   }
 
-  private async getQuizAttemptTrends(dateRange: DateRange): Promise<Array<{ date: Date; value: number }>> {
+  private async getQuizAttemptTrends(
+    dateRange: DateRange
+  ): Promise<Array<{ date: Date; value: number }>> {
     const result = await this.db
       .select({
         date: sql<string>`DATE(${quizSubmissions.startedAt})`,
-        count: count()
+        count: count(),
       })
       .from(quizSubmissions)
       .where(
@@ -699,17 +698,19 @@ export class MetricsCalculator implements IMetricsCalculator {
       .groupBy(sql`DATE(${quizSubmissions.startedAt})`)
       .orderBy(sql`DATE(${quizSubmissions.startedAt})`);
 
-    return result.map(row => ({
+    return result.map((row) => ({
       date: new Date(row.date),
-      value: Number(row.count)
+      value: Number(row.count),
     }));
   }
 
-  private async getDiscussionPostTrends(dateRange: DateRange): Promise<Array<{ date: Date; value: number }>> {
+  private async getDiscussionPostTrends(
+    dateRange: DateRange
+  ): Promise<Array<{ date: Date; value: number }>> {
     const result = await this.db
       .select({
         date: sql<string>`DATE(${discussionPosts.createdAt})`,
-        count: count()
+        count: count(),
       })
       .from(discussionPosts)
       .where(
@@ -721,13 +722,15 @@ export class MetricsCalculator implements IMetricsCalculator {
       .groupBy(sql`DATE(${discussionPosts.createdAt})`)
       .orderBy(sql`DATE(${discussionPosts.createdAt})`);
 
-    return result.map(row => ({
+    return result.map((row) => ({
       date: new Date(row.date),
-      value: Number(row.count)
+      value: Number(row.count),
     }));
   }
 
-  private calculateTrendDirection(dataPoints: Array<{ date: Date; value: number }>): 'increasing' | 'decreasing' | 'stable' {
+  private calculateTrendDirection(
+    dataPoints: Array<{ date: Date; value: number }>
+  ): 'increasing' | 'decreasing' | 'stable' {
     if (dataPoints.length < 2) {
       return 'stable';
     }

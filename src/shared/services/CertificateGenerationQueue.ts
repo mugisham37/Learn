@@ -1,45 +1,27 @@
 /**
  * Certificate Generation Queue Implementation
- * 
+ *
  * Implements BullMQ queue for certificate generation jobs with PDF creation,
  * S3 upload, enrollment record updates, and email delivery.
- * 
+ *
  * Requirements: 14.3 - Certificate queue with moderate concurrency and retry logic
  */
 
 import { Queue, Worker, Job, QueueOptions, WorkerOptions, JobsOptions } from 'bullmq';
 
 import { redis } from '../../infrastructure/cache/index.js';
-import { 
-  ICourseRepository 
-} from '../../modules/courses/infrastructure/repositories/ICourseRepository.js';
-import { 
+import { ICourseRepository } from '../../modules/courses/infrastructure/repositories/ICourseRepository.js';
+import {
   ICertificateGenerator,
-  CertificateGenerationData
+  CertificateGenerationData,
 } from '../../modules/enrollments/application/services/ICertificateGenerator.js';
-import { 
-  Enrollment 
-} from '../../modules/enrollments/domain/entities/Enrollment.js';
-import { 
-  ICertificateRepository 
-} from '../../modules/enrollments/infrastructure/repositories/ICertificateRepository.js';
-import { 
-  IEnrollmentRepository 
-} from '../../modules/enrollments/infrastructure/repositories/IEnrollmentRepository.js';
-import { 
-  INotificationService 
-} from '../../modules/notifications/application/services/INotificationService.js';
-import { 
-  IUserProfileService 
-} from '../../modules/users/application/services/IUserProfileService.js';
-import { 
-  IUserRepository 
-} from '../../modules/users/infrastructure/repositories/IUserRepository.js';
-import { 
-  ExternalServiceError, 
-  NotFoundError, 
-  ValidationError 
-} from '../errors/index.js';
+import { Enrollment } from '../../modules/enrollments/domain/entities/Enrollment.js';
+import { ICertificateRepository } from '../../modules/enrollments/infrastructure/repositories/ICertificateRepository.js';
+import { IEnrollmentRepository } from '../../modules/enrollments/infrastructure/repositories/IEnrollmentRepository.js';
+import { INotificationService } from '../../modules/notifications/application/services/INotificationService.js';
+import { IUserProfileService } from '../../modules/users/application/services/IUserProfileService.js';
+import { IUserRepository } from '../../modules/users/infrastructure/repositories/IUserRepository.js';
+import { ExternalServiceError, NotFoundError, ValidationError } from '../errors/index.js';
 import { logger } from '../utils/logger.js';
 
 import { IEmailService } from './IEmailService.js';
@@ -82,25 +64,25 @@ const QUEUE_OPTIONS: QueueOptions = {
   connection: redis,
   defaultJobOptions: {
     removeOnComplete: 100, // Keep last 100 completed jobs
-    removeOnFail: 50,      // Keep last 50 failed jobs
-    attempts: 3,           // Maximum retry attempts per requirement 14.3
+    removeOnFail: 50, // Keep last 50 failed jobs
+    attempts: 3, // Maximum retry attempts per requirement 14.3
     backoff: {
       type: 'exponential',
-      delay: 3000,         // Start with 3 second delay
+      delay: 3000, // Start with 3 second delay
     },
   },
 };
 
 const WORKER_OPTIONS: WorkerOptions = {
   connection: redis,
-  concurrency: 5,        // Moderate concurrency per requirement 14.3
-  maxStalledCount: 2,    // Maximum stalled jobs before failing
+  concurrency: 5, // Moderate concurrency per requirement 14.3
+  maxStalledCount: 2, // Maximum stalled jobs before failing
   stalledInterval: 30000, // Check for stalled jobs every 30 seconds
 };
 
 /**
  * Certificate Generation Queue Implementation
- * 
+ *
  * Manages certificate generation jobs using BullMQ with comprehensive error handling,
  * retry logic, PDF generation, S3 upload, and email delivery.
  */
@@ -141,7 +123,7 @@ export class CertificateGenerationQueue {
     try {
       // Test Redis connection
       await redis.ping();
-      
+
       logger.info('Certificate generation queue initialized', {
         queueName: QUEUE_NAME,
         concurrency: WORKER_OPTIONS.concurrency,
@@ -177,16 +159,12 @@ export class CertificateGenerationQueue {
       // Validate job data
       this.validateJobData(data);
 
-      const job = await this.queue.add(
-        'generate-certificate',
-        data,
-        {
-          ...options,
-          priority: this.getPriorityValue(data.priority || 'normal'),
-          delay: options?.delay || 0,
-          jobId: `certificate-${data.enrollmentId}-${Date.now()}`,
-        }
-      );
+      const job = await this.queue.add('generate-certificate', data, {
+        ...options,
+        priority: this.getPriorityValue(data.priority || 'normal'),
+        delay: options?.delay || 0,
+        jobId: `certificate-${data.enrollmentId}-${Date.now()}`,
+      });
 
       logger.info('Certificate generation job added successfully', {
         jobId: job.id,
@@ -298,7 +276,7 @@ export class CertificateGenerationQueue {
 
       // Close worker first to stop processing new jobs
       await this.worker.close();
-      
+
       // Close queue
       await this.queue.close();
 
@@ -313,9 +291,19 @@ export class CertificateGenerationQueue {
   /**
    * Processes a certificate generation job
    */
-  private async processCertificateJob(job: Job<CertificateGenerationJobData>): Promise<CertificateGenerationResult> {
+  private async processCertificateJob(
+    job: Job<CertificateGenerationJobData>
+  ): Promise<CertificateGenerationResult> {
     const startTime = Date.now();
-    const { enrollmentId, studentId, courseId, instructorId, completionDate, grade, creditsEarned } = job.data;
+    const {
+      enrollmentId,
+      studentId,
+      courseId,
+      instructorId,
+      completionDate,
+      grade,
+      creditsEarned,
+    } = job.data;
 
     try {
       logger.info('Processing certificate generation job', {
@@ -336,7 +324,9 @@ export class CertificateGenerationQueue {
       }
 
       if (enrollment.status !== 'completed') {
-        throw new ValidationError(`Enrollment must be completed to generate certificate: ${enrollmentId}`);
+        throw new ValidationError(
+          `Enrollment must be completed to generate certificate: ${enrollmentId}`
+        );
       }
 
       await job.updateProgress(20);
@@ -415,9 +405,12 @@ export class CertificateGenerationQueue {
         certificateId: enrollment.certificateId ?? undefined,
         progressPercentage: parseFloat(enrollment.progressPercentage),
       });
-      
+
       // Generate certificate with PDF
-      const certificate = await this.certificateGenerator.generateCertificate(enrollmentEntity, certificateData);
+      const certificate = await this.certificateGenerator.generateCertificate(
+        enrollmentEntity,
+        certificateData
+      );
 
       await job.updateProgress(70);
 
@@ -442,7 +435,12 @@ export class CertificateGenerationQueue {
       // Send certificate via email
       let emailSent = false;
       try {
-        await this.sendCertificateEmail(certificate, student.email, studentProfile.fullName, course.title);
+        await this.sendCertificateEmail(
+          certificate,
+          student.email,
+          studentProfile.fullName,
+          course.title
+        );
         emailSent = true;
       } catch (emailError) {
         logger.error('Failed to send certificate email', {
@@ -541,7 +539,7 @@ export class CertificateGenerationQueue {
           issuedDate: certificate.issuedAt.toLocaleDateString('en-US', {
             year: 'numeric',
             month: 'long',
-            day: 'numeric'
+            day: 'numeric',
           }),
           verificationUrl: certificate.verificationUrl,
           downloadUrl: certificate.pdfUrl,
@@ -662,7 +660,9 @@ let certificateGenerationQueueInstance: CertificateGenerationQueue | null = null
  */
 export function getCertificateGenerationQueue(): CertificateGenerationQueue {
   if (!certificateGenerationQueueInstance) {
-    throw new Error('CertificateGenerationQueue not initialized. Call initializeCertificateGenerationQueue first.');
+    throw new Error(
+      'CertificateGenerationQueue not initialized. Call initializeCertificateGenerationQueue first.'
+    );
   }
   return certificateGenerationQueueInstance;
 }
@@ -695,7 +695,7 @@ export async function initializeCertificateGenerationQueue(
   );
 
   await certificateGenerationQueueInstance.initialize();
-  
+
   logger.info('Certificate generation queue initialized successfully');
   return certificateGenerationQueueInstance;
 }

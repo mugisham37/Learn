@@ -1,9 +1,9 @@
 /**
  * Simple Event Bus Implementation
- * 
+ *
  * Provides a simple in-memory event bus for domain event handling
  * within the modular monolith architecture.
- * 
+ *
  * Requirements: 8.7 - Event-driven communication for search indexing
  */
 
@@ -40,7 +40,7 @@ export interface EventSubscription {
 
 /**
  * Simple Event Bus Implementation
- * 
+ *
  * Provides event publishing and subscription capabilities for domain events.
  * Uses Node.js EventEmitter internally for reliable event handling.
  */
@@ -51,7 +51,7 @@ export class EventBus {
   constructor() {
     this.eventEmitter = new EventEmitter();
     this.eventEmitter.setMaxListeners(100); // Allow many listeners
-    
+
     // Set up error handling
     this.eventEmitter.on('error', (error) => {
       logger.error('EventBus error', {
@@ -74,7 +74,7 @@ export class EventBus {
 
       // Get all handlers for this event type
       const handlers = this.subscriptions.get(event.eventType) || [];
-      
+
       if (handlers.length === 0) {
         logger.debug('No handlers registered for event type', {
           eventType: event.eventType,
@@ -87,7 +87,7 @@ export class EventBus {
       const handlerPromises = handlers.map(async (subscription) => {
         try {
           await subscription.handler(event);
-          
+
           logger.debug('Event handler completed successfully', {
             eventType: event.eventType,
             eventId: event.eventId,
@@ -100,7 +100,7 @@ export class EventBus {
             handlerName: subscription.handlerName || 'anonymous',
             error: error instanceof Error ? error.message : 'Unknown error',
           });
-          
+
           // Don't throw error to prevent one handler failure from affecting others
           // In a production system, you might want to implement dead letter queues
           // or retry mechanisms for failed event handlers
@@ -120,7 +120,7 @@ export class EventBus {
         eventId: event.eventId,
         error: error instanceof Error ? error.message : 'Unknown error',
       });
-      
+
       // Re-throw to let the caller know about the failure
       throw error;
     }
@@ -150,7 +150,7 @@ export class EventBus {
       if (!this.subscriptions.has(eventType)) {
         this.subscriptions.set(eventType, []);
       }
-      
+
       this.subscriptions.get(eventType)!.push(subscription);
 
       logger.debug('Event handler subscribed successfully', {
@@ -169,7 +169,7 @@ export class EventBus {
         handlerName: handlerName || 'anonymous',
         error: error instanceof Error ? error.message : 'Unknown error',
       });
-      
+
       throw error;
     }
   }
@@ -193,9 +193,9 @@ export class EventBus {
       }
 
       // Find and remove the handler
-      const index = handlers.findIndex(subscription => 
-        subscription.handler === handler && 
-        subscription.handlerName === handlerName
+      const index = handlers.findIndex(
+        (subscription) =>
+          subscription.handler === handler && subscription.handlerName === handlerName
       );
 
       if (index === -1) {
@@ -278,10 +278,10 @@ export class EventBus {
   shutdown(): Promise<void> {
     try {
       logger.info('Shutting down event bus...');
-      
+
       // Clear all subscriptions
       this.clear();
-      
+
       logger.info('Event bus shut down successfully');
       return Promise.resolve();
     } catch (error) {

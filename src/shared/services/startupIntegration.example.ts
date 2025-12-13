@@ -1,9 +1,9 @@
 /**
  * Analytics Scheduler Integration Example
- * 
+ *
  * This file shows how to integrate the analytics scheduler into the main application
  * startup process. Add this code to your main application initialization.
- * 
+ *
  * Requirements:
  * - 12.5: Scheduled analytics aggregation
  * - 14.3: Analytics aggregation queue setup
@@ -19,7 +19,8 @@ import { shutdownAnalyticsScheduler } from './AnalyticsScheduler.js';
 export async function initializeAnalyticsInApp(): Promise<void> {
   try {
     // Get environment-specific configuration
-    const environment = (process.env['NODE_ENV'] as 'development' | 'staging' | 'production') || 'development';
+    const environment =
+      (process.env['NODE_ENV'] as 'development' | 'staging' | 'production') || 'development';
     const schedulerConfig = getDefaultSchedulerConfig(environment);
 
     // Initialize analytics services and scheduler
@@ -54,47 +55,47 @@ export async function shutdownAnalyticsInApp(): Promise<void> {
 
 /**
  * Example integration in src/index.ts:
- * 
+ *
  * ```typescript
  * // In the bootstrap function, after server creation:
- * 
+ *
  * // Create and configure Fastify server
  * server = await createServer();
- * 
+ *
  * // Register module routes
  * const { registerModules } = await import('./modules/index.js');
  * await registerModules(server);
- * 
+ *
  * // Initialize database connection
  * // ... existing database initialization
- * 
+ *
  * // Initialize Redis connection
  * // ... existing Redis initialization
- * 
+ *
  * // Initialize analytics scheduler (ADD THIS)
  * await initializeAnalyticsInApp();
- * 
+ *
  * // Register GraphQL server
  * // ... existing GraphQL initialization
- * 
+ *
  * // Start the server
  * await startServer(server);
  * ```
- * 
+ *
  * ```typescript
  * // In the shutdown function, before server shutdown:
- * 
+ *
  * async function shutdown(signal: string): Promise<void> {
  *   logger.info(`${signal} signal received: closing HTTP server`, { signal });
- *   
+ *
  *   if (server) {
  *     try {
  *       // Shutdown analytics scheduler (ADD THIS)
  *       await shutdownAnalyticsInApp();
- *       
+ *
  *       // Shutdown server
  *       await stopServer(server);
- *       
+ *
  *       logger.info('Graceful shutdown completed');
  *       process.exit(0);
  *     } catch (error) {

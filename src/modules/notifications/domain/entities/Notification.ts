@@ -1,16 +1,16 @@
 /**
  * Notification Entity
- * 
+ *
  * Core domain entity representing a system notification.
  * Encapsulates notification content, delivery status, and business rules.
- * 
+ *
  * Requirements: 10.1, 10.4, 10.5, 10.6
  */
 
 /**
  * Notification type enumeration
  */
-export type NotificationType = 
+export type NotificationType =
   | 'new_message'
   | 'assignment_due'
   | 'grade_posted'
@@ -89,7 +89,7 @@ export interface NotificationBatchGroup {
 
 /**
  * Notification entity
- * 
+ *
  * Represents a system notification with content, delivery status, and business rules.
  * Enforces validation and provides methods for notification lifecycle management.
  */
@@ -109,7 +109,7 @@ export class Notification {
 
   /**
    * Creates a new Notification entity
-   * 
+   *
    * @param props - Notification properties
    */
   private constructor(props: NotificationProps) {
@@ -129,7 +129,7 @@ export class Notification {
 
   /**
    * Factory method to create a new Notification entity
-   * 
+   *
    * @param props - Notification creation properties
    * @returns Notification entity
    * @throws Error if validation fails
@@ -162,9 +162,16 @@ export class Notification {
 
     // Validate notification type
     const validTypes: NotificationType[] = [
-      'new_message', 'assignment_due', 'grade_posted', 'course_update',
-      'announcement', 'discussion_reply', 'enrollment_confirmed',
-      'certificate_issued', 'payment_received', 'refund_processed'
+      'new_message',
+      'assignment_due',
+      'grade_posted',
+      'course_update',
+      'announcement',
+      'discussion_reply',
+      'enrollment_confirmed',
+      'certificate_issued',
+      'payment_received',
+      'refund_processed',
     ];
     if (!validTypes.includes(props.notificationType)) {
       throw new Error(`Invalid notification type: ${props.notificationType}`);
@@ -212,7 +219,7 @@ export class Notification {
 
   /**
    * Factory method to reconstitute a Notification entity from persistence
-   * 
+   *
    * @param props - Notification properties from database
    * @returns Notification entity
    */
@@ -222,7 +229,7 @@ export class Notification {
 
   /**
    * Gets default expiration date for a notification type
-   * 
+   *
    * @param notificationType - Type of notification
    * @param createdAt - Creation date
    * @returns Default expiration date or undefined for non-expiring notifications
@@ -232,16 +239,16 @@ export class Notification {
     createdAt: Date
   ): Date | undefined {
     const expirationDays: Record<NotificationType, number | null> = {
-      new_message: 30,           // Messages expire after 30 days
-      assignment_due: null,      // Assignment due notifications don't expire
-      grade_posted: null,        // Grade notifications don't expire
-      course_update: 7,          // Course updates expire after 7 days
-      announcement: 14,          // Announcements expire after 14 days
-      discussion_reply: 7,       // Discussion replies expire after 7 days
+      new_message: 30, // Messages expire after 30 days
+      assignment_due: null, // Assignment due notifications don't expire
+      grade_posted: null, // Grade notifications don't expire
+      course_update: 7, // Course updates expire after 7 days
+      announcement: 14, // Announcements expire after 14 days
+      discussion_reply: 7, // Discussion replies expire after 7 days
       enrollment_confirmed: null, // Enrollment confirmations don't expire
-      certificate_issued: null,  // Certificate notifications don't expire
-      payment_received: null,    // Payment confirmations don't expire
-      refund_processed: null,    // Refund notifications don't expire
+      certificate_issued: null, // Certificate notifications don't expire
+      payment_received: null, // Payment confirmations don't expire
+      refund_processed: null, // Refund notifications don't expire
     };
 
     const days = expirationDays[notificationType];
@@ -308,7 +315,7 @@ export class Notification {
 
   /**
    * Checks if the notification is expired
-   * 
+   *
    * @param currentDate - Current date (defaults to now)
    * @returns True if notification is expired
    */
@@ -321,7 +328,7 @@ export class Notification {
 
   /**
    * Checks if the notification is urgent priority
-   * 
+   *
    * @returns True if notification is urgent
    */
   isUrgent(): boolean {
@@ -330,7 +337,7 @@ export class Notification {
 
   /**
    * Checks if the notification is high priority
-   * 
+   *
    * @returns True if notification is high priority
    */
   isHighPriority(): boolean {
@@ -339,7 +346,7 @@ export class Notification {
 
   /**
    * Checks if the notification can be batched with similar notifications
-   * 
+   *
    * @returns True if notification can be batched
    */
   canBeBatched(): boolean {
@@ -353,7 +360,7 @@ export class Notification {
       'course_update',
       'announcement',
       'discussion_reply',
-      'new_message'
+      'new_message',
     ];
 
     return batchableTypes.includes(this._notificationType);
@@ -361,7 +368,7 @@ export class Notification {
 
   /**
    * Checks if this notification can be batched with another notification
-   * 
+   *
    * @param other - Another notification
    * @returns True if notifications can be batched together
    */
@@ -380,7 +387,7 @@ export class Notification {
 
   /**
    * Marks the notification as read
-   * 
+   *
    * @throws Error if notification is already read
    */
   markAsRead(): void {
@@ -398,7 +405,7 @@ export class Notification {
 
   /**
    * Marks the notification as unread (for testing or admin purposes)
-   * 
+   *
    * @throws Error if notification is not read
    */
   markAsUnread(): void {
@@ -412,7 +419,7 @@ export class Notification {
 
   /**
    * Gets the age of the notification in milliseconds
-   * 
+   *
    * @param currentDate - Current date (defaults to now)
    * @returns Age in milliseconds
    */
@@ -422,7 +429,7 @@ export class Notification {
 
   /**
    * Gets the time until expiration in milliseconds
-   * 
+   *
    * @param currentDate - Current date (defaults to now)
    * @returns Time until expiration in milliseconds, or null if no expiration
    */
@@ -435,7 +442,7 @@ export class Notification {
 
   /**
    * Creates a batch group from multiple notifications
-   * 
+   *
    * @param notifications - Array of notifications to batch
    * @returns Notification batch group
    * @throws Error if notifications cannot be batched together
@@ -478,7 +485,7 @@ export class Notification {
 
     // Combine metadata from all notifications
     const combinedMetadata: NotificationMetadata = {};
-    notifications.forEach(notification => {
+    notifications.forEach((notification) => {
       Object.assign(combinedMetadata, notification.metadata);
     });
 
@@ -495,15 +502,12 @@ export class Notification {
 
   /**
    * Generates a batch title for multiple notifications
-   * 
+   *
    * @param notificationType - Type of notifications
    * @param count - Number of notifications
    * @returns Batch title
    */
-  private static generateBatchTitle(
-    notificationType: NotificationType,
-    count: number
-  ): string {
+  private static generateBatchTitle(notificationType: NotificationType, count: number): string {
     const titleTemplates: Record<NotificationType, string> = {
       new_message: `${count} new messages`,
       assignment_due: `${count} assignments due`,
@@ -522,7 +526,7 @@ export class Notification {
 
   /**
    * Generates batch content for multiple notifications
-   * 
+   *
    * @param notificationType - Type of notifications
    * @param notifications - Array of notifications
    * @returns Batch content
@@ -532,26 +536,26 @@ export class Notification {
     notifications: Notification[]
   ): string {
     const count = notifications.length;
-    
+
     switch (notificationType) {
       case 'new_message':
         return `You have ${count} new messages waiting for you.`;
-      
+
       case 'assignment_due':
         return `You have ${count} assignments due soon. Don't forget to submit them on time.`;
-      
+
       case 'grade_posted':
         return `${count} new grades have been posted for your courses.`;
-      
+
       case 'course_update':
         return `${count} of your courses have been updated with new content or information.`;
-      
+
       case 'announcement':
         return `${count} new announcements have been posted in your courses.`;
-      
+
       case 'discussion_reply':
         return `You have ${count} new replies in course discussions you're following.`;
-      
+
       default:
         return `You have ${count} new notifications.`;
     }
@@ -559,7 +563,7 @@ export class Notification {
 
   /**
    * Converts the entity to a plain object for persistence
-   * 
+   *
    * @returns Plain object representation
    */
   toPersistence(): {
@@ -594,7 +598,7 @@ export class Notification {
 
   /**
    * Returns JSON representation
-   * 
+   *
    * @returns JSON object
    */
   toJSON(): {

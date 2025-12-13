@@ -1,6 +1,6 @@
 /**
  * Users Module
- * 
+ *
  * Public API for the users module
  */
 

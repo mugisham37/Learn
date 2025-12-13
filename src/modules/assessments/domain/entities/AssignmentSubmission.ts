@@ -1,13 +1,17 @@
 /**
  * AssignmentSubmission Domain Entity
- * 
+ *
  * Represents a student's submission for an assignment with file uploads, grading, and revision tracking.
  * Implements business logic for submission validation, late detection, penalty calculation, and revision linking.
- * 
+ *
  * Requirements: 7.1, 7.3, 7.6
  */
 
-export type AssignmentGradingStatus = 'submitted' | 'under_review' | 'graded' | 'revision_requested';
+export type AssignmentGradingStatus =
+  | 'submitted'
+  | 'under_review'
+  | 'graded'
+  | 'revision_requested';
 
 export interface AssignmentForSubmission {
   id: string;
@@ -65,16 +69,19 @@ export class AssignmentSubmission {
     private _domainEvents: any[] = []
   ) {}
 
-  static create(data: CreateSubmissionData, assignment: AssignmentForSubmission): AssignmentSubmission {
+  static create(
+    data: CreateSubmissionData,
+    assignment: AssignmentForSubmission
+  ): AssignmentSubmission {
     // Validate submission data
     this.validateSubmissionData(data, assignment);
-    
+
     const submittedAt = data.submittedAt || new Date();
     const isLate = assignment.isSubmissionLate(submittedAt);
-    
+
     // Determine revision number
     const revisionNumber = data.parentSubmissionId ? 1 : 1; // Will be updated by service layer with actual count
-    
+
     const submission = new AssignmentSubmission(
       crypto.randomUUID(),
       data.assignmentId,
@@ -94,7 +101,7 @@ export class AssignmentSubmission {
       new Date(),
       new Date()
     );
-    
+
     return submission;
   }
   static fromPersistence(
@@ -140,7 +147,10 @@ export class AssignmentSubmission {
   /**
    * Validates submission data according to business rules
    */
-  private static validateSubmissionData(data: CreateSubmissionData, assignment: AssignmentForSubmission): void {
+  private static validateSubmissionData(
+    data: CreateSubmissionData,
+    assignment: AssignmentForSubmission
+  ): void {
     if (!data.assignmentId?.trim()) {
       throw new Error('Assignment ID is required');
     }
@@ -190,7 +200,7 @@ export class AssignmentSubmission {
 
     const penalty = (this.pointsAwarded * latePenaltyPercentage) / 100;
     const finalScore = Math.max(0, this.pointsAwarded - penalty);
-    
+
     return Math.round(finalScore * 100) / 100; // Round to 2 decimal places
   }
 
@@ -254,7 +264,10 @@ export class AssignmentSubmission {
   /**
    * Creates a revision submission linked to this submission
    */
-  createRevision(revisionData: CreateSubmissionData, assignment: AssignmentForSubmission): AssignmentSubmission {
+  createRevision(
+    revisionData: CreateSubmissionData,
+    assignment: AssignmentForSubmission
+  ): AssignmentSubmission {
     if (this.gradingStatus !== 'revision_requested') {
       throw new Error('Can only create revision for submissions with revision_requested status');
     }
@@ -265,11 +278,11 @@ export class AssignmentSubmission {
       parentSubmissionId: this.id,
       assignmentId: this.assignmentId,
       studentId: this.studentId,
-      enrollmentId: this.enrollmentId
+      enrollmentId: this.enrollmentId,
     };
 
     const revision = AssignmentSubmission.create(revisionSubmissionData, assignment);
-    
+
     // Set the correct revision number (parent's revision number + 1)
     return new AssignmentSubmission(
       revision.id,
@@ -311,10 +324,10 @@ export class AssignmentSubmission {
    */
   updateStatus(newStatus: AssignmentGradingStatus): AssignmentSubmission {
     const validTransitions: Record<AssignmentGradingStatus, AssignmentGradingStatus[]> = {
-      'submitted': ['under_review', 'graded', 'revision_requested'],
-      'under_review': ['graded', 'revision_requested'],
-      'graded': [], // Final state
-      'revision_requested': [] // Student creates new revision
+      submitted: ['under_review', 'graded', 'revision_requested'],
+      under_review: ['graded', 'revision_requested'],
+      graded: [], // Final state
+      revision_requested: [], // Student creates new revision
     };
 
     if (!validTransitions[this.gradingStatus].includes(newStatus)) {

@@ -1,9 +1,9 @@
 /**
  * Infrastructure Initialization
- * 
+ *
  * Centralized initialization of all infrastructure components including
  * database, Redis, Elasticsearch, and BullMQ queues with proper error handling and retry logic.
- * 
+ *
  * Requirements: 15.7, 16.3, 8.1, 14.1
  */
 
@@ -26,7 +26,7 @@ export async function initializeInfrastructure(): Promise<void> {
     // Test Redis connections
     logger.info('Testing Redis connections...');
     const { checkRedisHealth, checkSessionRedisHealth } = await import('./cache/index.js');
-    
+
     const redisHealth = await checkRedisHealth();
     if (!redisHealth.healthy) {
       throw new Error(`Redis connection failed: ${redisHealth.error}`);
@@ -41,8 +41,9 @@ export async function initializeInfrastructure(): Promise<void> {
 
     // Initialize Elasticsearch indices
     logger.info('Initializing Elasticsearch indices...');
-    const { initializeElasticsearchIndices, checkElasticsearchHealth } = await import('./search/index.js');
-    
+    const { initializeElasticsearchIndices, checkElasticsearchHealth } =
+      await import('./search/index.js');
+
     // First check if Elasticsearch is available
     const elasticsearchHealth = await checkElasticsearchHealth();
     if (!elasticsearchHealth.healthy) {
@@ -63,11 +64,14 @@ export async function initializeInfrastructure(): Promise<void> {
     logger.info('All infrastructure components initialized successfully');
   } catch (error) {
     logger.error('Failed to initialize infrastructure', {
-      error: error instanceof Error ? {
-        name: error.name,
-        message: error.message,
-        stack: error.stack,
-      } : String(error),
+      error:
+        error instanceof Error
+          ? {
+              name: error.name,
+              message: error.message,
+              stack: error.stack,
+            }
+          : String(error),
     });
     throw error;
   }
@@ -86,11 +90,13 @@ export async function shutdownInfrastructure(): Promise<void> {
   try {
     const { closeDatabaseConnection } = await import('./database/index.js');
     shutdownPromises.push(
-      closeDatabaseConnection().then(() => {
-        logger.info('✓ Database connections closed');
-      }).catch((error) => {
-        logger.error('Error closing database connections', { error });
-      })
+      closeDatabaseConnection()
+        .then(() => {
+          logger.info('✓ Database connections closed');
+        })
+        .catch((error) => {
+          logger.error('Error closing database connections', { error });
+        })
     );
   } catch (error) {
     logger.error('Error importing database module for shutdown', { error });
@@ -100,11 +106,13 @@ export async function shutdownInfrastructure(): Promise<void> {
   try {
     const { closeRedisConnections } = await import('./cache/index.js');
     shutdownPromises.push(
-      closeRedisConnections().then(() => {
-        logger.info('✓ Redis connections closed');
-      }).catch((error) => {
-        logger.error('Error closing Redis connections', { error });
-      })
+      closeRedisConnections()
+        .then(() => {
+          logger.info('✓ Redis connections closed');
+        })
+        .catch((error) => {
+          logger.error('Error closing Redis connections', { error });
+        })
     );
   } catch (error) {
     logger.error('Error importing cache module for shutdown', { error });
@@ -114,11 +122,13 @@ export async function shutdownInfrastructure(): Promise<void> {
   try {
     const { closeElasticsearchConnection } = await import('./search/index.js');
     shutdownPromises.push(
-      closeElasticsearchConnection().then(() => {
-        logger.info('✓ Elasticsearch connection closed');
-      }).catch((error) => {
-        logger.error('Error closing Elasticsearch connection', { error });
-      })
+      closeElasticsearchConnection()
+        .then(() => {
+          logger.info('✓ Elasticsearch connection closed');
+        })
+        .catch((error) => {
+          logger.error('Error closing Elasticsearch connection', { error });
+        })
     );
   } catch (error) {
     logger.error('Error importing search module for shutdown', { error });
@@ -129,11 +139,14 @@ export async function shutdownInfrastructure(): Promise<void> {
     const { QueueManager } = await import('./queue/index.js');
     const queueManager = QueueManager.getInstance();
     shutdownPromises.push(
-      queueManager.shutdown().then(() => {
-        logger.info('✓ BullMQ queue infrastructure shutdown');
-      }).catch((error) => {
-        logger.error('Error shutting down queue infrastructure', { error });
-      })
+      queueManager
+        .shutdown()
+        .then(() => {
+          logger.info('✓ BullMQ queue infrastructure shutdown');
+        })
+        .catch((error) => {
+          logger.error('Error shutting down queue infrastructure', { error });
+        })
     );
   } catch (error) {
     logger.error('Error importing queue module for shutdown', { error });
@@ -223,7 +236,7 @@ export async function checkInfrastructureHealth(): Promise<{
     const queueHealth = await queueManager.getHealthStatus();
     components.queues = queueHealth.healthy;
     if (!queueHealth.healthy) {
-      errors.push(`Queues: ${queueHealth.alerts.map(a => a.message).join(', ')}`);
+      errors.push(`Queues: ${queueHealth.alerts.map((a) => a.message).join(', ')}`);
     }
   } catch (error) {
     errors.push(`Queues: ${error instanceof Error ? error.message : 'Unknown error'}`);

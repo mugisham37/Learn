@@ -1,9 +1,9 @@
 /**
  * Connection Health Utilities
- * 
+ *
  * Provides health check utilities for database connections and connection pools
  * with detailed metrics and monitoring capabilities.
- * 
+ *
  * Requirements: 15.7, 17.1
  */
 
@@ -50,22 +50,28 @@ export interface ConnectionHealthStatus {
  */
 export async function getConnectionHealth(): Promise<ConnectionHealthStatus> {
   const timestamp = new Date();
-  
+
   // Get database health
   const dbHealth = await checkDatabaseHealth();
-  
+
   // Get connection monitor data
   const monitor = getConnectionMonitor();
   const analysis = monitor.analyzeConnectionPools();
-  
+
   // Calculate utilization percentages
-  const writeUtilization = dbHealth.writePool.totalConnections > 0 
-    ? (dbHealth.writePool.totalConnections / (dbHealth.writePool.totalConnections + dbHealth.writePool.idleConnections)) * 100
-    : 0;
-    
-  const readUtilization = dbHealth.readPool.totalConnections > 0
-    ? (dbHealth.readPool.totalConnections / (dbHealth.readPool.totalConnections + dbHealth.readPool.idleConnections)) * 100
-    : 0;
+  const writeUtilization =
+    dbHealth.writePool.totalConnections > 0
+      ? (dbHealth.writePool.totalConnections /
+          (dbHealth.writePool.totalConnections + dbHealth.writePool.idleConnections)) *
+        100
+      : 0;
+
+  const readUtilization =
+    dbHealth.readPool.totalConnections > 0
+      ? (dbHealth.readPool.totalConnections /
+          (dbHealth.readPool.totalConnections + dbHealth.readPool.idleConnections)) *
+        100
+      : 0;
 
   const status: ConnectionHealthStatus = {
     healthy: dbHealth.healthy,
@@ -119,7 +125,7 @@ async function checkPgBouncerHealth(): Promise<'healthy' | 'unhealthy' | 'unknow
     // For now, we'll do a simple connection test
     const { Pool } = await import('pg');
     const pgBouncerUrl = process.env['PGBOUNCER_URL'];
-    
+
     if (!pgBouncerUrl) {
       return 'unknown';
     }
@@ -154,7 +160,7 @@ export async function getBasicConnectionHealth(): Promise<{
 }> {
   try {
     const health = await getConnectionHealth();
-    
+
     if (health.healthy) {
       return {
         healthy: true,

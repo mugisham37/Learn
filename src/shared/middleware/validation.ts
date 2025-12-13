@@ -1,9 +1,9 @@
 /**
  * Input Validation Middleware
- * 
+ *
  * Provides comprehensive input validation for Fastify endpoints using JSON Schema.
  * Validates request body, query parameters, and path parameters before processing.
- * 
+ *
  * Requirements: 13.1
  */
 
@@ -49,7 +49,7 @@ export interface ValidationResult {
 
 /**
  * Formats Zod validation errors into a consistent structure
- * 
+ *
  * @param error - Zod validation error
  * @param prefix - Field prefix for nested validation
  * @returns Array of formatted validation error details
@@ -58,7 +58,7 @@ function formatZodErrors(error: ZodError, prefix: string = ''): ValidationErrorD
   return error.errors.map((err) => {
     const fieldPath = err.path.length > 0 ? err.path.join('.') : 'root';
     const field = prefix ? `${prefix}.${fieldPath}` : fieldPath;
-    
+
     return {
       field,
       message: err.message,
@@ -70,15 +70,12 @@ function formatZodErrors(error: ZodError, prefix: string = ''): ValidationErrorD
 
 /**
  * Validates request data against provided schemas
- * 
+ *
  * @param request - Fastify request object
  * @param config - Validation configuration with schemas
  * @returns Validation result with success flag and errors/data
  */
-function validateRequest(
-  request: FastifyRequest,
-  config: ValidationConfig
-): ValidationResult {
+function validateRequest(request: FastifyRequest, config: ValidationConfig): ValidationResult {
   const errors: ValidationErrorDetail[] = [];
   const validatedData: any = {};
 
@@ -159,16 +156,16 @@ function validateRequest(
 
 /**
  * Creates a validation middleware function for Fastify endpoints
- * 
+ *
  * This middleware validates incoming requests against provided Zod schemas
  * and rejects invalid requests with detailed error messages.
- * 
+ *
  * @param config - Validation configuration with schemas for different parts of the request
  * @returns Fastify preHandler middleware function
  * @throws ValidationError with detailed error information for invalid requests
- * 
+ *
  * Requirements: 13.1
- * 
+ *
  * @example
  * // Validate request body and query parameters
  * const validation = createValidationMiddleware({
@@ -181,9 +178,9 @@ function validateRequest(
  *     limit: z.number().int().positive().max(100).optional(),
  *   }),
  * });
- * 
+ *
  * fastify.post('/users', { preHandler: [validation] }, handler);
- * 
+ *
  * @example
  * // Validate path parameters
  * const validation = createValidationMiddleware({
@@ -191,14 +188,11 @@ function validateRequest(
  *     id: z.string().uuid(),
  *   }),
  * });
- * 
+ *
  * fastify.get('/users/:id', { preHandler: [validation] }, handler);
  */
 export function createValidationMiddleware(config: ValidationConfig) {
-  return function validationMiddleware(
-    request: FastifyRequest,
-    _reply: FastifyReply
-  ): void {
+  return function validationMiddleware(request: FastifyRequest, _reply: FastifyReply): void {
     const requestId = request.id;
     const startTime = Date.now();
 
@@ -208,7 +202,7 @@ export function createValidationMiddleware(config: ValidationConfig) {
 
       if (!result.success) {
         const validationTime = Date.now() - startTime;
-        
+
         logger.warn(
           {
             requestId,
@@ -223,10 +217,10 @@ export function createValidationMiddleware(config: ValidationConfig) {
         // Create detailed validation error
         const errorMessage = `Validation failed: ${result.errors!.length} error(s)`;
         const validationError = new ValidationError(errorMessage);
-        
+
         // Add validation details to error for better error handling
         (validationError as any).validationErrors = result.errors;
-        
+
         throw validationError;
       }
 
@@ -249,7 +243,7 @@ export function createValidationMiddleware(config: ValidationConfig) {
       }
 
       const validationTime = Date.now() - startTime;
-      
+
       logger.debug(
         {
           requestId,
@@ -287,29 +281,29 @@ export function createValidationMiddleware(config: ValidationConfig) {
 
 /**
  * Converts Zod schema to Fastify JSON Schema for OpenAPI documentation
- * 
+ *
  * This is a basic converter that handles common Zod types.
  * For complex schemas, consider using a dedicated library like zod-to-json-schema.
- * 
+ *
  * @param zodSchema - Zod schema to convert
  * @returns Fastify-compatible JSON Schema object
- * 
+ *
  * Note: This is a simplified implementation. For production use with complex schemas,
  * consider using libraries like zod-to-json-schema for full compatibility.
  */
 export function zodToFastifySchema(zodSchema: ZodSchema<any>): any {
   // This is a basic implementation for common cases
   // For full Zod to JSON Schema conversion, use a dedicated library
-  
+
   try {
     // Try to infer basic schema structure
     const sample = {};
     const result = zodSchema.safeParse(sample);
-    
+
     if (result.success) {
       return { type: 'object' };
     }
-    
+
     // Return a generic object schema as fallback
     return {
       type: 'object',
@@ -325,19 +319,19 @@ export function zodToFastifySchema(zodSchema: ZodSchema<any>): any {
 
 /**
  * Creates a complete Fastify schema object from validation config
- * 
+ *
  * This helper creates a Fastify schema that can be used for both
  * validation and OpenAPI documentation generation.
- * 
+ *
  * @param config - Validation configuration
  * @returns Fastify schema object
- * 
+ *
  * @example
  * const schema = createFastifySchema({
  *   body: z.object({ name: z.string() }),
  *   querystring: z.object({ page: z.number().optional() }),
  * });
- * 
+ *
  * fastify.post('/users', { schema }, handler);
  */
 export function createFastifySchema(config: ValidationConfig): FastifySchema {
@@ -372,7 +366,7 @@ export const commonValidationSchemas = {
       id: 'string',
     },
   },
-  
+
   // Pagination query parameters
   paginationQuery: {
     querystring: {
@@ -386,7 +380,7 @@ export const commonValidationSchemas = {
       additionalProperties: false,
     },
   },
-  
+
   // Search query parameters
   searchQuery: {
     querystring: {
@@ -406,7 +400,7 @@ export const commonValidationSchemas = {
 
 /**
  * Validation middleware that can be used as a Fastify plugin
- * 
+ *
  * This plugin adds validation capabilities to Fastify instances
  * and provides helper methods for creating validation middleware.
  */

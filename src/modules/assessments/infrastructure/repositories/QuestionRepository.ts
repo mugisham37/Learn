@@ -1,22 +1,31 @@
 /**
  * Question Repository Implementation
- * 
+ *
  * Implements question data access operations with Drizzle ORM queries,
  * Redis caching with 5-minute TTL, and cache invalidation on updates.
  * Handles database errors and maps them to domain errors.
- * 
+ *
  * Requirements: 6.1, 6.2
  */
 
 import { eq, and, count, sql, inArray } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
-import { cache, buildCacheKey, CachePrefix, CacheTTL } from '../../../../infrastructure/cache/index.js';
-import { getWriteDb, getReadDb, withDrizzleTransaction } from '../../../../infrastructure/database/index.js';
-import { 
+import {
+  cache,
+  buildCacheKey,
+  CachePrefix,
+  CacheTTL,
+} from '../../../../infrastructure/cache/index.js';
+import {
+  getWriteDb,
+  getReadDb,
+  withDrizzleTransaction,
+} from '../../../../infrastructure/database/index.js';
+import {
   questions,
-  Question, 
-  NewQuestion
+  Question,
+  NewQuestion,
 } from '../../../../infrastructure/database/schema/assessments.schema.js';
 import {
   DatabaseError,
@@ -36,7 +45,7 @@ import {
 
 /**
  * Question Repository Implementation
- * 
+ *
  * Provides data access methods for question entities with:
  * - Drizzle ORM for type-safe queries
  * - Redis caching with 5-minute TTL
@@ -64,8 +73,8 @@ export class QuestionRepository implements IQuestionRepository {
    * Builds cache key for quiz questions list
    */
   private getQuizQuestionsCacheKey(
-    quizId: string, 
-    page: number, 
+    quizId: string,
+    page: number,
     limit: number,
     filters?: QuestionFilters
   ): string {
@@ -77,12 +86,17 @@ export class QuestionRepository implements IQuestionRepository {
    * Builds cache key for all quiz questions
    */
   private getAllQuizQuestionsCacheKey(quizId: string, randomize?: boolean): string {
-    return buildCacheKey(CachePrefix.QUIZ, 'all-questions', quizId, randomize ? 'random' : 'ordered');
+    return buildCacheKey(
+      CachePrefix.QUIZ,
+      'all-questions',
+      quizId,
+      randomize ? 'random' : 'ordered'
+    );
   }
 
   /**
    * Creates a new question in the database
-   * 
+   *
    * @param data - Question creation data
    * @returns The created question
    * @throws ValidationError if quiz doesn't exist
@@ -112,10 +126,7 @@ export class QuestionRepository implements IQuestionRepository {
         .returning();
 
       if (!createdQuestion) {
-        throw new DatabaseError(
-          'Failed to create question',
-          'insert'
-        );
+        throw new DatabaseError('Failed to create question', 'insert');
       }
 
       // Invalidate quiz questions cache
@@ -131,16 +142,12 @@ export class QuestionRepository implements IQuestionRepository {
       // Handle database constraint violations
       if (error instanceof Error) {
         if (error.message.includes('foreign key') || error.message.includes('quiz')) {
-          throw new ValidationError(
-            'Invalid quiz ID',
-            [{ field: 'quizId', message: 'Quiz does not exist' }]
-          );
+          throw new ValidationError('Invalid quiz ID', [
+            { field: 'quizId', message: 'Quiz does not exist' },
+          ]);
         }
         if (error.message.includes('unique') || error.message.includes('order')) {
-          throw new ConflictError(
-            'Order number already exists for this quiz',
-            'orderNumber'
-          );
+          throw new ConflictError('Order number already exists for this quiz', 'orderNumber');
         }
       }
 
@@ -155,7 +162,7 @@ export class QuestionRepository implements IQuestionRepository {
 
   /**
    * Creates multiple questions in a single transaction
-   * 
+   *
    * @param questions - Array of question creation data
    * @returns The created questions
    * @throws ValidationError if quiz doesn't exist
@@ -185,10 +192,7 @@ export class QuestionRepository implements IQuestionRepository {
             difficulty: data.difficulty || 'medium',
           };
 
-          const [createdQuestion] = await tx
-            .insert(questions)
-            .values(newQuestion)
-            .returning();
+          const [createdQuestion] = await tx.insert(questions).values(newQuestion).returning();
 
           if (!createdQuestion) {
             throw new DatabaseError('Failed to create question in batch', 'insert');
@@ -201,8 +205,8 @@ export class QuestionRepository implements IQuestionRepository {
       });
 
       // Invalidate cache for all affected quizzes
-      const quizIds = Array.from(new Set(questionsData.map(q => q.quizId)));
-      await Promise.all(quizIds.map(quizId => this.invalidateCacheByQuiz(quizId)));
+      const quizIds = Array.from(new Set(questionsData.map((q) => q.quizId)));
+      await Promise.all(quizIds.map((quizId) => this.invalidateCacheByQuiz(quizId)));
 
       return result;
     } catch (error) {
@@ -218,16 +222,12 @@ export class QuestionRepository implements IQuestionRepository {
       // Handle database constraint violations
       if (error instanceof Error) {
         if (error.message.includes('foreign key') || error.message.includes('quiz')) {
-          throw new ValidationError(
-            'Invalid quiz ID in batch',
-            [{ field: 'quizId', message: 'One or more quizzes do not exist' }]
-          );
+          throw new ValidationError('Invalid quiz ID in batch', [
+            { field: 'quizId', message: 'One or more quizzes do not exist' },
+          ]);
         }
         if (error.message.includes('unique') || error.message.includes('order')) {
-          throw new ConflictError(
-            'Order number conflicts in batch',
-            'orderNumber'
-          );
+          throw new ConflictError('Order number conflicts in batch', 'orderNumber');
         }
       }
 
@@ -242,7 +242,7 @@ export class QuestionRepository implements IQuestionRepository {
 
   /**
    * Finds a question by its unique ID
-   * 
+   *
    * @param id - Question ID
    * @returns The question if found, null otherwise
    * @throws DatabaseError if database operation fails
@@ -252,7 +252,7 @@ export class QuestionRepository implements IQuestionRepository {
       // Check cache first
       const cacheKey = this.getQuestionCacheKey(id);
       const cachedQuestion = await cache.get<Question>(cacheKey);
-      
+
       if (cachedQuestion) {
         return cachedQuestion;
       }
@@ -283,7 +283,7 @@ export class QuestionRepository implements IQuestionRepository {
 
   /**
    * Finds questions by quiz with pagination and ordering
-   * 
+   *
    * @param quizId - Quiz ID
    * @param pagination - Pagination parameters
    * @param filters - Optional filters
@@ -298,46 +298,44 @@ export class QuestionRepository implements IQuestionRepository {
     try {
       // Check cache first
       const cacheKey = this.getQuizQuestionsCacheKey(
-        quizId, 
-        pagination.page, 
-        pagination.limit, 
+        quizId,
+        pagination.page,
+        pagination.limit,
         filters
       );
       const cachedResult = await cache.get<PaginatedResult<Question>>(cacheKey);
-      
+
       if (cachedResult) {
         return cachedResult;
       }
 
       // Build where conditions
       const whereConditions = [eq(questions.quizId, quizId)];
-      
+
       if (filters?.questionType) {
         whereConditions.push(eq(questions.questionType, filters.questionType));
       }
-      
+
       if (filters?.difficulty) {
         whereConditions.push(eq(questions.difficulty, filters.difficulty));
       }
-      
+
       if (filters?.minPoints !== undefined) {
         whereConditions.push(sql`${questions.points} >= ${filters.minPoints}`);
       }
-      
+
       if (filters?.maxPoints !== undefined) {
         whereConditions.push(sql`${questions.points} <= ${filters.maxPoints}`);
       }
 
-      const whereClause = whereConditions.length > 1 
-        ? and(...whereConditions) 
-        : whereConditions[0];
+      const whereClause = whereConditions.length > 1 ? and(...whereConditions) : whereConditions[0];
 
       // Get total count
       const [totalResult] = await this.readDb
         .select({ total: count() })
         .from(questions)
         .where(whereClause);
-      
+
       const total = totalResult?.total || 0;
 
       // Get paginated results ordered by orderNumber
@@ -373,7 +371,7 @@ export class QuestionRepository implements IQuestionRepository {
 
   /**
    * Finds all questions for a quiz ordered by orderNumber
-   * 
+   *
    * @param quizId - Quiz ID
    * @param randomize - Whether to randomize the order
    * @returns All questions for the quiz
@@ -384,7 +382,7 @@ export class QuestionRepository implements IQuestionRepository {
       // Check cache first
       const cacheKey = this.getAllQuizQuestionsCacheKey(quizId, randomize);
       const cachedQuestions = await cache.get<Question[]>(cacheKey);
-      
+
       if (cachedQuestions) {
         return cachedQuestions;
       }
@@ -411,7 +409,7 @@ export class QuestionRepository implements IQuestionRepository {
 
   /**
    * Updates a question's data
-   * 
+   *
    * @param id - Question ID
    * @param data - Update data
    * @returns The updated question
@@ -441,10 +439,7 @@ export class QuestionRepository implements IQuestionRepository {
         .returning();
 
       if (!updatedQuestion) {
-        throw new DatabaseError(
-          'Failed to update question',
-          'update'
-        );
+        throw new DatabaseError('Failed to update question', 'update');
       }
 
       // Invalidate cache
@@ -465,10 +460,7 @@ export class QuestionRepository implements IQuestionRepository {
       // Handle database constraint violations
       if (error instanceof Error) {
         if (error.message.includes('unique') || error.message.includes('order')) {
-          throw new ConflictError(
-            'Order number already exists for this quiz',
-            'orderNumber'
-          );
+          throw new ConflictError('Order number already exists for this quiz', 'orderNumber');
         }
       }
 
@@ -483,7 +475,7 @@ export class QuestionRepository implements IQuestionRepository {
 
   /**
    * Updates multiple questions in a single transaction
-   * 
+   *
    * @param updates - Array of question updates with IDs
    * @returns The updated questions
    * @throws NotFoundError if any question doesn't exist
@@ -534,7 +526,7 @@ export class QuestionRepository implements IQuestionRepository {
         // Invalidate cache for all affected questions and quizzes
         await Promise.all([
           ...updates.map(({ id }) => cache.delete(this.getQuestionCacheKey(id))),
-          ...Array.from(affectedQuizIds).map(quizId => this.invalidateCacheByQuiz(quizId))
+          ...Array.from(affectedQuizIds).map((quizId) => this.invalidateCacheByQuiz(quizId)),
         ]);
 
         return updatedQuestions;
@@ -543,10 +535,7 @@ export class QuestionRepository implements IQuestionRepository {
       return result;
     } catch (error) {
       // Re-throw known errors
-      if (
-        error instanceof NotFoundError ||
-        error instanceof DatabaseError
-      ) {
+      if (error instanceof NotFoundError || error instanceof DatabaseError) {
         throw error;
       }
 
@@ -561,7 +550,7 @@ export class QuestionRepository implements IQuestionRepository {
 
   /**
    * Deletes a question from the database
-   * 
+   *
    * @param id - Question ID
    * @returns void
    * @throws NotFoundError if question doesn't exist
@@ -576,16 +565,10 @@ export class QuestionRepository implements IQuestionRepository {
       }
 
       // Delete question
-      const result = await this.writeDb
-        .delete(questions)
-        .where(eq(questions.id, id))
-        .returning();
+      const result = await this.writeDb.delete(questions).where(eq(questions.id, id)).returning();
 
       if (!result || result.length === 0) {
-        throw new DatabaseError(
-          'Failed to delete question',
-          'delete'
-        );
+        throw new DatabaseError('Failed to delete question', 'delete');
       }
 
       // Invalidate cache
@@ -608,7 +591,7 @@ export class QuestionRepository implements IQuestionRepository {
 
   /**
    * Deletes all questions for a quiz
-   * 
+   *
    * @param quizId - Quiz ID
    * @returns Number of deleted questions
    * @throws DatabaseError if database operation fails
@@ -626,8 +609,8 @@ export class QuestionRepository implements IQuestionRepository {
 
       // Invalidate cache for all deleted questions
       await Promise.all([
-        ...existingQuestions.map(q => cache.delete(this.getQuestionCacheKey(q.id))),
-        this.invalidateCacheByQuiz(quizId)
+        ...existingQuestions.map((q) => cache.delete(this.getQuestionCacheKey(q.id))),
+        this.invalidateCacheByQuiz(quizId),
       ]);
 
       return result.length;
@@ -643,7 +626,7 @@ export class QuestionRepository implements IQuestionRepository {
   /**
    * Reorders questions within a quiz
    * Updates orderNumber for all provided question IDs
-   * 
+   *
    * @param quizId - Quiz ID
    * @param questionIds - Array of question IDs in desired order
    * @returns void
@@ -656,10 +639,9 @@ export class QuestionRepository implements IQuestionRepository {
       // Validate that all questions belong to the quiz
       const isValid = await this.validateQuestionsBelongToQuiz(quizId, questionIds);
       if (!isValid) {
-        throw new ValidationError(
-          'Some questions do not belong to the specified quiz',
-          [{ field: 'questionIds', message: 'Invalid question IDs for this quiz' }]
-        );
+        throw new ValidationError('Some questions do not belong to the specified quiz', [
+          { field: 'questionIds', message: 'Invalid question IDs for this quiz' },
+        ]);
       }
 
       // Update order numbers in a transaction
@@ -667,9 +649,9 @@ export class QuestionRepository implements IQuestionRepository {
         for (let i = 0; i < questionIds.length; i++) {
           await tx
             .update(questions)
-            .set({ 
+            .set({
               orderNumber: i + 1,
-              updatedAt: new Date()
+              updatedAt: new Date(),
             })
             .where(eq(questions.id, questionIds[i]!));
         }
@@ -677,8 +659,8 @@ export class QuestionRepository implements IQuestionRepository {
 
       // Invalidate cache for all affected questions and quiz
       await Promise.all([
-        ...questionIds.map(id => cache.delete(this.getQuestionCacheKey(id))),
-        this.invalidateCacheByQuiz(quizId)
+        ...questionIds.map((id) => cache.delete(this.getQuestionCacheKey(id))),
+        this.invalidateCacheByQuiz(quizId),
       ]);
     } catch (error) {
       // Re-throw known errors
@@ -701,7 +683,7 @@ export class QuestionRepository implements IQuestionRepository {
 
   /**
    * Gets the next available order number for a quiz
-   * 
+   *
    * @param quizId - Quiz ID
    * @returns Next order number
    * @throws DatabaseError if database operation fails
@@ -725,7 +707,7 @@ export class QuestionRepository implements IQuestionRepository {
 
   /**
    * Counts questions in a quiz
-   * 
+   *
    * @param quizId - Quiz ID
    * @returns Number of questions
    * @throws DatabaseError if database operation fails
@@ -749,7 +731,7 @@ export class QuestionRepository implements IQuestionRepository {
 
   /**
    * Calculates total points for all questions in a quiz
-   * 
+   *
    * @param quizId - Quiz ID
    * @returns Total points
    * @throws DatabaseError if database operation fails
@@ -773,7 +755,7 @@ export class QuestionRepository implements IQuestionRepository {
 
   /**
    * Checks if a question exists
-   * 
+   *
    * @param id - Question ID
    * @returns True if question exists, false otherwise
    * @throws DatabaseError if database operation fails
@@ -793,7 +775,7 @@ export class QuestionRepository implements IQuestionRepository {
 
   /**
    * Validates that all question IDs belong to the specified quiz
-   * 
+   *
    * @param quizId - Quiz ID
    * @param questionIds - Array of question IDs to validate
    * @returns True if all questions belong to quiz, false otherwise
@@ -808,12 +790,7 @@ export class QuestionRepository implements IQuestionRepository {
       const [result] = await this.readDb
         .select({ count: count() })
         .from(questions)
-        .where(
-          and(
-            eq(questions.quizId, quizId),
-            inArray(questions.id, questionIds)
-          )
-        );
+        .where(and(eq(questions.quizId, quizId), inArray(questions.id, questionIds)));
 
       return (result?.count || 0) === questionIds.length;
     } catch (error) {
@@ -828,7 +805,7 @@ export class QuestionRepository implements IQuestionRepository {
   /**
    * Invalidates cache for questions by quiz
    * Should be called after any update operation
-   * 
+   *
    * @param quizId - Quiz ID
    * @returns void
    */
@@ -837,7 +814,7 @@ export class QuestionRepository implements IQuestionRepository {
       // Invalidate quiz questions cache entries
       const pattern = buildCacheKey(CachePrefix.QUIZ, 'questions', quizId, '*');
       await cache.deletePattern(pattern);
-      
+
       // Also invalidate all questions cache
       const allPattern = buildCacheKey(CachePrefix.QUIZ, 'all-questions', quizId, '*');
       await cache.deletePattern(allPattern);

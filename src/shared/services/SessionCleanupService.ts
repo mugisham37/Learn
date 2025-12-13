@@ -1,17 +1,18 @@
 /**
  * Session Cleanup Service
- * 
+ *
  * Handles cleanup of expired sessions, refresh tokens, and temporary data.
  * Runs daily to maintain database hygiene and security.
- * 
+ *
  * Requirements: 14.7 - Daily session cleanup
  */
 
-import { logger } from '../utils/logger.js';
+import { sql } from 'drizzle-orm';
+
 import { getRedisClient } from '../../infrastructure/cache/index.js';
 import { db } from '../../infrastructure/database/index.js';
 import { users } from '../../infrastructure/database/schema/users.schema.js';
-import { sql } from 'drizzle-orm';
+import { logger } from '../utils/logger.js';
 
 /**
  * Session cleanup configuration
@@ -106,7 +107,13 @@ export class SessionCleanupService {
 
       do {
         // Scan for refresh token keys
-        const result = await redis.scan(cursor, 'MATCH', 'refresh_token:*', 'COUNT', this.config.batchSize);
+        const result = await redis.scan(
+          cursor,
+          'MATCH',
+          'refresh_token:*',
+          'COUNT',
+          this.config.batchSize
+        );
         cursor = result[0];
         const keys = result[1];
 
@@ -165,9 +172,7 @@ export class SessionCleanupService {
 
       const result = await db
         .delete(users)
-        .where(
-          sql`${users.emailVerified} = false AND ${users.createdAt} < ${cutoffDate}`
-        )
+        .where(sql`${users.emailVerified} = false AND ${users.createdAt} < ${cutoffDate}`)
         .returning({ id: users.id });
 
       const removedCount = result.length;
@@ -198,7 +203,13 @@ export class SessionCleanupService {
 
       do {
         // Scan for password reset token keys
-        const result = await redis.scan(cursor, 'MATCH', 'password_reset:*', 'COUNT', this.config.batchSize);
+        const result = await redis.scan(
+          cursor,
+          'MATCH',
+          'password_reset:*',
+          'COUNT',
+          this.config.batchSize
+        );
         cursor = result[0];
         const keys = result[1];
 
@@ -257,7 +268,13 @@ export class SessionCleanupService {
 
       do {
         // Scan for user-specific refresh token keys
-        const result = await redis.scan(cursor, 'MATCH', `refresh_token:${userId}:*`, 'COUNT', this.config.batchSize);
+        const result = await redis.scan(
+          cursor,
+          'MATCH',
+          `refresh_token:${userId}:*`,
+          'COUNT',
+          this.config.batchSize
+        );
         cursor = result[0];
         const keys = result[1];
 
@@ -303,7 +320,13 @@ export class SessionCleanupService {
       // Count refresh tokens
       let cursor = '0';
       do {
-        const result = await redis.scan(cursor, 'MATCH', 'refresh_token:*', 'COUNT', this.config.batchSize);
+        const result = await redis.scan(
+          cursor,
+          'MATCH',
+          'refresh_token:*',
+          'COUNT',
+          this.config.batchSize
+        );
         cursor = result[0];
         stats.totalRefreshTokens += result[1].length;
       } while (cursor !== '0');
@@ -311,7 +334,13 @@ export class SessionCleanupService {
       // Count password reset tokens
       cursor = '0';
       do {
-        const result = await redis.scan(cursor, 'MATCH', 'password_reset:*', 'COUNT', this.config.batchSize);
+        const result = await redis.scan(
+          cursor,
+          'MATCH',
+          'password_reset:*',
+          'COUNT',
+          this.config.batchSize
+        );
         cursor = result[0];
         stats.totalPasswordResetTokens += result[1].length;
       } while (cursor !== '0');
@@ -349,7 +378,10 @@ export class SessionCleanupService {
       await redis.ping();
 
       // Test database connectivity
-      await db.select({ count: sql<number>`1` }).from(users).limit(1);
+      await db
+        .select({ count: sql<number>`1` })
+        .from(users)
+        .limit(1);
 
       return true;
     } catch (error) {
@@ -379,7 +411,9 @@ export function getSessionCleanupService(): SessionCleanupService {
 /**
  * Initialize session cleanup service with custom config
  */
-export function initializeSessionCleanupService(config?: Partial<SessionCleanupConfig>): SessionCleanupService {
+export function initializeSessionCleanupService(
+  config?: Partial<SessionCleanupConfig>
+): SessionCleanupService {
   sessionCleanupServiceInstance = new SessionCleanupService(config);
   return sessionCleanupServiceInstance;
 }

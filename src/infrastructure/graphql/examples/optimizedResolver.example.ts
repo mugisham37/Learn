@@ -1,9 +1,9 @@
 /**
  * Example: Optimized GraphQL Resolver
- * 
+ *
  * This example demonstrates how to use the response optimization features
  * in GraphQL resolvers to reduce payload sizes and improve performance.
- * 
+ *
  * Requirements: 15.6
  */
 
@@ -71,14 +71,16 @@ export const getOptimizedCourses = async (
   info: GraphQLResolveInfo
 ) => {
   const paginationInput = extractPaginationInput(args.pagination || {});
-  
+
   // Check if we need to fetch related data based on requested fields
   const selection = createFieldSelection(info);
-  const needsInstructor = selection.getNestedSelection('edges')
+  const needsInstructor = selection
+    .getNestedSelection('edges')
     ?.getNestedSelection('node')
     ?.hasField('instructor');
-  
-  const needsModules = selection.getNestedSelection('edges')
+
+  const needsModules = selection
+    .getNestedSelection('edges')
     ?.getNestedSelection('node')
     ?.hasField('modules');
 
@@ -94,22 +96,26 @@ export const getOptimizedCourses = async (
       difficulty: 'beginner',
       price: 99.99,
       // Only include instructor if requested
-      instructor: needsInstructor ? {
-        id: 'instructor-1',
-        email: 'instructor@example.com',
-        profile: {
-          fullName: 'Jane Smith',
-          bio: 'Experienced developer',
-        },
-      } : undefined,
+      instructor: needsInstructor
+        ? {
+            id: 'instructor-1',
+            email: 'instructor@example.com',
+            profile: {
+              fullName: 'Jane Smith',
+              bio: 'Experienced developer',
+            },
+          }
+        : undefined,
       // Only include modules if requested
-      modules: needsModules ? [
-        {
-          id: 'module-1',
-          title: 'Introduction',
-          orderNumber: 1,
-        },
-      ] : undefined,
+      modules: needsModules
+        ? [
+            {
+              id: 'module-1',
+              title: 'Introduction',
+              orderNumber: 1,
+            },
+          ]
+        : undefined,
       enrollmentCount: 150,
       averageRating: 4.5,
       createdAt: new Date(),
@@ -122,12 +128,7 @@ export const getOptimizedCourses = async (
   const totalCount = 1; // This would come from your data source
 
   // Create optimized connection with field selection and null removal
-  return optimizeListResponse(
-    courses,
-    paginationInput,
-    info,
-    totalCount
-  );
+  return optimizeListResponse(courses, paginationInput, info, totalCount);
 };
 
 // Example: Using the withResponseOptimization wrapper
@@ -213,14 +214,16 @@ export const getOptimizedCourse = async (
         description: 'Deep dive into React hooks',
         orderNumber: 1,
         // Only include lessons if requested
-        lessons: includeLessons ? [
-          {
-            id: 'lesson-1',
-            title: 'Custom Hooks',
-            type: 'video',
-            duration: 1800,
-          },
-        ] : undefined,
+        lessons: includeLessons
+          ? [
+              {
+                id: 'lesson-1',
+                title: 'Custom Hooks',
+                type: 'video',
+                duration: 1800,
+              },
+            ]
+          : undefined,
       },
     ];
   }
@@ -257,7 +260,7 @@ export const getOptimizedUserCourses = async (
 ) => {
   try {
     const paginationInput = extractPaginationInput(args.pagination || {});
-    
+
     // Simulate fetching user courses
     const courses = [
       {
@@ -278,16 +281,11 @@ export const getOptimizedUserCourses = async (
 
     const totalCount = 1;
 
-    return optimizeListResponse(
-      courses,
-      paginationInput,
-      info,
-      totalCount
-    );
+    return optimizeListResponse(courses, paginationInput, info, totalCount);
   } catch (error) {
     // Log error and return optimized error response
     console.error('Failed to fetch user courses:', error);
-    
+
     // Return empty connection with error information
     return optimizeListResponse([], {}, info, 0);
   }
@@ -307,7 +305,7 @@ export const getOptimizedAnalytics = async (
   info: GraphQLResolveInfo
 ) => {
   const startTime = Date.now();
-  
+
   try {
     // Check what analytics data is requested
     const needsCourseMetrics = isFieldRequested(info, 'courseMetrics');
@@ -346,14 +344,14 @@ export const getOptimizedAnalytics = async (
           { date: '2024-01-02', count: 75 },
         ],
         completionTrend: [
-          { date: '2024-01-01', rate: 0.70 },
+          { date: '2024-01-01', rate: 0.7 },
           { date: '2024-01-02', rate: 0.72 },
         ],
       };
     }
 
     const processingTime = Date.now() - startTime;
-    
+
     // Log performance metrics
     console.log(`Analytics query processed in ${processingTime}ms`, {
       courseMetrics: needsCourseMetrics,

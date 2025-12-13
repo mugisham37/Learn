@@ -1,16 +1,14 @@
 /**
  * Question Repository Interface
- * 
+ *
  * Defines the contract for question data access operations.
  * Abstracts database operations behind a clean interface following
  * the Repository pattern for domain independence.
- * 
+ *
  * Requirements: 6.1, 6.2
  */
 
-import { 
-  Question
-} from '../../../../infrastructure/database/schema/assessments.schema.js';
+import { Question } from '../../../../infrastructure/database/schema/assessments.schema.js';
 
 /**
  * Pagination parameters for list queries
@@ -35,7 +33,13 @@ export interface PaginatedResult<T> {
  * Question filter parameters
  */
 export interface QuestionFilters {
-  questionType?: 'multiple_choice' | 'true_false' | 'short_answer' | 'essay' | 'fill_blank' | 'matching';
+  questionType?:
+    | 'multiple_choice'
+    | 'true_false'
+    | 'short_answer'
+    | 'essay'
+    | 'fill_blank'
+    | 'matching';
   difficulty?: 'easy' | 'medium' | 'hard';
   minPoints?: number;
   maxPoints?: number;
@@ -46,7 +50,13 @@ export interface QuestionFilters {
  */
 export interface CreateQuestionDTO {
   quizId: string;
-  questionType: 'multiple_choice' | 'true_false' | 'short_answer' | 'essay' | 'fill_blank' | 'matching';
+  questionType:
+    | 'multiple_choice'
+    | 'true_false'
+    | 'short_answer'
+    | 'essay'
+    | 'fill_blank'
+    | 'matching';
   questionText: string;
   questionMediaUrl?: string;
   options?: unknown; // JSONB field for question options
@@ -61,7 +71,13 @@ export interface CreateQuestionDTO {
  * Data Transfer Object for updating a question
  */
 export interface UpdateQuestionDTO {
-  questionType?: 'multiple_choice' | 'true_false' | 'short_answer' | 'essay' | 'fill_blank' | 'matching';
+  questionType?:
+    | 'multiple_choice'
+    | 'true_false'
+    | 'short_answer'
+    | 'essay'
+    | 'fill_blank'
+    | 'matching';
   questionText?: string;
   questionMediaUrl?: string;
   options?: unknown;
@@ -74,14 +90,14 @@ export interface UpdateQuestionDTO {
 
 /**
  * Question Repository Interface
- * 
+ *
  * Provides methods for all question data access operations with caching support.
  * Implementations must handle database errors and map them to domain errors.
  */
 export interface IQuestionRepository {
   /**
    * Creates a new question in the database
-   * 
+   *
    * @param data - Question creation data
    * @returns The created question
    * @throws ValidationError if quiz doesn't exist
@@ -92,7 +108,7 @@ export interface IQuestionRepository {
 
   /**
    * Creates multiple questions in a single transaction
-   * 
+   *
    * @param questions - Array of question creation data
    * @returns The created questions
    * @throws ValidationError if quiz doesn't exist
@@ -103,7 +119,7 @@ export interface IQuestionRepository {
 
   /**
    * Finds a question by its unique ID
-   * 
+   *
    * @param id - Question ID
    * @returns The question if found, null otherwise
    * @throws DatabaseError if database operation fails
@@ -112,7 +128,7 @@ export interface IQuestionRepository {
 
   /**
    * Finds questions by quiz with pagination and ordering
-   * 
+   *
    * @param quizId - Quiz ID
    * @param pagination - Pagination parameters
    * @param filters - Optional filters
@@ -127,7 +143,7 @@ export interface IQuestionRepository {
 
   /**
    * Finds all questions for a quiz ordered by orderNumber
-   * 
+   *
    * @param quizId - Quiz ID
    * @param randomize - Whether to randomize the order
    * @returns All questions for the quiz
@@ -137,7 +153,7 @@ export interface IQuestionRepository {
 
   /**
    * Updates a question's data
-   * 
+   *
    * @param id - Question ID
    * @param data - Update data
    * @returns The updated question
@@ -149,7 +165,7 @@ export interface IQuestionRepository {
 
   /**
    * Updates multiple questions in a single transaction
-   * 
+   *
    * @param updates - Array of question updates with IDs
    * @returns The updated questions
    * @throws NotFoundError if any question doesn't exist
@@ -159,7 +175,7 @@ export interface IQuestionRepository {
 
   /**
    * Deletes a question from the database
-   * 
+   *
    * @param id - Question ID
    * @returns void
    * @throws NotFoundError if question doesn't exist
@@ -169,7 +185,7 @@ export interface IQuestionRepository {
 
   /**
    * Deletes all questions for a quiz
-   * 
+   *
    * @param quizId - Quiz ID
    * @returns Number of deleted questions
    * @throws DatabaseError if database operation fails
@@ -179,7 +195,7 @@ export interface IQuestionRepository {
   /**
    * Reorders questions within a quiz
    * Updates orderNumber for all provided question IDs
-   * 
+   *
    * @param quizId - Quiz ID
    * @param questionIds - Array of question IDs in desired order
    * @returns void
@@ -191,7 +207,7 @@ export interface IQuestionRepository {
 
   /**
    * Gets the next available order number for a quiz
-   * 
+   *
    * @param quizId - Quiz ID
    * @returns Next order number
    * @throws DatabaseError if database operation fails
@@ -200,7 +216,7 @@ export interface IQuestionRepository {
 
   /**
    * Counts questions in a quiz
-   * 
+   *
    * @param quizId - Quiz ID
    * @returns Number of questions
    * @throws DatabaseError if database operation fails
@@ -209,7 +225,7 @@ export interface IQuestionRepository {
 
   /**
    * Calculates total points for all questions in a quiz
-   * 
+   *
    * @param quizId - Quiz ID
    * @returns Total points
    * @throws DatabaseError if database operation fails
@@ -218,7 +234,7 @@ export interface IQuestionRepository {
 
   /**
    * Checks if a question exists
-   * 
+   *
    * @param id - Question ID
    * @returns True if question exists, false otherwise
    * @throws DatabaseError if database operation fails
@@ -227,7 +243,7 @@ export interface IQuestionRepository {
 
   /**
    * Validates that all question IDs belong to the specified quiz
-   * 
+   *
    * @param quizId - Quiz ID
    * @param questionIds - Array of question IDs to validate
    * @returns True if all questions belong to quiz, false otherwise
@@ -238,7 +254,7 @@ export interface IQuestionRepository {
   /**
    * Invalidates cache for questions by quiz
    * Should be called after any update operation
-   * 
+   *
    * @param quizId - Quiz ID
    * @returns void
    */

@@ -1,10 +1,10 @@
 /**
  * Elasticsearch Client Implementation
- * 
+ *
  * Concrete implementation of IElasticsearchClient providing a wrapper
  * around the Elasticsearch client with error handling, retries, and
  * proper error mapping to domain errors.
- * 
+ *
  * Requirements: 8.1, 8.7
  */
 
@@ -60,22 +60,22 @@ function isRetryableError(error: any): boolean {
   if (error.name === 'ConnectionError' || error.name === 'TimeoutError') {
     return true;
   }
-  
+
   if (error.statusCode >= 500 && error.statusCode < 600) {
     return true;
   }
-  
+
   // Retry on specific Elasticsearch errors
   if (error.body?.error?.type === 'cluster_block_exception') {
     return true;
   }
-  
+
   return false;
 }
 
 /**
  * Elasticsearch Client Implementation
- * 
+ *
  * Provides a robust wrapper around the Elasticsearch client with
  * automatic retries, error handling, and proper error mapping.
  */
@@ -111,15 +111,12 @@ export class ElasticsearchClient implements IElasticsearchClient {
         }
 
         const delay = calculateBackoffDelay(attempt, this.retryConfig);
-        console.warn(
-          `${operationName} attempt ${attempt + 1} failed. Retrying in ${delay}ms...`,
-          {
-            error: error.message,
-            context,
-            attempt: attempt + 1,
-            maxRetries: this.retryConfig.maxRetries,
-          }
-        );
+        console.warn(`${operationName} attempt ${attempt + 1} failed. Retrying in ${delay}ms...`, {
+          error: error.message,
+          context,
+          attempt: attempt + 1,
+          maxRetries: this.retryConfig.maxRetries,
+        });
 
         await sleep(delay);
       }
@@ -190,11 +187,13 @@ export class ElasticsearchClient implements IElasticsearchClient {
   /**
    * Bulk index multiple documents
    */
-  async bulkIndex(operations: Array<{
-    index: string;
-    id: string;
-    document: any;
-  }>): Promise<BulkOperationResult> {
+  async bulkIndex(
+    operations: Array<{
+      index: string;
+      id: string;
+      document: any;
+    }>
+  ): Promise<BulkOperationResult> {
     return this.executeWithRetry(
       async () => {
         // Build bulk request body
@@ -507,25 +506,28 @@ export class ElasticsearchClient implements IElasticsearchClient {
    * Get index statistics
    */
   async getIndexStats(index: string): Promise<{
-    indices: Record<string, {
-      total: {
-        docs: {
-          count: number;
-          deleted: number;
+    indices: Record<
+      string,
+      {
+        total: {
+          docs: {
+            count: number;
+            deleted: number;
+          };
+          store: {
+            size_in_bytes: number;
+          };
+          indexing: {
+            index_total: number;
+            index_time_in_millis: number;
+          };
+          search: {
+            query_total: number;
+            query_time_in_millis: number;
+          };
         };
-        store: {
-          size_in_bytes: number;
-        };
-        indexing: {
-          index_total: number;
-          index_time_in_millis: number;
-        };
-        search: {
-          query_total: number;
-          query_time_in_millis: number;
-        };
-      };
-    }>;
+      }
+    >;
   }> {
     return this.executeWithRetry(
       async () => {

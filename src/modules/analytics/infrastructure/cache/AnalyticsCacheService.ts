@@ -1,27 +1,30 @@
 /**
  * Analytics Cache Service
- * 
+ *
  * Implements comprehensive caching strategy for analytics data with:
  * - Cache-aside pattern for expensive queries
  * - Appropriate TTL based on update frequency
  * - Cache warming for dashboard metrics
  * - Cache invalidation on data updates
  * - Cache stampede prevention
- * 
+ *
  * Requirements: 12.6, 15.2
  */
 
-import { cache, buildCacheKey, CachePrefix, CacheTTL, redis } from '../../../../infrastructure/cache/index.js';
+import {
+  cache,
+  buildCacheKey,
+  CachePrefix,
+  CacheTTL,
+  redis,
+} from '../../../../infrastructure/cache/index.js';
 import type { Role, DateRange } from '../../../../shared/types/index.js';
-import type { 
+import type {
   CourseReport,
   StudentReport,
-  DashboardMetrics
+  DashboardMetrics,
 } from '../../application/services/IAnalyticsService.js';
-import type { 
-  CourseAnalytics, 
-  StudentAnalytics
-} from '../../domain/entities/index.js';
+import type { CourseAnalytics, StudentAnalytics } from '../../domain/entities/index.js';
 
 /**
  * Cache TTL values specific to analytics data
@@ -32,20 +35,20 @@ export const AnalyticsCacheTTL = {
   DASHBOARD_METRICS: 300, // 5 minutes
   COURSE_ANALYTICS: 600, // 10 minutes
   STUDENT_ANALYTICS: 600, // 10 minutes
-  
+
   // Reports - longer TTL as they're expensive to generate
   COURSE_REPORT: 1800, // 30 minutes
   STUDENT_REPORT: 1800, // 30 minutes
   PLATFORM_METRICS: 900, // 15 minutes
-  
+
   // Trending data - medium TTL
   TRENDING_COURSES: 900, // 15 minutes
   TOP_PERFORMERS: 1800, // 30 minutes
-  
+
   // Event aggregations - short TTL for accuracy
   EVENT_COUNTS: 300, // 5 minutes
   EVENT_DISTRIBUTION: 600, // 10 minutes
-  
+
   // Cache warming locks - prevent stampede
   WARMING_LOCK: 60, // 1 minute
 } as const;
@@ -54,60 +57,58 @@ export const AnalyticsCacheTTL = {
  * Cache key builders for different analytics data types
  */
 export const AnalyticsCacheKeys = {
-  courseAnalytics: (courseId: string) => 
-    buildCacheKey(CachePrefix.ANALYTICS, 'course', courseId),
-  
-  studentAnalytics: (userId: string) => 
-    buildCacheKey(CachePrefix.ANALYTICS, 'student', userId),
-  
-  dashboardMetrics: (userId: string, role: Role) => 
+  courseAnalytics: (courseId: string) => buildCacheKey(CachePrefix.ANALYTICS, 'course', courseId),
+
+  studentAnalytics: (userId: string) => buildCacheKey(CachePrefix.ANALYTICS, 'student', userId),
+
+  dashboardMetrics: (userId: string, role: Role) =>
     buildCacheKey(CachePrefix.ANALYTICS, 'dashboard', userId, role),
-  
-  courseReport: (courseId: string, startDate: string, endDate: string) => 
+
+  courseReport: (courseId: string, startDate: string, endDate: string) =>
     buildCacheKey(CachePrefix.ANALYTICS, 'course-report', courseId, startDate, endDate),
-  
-  studentReport: (userId: string, startDate: string, endDate: string) => 
+
+  studentReport: (userId: string, startDate: string, endDate: string) =>
     buildCacheKey(CachePrefix.ANALYTICS, 'student-report', userId, startDate, endDate),
-  
-  platformMetrics: (startDate: string, endDate: string) => 
+
+  platformMetrics: (startDate: string, endDate: string) =>
     buildCacheKey(CachePrefix.ANALYTICS, 'platform', startDate, endDate),
-  
-  trendingCourses: (limit: number, startDate: string, endDate: string) => 
+
+  trendingCourses: (limit: number, startDate: string, endDate: string) =>
     buildCacheKey(CachePrefix.ANALYTICS, 'trending', limit, startDate, endDate),
-  
-  topPerformers: (limit: number) => 
-    buildCacheKey(CachePrefix.ANALYTICS, 'top-performers', limit),
-  
-  eventCount: (eventType: string, startDate?: string, endDate?: string) => 
-    buildCacheKey(CachePrefix.ANALYTICS, 'event-count', eventType, startDate || 'all', endDate || 'all'),
-  
-  eventDistribution: (startDate?: string, endDate?: string) => 
+
+  topPerformers: (limit: number) => buildCacheKey(CachePrefix.ANALYTICS, 'top-performers', limit),
+
+  eventCount: (eventType: string, startDate?: string, endDate?: string) =>
+    buildCacheKey(
+      CachePrefix.ANALYTICS,
+      'event-count',
+      eventType,
+      startDate || 'all',
+      endDate || 'all'
+    ),
+
+  eventDistribution: (startDate?: string, endDate?: string) =>
     buildCacheKey(CachePrefix.ANALYTICS, 'event-dist', startDate || 'all', endDate || 'all'),
-  
+
   // Cache warming locks
-  warmingLock: (key: string) => 
-    buildCacheKey(CachePrefix.ANALYTICS, 'warming-lock', key),
-  
+  warmingLock: (key: string) => buildCacheKey(CachePrefix.ANALYTICS, 'warming-lock', key),
+
   // Invalidation patterns
-  coursePattern: (courseId: string) => 
+  coursePattern: (courseId: string) =>
     buildCacheKey(CachePrefix.ANALYTICS, 'course', courseId) + '*',
-  
-  studentPattern: (userId: string) => 
-    buildCacheKey(CachePrefix.ANALYTICS, 'student', userId) + '*',
-  
-  allDashboardPattern: () => 
-    buildCacheKey(CachePrefix.ANALYTICS, 'dashboard') + '*',
-  
-  allReportsPattern: () => 
-    buildCacheKey(CachePrefix.ANALYTICS, '*-report', '*'),
-  
-  allTrendingPattern: () => 
-    buildCacheKey(CachePrefix.ANALYTICS, 'trending') + '*',
+
+  studentPattern: (userId: string) => buildCacheKey(CachePrefix.ANALYTICS, 'student', userId) + '*',
+
+  allDashboardPattern: () => buildCacheKey(CachePrefix.ANALYTICS, 'dashboard') + '*',
+
+  allReportsPattern: () => buildCacheKey(CachePrefix.ANALYTICS, '*-report', '*'),
+
+  allTrendingPattern: () => buildCacheKey(CachePrefix.ANALYTICS, 'trending') + '*',
 } as const;
 
 /**
  * Analytics Cache Service
- * 
+ *
  * Provides comprehensive caching functionality for analytics data with
  * cache-aside pattern, appropriate TTLs, cache warming, and invalidation.
  */
@@ -165,8 +166,8 @@ export class AnalyticsCacheService {
    */
   async getCourseReport(courseId: string, dateRange: DateRange): Promise<CourseReport | null> {
     const key = AnalyticsCacheKeys.courseReport(
-      courseId, 
-      dateRange.startDate.toISOString(), 
+      courseId,
+      dateRange.startDate.toISOString(),
       dateRange.endDate.toISOString()
     );
     return await cache.get<CourseReport>(key);
@@ -175,10 +176,14 @@ export class AnalyticsCacheService {
   /**
    * Caches course report with appropriate TTL
    */
-  async setCourseReport(courseId: string, dateRange: DateRange, report: CourseReport): Promise<void> {
+  async setCourseReport(
+    courseId: string,
+    dateRange: DateRange,
+    report: CourseReport
+  ): Promise<void> {
     const key = AnalyticsCacheKeys.courseReport(
-      courseId, 
-      dateRange.startDate.toISOString(), 
+      courseId,
+      dateRange.startDate.toISOString(),
       dateRange.endDate.toISOString()
     );
     await cache.set(key, report, AnalyticsCacheTTL.COURSE_REPORT);
@@ -189,8 +194,8 @@ export class AnalyticsCacheService {
    */
   async getStudentReport(userId: string, dateRange: DateRange): Promise<StudentReport | null> {
     const key = AnalyticsCacheKeys.studentReport(
-      userId, 
-      dateRange.startDate.toISOString(), 
+      userId,
+      dateRange.startDate.toISOString(),
       dateRange.endDate.toISOString()
     );
     return await cache.get<StudentReport>(key);
@@ -199,10 +204,14 @@ export class AnalyticsCacheService {
   /**
    * Caches student report with appropriate TTL
    */
-  async setStudentReport(userId: string, dateRange: DateRange, report: StudentReport): Promise<void> {
+  async setStudentReport(
+    userId: string,
+    dateRange: DateRange,
+    report: StudentReport
+  ): Promise<void> {
     const key = AnalyticsCacheKeys.studentReport(
-      userId, 
-      dateRange.startDate.toISOString(), 
+      userId,
+      dateRange.startDate.toISOString(),
       dateRange.endDate.toISOString()
     );
     await cache.set(key, report, AnalyticsCacheTTL.STUDENT_REPORT);
@@ -213,7 +222,7 @@ export class AnalyticsCacheService {
    */
   async getPlatformMetrics(dateRange: DateRange): Promise<any | null> {
     const key = AnalyticsCacheKeys.platformMetrics(
-      dateRange.startDate.toISOString(), 
+      dateRange.startDate.toISOString(),
       dateRange.endDate.toISOString()
     );
     return await cache.get(key);
@@ -224,7 +233,7 @@ export class AnalyticsCacheService {
    */
   async setPlatformMetrics(dateRange: DateRange, metrics: any): Promise<void> {
     const key = AnalyticsCacheKeys.platformMetrics(
-      dateRange.startDate.toISOString(), 
+      dateRange.startDate.toISOString(),
       dateRange.endDate.toISOString()
     );
     await cache.set(key, metrics, AnalyticsCacheTTL.PLATFORM_METRICS);
@@ -235,8 +244,8 @@ export class AnalyticsCacheService {
    */
   async getTrendingCourses(limit: number, dateRange: DateRange): Promise<CourseAnalytics[] | null> {
     const key = AnalyticsCacheKeys.trendingCourses(
-      limit, 
-      dateRange.startDate.toISOString(), 
+      limit,
+      dateRange.startDate.toISOString(),
       dateRange.endDate.toISOString()
     );
     return await cache.get<CourseAnalytics[]>(key);
@@ -245,10 +254,14 @@ export class AnalyticsCacheService {
   /**
    * Caches trending courses with appropriate TTL
    */
-  async setTrendingCourses(limit: number, dateRange: DateRange, courses: CourseAnalytics[]): Promise<void> {
+  async setTrendingCourses(
+    limit: number,
+    dateRange: DateRange,
+    courses: CourseAnalytics[]
+  ): Promise<void> {
     const key = AnalyticsCacheKeys.trendingCourses(
-      limit, 
-      dateRange.startDate.toISOString(), 
+      limit,
+      dateRange.startDate.toISOString(),
       dateRange.endDate.toISOString()
     );
     await cache.set(key, courses, AnalyticsCacheTTL.TRENDING_COURSES);
@@ -308,7 +321,10 @@ export class AnalyticsCacheService {
   /**
    * Caches event distribution with appropriate TTL
    */
-  async setEventDistribution(distribution: Record<string, number>, dateRange?: DateRange): Promise<void> {
+  async setEventDistribution(
+    distribution: Record<string, number>,
+    dateRange?: DateRange
+  ): Promise<void> {
     const key = AnalyticsCacheKeys.eventDistribution(
       dateRange?.startDate.toISOString(),
       dateRange?.endDate.toISOString()
@@ -318,15 +334,11 @@ export class AnalyticsCacheService {
 
   /**
    * Cache warming with stampede prevention
-   * 
+   *
    * Uses distributed locks to prevent multiple processes from warming the same cache
    * simultaneously (cache stampede prevention).
    */
-  async warmCache<T>(
-    cacheKey: string,
-    warmingFunction: () => Promise<T>,
-    ttl: number
-  ): Promise<T> {
+  async warmCache<T>(cacheKey: string, warmingFunction: () => Promise<T>, ttl: number): Promise<T> {
     // Check if data is already cached
     const cached = await cache.get<T>(cacheKey);
     if (cached) {
@@ -335,7 +347,11 @@ export class AnalyticsCacheService {
 
     // Try to acquire warming lock
     const lockKey = AnalyticsCacheKeys.warmingLock(cacheKey);
-    const lockAcquired = await cache.setIfNotExists(lockKey, 'warming', AnalyticsCacheTTL.WARMING_LOCK);
+    const lockAcquired = await cache.setIfNotExists(
+      lockKey,
+      'warming',
+      AnalyticsCacheTTL.WARMING_LOCK
+    );
 
     if (lockAcquired) {
       try {
@@ -349,13 +365,13 @@ export class AnalyticsCacheService {
       }
     } else {
       // Another process is warming the cache, wait a bit and check again
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
       const warmedData = await cache.get<T>(cacheKey);
       if (warmedData) {
         return warmedData;
       }
-      
+
       // If still not cached, execute the function without caching
       // This prevents blocking but may result in duplicate work
       return await warmingFunction();
@@ -364,7 +380,7 @@ export class AnalyticsCacheService {
 
   /**
    * Invalidates course-related cache entries
-   * 
+   *
    * Called when course data is updated to ensure cache consistency
    */
   async invalidateCourseCache(courseId: string): Promise<void> {
@@ -375,14 +391,12 @@ export class AnalyticsCacheService {
       AnalyticsCacheKeys.allTrendingPattern(),
     ];
 
-    await Promise.all(
-      patterns.map(pattern => cache.deletePattern(pattern))
-    );
+    await Promise.all(patterns.map((pattern) => cache.deletePattern(pattern)));
   }
 
   /**
    * Invalidates student-related cache entries
-   * 
+   *
    * Called when student data is updated to ensure cache consistency
    */
   async invalidateStudentCache(userId: string): Promise<void> {
@@ -392,14 +406,12 @@ export class AnalyticsCacheService {
       AnalyticsCacheKeys.allReportsPattern(),
     ];
 
-    await Promise.all(
-      patterns.map(pattern => cache.deletePattern(pattern))
-    );
+    await Promise.all(patterns.map((pattern) => cache.deletePattern(pattern)));
   }
 
   /**
    * Invalidates enrollment-related cache entries
-   * 
+   *
    * Called when enrollment data changes (new enrollment, completion, etc.)
    */
   async invalidateEnrollmentCache(courseId: string, studentId: string): Promise<void> {
@@ -411,7 +423,7 @@ export class AnalyticsCacheService {
 
   /**
    * Invalidates quiz/assignment-related cache entries
-   * 
+   *
    * Called when assessment data changes (submissions, grades, etc.)
    */
   async invalidateAssessmentCache(courseId: string, studentId: string): Promise<void> {
@@ -423,7 +435,7 @@ export class AnalyticsCacheService {
 
   /**
    * Invalidates payment-related cache entries
-   * 
+   *
    * Called when payment data changes (new payments, refunds, etc.)
    */
   async invalidatePaymentCache(courseId?: string): Promise<void> {
@@ -436,14 +448,12 @@ export class AnalyticsCacheService {
       patterns.push(AnalyticsCacheKeys.coursePattern(courseId));
     }
 
-    await Promise.all(
-      patterns.map(pattern => cache.deletePattern(pattern))
-    );
+    await Promise.all(patterns.map((pattern) => cache.deletePattern(pattern)));
   }
 
   /**
    * Invalidates all analytics cache
-   * 
+   *
    * Nuclear option for when major data changes occur
    */
   async invalidateAllAnalyticsCache(): Promise<void> {
@@ -453,7 +463,7 @@ export class AnalyticsCacheService {
 
   /**
    * Warms critical dashboard metrics for all active users
-   * 
+   *
    * Should be called periodically to ensure fast dashboard loading
    */
   async warmDashboardCaches(userIds: string[], roles: Role[]): Promise<void> {
@@ -462,7 +472,7 @@ export class AnalyticsCacheService {
     for (const userId of userIds) {
       for (const role of roles) {
         const cacheKey = AnalyticsCacheKeys.dashboardMetrics(userId, role);
-        
+
         // Only warm if not already cached
         const cached = await cache.get(cacheKey);
         if (!cached) {
@@ -500,13 +510,7 @@ export class AnalyticsCacheService {
     reportKeys: number;
     hitRate?: number;
   }> {
-    const [
-      totalStats,
-      courseKeys,
-      studentKeys,
-      dashboardKeys,
-      reportKeys,
-    ] = await Promise.all([
+    const [totalStats, courseKeys, studentKeys, dashboardKeys, reportKeys] = await Promise.all([
       cache.getStats(),
       this.countKeysByPattern(buildCacheKey(CachePrefix.ANALYTICS, 'course', '*')),
       this.countKeysByPattern(buildCacheKey(CachePrefix.ANALYTICS, 'student', '*')),
@@ -514,9 +518,11 @@ export class AnalyticsCacheService {
       this.countKeysByPattern(buildCacheKey(CachePrefix.ANALYTICS, '*-report', '*')),
     ]);
 
-    const hitRate = totalStats.hits && totalStats.misses 
-      ? (parseInt(totalStats.hits) / (parseInt(totalStats.hits) + parseInt(totalStats.misses))) * 100
-      : undefined;
+    const hitRate =
+      totalStats.hits && totalStats.misses
+        ? (parseInt(totalStats.hits) / (parseInt(totalStats.hits) + parseInt(totalStats.misses))) *
+          100
+        : undefined;
 
     return {
       totalKeys: totalStats.keys,
@@ -541,20 +547,14 @@ export class AnalyticsCacheService {
   private async countKeysByPattern(pattern: string): Promise<number> {
     let cursor = '0';
     let count = 0;
-    
+
     do {
-      const [nextCursor, keys] = await redis.scan(
-        cursor,
-        'MATCH',
-        pattern,
-        'COUNT',
-        100
-      );
-      
+      const [nextCursor, keys] = await redis.scan(cursor, 'MATCH', pattern, 'COUNT', 100);
+
       cursor = nextCursor;
       count += keys.length;
     } while (cursor !== '0');
-    
+
     return count;
   }
 }

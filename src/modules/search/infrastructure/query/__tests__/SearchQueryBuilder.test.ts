@@ -1,18 +1,18 @@
 /**
  * Search Query Builder Tests
- * 
+ *
  * Tests for the SearchQueryBuilder implementation to ensure
  * proper query construction for Elasticsearch.
  */
 
 import { describe, it, expect } from 'vitest';
-import { 
-  createSearchQueryBuilder, 
+import {
+  createSearchQueryBuilder,
   buildFullTextQuery,
   buildFilteredQuery,
   buildFacetedQuery,
   buildCourseSearchQuery,
-  buildLessonSearchQuery
+  buildLessonSearchQuery,
 } from '../SearchQueryBuilder.js';
 
 describe('SearchQueryBuilder', () => {
@@ -29,9 +29,7 @@ describe('SearchQueryBuilder', () => {
     });
 
     it('should build a match_all query when no text is provided', () => {
-      const query = createSearchQueryBuilder()
-        .query('', ['title', 'description'])
-        .build();
+      const query = createSearchQueryBuilder().query('', ['title', 'description']).build();
 
       expect(query.query.bool.must).toHaveLength(1);
       expect(query.query.bool.must[0]).toEqual({ match_all: {} });
@@ -48,7 +46,9 @@ describe('SearchQueryBuilder', () => {
 
       expect(query.query.bool.filter).toHaveLength(2);
       expect(query.query.bool.filter[0]).toEqual({ term: { category: 'programming' } });
-      expect(query.query.bool.filter[1]).toEqual({ terms: { difficulty: ['beginner', 'intermediate'] } });
+      expect(query.query.bool.filter[1]).toEqual({
+        terms: { difficulty: ['beginner', 'intermediate'] },
+      });
     });
 
     it('should add range filters correctly', () => {
@@ -90,10 +90,7 @@ describe('SearchQueryBuilder', () => {
     });
 
     it('should handle relevance sorting', () => {
-      const query = createSearchQueryBuilder()
-        .query('test')
-        .sortBy('relevance', 'desc')
-        .build();
+      const query = createSearchQueryBuilder().query('test').sortBy('relevance', 'desc').build();
 
       expect(query.sort).toHaveLength(1);
       expect(query.sort[0]).toBe('_score');
@@ -102,10 +99,7 @@ describe('SearchQueryBuilder', () => {
 
   describe('pagination', () => {
     it('should set pagination parameters', () => {
-      const query = createSearchQueryBuilder()
-        .query('test')
-        .paginate(20, 10)
-        .build();
+      const query = createSearchQueryBuilder().query('test').paginate(20, 10).build();
 
       expect(query.from).toBe(20);
       expect(query.size).toBe(10);
@@ -285,8 +279,7 @@ describe('SearchQueryBuilder', () => {
         .query('test', ['title'])
         .filterTerms('category', ['programming']);
 
-      const clonedBuilder = originalBuilder.clone()
-        .filterTerms('difficulty', ['beginner']);
+      const clonedBuilder = originalBuilder.clone().filterTerms('difficulty', ['beginner']);
 
       const originalQuery = originalBuilder.build();
       const clonedQuery = clonedBuilder.build();

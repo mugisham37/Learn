@@ -1,6 +1,6 @@
 /**
  * CloudFront Service Implementation
- * 
+ *
  * Implements CloudFront CDN operations using AWS SDK v3.
  * Handles signed URL generation for private content delivery.
  */
@@ -14,14 +14,11 @@ import { ExternalServiceError } from '../errors/index.js';
 import { logger } from '../utils/logger.js';
 import { secrets } from '../utils/secureConfig.js';
 
-import { 
-  ICloudFrontService, 
-  CloudFrontSignedUrlParams 
-} from './ICloudFrontService.js';
+import { ICloudFrontService, CloudFrontSignedUrlParams } from './ICloudFrontService.js';
 
 /**
  * CloudFront Service Implementation
- * 
+ *
  * Provides CloudFront CDN operations with error handling and logging.
  */
 export class CloudFrontService implements ICloudFrontService {
@@ -32,7 +29,7 @@ export class CloudFrontService implements ICloudFrontService {
   constructor() {
     this.domain = config.cloudfront.domain;
     this.keyPairId = config.cloudfront.keyPairId;
-    
+
     // Load private key from file if path is provided
     const cloudFrontConfig = secrets.getCloudFrontConfig();
     if (cloudFrontConfig.privateKeyPath) {
@@ -72,13 +69,15 @@ export class CloudFrontService implements ICloudFrontService {
       const expirationTime = new Date(Date.now() + params.expiresIn * 1000);
 
       // Simulate async operation for CloudFront URL generation
-      const signedUrl = await Promise.resolve(getSignedUrl({
-        url: params.url,
-        keyPairId: this.keyPairId,
-        privateKey: this.privateKey,
-        dateLessThan: expirationTime.toISOString(),
-        ipAddress: params.ipAddress,
-      }));
+      const signedUrl = await Promise.resolve(
+        getSignedUrl({
+          url: params.url,
+          keyPairId: this.keyPairId,
+          privateKey: this.privateKey,
+          dateLessThan: expirationTime.toISOString(),
+          ipAddress: params.ipAddress,
+        })
+      );
 
       logger.info('CloudFront signed URL generated successfully', {
         url: params.url,

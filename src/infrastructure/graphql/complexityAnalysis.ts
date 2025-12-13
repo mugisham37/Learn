@@ -1,17 +1,17 @@
 /**
  * GraphQL Query Complexity Analysis
- * 
+ *
  * This module implements query complexity analysis to prevent expensive queries
  * from overwhelming the server. It assigns complexity scores to fields and
  * rejects queries that exceed configured limits.
- * 
+ *
  * Requirements: 15.6
  */
 
-import { 
-  createComplexityRule, 
-  fieldExtensionsEstimator, 
-  simpleEstimator
+import {
+  createComplexityRule,
+  fieldExtensionsEstimator,
+  simpleEstimator,
 } from 'graphql-query-complexity';
 import { ValidationRule } from 'graphql';
 import { logger } from '../../shared/utils/logger.js';
@@ -35,10 +35,10 @@ export interface ComplexityConfig {
  */
 const DEFAULT_CONFIG: ComplexityConfig = {
   maximumComplexity: 1000, // Maximum complexity score allowed
-  maximumDepth: 15,        // Maximum query depth
-  scalarCost: 1,           // Cost for scalar fields
-  objectCost: 2,           // Cost for object fields
-  listFactor: 10,          // Multiplier for list fields
+  maximumDepth: 15, // Maximum query depth
+  scalarCost: 1, // Cost for scalar fields
+  objectCost: 2, // Cost for object fields
+  listFactor: 10, // Multiplier for list fields
   introspectionCost: 1000, // High cost for introspection queries
 };
 
@@ -47,14 +47,14 @@ const DEFAULT_CONFIG: ComplexityConfig = {
  */
 const customComplexityEstimator = (args: any) => {
   const { field, node, childComplexity } = args;
-  
+
   // Get field name and type information
   const fieldName = field.name;
   const fieldType = field.type;
-  
+
   // Base complexity for the field
   let complexity = DEFAULT_CONFIG.scalarCost || 1;
-  
+
   // Assign higher complexity to expensive operations
   if (fieldName.includes('search') || fieldName.includes('Search')) {
     complexity = 50; // Search operations are expensive
@@ -68,13 +68,13 @@ const customComplexityEstimator = (args: any) => {
     // List fields have higher base complexity
     complexity = DEFAULT_CONFIG.objectCost || 2;
   }
-  
+
   // Handle pagination arguments
   const args_node = node.arguments;
   if (args_node) {
-    const firstArg = args_node.find(arg => arg.name.value === 'first');
-    const limitArg = args_node.find(arg => arg.name.value === 'limit');
-    
+    const firstArg = args_node.find((arg) => arg.name.value === 'first');
+    const limitArg = args_node.find((arg) => arg.name.value === 'limit');
+
     if (firstArg && firstArg.value.kind === 'IntValue') {
       const first = parseInt(firstArg.value.value, 10);
       complexity *= Math.min(first, 100); // Cap at 100 to prevent abuse
@@ -83,48 +83,50 @@ const customComplexityEstimator = (args: any) => {
       complexity *= Math.min(limit, 100); // Cap at 100 to prevent abuse
     } else if (fieldName.endsWith('s') || fieldName.includes('list')) {
       // Default multiplier for lists without explicit limits
-      complexity *= (DEFAULT_CONFIG.listFactor || 10);
+      complexity *= DEFAULT_CONFIG.listFactor || 10;
     }
   }
-  
+
   // Add child complexity
   complexity += childComplexity;
-  
+
   return complexity;
 };
 
 /**
  * Creates a complexity analysis rule with custom configuration
  */
-export function createComplexityAnalysisRule(config: Partial<ComplexityConfig> = {}): ValidationRule {
+export function createComplexityAnalysisRule(
+  config: Partial<ComplexityConfig> = {}
+): ValidationRule {
   const finalConfig = { ...DEFAULT_CONFIG, ...config };
-  
+
   return createComplexityRule({
     maximumComplexity: finalConfig.maximumComplexity,
     maximumDepth: finalConfig.maximumDepth,
     estimators: [
       // Use field extensions if available (for custom @complexity directives)
       fieldExtensionsEstimator(),
-      
+
       // Use custom estimator for intelligent complexity calculation
       customComplexityEstimator,
-      
+
       // Fallback to simple estimator
       simpleEstimator({ maximumDepth: finalConfig.maximumDepth }),
     ],
     createError: (max: number, actual: number, node: any) => {
       const error = new Error(
         `Query complexity limit exceeded. Maximum allowed: ${max}, actual: ${actual}. ` +
-        'Please simplify your query or reduce the number of requested fields.'
+          'Please simplify your query or reduce the number of requested fields.'
       );
-      
+
       // Log complex queries for monitoring
       logger.warn('GraphQL query complexity limit exceeded', {
         maximumAllowed: max,
         actualComplexity: actual,
         timestamp: new Date().toISOString(),
       });
-      
+
       // Track in monitoring system
       try {
         const queryString = node?.loc?.source?.body || 'Unknown query';
@@ -134,10 +136,11 @@ export function createComplexityAnalysisRule(config: Partial<ComplexityConfig> =
         complexityMonitor.logComplexity(metrics);
       } catch (monitoringError) {
         logger.error('Failed to log complexity metrics', {
-          error: monitoringError instanceof Error ? monitoringError.message : String(monitoringError),
+          error:
+            monitoringError instanceof Error ? monitoringError.message : String(monitoringError),
         });
       }
-      
+
       return error;
     },
   });
@@ -155,22 +158,17 @@ export function createComplexityAnalysisPlugin(config: Partial<ComplexityConfig>
           try {
             // Calculate complexity for logging purposes
             const complexity = calculateQueryComplexity(document);
-            
+
             // Create metrics for monitoring
-            const metrics = createComplexityMetrics(
-              request.query || 'Unknown query',
-              complexity,
-              {
-                operationName: request.operationName,
-                userId: contextValue?.user?.id,
-                userRole: contextValue?.user?.role,
-                variables: request.variables,
-              }
-            );
-            
+            const metrics = createComplexityMetrics(request.query || 'Unknown query', complexity, {
+              operationName: request.operationName,
+              userId: contextValue?.user?.id,
+              userRole: contextValue?.user?.role,
+              variables: request.variables,
+            });
+
             // Log through monitoring system
             complexityMonitor.logComplexity(metrics);
-            
           } catch (error) {
             logger.error('Failed to calculate query complexity', {
               error: error instanceof Error ? error.message : String(error),
@@ -192,9 +190,9 @@ function calculateQueryComplexity(document: any): number {
     // This is a simplified complexity calculation for logging
     // In a real implementation, you would use the same estimators
     // as the validation rule
-    
+
     let complexity = 0;
-    
+
     // Count selections in the document
     if (document.definitions) {
       for (const definition of document.definitions) {
@@ -203,7 +201,7 @@ function calculateQueryComplexity(document: any): number {
         }
       }
     }
-    
+
     return complexity;
   } catch (error) {
     logger.error('Error calculating query complexity', {
@@ -218,22 +216,22 @@ function calculateQueryComplexity(document: any): number {
  */
 function countSelections(selectionSet: any): number {
   let count = 0;
-  
+
   if (selectionSet.selections) {
     for (const selection of selectionSet.selections) {
       count += 1; // Base cost for each field
-      
+
       if (selection.selectionSet) {
         count += countSelections(selection.selectionSet);
       }
-      
+
       // Add extra cost for fields with arguments (likely more expensive)
       if (selection.arguments && selection.arguments.length > 0) {
         count += 2;
       }
     }
   }
-  
+
   return count;
 }
 
@@ -273,21 +271,25 @@ export const COMPLEXITY_LIMITS = {
 export function getComplexityConfig(): ComplexityConfig {
   // Fallback to default configuration based on environment
   const env = process.env.NODE_ENV || 'development';
-  
+
   // Try to load from environment variables
   const envConfig = {
-    maximumComplexity: process.env.GRAPHQL_MAX_COMPLEXITY ? 
-      parseInt(process.env.GRAPHQL_MAX_COMPLEXITY, 10) : undefined,
-    maximumDepth: process.env.GRAPHQL_MAX_DEPTH ? 
-      parseInt(process.env.GRAPHQL_MAX_DEPTH, 10) : undefined,
-    logThreshold: process.env.GRAPHQL_LOG_THRESHOLD ? 
-      parseInt(process.env.GRAPHQL_LOG_THRESHOLD, 10) : undefined,
-    alertThreshold: process.env.GRAPHQL_ALERT_THRESHOLD ? 
-      parseInt(process.env.GRAPHQL_ALERT_THRESHOLD, 10) : undefined,
+    maximumComplexity: process.env.GRAPHQL_MAX_COMPLEXITY
+      ? parseInt(process.env.GRAPHQL_MAX_COMPLEXITY, 10)
+      : undefined,
+    maximumDepth: process.env.GRAPHQL_MAX_DEPTH
+      ? parseInt(process.env.GRAPHQL_MAX_DEPTH, 10)
+      : undefined,
+    logThreshold: process.env.GRAPHQL_LOG_THRESHOLD
+      ? parseInt(process.env.GRAPHQL_LOG_THRESHOLD, 10)
+      : undefined,
+    alertThreshold: process.env.GRAPHQL_ALERT_THRESHOLD
+      ? parseInt(process.env.GRAPHQL_ALERT_THRESHOLD, 10)
+      : undefined,
     enableDetailedLogging: process.env.GRAPHQL_DETAILED_LOGGING === 'true',
     enablePerformanceTracking: process.env.GRAPHQL_PERFORMANCE_TRACKING !== 'false',
   };
-  
+
   // Get base configuration for environment
   let baseConfig: ComplexityConfig;
   switch (env) {
@@ -301,12 +303,10 @@ export function getComplexityConfig(): ComplexityConfig {
       baseConfig = { ...DEFAULT_CONFIG, ...COMPLEXITY_LIMITS.development };
       break;
   }
-  
+
   // Override with environment variables if provided
   return {
     ...baseConfig,
-    ...Object.fromEntries(
-      Object.entries(envConfig).filter(([_, value]) => value !== undefined)
-    ),
+    ...Object.fromEntries(Object.entries(envConfig).filter(([_, value]) => value !== undefined)),
   };
 }

@@ -1,9 +1,9 @@
 /**
  * Cron Job Service
- * 
+ *
  * Manages scheduled tasks including secret rotation, analytics aggregation,
  * and maintenance tasks.
- * 
+ *
  * Requirements: 13.7, 14.7
  */
 

@@ -1,17 +1,17 @@
 /**
  * Notification Repository Interface
- * 
+ *
  * Defines the contract for notification data access operations.
  * Abstracts database operations behind a clean interface following
  * the Repository pattern for domain independence.
- * 
+ *
  * Requirements: 10.1, 10.4
  */
 
-import { 
-  Notification, 
-  NotificationType, 
-  Priority 
+import {
+  Notification,
+  NotificationType,
+  Priority,
 } from '../../../../infrastructure/database/schema/notifications.schema.js';
 
 /**
@@ -79,14 +79,14 @@ export interface PaginatedResult<T> {
 
 /**
  * Notification Repository Interface
- * 
+ *
  * Provides methods for all notification data access operations with caching support.
  * Implementations must handle database errors and map them to domain errors.
  */
 export interface INotificationRepository {
   /**
    * Creates a new notification in the database
-   * 
+   *
    * @param data - Notification creation data
    * @returns The created notification
    * @throws DatabaseError if database operation fails
@@ -95,7 +95,7 @@ export interface INotificationRepository {
 
   /**
    * Finds a notification by its unique ID
-   * 
+   *
    * @param id - Notification ID
    * @returns The notification if found, null otherwise
    * @throws DatabaseError if database operation fails
@@ -104,7 +104,7 @@ export interface INotificationRepository {
 
   /**
    * Finds notifications for a specific recipient with filtering and pagination
-   * 
+   *
    * @param recipientId - User ID of the notification recipient
    * @param filters - Optional filters to apply
    * @param pagination - Pagination options
@@ -119,7 +119,7 @@ export interface INotificationRepository {
 
   /**
    * Finds notifications with advanced filtering and pagination
-   * 
+   *
    * @param filters - Filters to apply
    * @param pagination - Pagination options
    * @returns Paginated list of notifications
@@ -132,7 +132,7 @@ export interface INotificationRepository {
 
   /**
    * Finds unread notifications for a specific recipient
-   * 
+   *
    * @param recipientId - User ID of the notification recipient
    * @param pagination - Pagination options
    * @returns Paginated list of unread notifications
@@ -145,7 +145,7 @@ export interface INotificationRepository {
 
   /**
    * Counts unread notifications for a specific recipient
-   * 
+   *
    * @param recipientId - User ID of the notification recipient
    * @returns Number of unread notifications
    * @throws DatabaseError if database operation fails
@@ -154,7 +154,7 @@ export interface INotificationRepository {
 
   /**
    * Finds notifications by type with filtering and pagination
-   * 
+   *
    * @param notificationType - Type of notifications to find
    * @param filters - Optional additional filters
    * @param pagination - Pagination options
@@ -169,7 +169,7 @@ export interface INotificationRepository {
 
   /**
    * Finds notifications by priority with filtering and pagination
-   * 
+   *
    * @param priority - Priority level of notifications to find
    * @param filters - Optional additional filters
    * @param pagination - Pagination options
@@ -184,7 +184,7 @@ export interface INotificationRepository {
 
   /**
    * Updates a notification's data
-   * 
+   *
    * @param id - Notification ID
    * @param data - Update data
    * @returns The updated notification
@@ -195,7 +195,7 @@ export interface INotificationRepository {
 
   /**
    * Marks a notification as read
-   * 
+   *
    * @param id - Notification ID
    * @returns The updated notification
    * @throws NotFoundError if notification doesn't exist
@@ -205,7 +205,7 @@ export interface INotificationRepository {
 
   /**
    * Marks multiple notifications as read
-   * 
+   *
    * @param ids - Array of notification IDs
    * @returns Array of updated notifications
    * @throws DatabaseError if database operation fails
@@ -214,7 +214,7 @@ export interface INotificationRepository {
 
   /**
    * Marks all notifications for a recipient as read
-   * 
+   *
    * @param recipientId - User ID of the notification recipient
    * @returns Number of notifications marked as read
    * @throws DatabaseError if database operation fails
@@ -223,7 +223,7 @@ export interface INotificationRepository {
 
   /**
    * Deletes a notification from the database
-   * 
+   *
    * @param id - Notification ID
    * @returns void
    * @throws NotFoundError if notification doesn't exist
@@ -233,7 +233,7 @@ export interface INotificationRepository {
 
   /**
    * Deletes multiple notifications from the database
-   * 
+   *
    * @param ids - Array of notification IDs
    * @returns Number of notifications deleted
    * @throws DatabaseError if database operation fails
@@ -242,7 +242,7 @@ export interface INotificationRepository {
 
   /**
    * Deletes expired notifications
-   * 
+   *
    * @returns Number of notifications deleted
    * @throws DatabaseError if database operation fails
    */
@@ -250,7 +250,7 @@ export interface INotificationRepository {
 
   /**
    * Deletes all notifications for a recipient
-   * 
+   *
    * @param recipientId - User ID of the notification recipient
    * @returns Number of notifications deleted
    * @throws DatabaseError if database operation fails
@@ -259,7 +259,7 @@ export interface INotificationRepository {
 
   /**
    * Checks if a notification exists
-   * 
+   *
    * @param id - Notification ID
    * @returns True if notification exists, false otherwise
    * @throws DatabaseError if database operation fails
@@ -269,7 +269,7 @@ export interface INotificationRepository {
   /**
    * Invalidates cache for a specific notification
    * Should be called after any update operation
-   * 
+   *
    * @param id - Notification ID
    * @returns void
    */
@@ -278,7 +278,7 @@ export interface INotificationRepository {
   /**
    * Invalidates cache for notifications by recipient
    * Should be called after operations that affect recipient's notifications
-   * 
+   *
    * @param recipientId - User ID of the notification recipient
    * @returns void
    */

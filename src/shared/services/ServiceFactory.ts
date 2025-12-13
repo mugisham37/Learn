@@ -1,12 +1,18 @@
 /**
  * Service Factory
- * 
+ *
  * Factory for creating service instances with proper dependency injection.
  */
 
 import { logger } from '../utils/logger.js';
 
-import { IEmailService, EmailOptions, EmailResult, BulkEmailResult, EmailTemplateData } from './IEmailService.js';
+import {
+  IEmailService,
+  EmailOptions,
+  EmailResult,
+  BulkEmailResult,
+  EmailTemplateData,
+} from './IEmailService.js';
 
 /**
  * Mock Email Service implementation
@@ -19,7 +25,7 @@ class MockEmailService implements IEmailService {
       templateId: options.templateId,
       subject: options.subject,
     });
-    
+
     return Promise.resolve({
       success: true,
       messageId: `mock-${Date.now()}`,
@@ -36,7 +42,7 @@ class MockEmailService implements IEmailService {
       recipientCount: recipients.length,
       templateId,
     });
-    
+
     return Promise.resolve({
       success: true,
       successCount: recipients.length,

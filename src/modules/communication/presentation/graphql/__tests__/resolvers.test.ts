@@ -1,6 +1,6 @@
 /**
  * Communication GraphQL Resolvers Tests
- * 
+ *
  * Basic tests to verify resolver structure and functionality
  */
 
@@ -18,7 +18,7 @@ const mockMessagingService = {
   getConversationMessages: vi.fn(),
   getUnreadCount: vi.fn(),
   deleteMessage: vi.fn(),
-  uploadAttachments: vi.fn()
+  uploadAttachments: vi.fn(),
 };
 
 const mockDiscussionService = {
@@ -28,7 +28,7 @@ const mockDiscussionService = {
   markSolution: vi.fn(),
   getThreadsByCourse: vi.fn(),
   getPostsByThread: vi.fn(),
-  updateThreadActivity: vi.fn()
+  updateThreadActivity: vi.fn(),
 };
 
 const mockAnnouncementService = {
@@ -39,7 +39,7 @@ const mockAnnouncementService = {
   updateAnnouncement: vi.fn(),
   deleteAnnouncement: vi.fn(),
   publishScheduledAnnouncements: vi.fn(),
-  getAnnouncementById: vi.fn()
+  getAnnouncementById: vi.fn(),
 };
 
 const mockRealtimeService = {
@@ -50,12 +50,12 @@ const mockRealtimeService = {
   emitToThread: vi.fn(),
   broadcastPresence: vi.fn(),
   getOnlineUsersInCourse: vi.fn(),
-  getUserPresence: vi.fn()
+  getUserPresence: vi.fn(),
 };
 
 const mockPubSub = {
   publish: vi.fn(),
-  asyncIterator: vi.fn()
+  asyncIterator: vi.fn(),
 };
 
 describe('Communication GraphQL Resolvers', () => {
@@ -63,18 +63,18 @@ describe('Communication GraphQL Resolvers', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    
+
     context = {
       user: {
         id: 'user-123',
         email: 'test@example.com',
-        role: 'student'
+        role: 'student',
       },
       messagingService: mockMessagingService,
       discussionService: mockDiscussionService,
       announcementService: mockAnnouncementService,
       realtimeService: mockRealtimeService,
-      pubsub: mockPubSub
+      pubsub: mockPubSub,
     };
   });
 
@@ -82,11 +82,7 @@ describe('Communication GraphQL Resolvers', () => {
     it('should have unreadMessageCount resolver', async () => {
       mockMessagingService.getUnreadCount.mockResolvedValue(5);
 
-      const result = await communicationResolvers.Query.unreadMessageCount(
-        {},
-        {},
-        context
-      );
+      const result = await communicationResolvers.Query.unreadMessageCount({}, {}, context);
 
       expect(result).toBe(5);
       expect(mockMessagingService.getUnreadCount).toHaveBeenCalledWith('user-123');
@@ -104,11 +100,11 @@ describe('Communication GraphQL Resolvers', () => {
       const mockConversations = {
         conversations: {
           items: [],
-          totalCount: 0
+          totalCount: 0,
         },
-        totalUnreadCount: 0
+        totalUnreadCount: 0,
       };
-      
+
       mockMessagingService.getConversations.mockResolvedValue(mockConversations);
 
       const result = await communicationResolvers.Query.conversations(
@@ -118,10 +114,10 @@ describe('Communication GraphQL Resolvers', () => {
       );
 
       expect(result).toBeDefined();
-      expect(mockMessagingService.getConversations).toHaveBeenCalledWith(
-        'user-123',
-        { limit: 10, offset: 0 }
-      );
+      expect(mockMessagingService.getConversations).toHaveBeenCalledWith('user-123', {
+        limit: 10,
+        offset: 0,
+      });
     });
 
     it('should have coursePresence resolver', async () => {
@@ -145,13 +141,13 @@ describe('Communication GraphQL Resolvers', () => {
         id: 'msg-123',
         senderId: 'user-123',
         recipientId: 'user-456',
-        content: 'Hello world'
+        content: 'Hello world',
       };
 
       const mockResult = {
         message: mockMessage,
         deliveredRealtime: true,
-        notificationSent: true
+        notificationSent: true,
       };
 
       mockMessagingService.sendMessage.mockResolvedValue(mockResult);
@@ -161,8 +157,8 @@ describe('Communication GraphQL Resolvers', () => {
         {
           recipientId: 'user-456',
           input: {
-            content: 'Hello world'
-          }
+            content: 'Hello world',
+          },
         },
         context
       );
@@ -172,7 +168,7 @@ describe('Communication GraphQL Resolvers', () => {
         'user-123',
         'user-456',
         expect.objectContaining({
-          content: 'Hello world'
+          content: 'Hello world',
         })
       );
     });
@@ -184,8 +180,8 @@ describe('Communication GraphQL Resolvers', () => {
           {
             recipientId: 'user-456',
             input: {
-              content: ''
-            }
+              content: '',
+            },
           },
           context
         )
@@ -211,12 +207,12 @@ describe('Communication GraphQL Resolvers', () => {
         courseId: 'course-123',
         authorId: 'user-123',
         title: 'Test Thread',
-        content: 'Test content'
+        content: 'Test content',
       };
 
       const mockResult = {
         thread: mockThread,
-        enrollmentValidated: true
+        enrollmentValidated: true,
       };
 
       mockDiscussionService.createThread.mockResolvedValue(mockResult);
@@ -228,8 +224,8 @@ describe('Communication GraphQL Resolvers', () => {
           input: {
             category: 'general',
             title: 'Test Thread',
-            content: 'Test content'
-          }
+            content: 'Test content',
+          },
         },
         context
       );
@@ -241,7 +237,7 @@ describe('Communication GraphQL Resolvers', () => {
           authorId: 'user-123',
           category: 'general',
           title: 'Test Thread',
-          content: 'Test content'
+          content: 'Test content',
         })
       );
     });
@@ -255,8 +251,8 @@ describe('Communication GraphQL Resolvers', () => {
             input: {
               category: '',
               title: 'Test Thread',
-              content: 'Test content'
-            }
+              content: 'Test content',
+            },
           },
           context
         )
@@ -271,8 +267,8 @@ describe('Communication GraphQL Resolvers', () => {
             courseId: 'course-123',
             input: {
               title: 'Test Announcement',
-              content: 'Test content'
-            }
+              content: 'Test content',
+            },
           },
           context
         )
@@ -282,7 +278,7 @@ describe('Communication GraphQL Resolvers', () => {
     it('should allow educator to create announcement', async () => {
       const educatorContext = {
         ...context,
-        user: { ...context.user!, role: 'educator' }
+        user: { ...context.user!, role: 'educator' },
       };
 
       const mockAnnouncement = {
@@ -290,12 +286,12 @@ describe('Communication GraphQL Resolvers', () => {
         courseId: 'course-123',
         educatorId: 'user-123',
         title: 'Test Announcement',
-        content: 'Test content'
+        content: 'Test content',
       };
 
       const mockResult = {
         success: true,
-        announcement: mockAnnouncement
+        announcement: mockAnnouncement,
       };
 
       mockAnnouncementService.createAnnouncement.mockResolvedValue(mockResult);
@@ -306,8 +302,8 @@ describe('Communication GraphQL Resolvers', () => {
           courseId: 'course-123',
           input: {
             title: 'Test Announcement',
-            content: 'Test content'
-          }
+            content: 'Test content',
+          },
         },
         educatorContext
       );
@@ -318,7 +314,7 @@ describe('Communication GraphQL Resolvers', () => {
         'user-123',
         expect.objectContaining({
           title: 'Test Announcement',
-          content: 'Test content'
+          content: 'Test content',
         })
       );
     });
@@ -354,15 +350,15 @@ describe('Communication GraphQL Resolvers', () => {
   describe('Helper functions', () => {
     it('should require authentication', () => {
       const contextWithoutUser = { ...context, user: undefined };
-      
+
       expect(() => {
         // This would be called internally by resolvers
         if (!contextWithoutUser.user) {
           throw new GraphQLError('Authentication required', {
             extensions: {
               code: 'UNAUTHENTICATED',
-              http: { status: 401 }
-            }
+              http: { status: 401 },
+            },
           });
         }
       }).toThrow(GraphQLError);
@@ -375,8 +371,8 @@ describe('Communication GraphQL Resolvers', () => {
           throw new GraphQLError('Educator role required', {
             extensions: {
               code: 'FORBIDDEN',
-              http: { status: 403 }
-            }
+              http: { status: 403 },
+            },
           });
         }
       }).toThrow(GraphQLError);

@@ -1,9 +1,9 @@
 /**
  * CloudWatch Metrics Middleware
- * 
+ *
  * Integrates CloudWatch metrics collection with Fastify request/response cycle.
  * Records response times, throughput, error rates, and other KPIs.
- * 
+ *
  * Requirements: 17.6
  */
 
@@ -32,10 +32,10 @@ export function registerCloudWatchMetrics(server: any): void {
       endpoint: getEndpointName(request.url),
       method: request.method,
     };
-    
+
     // Store timing data in request context
     (request as any).cloudWatchTiming = timing;
-    
+
     // Record throughput (incoming request)
     try {
       await metrics.throughput(timing.endpoint, timing.method, 1);
@@ -48,7 +48,7 @@ export function registerCloudWatchMetrics(server: any): void {
   // On-response hook to record response metrics
   server.addHook('onResponse', async (request: FastifyRequest, reply: FastifyReply) => {
     const timing = (request as any).cloudWatchTiming as RequestTiming;
-    
+
     if (!timing) {
       return;
     }
@@ -75,7 +75,7 @@ export function registerCloudWatchMetrics(server: any): void {
   // On-error hook to record error metrics
   server.addHook('onError', async (request: FastifyRequest, reply: FastifyReply, error: Error) => {
     const timing = (request as any).cloudWatchTiming as RequestTiming;
-    
+
     if (!timing) {
       return;
     }
@@ -99,13 +99,15 @@ export function registerCloudWatchMetrics(server: any): void {
 function getEndpointName(url: string): string {
   // Remove query parameters
   const path = url.split('?')[0];
-  
+
   // Replace dynamic segments with placeholders for better grouping
-  return path
-    .replace(/\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, '/:id') // UUIDs
-    .replace(/\/\d+/g, '/:id') // Numeric IDs
-    .replace(/\/[a-zA-Z0-9-_]+\.(jpg|jpeg|png|gif|pdf|mp4|webm)/gi, '/:file') // File extensions
-    || '/';
+  return (
+    path
+      .replace(/\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, '/:id') // UUIDs
+      .replace(/\/\d+/g, '/:id') // Numeric IDs
+      .replace(/\/[a-zA-Z0-9-_]+\.(jpg|jpeg|png|gif|pdf|mp4|webm)/gi, '/:file') || // File extensions
+    '/'
+  );
 }
 
 /**
@@ -114,25 +116,38 @@ function getEndpointName(url: string): string {
 function getErrorType(statusCode: number): string {
   if (statusCode >= 400 && statusCode < 500) {
     switch (statusCode) {
-      case 400: return 'BadRequest';
-      case 401: return 'Unauthorized';
-      case 403: return 'Forbidden';
-      case 404: return 'NotFound';
-      case 409: return 'Conflict';
-      case 422: return 'ValidationError';
-      case 429: return 'RateLimited';
-      default: return 'ClientError';
+      case 400:
+        return 'BadRequest';
+      case 401:
+        return 'Unauthorized';
+      case 403:
+        return 'Forbidden';
+      case 404:
+        return 'NotFound';
+      case 409:
+        return 'Conflict';
+      case 422:
+        return 'ValidationError';
+      case 429:
+        return 'RateLimited';
+      default:
+        return 'ClientError';
     }
   } else if (statusCode >= 500) {
     switch (statusCode) {
-      case 500: return 'InternalServerError';
-      case 502: return 'BadGateway';
-      case 503: return 'ServiceUnavailable';
-      case 504: return 'GatewayTimeout';
-      default: return 'ServerError';
+      case 500:
+        return 'InternalServerError';
+      case 502:
+        return 'BadGateway';
+      case 503:
+        return 'ServiceUnavailable';
+      case 504:
+        return 'GatewayTimeout';
+      default:
+        return 'ServerError';
     }
   }
-  
+
   return 'UnknownError';
 }
 
@@ -142,7 +157,7 @@ function getErrorType(statusCode: number): string {
 function getErrorTypeFromError(error: Error): string {
   // Map common error types to CloudWatch metric names
   const errorName = error.name || 'Error';
-  
+
   switch (errorName) {
     case 'ValidationError':
       return 'ValidationError';
@@ -176,23 +191,23 @@ export function recordDatabaseMetrics<T extends (...args: any[]) => Promise<any>
 ): T {
   return (async (...args: any[]) => {
     const startTime = Date.now();
-    
+
     try {
       const result = await fn(...args);
       const duration = Date.now() - startTime;
-      
+
       // Record successful query time
       await metrics.dbQuery(operation, table, duration);
       applicationMetricsService.recordDatabaseQuery(operation, table, duration);
-      
+
       return result;
     } catch (error) {
       const duration = Date.now() - startTime;
-      
+
       // Record failed query time
       await metrics.dbQuery(`${operation}_failed`, table, duration);
       applicationMetricsService.recordDatabaseQuery(`${operation}_failed`, table, duration);
-      
+
       throw error;
     }
   }) as T;
@@ -240,10 +255,10 @@ export async function recordExternalServiceMetrics(
 ): Promise<void> {
   try {
     const metricName = success ? 'ExternalServiceSuccess' : 'ExternalServiceError';
-    
+
     await metrics.responseTime(`external/${serviceName}`, operation, duration);
     applicationMetricsService.recordExternalServiceCall(serviceName, operation, duration, success);
-    
+
     if (!success) {
       await metrics.error(`external/${serviceName}`, operation, 'ExternalServiceError');
     }

@@ -1,10 +1,10 @@
 /**
  * Analytics Scheduler Implementation
- * 
+ *
  * Implements scheduled analytics jobs using node-cron for timing and BullMQ for execution.
  * Schedules hourly real-time metrics, daily course/student analytics, weekly trend reports,
  * and monthly executive summaries according to requirements.
- * 
+ *
  * Requirements:
  * - 12.5: Scheduled analytics aggregation (hourly, daily, weekly, monthly)
  * - 14.3: Analytics aggregation on cron triggers
@@ -44,7 +44,7 @@ const DEFAULT_CONFIG: SchedulerConfig = {
 
 /**
  * Analytics Scheduler Implementation
- * 
+ *
  * Manages scheduled analytics jobs using node-cron for timing coordination
  * and BullMQ for reliable job execution. Provides comprehensive scheduling
  * for all analytics aggregation requirements.
@@ -61,7 +61,10 @@ export class AnalyticsScheduler {
   /**
    * Initialize the scheduler with analytics services
    */
-  async initialize(analyticsService: AnalyticsService, metricsCalculator: MetricsCalculator): Promise<void> {
+  async initialize(
+    analyticsService: AnalyticsService,
+    metricsCalculator: MetricsCalculator
+  ): Promise<void> {
     if (this.isInitialized) {
       logger.warn('Analytics scheduler already initialized');
       return;
@@ -131,7 +134,7 @@ export class AnalyticsScheduler {
           logger.info('Starting scheduled hourly real-time metrics job');
           const analyticsQueue = getAnalyticsQueue();
           const jobId = await analyticsQueue.queueRealTimeMetrics();
-          
+
           logger.info('Hourly real-time metrics job scheduled successfully', { jobId });
         } catch (error) {
           logger.error('Failed to schedule hourly real-time metrics job', {
@@ -163,15 +166,15 @@ export class AnalyticsScheduler {
         try {
           logger.info('Starting scheduled daily analytics jobs');
           const analyticsQueue = getAnalyticsQueue();
-          
+
           // Queue course analytics job
           const courseJobId = await analyticsQueue.queueCourseAnalytics();
           logger.info('Daily course analytics job scheduled', { jobId: courseJobId });
-          
+
           // Queue student analytics job
           const studentJobId = await analyticsQueue.queueStudentAnalytics();
           logger.info('Daily student analytics job scheduled', { jobId: studentJobId });
-          
+
           logger.info('Daily analytics jobs scheduled successfully', {
             courseJobId,
             studentJobId,
@@ -206,23 +209,18 @@ export class AnalyticsScheduler {
         try {
           logger.info('Starting scheduled weekly trend reports job');
           const analyticsQueue = getAnalyticsQueue();
-          
+
           // Calculate date range for the past week
           const endDate = new Date();
           const startDate = new Date(endDate.getTime() - 7 * 24 * 60 * 60 * 1000);
-          
+
           const dateRange: DateRange = { startDate, endDate };
-          
+
           // Define report types to generate
-          const reportTypes = [
-            'enrollments',
-            'completions',
-            'quiz_attempts',
-            'discussion_posts',
-          ];
-          
+          const reportTypes = ['enrollments', 'completions', 'quiz_attempts', 'discussion_posts'];
+
           const jobId = await analyticsQueue.queueTrendReports(dateRange, reportTypes);
-          
+
           logger.info('Weekly trend reports job scheduled successfully', {
             jobId,
             dateRange,
@@ -258,15 +256,15 @@ export class AnalyticsScheduler {
         try {
           logger.info('Starting scheduled monthly executive summary job');
           const analyticsQueue = getAnalyticsQueue();
-          
+
           // Calculate date range for the past month
           const endDate = new Date();
           const startDate = new Date(endDate.getFullYear(), endDate.getMonth() - 1, 1);
-          
+
           const dateRange: DateRange = { startDate, endDate };
-          
+
           const jobId = await analyticsQueue.queueExecutiveSummary(dateRange, true);
-          
+
           logger.info('Monthly executive summary job scheduled successfully', {
             jobId,
             dateRange,
@@ -301,10 +299,10 @@ export class AnalyticsScheduler {
         try {
           logger.info('Starting scheduled daily cleanup job');
           const analyticsQueue = getAnalyticsQueue();
-          
+
           // Clean up old analytics jobs
           await analyticsQueue.cleanupJobs();
-          
+
           logger.info('Daily cleanup job completed successfully');
         } catch (error) {
           logger.error('Failed to execute daily cleanup job', {
@@ -336,7 +334,7 @@ export class AnalyticsScheduler {
     try {
       const analyticsQueue = getAnalyticsQueue();
       const jobId = await analyticsQueue.queueRealTimeMetrics();
-      
+
       logger.info('Real-time metrics job triggered manually', { jobId });
       return jobId;
     } catch (error) {
@@ -357,15 +355,15 @@ export class AnalyticsScheduler {
 
     try {
       const analyticsQueue = getAnalyticsQueue();
-      
+
       const courseJobId = await analyticsQueue.queueCourseAnalytics();
       const studentJobId = await analyticsQueue.queueStudentAnalytics();
-      
+
       logger.info('Daily analytics jobs triggered manually', {
         courseJobId,
         studentJobId,
       });
-      
+
       return { courseJobId, studentJobId };
     } catch (error) {
       logger.error('Failed to trigger daily analytics jobs', {
@@ -385,28 +383,23 @@ export class AnalyticsScheduler {
 
     try {
       const analyticsQueue = getAnalyticsQueue();
-      
+
       // Use provided date range or default to past week
       const range = dateRange || {
         startDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
         endDate: new Date(),
       };
-      
-      const reportTypes = [
-        'enrollments',
-        'completions',
-        'quiz_attempts',
-        'discussion_posts',
-      ];
-      
+
+      const reportTypes = ['enrollments', 'completions', 'quiz_attempts', 'discussion_posts'];
+
       const jobId = await analyticsQueue.queueTrendReports(range, reportTypes);
-      
+
       logger.info('Weekly trend reports job triggered manually', {
         jobId,
         dateRange: range,
         reportTypes,
       });
-      
+
       return jobId;
     } catch (error) {
       logger.error('Failed to trigger weekly trend reports job', {
@@ -426,20 +419,20 @@ export class AnalyticsScheduler {
 
     try {
       const analyticsQueue = getAnalyticsQueue();
-      
+
       // Use provided date range or default to past month
       const range = dateRange || {
         startDate: new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1),
         endDate: new Date(),
       };
-      
+
       const jobId = await analyticsQueue.queueExecutiveSummary(range, true);
-      
+
       logger.info('Monthly executive summary job triggered manually', {
         jobId,
         dateRange: range,
       });
-      
+
       return jobId;
     } catch (error) {
       logger.error('Failed to trigger monthly executive summary job', {
@@ -459,7 +452,7 @@ export class AnalyticsScheduler {
     taskStatuses: Record<string, boolean>;
   } {
     const taskStatuses: Record<string, boolean> = {};
-    
+
     for (const [name, task] of Array.from(this.scheduledTasks.entries())) {
       taskStatuses[name] = task.getStatus() === 'scheduled';
     }
@@ -507,7 +500,7 @@ export class AnalyticsScheduler {
       logger.info(`Stopped scheduled task: ${taskName}`);
       return true;
     }
-    
+
     logger.warn(`Task not found: ${taskName}`);
     return false;
   }
@@ -522,7 +515,7 @@ export class AnalyticsScheduler {
       logger.info(`Started scheduled task: ${taskName}`);
       return true;
     }
-    
+
     logger.warn(`Task not found: ${taskName}`);
     return false;
   }
@@ -535,7 +528,7 @@ export class AnalyticsScheduler {
       void task.stop();
       logger.info(`Stopped scheduled task: ${name}`);
     }
-    
+
     logger.info('All scheduled tasks stopped');
   }
 
@@ -547,7 +540,7 @@ export class AnalyticsScheduler {
       void task.start();
       logger.info(`Started scheduled task: ${name}`);
     }
-    
+
     logger.info('All scheduled tasks started');
   }
 
@@ -556,20 +549,20 @@ export class AnalyticsScheduler {
    */
   async shutdown(): Promise<void> {
     logger.info('Shutting down analytics scheduler...');
-    
+
     try {
       // Stop all scheduled tasks
       this.stopAllTasks();
-      
+
       // Clear scheduled tasks
       this.scheduledTasks.clear();
-      
+
       // Shutdown analytics queue
       const analyticsQueue = getAnalyticsQueue();
       await analyticsQueue.shutdown();
-      
+
       this.isInitialized = false;
-      
+
       logger.info('Analytics scheduler shutdown completed');
     } catch (error) {
       logger.error('Analytics scheduler shutdown error', {
@@ -639,9 +632,9 @@ export async function initializeAnalyticsScheduler(
   if (!analyticsSchedulerInstance) {
     analyticsSchedulerInstance = new AnalyticsScheduler(config);
   }
-  
+
   await analyticsSchedulerInstance.initialize(analyticsService, metricsCalculator);
-  
+
   logger.info('Analytics scheduler initialized successfully');
   return analyticsSchedulerInstance;
 }

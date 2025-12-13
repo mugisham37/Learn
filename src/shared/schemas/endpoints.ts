@@ -1,9 +1,9 @@
 /**
  * Endpoint-Specific Validation Schemas
- * 
+ *
  * Validation schemas for common API endpoints across different modules.
  * These schemas demonstrate how to use the validation middleware.
- * 
+ *
  * Requirements: 13.1
  */
 

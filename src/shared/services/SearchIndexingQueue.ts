@@ -1,25 +1,25 @@
 /**
  * Search Indexing Queue Implementation
- * 
+ *
  * Implements BullMQ queue for search indexing operations with retry logic,
  * event-driven indexing, and bulk reindexing capabilities.
- * 
+ *
  * Requirements: 8.7 - Index courses on creation and updates, trigger reindexing on events
  */
 
 import { Queue, Worker, Job, QueueOptions, WorkerOptions, JobsOptions } from 'bullmq';
 
+import { redis } from '../../infrastructure/cache/index.js';
 import type { Course } from '../../modules/courses/domain/entities/Course.js';
 import type { Lesson } from '../../modules/courses/domain/entities/Lesson.js';
 import type { ISearchService } from '../../modules/search/application/services/ISearchService.js';
-import { redis } from '../../infrastructure/cache/index.js';
 import { ExternalServiceError, NotFoundError, ValidationError } from '../errors/index.js';
 import { logger } from '../utils/logger.js';
 
 /**
  * Search indexing job types
  */
-export type SearchIndexingJobType = 
+export type SearchIndexingJobType =
   | 'index-course'
   | 'index-lesson'
   | 'remove-course'
@@ -72,7 +72,7 @@ export interface BulkReindexJobData {
   priority?: number;
 }
 
-export type SearchIndexingJobData = 
+export type SearchIndexingJobData =
   | IndexCourseJobData
   | IndexLessonJobData
   | RemoveCourseJobData
@@ -88,25 +88,25 @@ const QUEUE_OPTIONS: QueueOptions = {
   connection: redis,
   defaultJobOptions: {
     removeOnComplete: 100, // Keep last 100 completed jobs
-    removeOnFail: 200,     // Keep last 200 failed jobs
-    attempts: 5,           // Maximum retry attempts for indexing
+    removeOnFail: 200, // Keep last 200 failed jobs
+    attempts: 5, // Maximum retry attempts for indexing
     backoff: {
       type: 'exponential',
-      delay: 2000,         // Start with 2 second delay
+      delay: 2000, // Start with 2 second delay
     },
   },
 };
 
 const WORKER_OPTIONS: WorkerOptions = {
   connection: redis,
-  concurrency: 5,        // Moderate concurrency for indexing operations
-  maxStalledCount: 3,    // Maximum stalled jobs before failing
+  concurrency: 5, // Moderate concurrency for indexing operations
+  maxStalledCount: 3, // Maximum stalled jobs before failing
   stalledInterval: 30000, // Check for stalled jobs every 30 seconds
 };
 
 /**
  * Search Indexing Queue Implementation
- * 
+ *
  * Manages search indexing operations using BullMQ with comprehensive error handling,
  * retry logic, and support for both individual and bulk indexing operations.
  */
@@ -115,9 +115,7 @@ export class SearchIndexingQueue {
   private worker: Worker<SearchIndexingJobData>;
   private isInitialized = false;
 
-  constructor(
-    private readonly searchService: ISearchService
-  ) {
+  constructor(private readonly searchService: ISearchService) {
     this.queue = new Queue<SearchIndexingJobData>(QUEUE_NAME, QUEUE_OPTIONS);
     this.worker = new Worker<SearchIndexingJobData>(
       QUEUE_NAME,
@@ -139,7 +137,7 @@ export class SearchIndexingQueue {
     try {
       // Test Redis connection
       await redis.ping();
-      
+
       logger.info('Search indexing queue initialized', {
         queueName: QUEUE_NAME,
         concurrency: WORKER_OPTIONS.concurrency,
@@ -269,16 +267,19 @@ export class SearchIndexingQueue {
    */
   async bulkReindex(
     type: 'courses' | 'lessons' | 'all',
-    options?: { 
-      batchSize?: number; 
-      startFromId?: string; 
-      priority?: number; 
+    options?: {
+      batchSize?: number;
+      startFromId?: string;
+      priority?: number;
       delay?: number;
     }
   ): Promise<Job<SearchIndexingJobData>> {
-    const jobType = type === 'courses' ? 'bulk-reindex-courses' :
-                   type === 'lessons' ? 'bulk-reindex-lessons' :
-                   'bulk-reindex-all';
+    const jobType =
+      type === 'courses'
+        ? 'bulk-reindex-courses'
+        : type === 'lessons'
+          ? 'bulk-reindex-lessons'
+          : 'bulk-reindex-all';
 
     const jobData: BulkReindexJobData = {
       type: jobType,
@@ -301,7 +302,7 @@ export class SearchIndexingQueue {
     status: string;
     progress: number;
     data?: SearchIndexingJobData;
-    result?: any;
+    result?: unknown;
     failedReason?: string;
     processedOn?: Date;
     finishedOn?: Date;
@@ -380,7 +381,7 @@ export class SearchIndexingQueue {
 
       // Close worker first to stop processing new jobs
       await this.worker.close();
-      
+
       // Close queue
       await this.queue.close();
 
@@ -409,11 +410,7 @@ export class SearchIndexingQueue {
       // Validate job data
       this.validateJobData(data);
 
-      const job = await this.queue.add(
-        data.type,
-        data,
-        options
-      );
+      const job = await this.queue.add(data.type, data, options);
 
       logger.debug('Search indexing job added successfully', {
         jobId: job.id,
@@ -442,7 +439,7 @@ export class SearchIndexingQueue {
   /**
    * Processes a search indexing job
    */
-  private async processIndexingJob(job: Job<SearchIndexingJobData>): Promise<any> {
+  private async processIndexingJob(job: Job<SearchIndexingJobData>): Promise<unknown> {
     const { data } = job;
 
     try {
@@ -457,26 +454,26 @@ export class SearchIndexingQueue {
       switch (data.type) {
         case 'index-course':
           return await this.processIndexCourseJob(job, data);
-        
+
         case 'index-lesson':
           return await this.processIndexLessonJob(job, data);
-        
+
         case 'remove-course':
           return await this.processRemoveCourseJob(job, data);
-        
+
         case 'remove-lesson':
           return await this.processRemoveLessonJob(job, data);
-        
+
         case 'remove-lessons-by-course':
           return await this.processRemoveLessonsByCourseJob(job, data);
-        
+
         case 'bulk-reindex-courses':
         case 'bulk-reindex-lessons':
         case 'bulk-reindex-all':
           return await this.processBulkReindexJob(job, data);
-        
+
         default:
-          throw new ValidationError(`Unknown job type: ${(data as any).type}`);
+          throw new ValidationError(`Unknown job type: ${(data as { type?: string }).type}`);
       }
     } catch (error) {
       logger.error('Search indexing job failed', {
@@ -499,8 +496,8 @@ export class SearchIndexingQueue {
   ): Promise<{ success: boolean; courseId: string }> {
     await job.updateProgress(20);
 
-    let course = data.course;
-    
+    const course = data.course;
+
     // If course data not provided, we would fetch it from the database
     // For now, we'll assume it's provided or handle the case where it's not
     if (!course) {
@@ -539,8 +536,8 @@ export class SearchIndexingQueue {
   ): Promise<{ success: boolean; lessonId: string; courseId: string }> {
     await job.updateProgress(20);
 
-    let lesson = data.lesson;
-    
+    const lesson = data.lesson;
+
     // If lesson data not provided, we would fetch it from the database
     if (!lesson) {
       // TODO: Fetch lesson from database
@@ -672,7 +669,7 @@ export class SearchIndexingQueue {
 
     // TODO: Implement actual bulk reindexing logic
     // This would require access to course and lesson repositories
-    
+
     await job.updateProgress(100);
 
     const message = `Bulk reindex operation completed for ${data.type}`;
@@ -702,7 +699,7 @@ export class SearchIndexingQueue {
           throw new ValidationError('Course ID is required for course indexing');
         }
         break;
-      
+
       case 'index-lesson':
         if (!data.lessonId) {
           throw new ValidationError('Lesson ID is required for lesson indexing');
@@ -711,33 +708,33 @@ export class SearchIndexingQueue {
           throw new ValidationError('Course ID is required for lesson indexing');
         }
         break;
-      
+
       case 'remove-course':
         if (!data.courseId) {
           throw new ValidationError('Course ID is required for course removal');
         }
         break;
-      
+
       case 'remove-lesson':
         if (!data.lessonId) {
           throw new ValidationError('Lesson ID is required for lesson removal');
         }
         break;
-      
+
       case 'remove-lessons-by-course':
         if (!data.courseId) {
           throw new ValidationError('Course ID is required for lessons removal');
         }
         break;
-      
+
       case 'bulk-reindex-courses':
       case 'bulk-reindex-lessons':
       case 'bulk-reindex-all':
         // No specific validation needed for bulk operations
         break;
-      
+
       default:
-        throw new ValidationError(`Invalid job type: ${(data as unknown).type}`);
+        throw new ValidationError(`Invalid job type: ${(data as { type?: string }).type}`);
     }
   }
 
@@ -753,7 +750,7 @@ export class SearchIndexingQueue {
     });
 
     // Worker events
-    this.worker.on('completed', (job, result) => {
+    this.worker.on('completed', (job, result: unknown) => {
       logger.info('Search indexing job completed', {
         jobId: job.id,
         type: job.data.type,

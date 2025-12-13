@@ -1,6 +1,6 @@
 /**
  * AWS Service Type Definitions
- * 
+ *
  * Common type definitions for AWS services used across the application
  */
 

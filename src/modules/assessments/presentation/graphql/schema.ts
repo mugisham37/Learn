@@ -1,9 +1,9 @@
 /**
  * GraphQL Schema for Assessments Module
- * 
+ *
  * Defines GraphQL types, inputs, and schema for quiz and assignment creation,
  * management, submission tracking, and grading workflows.
- * 
+ *
  * Requirements: 21.1, 21.2
  */
 
@@ -291,7 +291,7 @@ export const assessmentTypeDefs = gql`
     # Quiz mutations
     """
     Create a new quiz for a lesson with configuration settings.
-    
+
     Example:
     mutation {
       createQuiz(input: {
@@ -313,14 +313,14 @@ export const assessmentTypeDefs = gql`
         }
       }
     }
-    
+
     Requirements: 6.1, 6.2
     """
     createQuiz(input: CreateQuizInput!): Quiz!
-    
+
     """
     Start a new quiz attempt for a student.
-    
+
     Example:
     mutation {
       startQuizAttempt(quizId: "quiz-123") {
@@ -335,14 +335,14 @@ export const assessmentTypeDefs = gql`
         }
       }
     }
-    
+
     Requirements: 6.3
     """
     startQuizAttempt(quizId: ID!): QuizSubmission!
-    
+
     """
     Submit answer for a specific question during quiz attempt.
-    
+
     Example:
     mutation {
       submitQuizAnswer(
@@ -353,14 +353,14 @@ export const assessmentTypeDefs = gql`
         }
       )
     }
-    
+
     Requirements: 6.3
     """
     submitQuizAnswer(submissionId: ID!, input: SubmitQuizAnswerInput!): Boolean!
-    
+
     """
     Submit completed quiz for grading and scoring.
-    
+
     Example:
     mutation {
       submitQuiz(submissionId: "submission-123") {
@@ -371,15 +371,15 @@ export const assessmentTypeDefs = gql`
         pointsEarned
       }
     }
-    
+
     Requirements: 6.4, 6.5
     """
     submitQuiz(submissionId: ID!): QuizSubmission!
-    
+
     # Assignment mutations
     """
     Create a new assignment for a lesson with requirements and rubric.
-    
+
     Example:
     mutation {
       createAssignment(input: {
@@ -401,14 +401,14 @@ export const assessmentTypeDefs = gql`
         }
       }
     }
-    
+
     Requirements: 7.1
     """
     createAssignment(input: CreateAssignmentInput!): Assignment!
-    
+
     """
     Submit assignment with file upload or text response.
-    
+
     Example:
     mutation {
       submitAssignment(input: {
@@ -429,14 +429,14 @@ export const assessmentTypeDefs = gql`
         }
       }
     }
-    
+
     Requirements: 7.2, 7.3
     """
     submitAssignment(input: SubmitAssignmentInput!): AssignmentSubmission!
-    
+
     """
     Grade assignment submission with points and feedback.
-    
+
     Example:
     mutation {
       gradeAssignment(
@@ -453,14 +453,14 @@ export const assessmentTypeDefs = gql`
         gradedAt
       }
     }
-    
+
     Requirements: 7.4, 7.7
     """
     gradeAssignment(submissionId: ID!, input: GradeAssignmentInput!): AssignmentSubmission!
-    
+
     """
     Request revision on assignment submission with specific feedback.
-    
+
     Example:
     mutation {
       requestRevision(
@@ -473,7 +473,7 @@ export const assessmentTypeDefs = gql`
         revisionNumber
       }
     }
-    
+
     Requirements: 7.5, 7.6
     """
     requestRevision(submissionId: ID!, feedback: String!): AssignmentSubmission!
@@ -484,20 +484,20 @@ export const assessmentTypeDefs = gql`
     # Quiz queries
     quiz(id: ID!): Quiz
     quizzesByLesson(lessonId: ID!): [Quiz!]!
-    
+
     # Question queries
     question(id: ID!): Question
     questionsByQuiz(quizId: ID!): [Question!]!
-    
+
     # Quiz submission queries
     quizSubmission(id: ID!): QuizSubmission
     quizSubmissionsByStudent(quizId: ID!): [QuizSubmission!]!
     quizSubmissionsByQuiz(quizId: ID!): [QuizSubmission!]!
-    
+
     # Assignment queries
     assignment(id: ID!): Assignment
     assignmentsByLesson(lessonId: ID!): [Assignment!]!
-    
+
     # Assignment submission queries
     assignmentSubmission(id: ID!): AssignmentSubmission
     assignmentSubmissionsByStudent(assignmentId: ID!): [AssignmentSubmission!]!

@@ -1,17 +1,17 @@
 /**
  * Notification Service Interface
- * 
+ *
  * Defines the contract for notification service implementations.
  * Handles multi-channel notification delivery (email, push, in-app)
  * with user preference checking and batching capabilities.
- * 
+ *
  * Requirements: 10.1, 10.2, 10.4, 10.5, 10.7
  */
 
-import { 
-  Notification, 
-  NotificationType, 
-  Priority 
+import {
+  Notification,
+  NotificationType,
+  Priority,
 } from '../../../../infrastructure/database/schema/notifications.schema.js';
 import { NotificationPreferences } from '../../../users/domain/value-objects/UserProfile.js';
 
@@ -91,17 +91,17 @@ export interface BatchNotificationResult {
 
 /**
  * Notification Service Interface
- * 
+ *
  * Provides methods for creating notifications and delivering them through
  * multiple channels based on user preferences.
  */
 export interface INotificationService {
   /**
    * Creates a notification and delivers it through appropriate channels
-   * 
+   *
    * Checks user preferences before sending email and push notifications.
    * Always creates in-app notification and sends real-time update.
-   * 
+   *
    * @param data - Notification creation data
    * @returns Promise resolving to notification delivery result
    * @throws ValidationError if notification data is invalid
@@ -112,10 +112,10 @@ export interface INotificationService {
 
   /**
    * Sends email notification using appropriate template
-   * 
+   *
    * Selects email template based on notification type and populates
    * with dynamic data. Respects user email preferences.
-   * 
+   *
    * @param notification - Notification to send via email
    * @returns Promise resolving when email is sent
    * @throws ExternalServiceError if email sending fails
@@ -124,10 +124,10 @@ export interface INotificationService {
 
   /**
    * Sends push notification to user's registered devices
-   * 
+   *
    * Currently a stub for future mobile app integration.
    * Will use Firebase Cloud Messaging or Apple Push Notification Service.
-   * 
+   *
    * @param notification - Notification to send via push
    * @returns Promise resolving when push is sent
    * @throws ExternalServiceError if push sending fails
@@ -136,10 +136,10 @@ export interface INotificationService {
 
   /**
    * Marks a notification as read and updates unread count
-   * 
+   *
    * Updates the notification read status and timestamp.
    * Invalidates cache and sends real-time update to user.
-   * 
+   *
    * @param notificationId - ID of notification to mark as read
    * @param userId - ID of user marking notification as read
    * @returns Promise resolving to updated notification
@@ -150,10 +150,10 @@ export interface INotificationService {
 
   /**
    * Batches similar notifications to prevent spam
-   * 
+   *
    * Groups notifications by type and recipient, creating digest
    * notifications instead of individual ones when appropriate.
-   * 
+   *
    * @param notifications - Array of notification data to batch
    * @returns Promise resolving to batch notification result
    * @throws ValidationError if notification data is invalid
@@ -162,10 +162,10 @@ export interface INotificationService {
 
   /**
    * Gets user notification preferences for delivery decisions
-   * 
+   *
    * Retrieves user preferences to determine which channels to use
    * for notification delivery.
-   * 
+   *
    * @param userId - ID of user to get preferences for
    * @returns Promise resolving to user notification preferences
    * @throws NotFoundError if user doesn't exist
@@ -174,21 +174,21 @@ export interface INotificationService {
 
   /**
    * Checks if user has enabled notifications for a specific type and channel
-   * 
+   *
    * @param userId - ID of user to check preferences for
    * @param notificationType - Type of notification to check
    * @param channel - Delivery channel to check ('email', 'push', 'inApp')
    * @returns Promise resolving to true if notifications are enabled
    */
   isNotificationEnabled(
-    userId: string, 
-    notificationType: NotificationType, 
+    userId: string,
+    notificationType: NotificationType,
     channel: 'email' | 'push' | 'inApp'
   ): Promise<boolean>;
 
   /**
    * Gets the appropriate email template ID for a notification type
-   * 
+   *
    * @param notificationType - Type of notification
    * @returns Email template identifier
    */
@@ -196,7 +196,7 @@ export interface INotificationService {
 
   /**
    * Formats notification content for email delivery
-   * 
+   *
    * @param notification - Notification to format
    * @param recipientName - Name of notification recipient
    * @returns Email template data
@@ -205,7 +205,7 @@ export interface INotificationService {
 
   /**
    * Formats notification content for push delivery
-   * 
+   *
    * @param notification - Notification to format
    * @returns Push notification data
    */

@@ -1,9 +1,9 @@
 /**
  * Video Processing Manager
- * 
+ *
  * Central manager for video processing operations that coordinates between
  * the queue, webhook processing, and status tracking.
- * 
+ *
  * Requirements:
  * - 4.2: MediaConvert transcoding with multiple resolutions
  * - 4.3: Transcoding job status and retry logic
@@ -13,13 +13,16 @@
 
 import { logger } from '../utils/logger.js';
 import { VideoProcessingService } from './VideoProcessingService.js';
-import { MediaConvertWebhookProcessor, MediaConvertWebhookEvent } from './MediaConvertWebhookProcessor.js';
+import {
+  MediaConvertWebhookProcessor,
+  MediaConvertWebhookEvent,
+} from './MediaConvertWebhookProcessor.js';
 import { IContentRepository } from '../../modules/content/infrastructure/repositories/IContentRepository.js';
 import { IMediaConvertService } from './IMediaConvertService.js';
 
 /**
  * Video Processing Manager
- * 
+ *
  * Provides a unified interface for all video processing operations
  * including upload handling, status tracking, and webhook processing.
  */
@@ -36,9 +39,7 @@ export class VideoProcessingManager {
       this.contentRepository,
       this.mediaConvertService
     );
-    this.webhookProcessor = new MediaConvertWebhookProcessor(
-      this.contentRepository
-    );
+    this.webhookProcessor = new MediaConvertWebhookProcessor(this.contentRepository);
   }
 
   /**
@@ -51,7 +52,7 @@ export class VideoProcessingManager {
 
     try {
       await this.videoProcessingService.initialize();
-      
+
       logger.info('Video processing manager initialized successfully');
       this.isInitialized = true;
     } catch (error) {

@@ -1,9 +1,9 @@
 /**
  * Health Check Utilities
- * 
+ *
  * Comprehensive health checks for all infrastructure dependencies
  * including database, Redis, and Elasticsearch.
- * 
+ *
  * Requirements: 17.1
  */
 
@@ -117,7 +117,6 @@ const NON_CRITICAL_SERVICES = ['sessionRedis', 'elasticsearch', 'rateLimit'] as 
  * Performs comprehensive health checks on all infrastructure dependencies
  */
 export async function performSystemHealthCheck(): Promise<SystemHealth> {
-  
   // Run all health checks in parallel for better performance
   const [
     databaseHealth,
@@ -138,111 +137,123 @@ export async function performSystemHealthCheck(): Promise<SystemHealth> {
   ]);
 
   // Process database health check result
-  const database: ServiceHealth = databaseHealth.status === 'fulfilled'
-    ? {
-        healthy: databaseHealth.value.healthy,
-        latencyMs: databaseHealth.value.latencyMs,
-        error: databaseHealth.value.error,
-        details: {
-          writePool: databaseHealth.value.writePool,
-          readPool: databaseHealth.value.readPool,
-        },
-      }
-    : {
-        healthy: false,
-        error: databaseHealth.reason instanceof Error 
-          ? databaseHealth.reason.message 
-          : 'Database health check failed',
-      };
+  const database: ServiceHealth =
+    databaseHealth.status === 'fulfilled'
+      ? {
+          healthy: databaseHealth.value.healthy,
+          latencyMs: databaseHealth.value.latencyMs,
+          error: databaseHealth.value.error,
+          details: {
+            writePool: databaseHealth.value.writePool,
+            readPool: databaseHealth.value.readPool,
+          },
+        }
+      : {
+          healthy: false,
+          error:
+            databaseHealth.reason instanceof Error
+              ? databaseHealth.reason.message
+              : 'Database health check failed',
+        };
 
   // Process Redis health check result
-  const redis: ServiceHealth = redisHealth.status === 'fulfilled'
-    ? {
-        healthy: redisHealth.value.healthy,
-        latencyMs: redisHealth.value.latency,
-        error: redisHealth.value.error,
-      }
-    : {
-        healthy: false,
-        error: redisHealth.reason instanceof Error 
-          ? redisHealth.reason.message 
-          : 'Redis health check failed',
-      };
+  const redis: ServiceHealth =
+    redisHealth.status === 'fulfilled'
+      ? {
+          healthy: redisHealth.value.healthy,
+          latencyMs: redisHealth.value.latency,
+          error: redisHealth.value.error,
+        }
+      : {
+          healthy: false,
+          error:
+            redisHealth.reason instanceof Error
+              ? redisHealth.reason.message
+              : 'Redis health check failed',
+        };
 
   // Process session Redis health check result
-  const sessionRedis: ServiceHealth = sessionRedisHealth.status === 'fulfilled'
-    ? {
-        healthy: sessionRedisHealth.value.healthy,
-        latencyMs: sessionRedisHealth.value.latency,
-        error: sessionRedisHealth.value.error,
-      }
-    : {
-        healthy: false,
-        error: sessionRedisHealth.reason instanceof Error 
-          ? sessionRedisHealth.reason.message 
-          : 'Session Redis health check failed',
-      };
+  const sessionRedis: ServiceHealth =
+    sessionRedisHealth.status === 'fulfilled'
+      ? {
+          healthy: sessionRedisHealth.value.healthy,
+          latencyMs: sessionRedisHealth.value.latency,
+          error: sessionRedisHealth.value.error,
+        }
+      : {
+          healthy: false,
+          error:
+            sessionRedisHealth.reason instanceof Error
+              ? sessionRedisHealth.reason.message
+              : 'Session Redis health check failed',
+        };
 
   // Process Elasticsearch health check result
-  const elasticsearch: ServiceHealth = elasticsearchHealth.status === 'fulfilled'
-    ? {
-        healthy: elasticsearchHealth.value.healthy,
-        latencyMs: elasticsearchHealth.value.latencyMs,
-        error: elasticsearchHealth.value.error,
-        details: {
-          cluster: elasticsearchHealth.value.cluster,
-          indices: elasticsearchHealth.value.indices,
-        },
-      }
-    : {
-        healthy: false,
-        error: elasticsearchHealth.reason instanceof Error 
-          ? elasticsearchHealth.reason.message 
-          : 'Elasticsearch health check failed',
-      };
+  const elasticsearch: ServiceHealth =
+    elasticsearchHealth.status === 'fulfilled'
+      ? {
+          healthy: elasticsearchHealth.value.healthy,
+          latencyMs: elasticsearchHealth.value.latencyMs,
+          error: elasticsearchHealth.value.error,
+          details: {
+            cluster: elasticsearchHealth.value.cluster,
+            indices: elasticsearchHealth.value.indices,
+          },
+        }
+      : {
+          healthy: false,
+          error:
+            elasticsearchHealth.reason instanceof Error
+              ? elasticsearchHealth.reason.message
+              : 'Elasticsearch health check failed',
+        };
 
   // Process rate limiting health check result
-  const rateLimit: ServiceHealth = rateLimitHealth.status === 'fulfilled'
-    ? {
-        healthy: rateLimitHealth.value.healthy,
-        error: rateLimitHealth.value.error,
-      }
-    : {
-        healthy: false,
-        error: rateLimitHealth.reason instanceof Error 
-          ? rateLimitHealth.reason.message 
-          : 'Rate limiting health check failed',
-      };
+  const rateLimit: ServiceHealth =
+    rateLimitHealth.status === 'fulfilled'
+      ? {
+          healthy: rateLimitHealth.value.healthy,
+          error: rateLimitHealth.value.error,
+        }
+      : {
+          healthy: false,
+          error:
+            rateLimitHealth.reason instanceof Error
+              ? rateLimitHealth.reason.message
+              : 'Rate limiting health check failed',
+        };
 
   // Process secrets manager health check result
-  const secretsManager: ServiceHealth = secretsManagerHealth.status === 'fulfilled'
-    ? {
-        healthy: secretsManagerHealth.value,
-        error: secretsManagerHealth.value ? undefined : 'Secrets manager health check failed',
-      }
-    : {
-        healthy: false,
-        error: secretsManagerHealth.reason instanceof Error 
-          ? secretsManagerHealth.reason.message 
-          : 'Secrets manager health check failed',
-      };
+  const secretsManager: ServiceHealth =
+    secretsManagerHealth.status === 'fulfilled'
+      ? {
+          healthy: secretsManagerHealth.value,
+          error: secretsManagerHealth.value ? undefined : 'Secrets manager health check failed',
+        }
+      : {
+          healthy: false,
+          error:
+            secretsManagerHealth.reason instanceof Error
+              ? secretsManagerHealth.reason.message
+              : 'Secrets manager health check failed',
+        };
 
   // Process S3 health check result
-  const s3: ServiceHealth = s3Health.status === 'fulfilled'
-    ? {
-        healthy: s3Health.value.healthy,
-        latencyMs: s3Health.value.latencyMs,
-        error: s3Health.value.error,
-        details: {
-          bucketAccessible: s3Health.value.bucketAccessible,
-        },
-      }
-    : {
-        healthy: false,
-        error: s3Health.reason instanceof Error 
-          ? s3Health.reason.message 
-          : 'S3 health check failed',
-      };
+  const s3: ServiceHealth =
+    s3Health.status === 'fulfilled'
+      ? {
+          healthy: s3Health.value.healthy,
+          latencyMs: s3Health.value.latencyMs,
+          error: s3Health.value.error,
+          details: {
+            bucketAccessible: s3Health.value.bucketAccessible,
+          },
+        }
+      : {
+          healthy: false,
+          error:
+            s3Health.reason instanceof Error ? s3Health.reason.message : 'S3 health check failed',
+        };
 
   const services = {
     database,
@@ -255,7 +266,7 @@ export async function performSystemHealthCheck(): Promise<SystemHealth> {
   };
 
   // Calculate overall health status
-  const healthyServices = Object.values(services).filter(service => service.healthy);
+  const healthyServices = Object.values(services).filter((service) => service.healthy);
   const totalServices = Object.keys(services).length;
 
   // Check for critical service failures
@@ -273,12 +284,10 @@ export async function performSystemHealthCheck(): Promise<SystemHealth> {
   } else {
     // Check non-critical services
     const nonCriticalFailures = NON_CRITICAL_SERVICES.filter(
-      serviceName => !services[serviceName].healthy
+      (serviceName) => !services[serviceName].healthy
     );
     status = nonCriticalFailures.length > 0 ? 'degraded' : 'healthy';
   }
-
-
 
   // Get connection pool information if monitoring is enabled
   let connectionPools;
@@ -331,7 +340,7 @@ export async function performQuickHealthCheck(): Promise<{
   latencyMs: number;
 }> {
   const startTime = Date.now();
-  
+
   try {
     // Just check if we can connect to critical services quickly
     const [databaseResult, redisResult, s3Result] = await Promise.allSettled([
@@ -373,7 +382,7 @@ export async function checkReadiness(): Promise<{
   notReady: string[];
 }> {
   const health = await performSystemHealthCheck();
-  
+
   const readyServices: string[] = [];
   const notReadyServices: string[] = [];
 
@@ -408,7 +417,7 @@ export function checkLiveness(): {
   // and can perform basic operations
   try {
     const uptime = process.uptime();
-    
+
     // If we can get uptime and current time, we're alive
     return {
       alive: true,

@@ -1,9 +1,9 @@
 /**
  * Metrics Endpoint Middleware
- * 
+ *
  * Provides HTTP endpoints for accessing application metrics.
  * Useful for monitoring dashboards and health checks.
- * 
+ *
  * Requirements: 17.6
  */
 
@@ -85,17 +85,21 @@ export function registerMetricsEndpoints(server: FastifyInstance): void {
   });
 
   // Admin metrics endpoint (detailed metrics)
-  server.get('/admin/metrics', {
-    preHandler: [requireAuth, requireRole(['admin'])],
-  }, async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const metrics = await getDetailedMetrics();
-      return reply.send(metrics);
-    } catch (error) {
-      logger.error('Failed to get detailed metrics', { error });
-      return reply.code(500).send({ error: 'Failed to retrieve detailed metrics' });
+  server.get(
+    '/admin/metrics',
+    {
+      preHandler: [requireAuth, requireRole(['admin'])],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const metrics = await getDetailedMetrics();
+        return reply.send(metrics);
+      } catch (error) {
+        logger.error('Failed to get detailed metrics', { error });
+        return reply.code(500).send({ error: 'Failed to retrieve detailed metrics' });
+      }
     }
-  });
+  );
 
   // Metrics health endpoint
   server.get('/metrics/health', async (request: FastifyRequest, reply: FastifyReply) => {
@@ -105,9 +109,9 @@ export function registerMetricsEndpoints(server: FastifyInstance): void {
       return reply.code(statusCode).send(health);
     } catch (error) {
       logger.error('Failed to get metrics health', { error });
-      return reply.code(503).send({ 
-        healthy: false, 
-        error: 'Failed to check metrics health' 
+      return reply.code(503).send({
+        healthy: false,
+        error: 'Failed to check metrics health',
       });
     }
   });
@@ -192,7 +196,10 @@ async function getDetailedMetrics(): Promise<MetricsResponse> {
     };
   });
 
-  const servicesByName: Record<string, { count: number; averageDuration: number; errorRate: number }> = {};
+  const servicesByName: Record<
+    string,
+    { count: number; averageDuration: number; errorRate: number }
+  > = {};
   externalServiceMetrics.servicesByName.forEach((data, service) => {
     servicesByName[service] = {
       count: data.count,
@@ -271,10 +278,11 @@ async function getDetailedMetrics(): Promise<MetricsResponse> {
 async function getMetricsHealth(): Promise<{ healthy: boolean; details: Record<string, any> }> {
   const cloudWatchHealthy = await cloudWatchService.isHealthy();
   const resourceMetrics = applicationMetricsService.getResourceMetrics();
-  
+
   // Check if memory usage is reasonable (< 90% of heap)
-  const memoryHealthy = resourceMetrics.memoryUsage.heapUsed < (resourceMetrics.memoryUsage.heapTotal * 0.9);
-  
+  const memoryHealthy =
+    resourceMetrics.memoryUsage.heapUsed < resourceMetrics.memoryUsage.heapTotal * 0.9;
+
   // Check if there are recent metrics
   const responseTimeMetrics = applicationMetricsService.getResponseTimePercentiles();
   const metricsActive = responseTimeMetrics.count > 0;
@@ -289,7 +297,8 @@ async function getMetricsHealth(): Promise<{ healthy: boolean; details: Record<s
         healthy: memoryHealthy,
         heapUsed: resourceMetrics.memoryUsage.heapUsed,
         heapTotal: resourceMetrics.memoryUsage.heapTotal,
-        usagePercent: (resourceMetrics.memoryUsage.heapUsed / resourceMetrics.memoryUsage.heapTotal) * 100,
+        usagePercent:
+          (resourceMetrics.memoryUsage.heapUsed / resourceMetrics.memoryUsage.heapTotal) * 100,
       },
       metrics: {
         active: metricsActive,

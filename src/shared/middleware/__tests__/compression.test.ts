@@ -1,6 +1,6 @@
 /**
  * Compression Middleware Tests
- * 
+ *
  * Tests for HTTP response compression middleware including
  * gzip and brotli compression with various content types.
  */
@@ -40,7 +40,7 @@ describe('Compression Middleware', () => {
   describe('registerCompression', () => {
     it('should register compression middleware with Fastify', async () => {
       await registerCompression(fastify);
-      
+
       // Add a test route
       fastify.get('/test', async () => {
         return { message: 'Hello, World!'.repeat(100) }; // Large enough to trigger compression
@@ -61,7 +61,7 @@ describe('Compression Middleware', () => {
 
     it('should handle requests without accept-encoding header', async () => {
       await registerCompression(fastify);
-      
+
       fastify.get('/test', async () => {
         return { message: 'Hello, World!' };
       });
@@ -76,7 +76,7 @@ describe('Compression Middleware', () => {
 
     it('should skip compression for small responses', async () => {
       await registerCompression(fastify, { threshold: 1000 });
-      
+
       fastify.get('/test', async () => {
         return { message: 'Small' }; // Below threshold
       });
@@ -95,7 +95,7 @@ describe('Compression Middleware', () => {
 
     it('should skip compression for HEAD requests', async () => {
       await registerCompression(fastify);
-      
+
       fastify.head('/test', async () => {
         return { message: 'Hello, World!'.repeat(100) };
       });
@@ -113,7 +113,7 @@ describe('Compression Middleware', () => {
 
     it('should skip compression when content-encoding already set', async () => {
       await registerCompression(fastify);
-      
+
       fastify.get('/test', async (request, reply) => {
         reply.header('content-encoding', 'identity');
         return { message: 'Hello, World!'.repeat(100) };

@@ -1,6 +1,6 @@
 /**
  * Communication Presentation Layer
- * 
+ *
  * GraphQL resolvers, REST controllers, and input validation
  */
 

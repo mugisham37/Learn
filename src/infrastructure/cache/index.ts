@@ -1,9 +1,9 @@
 /**
  * Redis Cache Configuration
- * 
+ *
  * Manages Redis connection for caching, sessions, and rate limiting
  * Implements connection pooling, retry logic, and comprehensive cache utilities
- * 
+ *
  * Requirements: 15.2, 15.3
  */
 
@@ -50,12 +50,12 @@ const redisOptions: RedisOptions = {
   port: config.redis.port,
   password: config.redis.password || undefined,
   db: config.redis.db,
-  
+
   // Connection pooling configuration
   maxRetriesPerRequest: 3,
   enableReadyCheck: true,
   enableOfflineQueue: true,
-  
+
   // Retry strategy with exponential backoff
   retryStrategy: (times: number) => {
     if (times > 10) {
@@ -68,7 +68,7 @@ const redisOptions: RedisOptions = {
     console.log(`Redis retry attempt ${times}, waiting ${delay}ms`);
     return delay;
   },
-  
+
   // Reconnect on error
   reconnectOnError: (err) => {
     const targetError = 'READONLY';
@@ -78,13 +78,13 @@ const redisOptions: RedisOptions = {
     }
     return false;
   },
-  
+
   // Connection timeout
   connectTimeout: 10000,
-  
+
   // Keep alive
   keepAlive: 30000,
-  
+
   // Lazy connect - don't connect until first command
   lazyConnect: false,
 };
@@ -93,6 +93,11 @@ const redisOptions: RedisOptions = {
  * Primary Redis client instance for general caching
  */
 export const redis = new Redis(redisOptions);
+
+/**
+ * Get Redis client instance (alias for compatibility)
+ */
+export const getRedisClient = () => redis;
 
 /**
  * Separate Redis client for session storage
@@ -148,7 +153,7 @@ export async function checkRedisHealth(): Promise<{
     const start = Date.now();
     await redis.ping();
     const latency = Date.now() - start;
-    
+
     return {
       healthy: true,
       latency,
@@ -173,7 +178,7 @@ export async function checkSessionRedisHealth(): Promise<{
     const start = Date.now();
     await sessionRedis.ping();
     const latency = Date.now() - start;
-    
+
     return {
       healthy: true,
       latency,
@@ -191,10 +196,7 @@ export async function checkSessionRedisHealth(): Promise<{
  */
 export async function closeRedisConnections(): Promise<void> {
   try {
-    await Promise.all([
-      redis.quit(),
-      sessionRedis.quit(),
-    ]);
+    await Promise.all([redis.quit(), sessionRedis.quit()]);
     console.log('All Redis connections closed gracefully');
   } catch (error) {
     console.error('Error closing Redis connections:', error);
@@ -260,13 +262,13 @@ export const cache = {
     try {
       const serialized = JSON.stringify(value);
       let result: string | null;
-      
+
       if (ttlSeconds) {
         result = await redis.set(key, serialized, 'EX', ttlSeconds, 'NX');
       } else {
         result = await redis.set(key, serialized, 'NX');
       }
-      
+
       return result === 'OK';
     } catch (error) {
       console.error(`Cache setIfNotExists error for key ${key}:`, error);
@@ -283,7 +285,7 @@ export const cache = {
       if (keys.length === 0) {
         return [];
       }
-      
+
       const values = await redis.mget(...keys);
       return values.map((value) => {
         if (!value) {
@@ -310,9 +312,9 @@ export const cache = {
       if (entries.length === 0) {
         return;
       }
-      
+
       const pipeline = redis.pipeline();
-      
+
       for (const entry of entries) {
         const serialized = JSON.stringify(entry.value);
         if (entry.ttl) {
@@ -321,7 +323,7 @@ export const cache = {
           pipeline.set(entry.key, serialized);
         }
       }
-      
+
       await pipeline.exec();
     } catch (error) {
       console.error('Cache mset error:', error);
@@ -365,25 +367,19 @@ export const cache = {
     try {
       let cursor = '0';
       let deletedCount = 0;
-      
+
       do {
         // Use SCAN instead of KEYS for production safety
-        const [nextCursor, keys] = await redis.scan(
-          cursor,
-          'MATCH',
-          pattern,
-          'COUNT',
-          100
-        );
-        
+        const [nextCursor, keys] = await redis.scan(cursor, 'MATCH', pattern, 'COUNT', 100);
+
         cursor = nextCursor;
-        
+
         if (keys.length > 0) {
           await redis.del(...keys);
           deletedCount += keys.length;
         }
       } while (cursor !== '0');
-      
+
       return deletedCount;
     } catch (error) {
       console.error(`Cache deletePattern error for pattern ${pattern}:`, error);
@@ -480,11 +476,8 @@ export const cache = {
     misses?: string;
   }> {
     try {
-      const [dbSize, info] = await Promise.all([
-        redis.dbsize(),
-        redis.info('stats'),
-      ]);
-      
+      const [dbSize, info] = await Promise.all([redis.dbsize(), redis.info('stats')]);
+
       // Parse info string for stats
       const stats: Record<string, string> = {};
       info.split('\r\n').forEach((line) => {
@@ -493,7 +486,7 @@ export const cache = {
           stats[key] = value;
         }
       });
-      
+
       return {
         keys: dbSize,
         memory: stats.used_memory_human || 'unknown',
@@ -518,7 +511,11 @@ export const sessionCache = {
   /**
    * Stores a session with automatic expiration
    */
-  async set(sessionId: string, data: unknown, ttlSeconds: number = CacheTTL.SESSION): Promise<void> {
+  async set(
+    sessionId: string,
+    data: unknown,
+    ttlSeconds: number = CacheTTL.SESSION
+  ): Promise<void> {
     try {
       const serialized = JSON.stringify(data);
       await sessionRedis.setex(sessionId, ttlSeconds, serialized);

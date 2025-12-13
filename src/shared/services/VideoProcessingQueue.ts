@@ -1,9 +1,9 @@
 /**
  * Video Processing Queue Implementation
- * 
+ *
  * Implements BullMQ queue for video processing jobs with MediaConvert integration,
  * job status tracking, retry logic, and notification handling.
- * 
+ *
  * Requirements:
  * - 4.2: MediaConvert transcoding with multiple resolutions
  * - 4.3: Transcoding job status and retry logic
@@ -17,11 +17,7 @@ import { logger } from '../utils/logger.js';
 // import { config } from '../../config/index.js';
 import { IMediaConvertService } from './IMediaConvertService.js';
 import { IContentRepository } from '../../modules/content/infrastructure/repositories/IContentRepository.js';
-import { 
-  ExternalServiceError, 
-  NotFoundError, 
-  ValidationError 
-} from '../errors/index.js';
+import { ExternalServiceError, NotFoundError, ValidationError } from '../errors/index.js';
 
 /**
  * Video processing job data interface
@@ -62,25 +58,25 @@ const QUEUE_OPTIONS: QueueOptions = {
   connection: redis,
   defaultJobOptions: {
     removeOnComplete: 50, // Keep last 50 completed jobs
-    removeOnFail: 100,    // Keep last 100 failed jobs
-    attempts: 3,          // Maximum retry attempts
+    removeOnFail: 100, // Keep last 100 failed jobs
+    attempts: 3, // Maximum retry attempts
     backoff: {
       type: 'exponential',
-      delay: 5000,        // Start with 5 second delay
+      delay: 5000, // Start with 5 second delay
     },
   },
 };
 
 const WORKER_OPTIONS: WorkerOptions = {
   connection: redis,
-  concurrency: 2,       // Low concurrency for video processing
-  maxStalledCount: 1,   // Maximum stalled jobs before failing
+  concurrency: 2, // Low concurrency for video processing
+  maxStalledCount: 1, // Maximum stalled jobs before failing
   stalledInterval: 30000, // Check for stalled jobs every 30 seconds
 };
 
 /**
  * Video Processing Queue Implementation
- * 
+ *
  * Manages video transcoding jobs using BullMQ with MediaConvert integration,
  * comprehensive error handling, and status tracking.
  */
@@ -114,7 +110,7 @@ export class VideoProcessingQueue {
     try {
       // Test Redis connection
       await redis.ping();
-      
+
       logger.info('Video processing queue initialized', {
         queueName: QUEUE_NAME,
         concurrency: WORKER_OPTIONS.concurrency,
@@ -150,16 +146,12 @@ export class VideoProcessingQueue {
       // Validate job data
       this.validateJobData(data);
 
-      const job = await this.queue.add(
-        'process-video',
-        data,
-        {
-          ...options,
-          priority: 7, // High priority for video processing
-          delay: options?.delay || 0,
-          jobId: `video-${data.videoAssetId}-${Date.now()}`,
-        }
-      );
+      const job = await this.queue.add('process-video', data, {
+        ...options,
+        priority: 7, // High priority for video processing
+        delay: options?.delay || 0,
+        jobId: `video-${data.videoAssetId}-${Date.now()}`,
+      });
 
       logger.info('Video processing job added successfully', {
         jobId: job.id,
@@ -302,7 +294,7 @@ export class VideoProcessingQueue {
 
       // Close worker first to stop processing new jobs
       await this.worker.close();
-      
+
       // Close queue
       await this.queue.close();
 
@@ -339,10 +331,7 @@ export class VideoProcessingQueue {
       }
 
       // Update video asset status to in_progress
-      await this.contentRepository.updateVideoAssetProcessingStatus(
-        videoAssetId,
-        'in_progress'
-      );
+      await this.contentRepository.updateVideoAssetProcessingStatus(videoAssetId, 'in_progress');
 
       await job.updateProgress(20);
 
@@ -439,13 +428,9 @@ export class VideoProcessingQueue {
       });
 
       // Update video asset status to failed
-      await this.contentRepository.updateVideoAssetProcessingStatus(
-        videoAssetId,
-        'failed',
-        {
-          errorMessage: error instanceof Error ? error.message : 'Unknown error',
-        }
-      );
+      await this.contentRepository.updateVideoAssetProcessingStatus(videoAssetId, 'failed', {
+        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+      });
 
       throw error;
     }
@@ -469,7 +454,7 @@ export class VideoProcessingQueue {
 
         // Update progress based on MediaConvert progress
         if (jobStatus.progress !== undefined) {
-          const adjustedProgress = 30 + (jobStatus.progress * 0.6); // 30-90% range
+          const adjustedProgress = 30 + jobStatus.progress * 0.6; // 30-90% range
           await bullJob.updateProgress(Math.round(adjustedProgress));
         }
 
@@ -477,39 +462,39 @@ export class VideoProcessingQueue {
           // Job completed successfully
           await bullJob.updateProgress(95);
 
-          const outputs = jobStatus.outputs?.map(output => ({
-            resolution: output.resolution,
-            url: output.outputUrl,
-            bitrate: output.bitrate,
-            fileSize: output.fileSize,
-          })) || [];
+          const outputs =
+            jobStatus.outputs?.map((output) => ({
+              resolution: output.resolution,
+              url: output.outputUrl,
+              bitrate: output.bitrate,
+              fileSize: output.fileSize,
+            })) || [];
 
           // Update video asset with completion data
-          const availableResolutions = outputs.map(output => ({
+          const availableResolutions = outputs.map((output) => ({
             resolution: output.resolution,
             url: output.url,
             bitrate: output.bitrate,
             fileSize: output.fileSize,
           }));
 
-          const streamingUrls = outputs.reduce((urls, output) => {
-            urls[output.resolution] = output.url;
-            return urls;
-          }, {} as Record<string, string>);
-
-          const hlsManifestUrl = outputs.find(o => o.resolution === '1080p')?.url || 
-                                outputs[0]?.url;
-
-          await this.contentRepository.updateVideoAssetProcessingStatus(
-            videoAssetId,
-            'completed',
-            {
-              availableResolutions,
-              streamingUrls,
-              hlsManifestUrl,
-              processingCompletedAt: new Date().toISOString(),
-            }
+          const streamingUrls = outputs.reduce(
+            (urls, output) => {
+              urls[output.resolution] = output.url;
+              return urls;
+            },
+            {} as Record<string, string>
           );
+
+          const hlsManifestUrl =
+            outputs.find((o) => o.resolution === '1080p')?.url || outputs[0]?.url;
+
+          await this.contentRepository.updateVideoAssetProcessingStatus(videoAssetId, 'completed', {
+            availableResolutions,
+            streamingUrls,
+            hlsManifestUrl,
+            processingCompletedAt: new Date().toISOString(),
+          });
 
           await bullJob.updateProgress(100);
 
@@ -522,14 +507,10 @@ export class VideoProcessingQueue {
           // Job failed or was cancelled
           const errorMessage = jobStatus.errorMessage || 'MediaConvert job failed';
 
-          await this.contentRepository.updateVideoAssetProcessingStatus(
-            videoAssetId,
-            'failed',
-            {
-              errorMessage,
-              processingCompletedAt: new Date().toISOString(),
-            }
-          );
+          await this.contentRepository.updateVideoAssetProcessingStatus(videoAssetId, 'failed', {
+            errorMessage,
+            processingCompletedAt: new Date().toISOString(),
+          });
 
           return {
             videoAssetId,
@@ -539,7 +520,7 @@ export class VideoProcessingQueue {
         }
 
         // Job still in progress, wait before next poll
-        await new Promise(resolve => setTimeout(resolve, pollingInterval));
+        await new Promise((resolve) => setTimeout(resolve, pollingInterval));
       } catch (error) {
         logger.error('Error polling MediaConvert job status', {
           mediaConvertJobId,
@@ -552,7 +533,7 @@ export class VideoProcessingQueue {
           throw error;
         }
 
-        await new Promise(resolve => setTimeout(resolve, pollingInterval));
+        await new Promise((resolve) => setTimeout(resolve, pollingInterval));
       }
     }
 
@@ -718,7 +699,9 @@ let videoProcessingQueueInstance: VideoProcessingQueue | null = null;
  */
 export function getVideoProcessingQueue(): VideoProcessingQueue {
   if (!videoProcessingQueueInstance) {
-    throw new Error('VideoProcessingQueue not initialized. Call initializeVideoProcessingQueue first.');
+    throw new Error(
+      'VideoProcessingQueue not initialized. Call initializeVideoProcessingQueue first.'
+    );
   }
   return videoProcessingQueueInstance;
 }
@@ -735,13 +718,10 @@ export async function initializeVideoProcessingQueue(
     return videoProcessingQueueInstance;
   }
 
-  videoProcessingQueueInstance = new VideoProcessingQueue(
-    mediaConvertService,
-    contentRepository
-  );
+  videoProcessingQueueInstance = new VideoProcessingQueue(mediaConvertService, contentRepository);
 
   await videoProcessingQueueInstance.initialize();
-  
+
   logger.info('Video processing queue initialized successfully');
   return videoProcessingQueueInstance;
 }

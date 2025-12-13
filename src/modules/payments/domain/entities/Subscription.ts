@@ -1,16 +1,20 @@
 /**
  * Subscription Domain Entity
- * 
+ *
  * Represents a recurring subscription plan for users.
  * Contains business logic for subscription lifecycle management.
- * 
+ *
  * Requirements:
  * - 11.1: Subscription creation and management
  * - 11.5: Subscription cancellation and status tracking
  */
 
 import { randomUUID } from 'crypto';
-import { SubscriptionCreatedEvent, SubscriptionCanceledEvent, SubscriptionRenewedEvent } from '../events/PaymentEvents';
+import {
+  SubscriptionCreatedEvent,
+  SubscriptionCanceledEvent,
+  SubscriptionRenewedEvent,
+} from '../events/PaymentEvents';
 
 export type SubscriptionStatus = 'active' | 'canceled' | 'past_due' | 'unpaid';
 
@@ -39,7 +43,7 @@ export interface CreateSubscriptionData {
 
 /**
  * Subscription Entity
- * 
+ *
  * Encapsulates subscription business logic and validation rules.
  * Manages subscription lifecycle and billing periods.
  */
@@ -50,7 +54,7 @@ export class Subscription {
 
   /**
    * Creates a new Subscription entity
-   * 
+   *
    * @param data - Subscription creation data
    * @returns Subscription entity
    * @throws Error if validation fails
@@ -72,21 +76,23 @@ export class Subscription {
     };
 
     const subscription = new Subscription(subscriptionData);
-    
+
     // Emit domain event for subscription creation
-    subscription.addDomainEvent(new SubscriptionCreatedEvent(
-      subscription.getId(),
-      subscription.getUserId(),
-      subscription.getPlanId(),
-      subscription.getCurrentPeriodEnd()
-    ));
-    
+    subscription.addDomainEvent(
+      new SubscriptionCreatedEvent(
+        subscription.getId(),
+        subscription.getUserId(),
+        subscription.getPlanId(),
+        subscription.getCurrentPeriodEnd()
+      )
+    );
+
     return subscription;
   }
 
   /**
    * Reconstructs Subscription entity from database data
-   * 
+   *
    * @param data - Complete subscription data from database
    * @returns Subscription entity
    */
@@ -96,7 +102,7 @@ export class Subscription {
 
   /**
    * Validates subscription data according to business rules
-   * 
+   *
    * @throws Error if validation fails
    */
   private validateSubscription(): void {
@@ -151,12 +157,14 @@ export class Subscription {
     this.data.updatedAt = new Date();
 
     // Emit domain event for subscription cancellation
-    this.addDomainEvent(new SubscriptionCanceledEvent(
-      this.data.id,
-      this.data.userId,
-      this.data.currentPeriodEnd,
-      true // cancelAtPeriodEnd
-    ));
+    this.addDomainEvent(
+      new SubscriptionCanceledEvent(
+        this.data.id,
+        this.data.userId,
+        this.data.currentPeriodEnd,
+        true // cancelAtPeriodEnd
+      )
+    );
   }
 
   /**
@@ -172,12 +180,14 @@ export class Subscription {
     this.data.updatedAt = new Date();
 
     // Emit domain event for immediate subscription cancellation
-    this.addDomainEvent(new SubscriptionCanceledEvent(
-      this.data.id,
-      this.data.userId,
-      new Date(), // canceled immediately
-      false // not cancelAtPeriodEnd
-    ));
+    this.addDomainEvent(
+      new SubscriptionCanceledEvent(
+        this.data.id,
+        this.data.userId,
+        new Date(), // canceled immediately
+        false // not cancelAtPeriodEnd
+      )
+    );
   }
 
   /**
@@ -185,7 +195,9 @@ export class Subscription {
    */
   reactivate(): void {
     if (this.data.status !== 'canceled' && !this.data.cancelAtPeriodEnd) {
-      throw new Error('Only canceled subscriptions or those marked for cancellation can be reactivated');
+      throw new Error(
+        'Only canceled subscriptions or those marked for cancellation can be reactivated'
+      );
     }
 
     this.data.status = 'active';
@@ -195,7 +207,7 @@ export class Subscription {
 
   /**
    * Updates subscription status
-   * 
+   *
    * @param status - New subscription status
    */
   updateStatus(status: SubscriptionStatus): void {
@@ -214,7 +226,7 @@ export class Subscription {
 
   /**
    * Renews the subscription for the next billing period
-   * 
+   *
    * @param newPeriodStart - Start of new billing period
    * @param newPeriodEnd - End of new billing period
    */
@@ -237,17 +249,14 @@ export class Subscription {
     this.data.updatedAt = new Date();
 
     // Emit domain event for subscription renewal
-    this.addDomainEvent(new SubscriptionRenewedEvent(
-      this.data.id,
-      this.data.userId,
-      newPeriodStart,
-      newPeriodEnd
-    ));
+    this.addDomainEvent(
+      new SubscriptionRenewedEvent(this.data.id, this.data.userId, newPeriodStart, newPeriodEnd)
+    );
   }
 
   /**
    * Checks if subscription is currently active
-   * 
+   *
    * @returns true if subscription is active and not expired
    */
   isActive(): boolean {
@@ -257,7 +266,7 @@ export class Subscription {
 
   /**
    * Checks if subscription is expired
-   * 
+   *
    * @returns true if subscription has passed its current period end
    */
   isExpired(): boolean {
@@ -267,7 +276,7 @@ export class Subscription {
 
   /**
    * Checks if subscription will be canceled at period end
-   * 
+   *
    * @returns true if subscription is marked for cancellation
    */
   willCancelAtPeriodEnd(): boolean {
@@ -276,7 +285,7 @@ export class Subscription {
 
   /**
    * Gets days remaining in current billing period
-   * 
+   *
    * @returns Number of days remaining, or 0 if expired
    */
   getDaysRemaining(): number {
@@ -336,7 +345,7 @@ export class Subscription {
 
   /**
    * Converts entity to plain object for persistence
-   * 
+   *
    * @returns Plain object representation
    */
   toData(): SubscriptionData {

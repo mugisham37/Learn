@@ -1,28 +1,50 @@
 /**
  * Authentication Service Implementation
- * 
+ *
  * Implements authentication operations including registration with email uniqueness check,
  * login with credential verification, token management with Redis, email verification,
  * and password reset functionality.
- * 
+ *
  * Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7
  */
 
 import * as crypto from 'crypto';
 
-import { buildCacheKey, CachePrefix, CacheTTL, sessionCache } from '../../../../infrastructure/cache/index.js';
-import { AuthenticationError, ConflictError, ValidationError } from '../../../../shared/errors/index.js';
-import { decodeToken, generateTokenPair, generateVerificationToken, hashPassword, verifyPassword, verifyToken } from '../../../../shared/utils/auth.js';
+import {
+  buildCacheKey,
+  CachePrefix,
+  CacheTTL,
+  sessionCache,
+} from '../../../../infrastructure/cache/index.js';
+import {
+  AuthenticationError,
+  ConflictError,
+  ValidationError,
+} from '../../../../shared/errors/index.js';
+import {
+  decodeToken,
+  generateTokenPair,
+  generateVerificationToken,
+  hashPassword,
+  verifyPassword,
+  verifyToken,
+} from '../../../../shared/utils/auth.js';
 import { User } from '../../domain/entities/User.js';
 import { Email } from '../../domain/value-objects/Email.js';
 import { Password } from '../../domain/value-objects/Password.js';
 import { IUserRepository } from '../../infrastructure/repositories/IUserRepository.js';
 
-import { IAuthService, LoginResult, RefreshTokenResult, RegisterDTO, RegisterResult } from './IAuthService.js';
+import {
+  IAuthService,
+  LoginResult,
+  RefreshTokenResult,
+  RegisterDTO,
+  RegisterResult,
+} from './IAuthService.js';
 
 /**
  * Authentication Service Implementation
- * 
+ *
  * Provides comprehensive authentication functionality with:
  * - Email uniqueness validation
  * - Password strength validation and hashing
@@ -36,7 +58,7 @@ export class AuthService implements IAuthService {
 
   /**
    * Registers a new user with email uniqueness check and password hashing
-   * 
+   *
    * Workflow:
    * 1. Validate email format using Email value object
    * 2. Check email uniqueness in database
@@ -45,7 +67,7 @@ export class AuthService implements IAuthService {
    * 5. Generate unique verification token
    * 6. Create user in database
    * 7. Return user and verification token
-   * 
+   *
    * @param data - Registration data
    * @returns User entity and verification token
    * @throws ConflictError if email already exists
@@ -58,10 +80,9 @@ export class AuthService implements IAuthService {
     try {
       email = Email.create(data.email);
     } catch (error) {
-      throw new ValidationError(
-        'Invalid email format',
-        [{ field: 'email', message: error instanceof Error ? error.message : 'Invalid email' }]
-      );
+      throw new ValidationError('Invalid email format', [
+        { field: 'email', message: error instanceof Error ? error.message : 'Invalid email' },
+      ]);
     }
 
     // Check email uniqueness
@@ -75,34 +96,30 @@ export class AuthService implements IAuthService {
     try {
       password = Password.create(data.password);
     } catch (error) {
-      throw new ValidationError(
-        'Password does not meet strength requirements',
-        [{ field: 'password', message: error instanceof Error ? error.message : 'Invalid password' }]
-      );
+      throw new ValidationError('Password does not meet strength requirements', [
+        { field: 'password', message: error instanceof Error ? error.message : 'Invalid password' },
+      ]);
     }
 
     // Validate role
     const validRoles: Array<'student' | 'educator' | 'admin'> = ['student', 'educator', 'admin'];
     if (!validRoles.includes(data.role)) {
-      throw new ValidationError(
-        'Invalid role',
-        [{ field: 'role', message: `Role must be one of: ${validRoles.join(', ')}` }]
-      );
+      throw new ValidationError('Invalid role', [
+        { field: 'role', message: `Role must be one of: ${validRoles.join(', ')}` },
+      ]);
     }
 
     // Validate full name
     if (!data.fullName || data.fullName.trim().length === 0) {
-      throw new ValidationError(
-        'Full name is required',
-        [{ field: 'fullName', message: 'Full name cannot be empty' }]
-      );
+      throw new ValidationError('Full name is required', [
+        { field: 'fullName', message: 'Full name cannot be empty' },
+      ]);
     }
 
     if (data.fullName.trim().length < 2) {
-      throw new ValidationError(
-        'Full name is too short',
-        [{ field: 'fullName', message: 'Full name must be at least 2 characters' }]
-      );
+      throw new ValidationError('Full name is too short', [
+        { field: 'fullName', message: 'Full name must be at least 2 characters' },
+      ]);
     }
 
     // Hash password
@@ -144,7 +161,7 @@ export class AuthService implements IAuthService {
 
   /**
    * Authenticates a user with credential verification and token generation
-   * 
+   *
    * Workflow:
    * 1. Find user by email
    * 2. Verify user exists and is not deleted
@@ -155,7 +172,7 @@ export class AuthService implements IAuthService {
    * 7. Store refresh token in Redis with automatic expiration
    * 8. Update last login timestamp
    * 9. Return user and tokens
-   * 
+   *
    * @param email - User email
    * @param password - User password
    * @returns User entity and token pair
@@ -178,7 +195,9 @@ export class AuthService implements IAuthService {
 
     // Check if email is verified
     if (!user.emailVerified) {
-      throw new AuthenticationError('Email not verified. Please verify your email before logging in.');
+      throw new AuthenticationError(
+        'Email not verified. Please verify your email before logging in.'
+      );
     }
 
     // Verify password
@@ -189,11 +208,7 @@ export class AuthService implements IAuthService {
     }
 
     // Generate token pair
-    const { accessToken, refreshToken } = generateTokenPair(
-      user.id,
-      user.email,
-      user.role
-    );
+    const { accessToken, refreshToken } = generateTokenPair(user.id, user.email, user.role);
 
     // Store refresh token in Redis with 30-day expiration
     const refreshTokenKey = this.buildRefreshTokenKey(user.id, refreshToken);
@@ -238,7 +253,7 @@ export class AuthService implements IAuthService {
 
   /**
    * Refreshes access token using a valid refresh token
-   * 
+   *
    * Workflow:
    * 1. Verify refresh token signature and expiration
    * 2. Extract user ID from token payload
@@ -248,7 +263,7 @@ export class AuthService implements IAuthService {
    * 6. Delete old refresh token from Redis
    * 7. Store new refresh token in Redis
    * 8. Return new tokens
-   * 
+   *
    * @param refreshToken - Valid refresh token
    * @returns New token pair
    * @throws AuthenticationError if refresh token is invalid or expired
@@ -325,13 +340,13 @@ export class AuthService implements IAuthService {
 
   /**
    * Logs out a user by deleting their refresh token from Redis
-   * 
+   *
    * Workflow:
    * 1. Verify refresh token signature
    * 2. Extract user ID from token
    * 3. Verify user ID matches provided user ID
    * 4. Delete refresh token from Redis
-   * 
+   *
    * @param userId - User ID
    * @param refreshToken - Refresh token to invalidate
    * @returns void
@@ -358,7 +373,7 @@ export class AuthService implements IAuthService {
 
   /**
    * Verifies a user's email using verification token
-   * 
+   *
    * Workflow:
    * 1. Find user by verification token
    * 2. Verify user exists
@@ -367,7 +382,7 @@ export class AuthService implements IAuthService {
    * 5. Clear verification token
    * 6. Update user in database
    * 7. Return verified user
-   * 
+   *
    * @param token - Email verification token
    * @returns Verified user entity
    * @throws AuthenticationError if token is invalid or expired
@@ -414,7 +429,7 @@ export class AuthService implements IAuthService {
 
   /**
    * Initiates password reset by generating token and sending email
-   * 
+   *
    * Workflow:
    * 1. Find user by email
    * 2. If user doesn't exist, return silently (prevent email enumeration)
@@ -423,9 +438,9 @@ export class AuthService implements IAuthService {
    * 5. Update user with reset token and expiration
    * 6. Send password reset email (TODO: implement email sending)
    * 7. Return silently
-   * 
+   *
    * Note: Always succeeds to prevent email enumeration attacks
-   * 
+   *
    * @param email - User email
    * @returns void (always succeeds to prevent email enumeration)
    */
@@ -465,7 +480,7 @@ export class AuthService implements IAuthService {
 
   /**
    * Resets user password using reset token
-   * 
+   *
    * Workflow:
    * 1. Find user by password reset token
    * 2. Verify user exists
@@ -475,7 +490,7 @@ export class AuthService implements IAuthService {
    * 6. Update user with new password hash
    * 7. Clear reset token and expiration
    * 8. Invalidate all existing refresh tokens for this user
-   * 
+   *
    * @param token - Password reset token
    * @param newPassword - New password
    * @returns void
@@ -502,10 +517,9 @@ export class AuthService implements IAuthService {
     try {
       password = Password.create(newPassword);
     } catch (error) {
-      throw new ValidationError(
-        'Password does not meet strength requirements',
-        [{ field: 'password', message: error instanceof Error ? error.message : 'Invalid password' }]
-      );
+      throw new ValidationError('Password does not meet strength requirements', [
+        { field: 'password', message: error instanceof Error ? error.message : 'Invalid password' },
+      ]);
     }
 
     // Hash new password
@@ -525,7 +539,7 @@ export class AuthService implements IAuthService {
 
   /**
    * Builds Redis key for refresh token storage
-   * 
+   *
    * @param userId - User ID
    * @param refreshToken - Refresh token
    * @returns Redis key
@@ -538,37 +552,31 @@ export class AuthService implements IAuthService {
       .update(refreshToken)
       .digest('hex')
       .substring(0, 16);
-    
+
     return buildCacheKey(CachePrefix.SESSION, 'refresh', userId, tokenHash);
   }
 
   /**
    * Invalidates all refresh tokens for a user
    * Used when password is changed or account is compromised
-   * 
+   *
    * @param userId - User ID
    * @returns void
    */
   private async invalidateAllUserTokens(userId: string): Promise<void> {
     // Delete all refresh tokens for this user
     const pattern = buildCacheKey(CachePrefix.SESSION, 'refresh', userId, '*');
-    
+
     // Use Redis SCAN to find and delete all matching keys
     // This is safe for production as it doesn't block the server
     const { redis } = await import('../../../../infrastructure/cache/index.js');
-    
+
     let cursor = '0';
     do {
-      const [nextCursor, keys] = await redis.scan(
-        cursor,
-        'MATCH',
-        pattern,
-        'COUNT',
-        100
-      );
-      
+      const [nextCursor, keys] = await redis.scan(cursor, 'MATCH', pattern, 'COUNT', 100);
+
       cursor = nextCursor;
-      
+
       if (keys.length > 0) {
         await redis.del(...keys);
       }

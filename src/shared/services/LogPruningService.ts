@@ -1,10 +1,10 @@
 /**
  * Log Pruning Service
- * 
+ *
  * Handles cleanup of old log files and log entries to manage disk space
  * and maintain system performance. Runs daily to prune logs older than
  * the configured retention period.
- * 
+ *
  * Requirements: 14.7 - Daily log pruning
  */
 
@@ -103,16 +103,20 @@ export class LogPruningService {
       cutoffDate.setDate(cutoffDate.getDate() - this.config.retentionDays);
 
       // Find oldest log date
-      results.oldestLogDate = logFiles.reduce((oldest, file) => {
-        return !oldest || file.createdAt < oldest ? file.createdAt : oldest;
-      }, null as Date | null);
+      results.oldestLogDate = logFiles.reduce(
+        (oldest, file) => {
+          return !oldest || file.createdAt < oldest ? file.createdAt : oldest;
+        },
+        null as Date | null
+      );
 
       // Separate files into categories
-      const filesToRemove = logFiles.filter(file => file.createdAt < cutoffDate);
-      const filesToCompress = logFiles.filter(file => 
-        file.createdAt >= cutoffDate && 
-        !file.isCompressed && 
-        file.size > this.config.maxFileSizeMB * 1024 * 1024
+      const filesToRemove = logFiles.filter((file) => file.createdAt < cutoffDate);
+      const filesToCompress = logFiles.filter(
+        (file) =>
+          file.createdAt >= cutoffDate &&
+          !file.isCompressed &&
+          file.size > this.config.maxFileSizeMB * 1024 * 1024
       );
 
       // Remove old files
@@ -121,7 +125,7 @@ export class LogPruningService {
           await fs.unlink(file.path);
           results.filesRemoved++;
           results.spaceSavedMB += file.size / (1024 * 1024);
-          
+
           logger.debug('Removed old log file', {
             file: file.name,
             size: file.size,
@@ -142,12 +146,12 @@ export class LogPruningService {
             const compressedSize = await this.compressLogFile(file);
             results.filesCompressed++;
             results.spaceSavedMB += (file.size - compressedSize) / (1024 * 1024);
-            
+
             logger.debug('Compressed log file', {
               file: file.name,
               originalSize: file.size,
               compressedSize,
-              compressionRatio: ((file.size - compressedSize) / file.size * 100).toFixed(2) + '%',
+              compressionRatio: (((file.size - compressedSize) / file.size) * 100).toFixed(2) + '%',
             });
           } catch (error) {
             logger.error('Failed to compress log file', {
@@ -170,7 +174,7 @@ export class LogPruningService {
             await fs.unlink(file.path);
             results.filesRemoved++;
             results.spaceSavedMB += file.size / (1024 * 1024);
-            
+
             logger.debug('Removed log file due to count limit', {
               file: file.name,
               size: file.size,
@@ -233,10 +237,10 @@ export class LogPruningService {
         }
 
         const filePath = join(this.config.logDirectory, file);
-        
+
         try {
           const stats = await fs.stat(filePath);
-          
+
           logFiles.push({
             path: filePath,
             name: file,
@@ -272,7 +276,7 @@ export class LogPruningService {
     const { pipeline } = await import('stream/promises');
 
     const compressedPath = file.path + '.gz';
-    
+
     // Create compression pipeline
     const readStream = createReadStream(file.path);
     const gzipStream = createGzip({ level: 9 });
@@ -283,7 +287,7 @@ export class LogPruningService {
 
     // Get compressed file size
     const compressedStats = await fs.stat(compressedPath);
-    
+
     // Remove original file
     await fs.unlink(file.path);
 
@@ -303,7 +307,7 @@ export class LogPruningService {
   }> {
     try {
       const logFiles = await this.getLogFiles();
-      
+
       const stats = {
         totalLogFiles: logFiles.length,
         totalLogSizeMB: 0,
@@ -321,8 +325,8 @@ export class LogPruningService {
       stats.totalLogSizeMB = logFiles.reduce((total, file) => total + file.size, 0) / (1024 * 1024);
       stats.oldestLogDate = logFiles[0]?.createdAt ?? null;
       stats.newestLogDate = logFiles[logFiles.length - 1]?.createdAt ?? null;
-      stats.compressedFiles = logFiles.filter(file => file.isCompressed).length;
-      stats.uncompressedFiles = logFiles.filter(file => !file.isCompressed).length;
+      stats.compressedFiles = logFiles.filter((file) => file.isCompressed).length;
+      stats.uncompressedFiles = logFiles.filter((file) => !file.isCompressed).length;
 
       // Round to 2 decimal places
       stats.totalLogSizeMB = Math.round(stats.totalLogSizeMB * 100) / 100;
@@ -345,14 +349,14 @@ export class LogPruningService {
       cutoffDate.setDate(cutoffDate.getDate() - days);
 
       const logFiles = await this.getLogFiles();
-      const filesToRemove = logFiles.filter(file => file.createdAt < cutoffDate);
+      const filesToRemove = logFiles.filter((file) => file.createdAt < cutoffDate);
 
       let removedCount = 0;
       for (const file of filesToRemove) {
         try {
           await fs.unlink(file.path);
           removedCount++;
-          
+
           logger.debug('Manually removed old log file', {
             file: file.name,
             age: Math.floor((Date.now() - file.createdAt.getTime()) / (1000 * 60 * 60 * 24)),
@@ -386,7 +390,7 @@ export class LogPruningService {
     try {
       // Check if log directory is accessible
       await fs.access(this.config.logDirectory);
-      
+
       // Check if we can read the directory
       await fs.readdir(this.config.logDirectory);
 

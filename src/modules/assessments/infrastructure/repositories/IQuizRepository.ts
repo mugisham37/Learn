@@ -1,17 +1,14 @@
 /**
  * Quiz Repository Interface
- * 
+ *
  * Defines the contract for quiz data access operations.
  * Abstracts database operations behind a clean interface following
  * the Repository pattern for domain independence.
- * 
+ *
  * Requirements: 6.1, 6.2, 6.3
  */
 
-import { 
-  Quiz,
-  Question
-} from '../../../../infrastructure/database/schema/assessments.schema.js';
+import { Quiz, Question } from '../../../../infrastructure/database/schema/assessments.schema.js';
 
 /**
  * Pagination parameters for list queries
@@ -87,14 +84,14 @@ export interface QuizWithQuestions extends Quiz {
 
 /**
  * Quiz Repository Interface
- * 
+ *
  * Provides methods for all quiz data access operations with caching support.
  * Implementations must handle database errors and map them to domain errors.
  */
 export interface IQuizRepository {
   /**
    * Creates a new quiz in the database
-   * 
+   *
    * @param data - Quiz creation data
    * @returns The created quiz
    * @throws ValidationError if lesson doesn't exist
@@ -104,7 +101,7 @@ export interface IQuizRepository {
 
   /**
    * Finds a quiz by its unique ID
-   * 
+   *
    * @param id - Quiz ID
    * @returns The quiz if found, null otherwise
    * @throws DatabaseError if database operation fails
@@ -113,7 +110,7 @@ export interface IQuizRepository {
 
   /**
    * Finds a quiz by ID with all questions included
-   * 
+   *
    * @param id - Quiz ID
    * @returns The quiz with questions if found, null otherwise
    * @throws DatabaseError if database operation fails
@@ -122,7 +119,7 @@ export interface IQuizRepository {
 
   /**
    * Finds quizzes by lesson with pagination
-   * 
+   *
    * @param lessonId - Lesson ID
    * @param pagination - Pagination parameters
    * @param filters - Optional filters
@@ -137,20 +134,17 @@ export interface IQuizRepository {
 
   /**
    * Finds all quizzes with pagination and filtering
-   * 
+   *
    * @param pagination - Pagination parameters
    * @param filters - Optional filters
    * @returns Paginated quiz results
    * @throws DatabaseError if database operation fails
    */
-  findAll(
-    pagination: PaginationParams,
-    filters?: QuizFilters
-  ): Promise<PaginatedResult<Quiz>>;
+  findAll(pagination: PaginationParams, filters?: QuizFilters): Promise<PaginatedResult<Quiz>>;
 
   /**
    * Updates a quiz's data
-   * 
+   *
    * @param id - Quiz ID
    * @param data - Update data
    * @returns The updated quiz
@@ -162,7 +156,7 @@ export interface IQuizRepository {
   /**
    * Deletes a quiz from the database
    * This cascades to delete all questions and submissions
-   * 
+   *
    * @param id - Quiz ID
    * @returns void
    * @throws NotFoundError if quiz doesn't exist
@@ -172,7 +166,7 @@ export interface IQuizRepository {
 
   /**
    * Checks if a quiz exists
-   * 
+   *
    * @param id - Quiz ID
    * @returns True if quiz exists, false otherwise
    * @throws DatabaseError if database operation fails
@@ -181,7 +175,7 @@ export interface IQuizRepository {
 
   /**
    * Checks if a quiz is available for taking at the current time
-   * 
+   *
    * @param id - Quiz ID
    * @returns True if quiz is available, false otherwise
    * @throws NotFoundError if quiz doesn't exist
@@ -191,7 +185,7 @@ export interface IQuizRepository {
 
   /**
    * Gets the total number of questions in a quiz
-   * 
+   *
    * @param id - Quiz ID
    * @returns Number of questions
    * @throws NotFoundError if quiz doesn't exist
@@ -201,7 +195,7 @@ export interface IQuizRepository {
 
   /**
    * Gets the total points possible for a quiz
-   * 
+   *
    * @param id - Quiz ID
    * @returns Total points
    * @throws NotFoundError if quiz doesn't exist
@@ -212,7 +206,7 @@ export interface IQuizRepository {
   /**
    * Invalidates cache for a specific quiz
    * Should be called after any update operation
-   * 
+   *
    * @param id - Quiz ID
    * @returns void
    */
@@ -221,7 +215,7 @@ export interface IQuizRepository {
   /**
    * Invalidates cache for quizzes by lesson
    * Should be called after operations that affect lesson quiz lists
-   * 
+   *
    * @param lessonId - Lesson ID
    * @returns void
    */

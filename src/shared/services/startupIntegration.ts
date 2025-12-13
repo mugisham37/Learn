@@ -1,26 +1,23 @@
 /**
  * Application Startup Integration
- * 
+ *
  * Provides utilities for integrating various services during application startup,
  * including search indexing, event handling, and background job processing.
- * 
+ *
  * Requirements: 8.7 - Search indexing strategy integration
  */
 
 import { logger } from '../utils/logger.js';
 import { initializeSearchIndexing, shutdownSearchIndexing } from '../../modules/search/index.js';
 import { eventBus } from './EventBus.js';
-import { 
-  initializeVideoProcessingQueue, 
-  shutdownVideoProcessingQueue 
+import {
+  initializeVideoProcessingQueue,
+  shutdownVideoProcessingQueue,
 } from './VideoProcessingQueue.js';
-import { 
-  initializeEmailQueue, 
-  shutdownEmailQueue 
-} from './EmailQueue.js';
-import { 
-  initializeCertificateGenerationQueue, 
-  shutdownCertificateGenerationQueue 
+import { initializeEmailQueue, shutdownEmailQueue } from './EmailQueue.js';
+import {
+  initializeCertificateGenerationQueue,
+  shutdownCertificateGenerationQueue,
 } from './CertificateGenerationQueue.js';
 import { MediaConvertService } from './MediaConvertService.js';
 import { ContentRepository } from '../../modules/content/infrastructure/repositories/ContentRepository.js';
@@ -56,16 +53,14 @@ export interface StartupConfig {
 /**
  * Initializes all application services during startup
  */
-export async function initializeApplicationServices(
-  config: StartupConfig = {}
-): Promise<void> {
+export async function initializeApplicationServices(config: StartupConfig = {}): Promise<void> {
   try {
     logger.info('Initializing application services...', { config });
 
     // Initialize search indexing if enabled
     if (config.searchIndexing?.enabled !== false) {
       logger.info('Initializing search indexing...');
-      
+
       await initializeSearchIndexing({
         enableEventHandlers: config.searchIndexing?.enableEventHandlers !== false,
         enableBulkReindexing: config.searchIndexing?.enableBulkReindexing !== false,
@@ -79,15 +74,12 @@ export async function initializeApplicationServices(
     // Initialize video processing queue if enabled
     if (config.videoProcessing?.enabled !== false) {
       logger.info('Initializing video processing queue...');
-      
+
       // Create service instances
       const mediaConvertService = new MediaConvertService();
       const contentRepository = new ContentRepository();
-      
-      await initializeVideoProcessingQueue(
-        mediaConvertService,
-        contentRepository
-      );
+
+      await initializeVideoProcessingQueue(mediaConvertService, contentRepository);
 
       logger.info('Video processing queue initialized successfully');
     }
@@ -95,7 +87,7 @@ export async function initializeApplicationServices(
     // Initialize email queue if enabled
     if (config.emailQueue?.enabled !== false) {
       logger.info('Initializing email queue...');
-      
+
       await initializeEmailQueue();
 
       logger.info('Email queue initialized successfully');
@@ -104,18 +96,20 @@ export async function initializeApplicationServices(
     // Initialize certificate generation queue if enabled
     if (config.certificateGeneration?.enabled !== false) {
       logger.info('Initializing certificate generation queue...');
-      
+
       // Note: In a real application, these dependencies would be injected
       // For now, we'll create placeholder instances or skip initialization
-      logger.warn('Certificate generation queue initialization requires dependency injection setup');
-      
+      logger.warn(
+        'Certificate generation queue initialization requires dependency injection setup'
+      );
+
       logger.info('Certificate generation queue initialization skipped (requires DI setup)');
     }
 
     // Initialize CloudWatch if enabled
     if (config.cloudWatch?.enabled !== false) {
       logger.info('Initializing CloudWatch integration...');
-      
+
       await CloudWatchInitializer.initialize();
 
       logger.info('CloudWatch integration initialized successfully');
@@ -123,7 +117,7 @@ export async function initializeApplicationServices(
 
     // Initialize alerting rules
     logger.info('Initializing alerting rules...');
-    
+
     const { initializeAlertingRules } = await import('./AlertingRulesService.js');
     initializeAlertingRules();
 
@@ -131,7 +125,7 @@ export async function initializeApplicationServices(
 
     // Initialize monitoring dashboards
     logger.info('Initializing monitoring dashboards...');
-    
+
     const { initializeMonitoringDashboards } = await import('./MonitoringDashboardService.js');
     await initializeMonitoringDashboards();
 
@@ -200,13 +194,10 @@ export class CourseServiceWithSearchIntegration {
       const course = await this.courseService.createCourse(courseData);
 
       // Publish domain event for search indexing
-      const { CourseCreatedEvent } = await import('../../modules/courses/domain/events/CourseEvents.js');
-      
-      const event = new CourseCreatedEvent(
-        course.id,
-        course.instructorId,
-        course.title
-      );
+      const { CourseCreatedEvent } =
+        await import('../../modules/courses/domain/events/CourseEvents.js');
+
+      const event = new CourseCreatedEvent(course.id, course.instructorId, course.title);
 
       await this.eventBusInstance.publish(event);
 
@@ -233,13 +224,10 @@ export class CourseServiceWithSearchIntegration {
       const course = await this.courseService.updateCourse(courseId, updates);
 
       // Publish domain event for search re-indexing
-      const { CourseUpdatedEvent } = await import('../../modules/courses/domain/events/CourseEvents.js');
-      
-      const event = new CourseUpdatedEvent(
-        course.id,
-        course.instructorId,
-        updates
-      );
+      const { CourseUpdatedEvent } =
+        await import('../../modules/courses/domain/events/CourseEvents.js');
+
+      const event = new CourseUpdatedEvent(course.id, course.instructorId, updates);
 
       await this.eventBusInstance.publish(event);
 
@@ -268,13 +256,10 @@ export class CourseServiceWithSearchIntegration {
       const course = await this.courseService.publishCourse(courseId);
 
       // Publish domain event for search indexing
-      const { CoursePublishedEvent } = await import('../../modules/courses/domain/events/CourseEvents.js');
-      
-      const event = new CoursePublishedEvent(
-        course.id,
-        course.instructorId,
-        course.title
-      );
+      const { CoursePublishedEvent } =
+        await import('../../modules/courses/domain/events/CourseEvents.js');
+
+      const event = new CoursePublishedEvent(course.id, course.instructorId, course.title);
 
       await this.eventBusInstance.publish(event);
 
@@ -302,12 +287,10 @@ export class CourseServiceWithSearchIntegration {
       const course = await this.courseService.archiveCourse(courseId);
 
       // Publish domain event for search removal
-      const { CourseArchivedEvent } = await import('../../modules/courses/domain/events/CourseEvents.js');
-      
-      const event = new CourseArchivedEvent(
-        course.id,
-        course.instructorId
-      );
+      const { CourseArchivedEvent } =
+        await import('../../modules/courses/domain/events/CourseEvents.js');
+
+      const event = new CourseArchivedEvent(course.id, course.instructorId);
 
       await this.eventBusInstance.publish(event);
 

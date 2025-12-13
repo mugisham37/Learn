@@ -1,16 +1,21 @@
 /**
  * Payment Domain Entity
- * 
+ *
  * Represents a payment transaction for course purchases.
  * Contains business logic for payment validation and state management.
- * 
+ *
  * Requirements:
  * - 11.1: Stripe checkout session creation and payment processing
  * - 11.5: Refund processing and tracking
  */
 
 import { randomUUID } from 'crypto';
-import { PaymentCreatedEvent, PaymentSucceededEvent, PaymentFailedEvent, PaymentRefundedEvent } from '../events/PaymentEvents';
+import {
+  PaymentCreatedEvent,
+  PaymentSucceededEvent,
+  PaymentFailedEvent,
+  PaymentRefundedEvent,
+} from '../events/PaymentEvents';
 
 export type PaymentStatus = 'pending' | 'succeeded' | 'failed' | 'refunded';
 
@@ -42,7 +47,7 @@ export interface CreatePaymentData {
 
 /**
  * Payment Entity
- * 
+ *
  * Encapsulates payment business logic and validation rules.
  * Ensures payment data integrity and business rule compliance.
  */
@@ -53,7 +58,7 @@ export class Payment {
 
   /**
    * Creates a new Payment entity
-   * 
+   *
    * @param data - Payment creation data
    * @returns Payment entity
    * @throws Error if validation fails
@@ -76,16 +81,23 @@ export class Payment {
     };
 
     const payment = new Payment(paymentData);
-    
+
     // Emit domain event for payment creation
-    payment.addDomainEvent(new PaymentCreatedEvent(payment.getId(), payment.getUserId(), payment.getAmount(), payment.getCurrency()));
-    
+    payment.addDomainEvent(
+      new PaymentCreatedEvent(
+        payment.getId(),
+        payment.getUserId(),
+        payment.getAmount(),
+        payment.getCurrency()
+      )
+    );
+
     return payment;
   }
 
   /**
    * Reconstructs Payment entity from database data
-   * 
+   *
    * @param data - Complete payment data from database
    * @returns Payment entity
    */
@@ -95,7 +107,7 @@ export class Payment {
 
   /**
    * Validates payment data according to business rules
-   * 
+   *
    * @throws Error if validation fails
    */
   private validatePayment(): void {
@@ -131,7 +143,7 @@ export class Payment {
 
   /**
    * Marks payment as succeeded
-   * 
+   *
    * @param stripePaymentIntentId - Stripe payment intent ID
    * @param paymentMethod - Payment method used
    */
@@ -146,12 +158,19 @@ export class Payment {
     this.data.updatedAt = new Date();
 
     // Emit domain event for payment success
-    this.addDomainEvent(new PaymentSucceededEvent(this.data.id, this.data.userId, this.data.amount, this.data.currency));
+    this.addDomainEvent(
+      new PaymentSucceededEvent(
+        this.data.id,
+        this.data.userId,
+        this.data.amount,
+        this.data.currency
+      )
+    );
   }
 
   /**
    * Marks payment as failed
-   * 
+   *
    * @param reason - Failure reason
    */
   markAsFailed(reason?: string): void {
@@ -161,7 +180,7 @@ export class Payment {
 
     this.data.status = 'failed';
     this.data.updatedAt = new Date();
-    
+
     if (reason) {
       this.data.metadata = { ...this.data.metadata, failureReason: reason };
     }
@@ -172,7 +191,7 @@ export class Payment {
 
   /**
    * Marks payment as refunded
-   * 
+   *
    * @param refundAmount - Amount refunded
    */
   markAsRefunded(refundAmount: string): void {
@@ -189,12 +208,14 @@ export class Payment {
     this.data.metadata = { ...this.data.metadata, refundAmount };
 
     // Emit domain event for payment refund
-    this.addDomainEvent(new PaymentRefundedEvent(this.data.id, this.data.userId, refundAmount, this.data.currency));
+    this.addDomainEvent(
+      new PaymentRefundedEvent(this.data.id, this.data.userId, refundAmount, this.data.currency)
+    );
   }
 
   /**
    * Checks if payment can be refunded
-   * 
+   *
    * @returns true if payment can be refunded
    */
   canBeRefunded(): boolean {
@@ -203,7 +224,7 @@ export class Payment {
 
   /**
    * Gets the maximum refundable amount
-   * 
+   *
    * @returns Maximum refundable amount as string
    */
   getMaxRefundableAmount(): string {
@@ -215,7 +236,7 @@ export class Payment {
 
   /**
    * Updates payment metadata
-   * 
+   *
    * @param metadata - Additional metadata to merge
    */
   updateMetadata(metadata: Record<string, any>): void {
@@ -274,7 +295,7 @@ export class Payment {
 
   /**
    * Converts entity to plain object for persistence
-   * 
+   *
    * @returns Plain object representation
    */
   toData(): PaymentData {

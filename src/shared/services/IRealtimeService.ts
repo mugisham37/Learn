@@ -1,9 +1,9 @@
 /**
  * Real-time Service Interface
- * 
+ *
  * Defines the contract for real-time communication services
  * Used by application services to emit real-time events
- * 
+ *
  * Requirements: 9.6, 9.7, 9.8
  */
 
@@ -151,7 +151,7 @@ export interface RealtimeEvents {
   };
 
   // Error events
-  'error': {
+  error: {
     message: string;
     code?: string;
     details?: Record<string, unknown>;
@@ -211,11 +211,7 @@ export interface IRealtimeService {
   /**
    * Broadcasts user presence to relevant rooms
    */
-  broadcastPresence(
-    userId: string,
-    status: PresenceStatus,
-    courseIds?: string[]
-  ): Promise<void>;
+  broadcastPresence(userId: string, status: PresenceStatus, courseIds?: string[]): Promise<void>;
 
   /**
    * Gets online users in a course

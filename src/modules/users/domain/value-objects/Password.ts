@@ -1,9 +1,9 @@
 /**
  * Password Value Object
- * 
+ *
  * Immutable value object representing a validated password.
  * Ensures password strength validation at construction time.
- * 
+ *
  * Requirements: 1.3
  */
 
@@ -11,7 +11,7 @@ import { validatePasswordStrength } from '../../../../shared/utils/validation.js
 
 /**
  * Password value object
- * 
+ *
  * Represents a validated password. Once created, the password is guaranteed
  * to meet strength requirements:
  * - Minimum 8 characters
@@ -25,7 +25,7 @@ export class Password {
 
   /**
    * Creates a new Password value object
-   * 
+   *
    * @param value - Password string
    * @param strength - Password strength rating
    */
@@ -36,14 +36,14 @@ export class Password {
 
   /**
    * Factory method to create a Password value object
-   * 
+   *
    * @param value - Password string
    * @returns Password value object
    * @throws Error if password doesn't meet strength requirements
    */
   static create(value: string): Password {
     const validation = validatePasswordStrength(value);
-    
+
     if (!validation.valid) {
       throw new Error(validation.errors.join('; '));
     }
@@ -53,7 +53,7 @@ export class Password {
 
   /**
    * Gets the password value
-   * 
+   *
    * @returns Password string
    */
   get value(): string {
@@ -62,7 +62,7 @@ export class Password {
 
   /**
    * Gets the password strength rating
-   * 
+   *
    * @returns Strength rating: 'weak', 'medium', or 'strong'
    */
   get strength(): 'weak' | 'medium' | 'strong' {
@@ -71,7 +71,7 @@ export class Password {
 
   /**
    * Checks if password is strong
-   * 
+   *
    * @returns True if password strength is 'strong'
    */
   isStrong(): boolean {
@@ -81,7 +81,7 @@ export class Password {
   /**
    * Checks equality with another Password value object
    * Note: This compares the actual password values, not hashes
-   * 
+   *
    * @param other - Another Password value object
    * @returns True if passwords are equal
    */
@@ -91,7 +91,7 @@ export class Password {
 
   /**
    * Returns string representation (masked for security)
-   * 
+   *
    * @returns Masked password string
    */
   toString(): string {
@@ -100,7 +100,7 @@ export class Password {
 
   /**
    * Returns JSON representation (masked for security)
-   * 
+   *
    * @returns Masked password string
    */
   toJSON(): string {

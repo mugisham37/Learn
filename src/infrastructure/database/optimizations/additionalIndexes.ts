@@ -1,6 +1,6 @@
 /**
  * Additional Database Indexes for Query Optimization
- * 
+ *
  * Strategic indexes to optimize frequently used queries based on analysis
  * Implements requirement 15.1 for database query optimization
  */
@@ -349,10 +349,10 @@ export async function createOptimizationIndexes(db: NodePgDatabase<any>): Promis
   for (const index of OPTIMIZATION_INDEXES) {
     try {
       await createIndex(db, index);
-      logger.info(`Created index: ${index.name}`, { 
-        table: index.table, 
+      logger.info(`Created index: ${index.name}`, {
+        table: index.table,
         columns: index.columns,
-        description: index.description 
+        description: index.description,
       });
     } catch (error) {
       // Index might already exist, log warning but continue
@@ -409,7 +409,8 @@ export async function analyzeIndexUsage(db: NodePgDatabase<any>): Promise<{
 }> {
   try {
     // Get unused indexes
-    const unusedResult = await db.execute(sql.raw(`
+    const unusedResult = await db.execute(
+      sql.raw(`
       SELECT 
         schemaname,
         tablename,
@@ -419,10 +420,12 @@ export async function analyzeIndexUsage(db: NodePgDatabase<any>): Promise<{
       FROM pg_stat_user_indexes 
       WHERE idx_tup_read = 0 AND idx_tup_fetch = 0
       ORDER BY schemaname, tablename, indexname
-    `));
+    `)
+    );
 
     // Get heavily used indexes
-    const heavyUsageResult = await db.execute(sql.raw(`
+    const heavyUsageResult = await db.execute(
+      sql.raw(`
       SELECT 
         schemaname,
         tablename,
@@ -433,10 +436,12 @@ export async function analyzeIndexUsage(db: NodePgDatabase<any>): Promise<{
       WHERE idx_tup_read > 10000 OR idx_tup_fetch > 10000
       ORDER BY (idx_tup_read + idx_tup_fetch) DESC
       LIMIT 20
-    `));
+    `)
+    );
 
     // Get index sizes
-    const sizeResult = await db.execute(sql.raw(`
+    const sizeResult = await db.execute(
+      sql.raw(`
       SELECT 
         t.tablename,
         indexname,
@@ -447,7 +452,8 @@ export async function analyzeIndexUsage(db: NodePgDatabase<any>): Promise<{
       LEFT JOIN pg_class c2 ON c2.oid = i.indexrelid
       WHERE t.schemaname = 'public' AND c2.relname IS NOT NULL
       ORDER BY pg_relation_size(c2.oid) DESC
-    `));
+    `)
+    );
 
     return {
       unusedIndexes: unusedResult.map((row: any) => row.indexname),
@@ -471,12 +477,30 @@ export async function updateTableStatistics(db: NodePgDatabase<any>): Promise<vo
   logger.info('Updating table statistics for query optimization...');
 
   const tables = [
-    'users', 'user_profiles', 'courses', 'course_modules', 'lessons',
-    'enrollments', 'lesson_progress', 'certificates', 'quizzes', 'questions',
-    'quiz_submissions', 'assignments', 'assignment_submissions',
-    'messages', 'discussion_threads', 'discussion_posts', 'announcements',
-    'notifications', 'analytics_events', 'payments', 'subscriptions', 'refunds',
-    'video_assets', 'file_assets'
+    'users',
+    'user_profiles',
+    'courses',
+    'course_modules',
+    'lessons',
+    'enrollments',
+    'lesson_progress',
+    'certificates',
+    'quizzes',
+    'questions',
+    'quiz_submissions',
+    'assignments',
+    'assignment_submissions',
+    'messages',
+    'discussion_threads',
+    'discussion_posts',
+    'announcements',
+    'notifications',
+    'analytics_events',
+    'payments',
+    'subscriptions',
+    'refunds',
+    'video_assets',
+    'file_assets',
   ];
 
   for (const table of tables) {

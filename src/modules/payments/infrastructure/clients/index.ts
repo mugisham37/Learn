@@ -1,6 +1,6 @@
 /**
  * Payment Infrastructure Clients
- * 
+ *
  * External service clients for payment processing.
  */
 

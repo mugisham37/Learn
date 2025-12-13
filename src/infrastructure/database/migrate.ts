@@ -1,6 +1,6 @@
 /**
  * Database Migration Runner
- * 
+ *
  * Runs pending database migrations using Drizzle Kit
  */
 

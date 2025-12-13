@@ -1,19 +1,23 @@
 /**
  * Announcement Service Implementation
- * 
+ *
  * Implements announcement operations with educator authorization,
  * scheduling, and notification delivery to enrolled students
  */
 
-import { ValidationError, NotFoundError, AuthorizationError } from '../../../../shared/errors/index.js';
+import {
+  ValidationError,
+  NotFoundError,
+  AuthorizationError,
+} from '../../../../shared/errors/index.js';
 import { sanitizeByContentType } from '../../../../shared/utils/sanitization.js';
 import type { IAnnouncementRepository } from '../../infrastructure/repositories/IAnnouncementRepository.js';
-import { 
+import {
   validateAnnouncementData,
   isAnnouncementReadyToPublish,
   type Announcement,
   type CreateAnnouncementData,
-  type AnnouncementData
+  type AnnouncementData,
 } from '../../domain/entities/Announcement.js';
 
 import {
@@ -21,7 +25,7 @@ import {
   type AnnouncementCreationResult,
   type AnnouncementUpdateResult,
   type AnnouncementDeletionResult,
-  type PublishScheduledResult
+  type PublishScheduledResult,
 } from './IAnnouncementService.js';
 
 /**
@@ -37,21 +41,26 @@ interface IRealtimeService {
 }
 
 interface INotificationService {
-  createNotification(recipientId: string, data: {
-    type: string;
-    title: string;
-    content: string;
-    actionUrl?: string;
-    metadata?: Record<string, unknown>;
-  }): Promise<void>;
-  batchNotifications(notifications: Array<{
-    recipientId: string;
-    type: string;
-    title: string;
-    content: string;
-    actionUrl?: string;
-    metadata?: Record<string, unknown>;
-  }>): Promise<void>;
+  createNotification(
+    recipientId: string,
+    data: {
+      type: string;
+      title: string;
+      content: string;
+      actionUrl?: string;
+      metadata?: Record<string, unknown>;
+    }
+  ): Promise<void>;
+  batchNotifications(
+    notifications: Array<{
+      recipientId: string;
+      type: string;
+      title: string;
+      content: string;
+      actionUrl?: string;
+      metadata?: Record<string, unknown>;
+    }>
+  ): Promise<void>;
 }
 
 interface IEmailService {
@@ -60,7 +69,7 @@ interface IEmailService {
 
 /**
  * AnnouncementService
- * 
+ *
  * Handles course announcements with educator authorization,
  * scheduling capabilities, and notification delivery to all enrolled students
  */
@@ -84,7 +93,7 @@ export class AnnouncementService implements IAnnouncementService {
       if (validationErrors.length > 0) {
         return {
           success: false,
-          error: validationErrors.join(', ')
+          error: validationErrors.join(', '),
         };
       }
 
@@ -97,7 +106,7 @@ export class AnnouncementService implements IAnnouncementService {
         educatorId,
         title: data.title.trim(),
         content: sanitizeByContentType(data.content.trim(), 'announcement.content'),
-        scheduledFor: data.scheduledFor
+        scheduledFor: data.scheduledFor,
       };
 
       // Create the announcement
@@ -110,13 +119,13 @@ export class AnnouncementService implements IAnnouncementService {
 
       return {
         success: true,
-        announcement
+        announcement,
       };
     } catch (error) {
       if (error instanceof ValidationError || error instanceof AuthorizationError) {
         return {
           success: false,
-          error: error.message
+          error: error.message,
         };
       }
       throw error;
@@ -132,7 +141,7 @@ export class AnnouncementService implements IAnnouncementService {
     if (data.scheduledFor <= new Date()) {
       return {
         success: false,
-        error: 'Scheduled date must be in the future'
+        error: 'Scheduled date must be in the future',
       };
     }
 
@@ -170,7 +179,7 @@ export class AnnouncementService implements IAnnouncementService {
       if (!existingAnnouncement) {
         return {
           success: false,
-          error: 'Announcement not found'
+          error: 'Announcement not found',
         };
       }
 
@@ -178,23 +187,27 @@ export class AnnouncementService implements IAnnouncementService {
       if (existingAnnouncement.educatorId !== educatorId) {
         return {
           success: false,
-          error: 'Not authorized to update this announcement'
+          error: 'Not authorized to update this announcement',
         };
       }
 
       // Validate updated data
-      if (data.title !== undefined || data.content !== undefined || data.scheduledFor !== undefined) {
+      if (
+        data.title !== undefined ||
+        data.content !== undefined ||
+        data.scheduledFor !== undefined
+      ) {
         const validationData: CreateAnnouncementData = {
           title: data.title ?? existingAnnouncement.title,
           content: data.content ?? existingAnnouncement.content,
-          scheduledFor: data.scheduledFor ?? existingAnnouncement.scheduledFor
+          scheduledFor: data.scheduledFor ?? existingAnnouncement.scheduledFor,
         };
 
         const validationErrors = validateAnnouncementData(validationData);
         if (validationErrors.length > 0) {
           return {
             success: false,
-            error: validationErrors.join(', ')
+            error: validationErrors.join(', '),
           };
         }
       }
@@ -204,13 +217,13 @@ export class AnnouncementService implements IAnnouncementService {
 
       return {
         success: true,
-        announcement: updatedAnnouncement
+        announcement: updatedAnnouncement,
       };
     } catch (error) {
       if (error instanceof ValidationError || error instanceof AuthorizationError) {
         return {
           success: false,
-          error: error.message
+          error: error.message,
         };
       }
       throw error;
@@ -227,7 +240,7 @@ export class AnnouncementService implements IAnnouncementService {
       if (!existingAnnouncement) {
         return {
           success: false,
-          error: 'Announcement not found'
+          error: 'Announcement not found',
         };
       }
 
@@ -235,7 +248,7 @@ export class AnnouncementService implements IAnnouncementService {
       if (existingAnnouncement.educatorId !== educatorId) {
         return {
           success: false,
-          error: 'Not authorized to delete this announcement'
+          error: 'Not authorized to delete this announcement',
         };
       }
 
@@ -243,13 +256,13 @@ export class AnnouncementService implements IAnnouncementService {
       await this.announcementRepository.delete(announcementId);
 
       return {
-        success: true
+        success: true,
       };
     } catch (error) {
       if (error instanceof ValidationError || error instanceof AuthorizationError) {
         return {
           success: false,
-          error: error.message
+          error: error.message,
         };
       }
       throw error;
@@ -261,17 +274,20 @@ export class AnnouncementService implements IAnnouncementService {
 
     try {
       // Find all scheduled announcements ready to be published
-      const scheduledAnnouncements = await this.announcementRepository.findScheduledReadyToPublish();
+      const scheduledAnnouncements =
+        await this.announcementRepository.findScheduledReadyToPublish();
 
       for (const announcement of scheduledAnnouncements) {
         try {
           if (isAnnouncementReadyToPublish(announcement)) {
             // Mark as published
-            const publishedAnnouncement = await this.announcementRepository.markAsPublished(announcement.id);
-            
+            const publishedAnnouncement = await this.announcementRepository.markAsPublished(
+              announcement.id
+            );
+
             // Send notifications
             await this.publishAnnouncement(publishedAnnouncement);
-            
+
             publishedCount++;
           }
         } catch (error) {
@@ -283,24 +299,21 @@ export class AnnouncementService implements IAnnouncementService {
       return {
         success: errors.length === 0,
         publishedCount,
-        errors
+        errors,
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       return {
         success: false,
         publishedCount,
-        errors: [`Failed to fetch scheduled announcements: ${errorMessage}`]
+        errors: [`Failed to fetch scheduled announcements: ${errorMessage}`],
       };
     }
   }
 
-  async getAnnouncementById(
-    announcementId: string,
-    userId: string
-  ): Promise<Announcement | null> {
+  async getAnnouncementById(announcementId: string, userId: string): Promise<Announcement | null> {
     const announcement = await this.announcementRepository.findById(announcementId);
-    
+
     if (!announcement) {
       return null;
     }
@@ -330,7 +343,6 @@ export class AnnouncementService implements IAnnouncementService {
     // that the educator actually owns/teaches this course
     // For now, we'll assume any educator can create announcements for any course
     // This should be replaced with proper course ownership verification
-    
     // TODO: Implement proper course ownership verification
     // const course = await this.courseService.getCourseById(courseId);
     // if (!course || course.instructorId !== educatorId) {
@@ -342,7 +354,6 @@ export class AnnouncementService implements IAnnouncementService {
     // This is a simplified check - in a real implementation, you would verify
     // that the user is actually enrolled in this course
     // For now, we'll assume all users have access to all announcements
-    
     // TODO: Implement proper enrollment verification
     // const enrollment = await this.enrollmentService.getEnrollmentByUserAndCourse(userId, courseId);
     // if (!enrollment) {
@@ -365,24 +376,26 @@ export class AnnouncementService implements IAnnouncementService {
             content: announcement.content,
             courseId: announcement.courseId,
             educatorId: announcement.educatorId,
-            publishedAt: announcement.publishedAt
+            publishedAt: announcement.publishedAt,
           }
         );
       }
 
       // Create in-app notifications for all enrolled students
       if (this.notificationService && enrolledStudents.length > 0) {
-        const notifications = enrolledStudents.map(studentId => ({
+        const notifications = enrolledStudents.map((studentId) => ({
           recipientId: studentId,
           type: 'announcement',
           title: `New announcement: ${announcement.title}`,
-          content: announcement.content.substring(0, 200) + (announcement.content.length > 200 ? '...' : ''),
+          content:
+            announcement.content.substring(0, 200) +
+            (announcement.content.length > 200 ? '...' : ''),
           actionUrl: `/courses/${announcement.courseId}/announcements/${announcement.id}`,
           metadata: {
             courseId: announcement.courseId,
             announcementId: announcement.id,
-            educatorId: announcement.educatorId
-          }
+            educatorId: announcement.educatorId,
+          },
         }));
 
         await this.notificationService.batchNotifications(notifications);
@@ -391,18 +404,14 @@ export class AnnouncementService implements IAnnouncementService {
       // Send email digest for announcements (if email service is available)
       if (this.emailService && enrolledStudents.length > 0) {
         const studentEmails = await this.getStudentEmails(enrolledStudents);
-        
+
         if (studentEmails.length > 0) {
-          await this.emailService.sendBulk(
-            studentEmails,
-            'course-announcement',
-            {
-              announcementTitle: announcement.title,
-              announcementContent: announcement.content,
-              courseId: announcement.courseId,
-              announcementUrl: `/courses/${announcement.courseId}/announcements/${announcement.id}`
-            }
-          );
+          await this.emailService.sendBulk(studentEmails, 'course-announcement', {
+            announcementTitle: announcement.title,
+            announcementContent: announcement.content,
+            courseId: announcement.courseId,
+            announcementUrl: `/courses/${announcement.courseId}/announcements/${announcement.id}`,
+          });
         }
       }
     } catch (error) {
@@ -414,22 +423,22 @@ export class AnnouncementService implements IAnnouncementService {
   private async getEnrolledStudents(courseId: string): Promise<string[]> {
     // This is a placeholder - in a real implementation, you would get enrolled students
     // from the enrollment service
-    
+
     // TODO: Implement proper enrolled students retrieval
     // const enrollments = await this.enrollmentService.getEnrollmentsByCourse(courseId);
     // return enrollments.map(enrollment => enrollment.studentId);
-    
+
     return []; // Return empty array for now
   }
 
   private async getStudentEmails(studentIds: string[]): Promise<string[]> {
     // This is a placeholder - in a real implementation, you would get student emails
     // from the user service
-    
+
     // TODO: Implement proper student email retrieval
     // const users = await this.userService.getUsersByIds(studentIds);
     // return users.map(user => user.email);
-    
+
     return []; // Return empty array for now
   }
 }

@@ -415,6 +415,9 @@ data) {
 }
 
 /**
- * Global Sentry sence
+ * Global Sentry service instance
  */
-exp;ice()SentryServvice = new eronst sentrySort c
+export const sentryService = new SentryService();
+
+// Export the class as well for direct instantiation if needed
+export { SentryService };

@@ -1,9 +1,9 @@
 /**
  * Enrollment Service Interface
- * 
+ *
  * Defines the contract for enrollment business operations.
  * Handles student enrollment, progress tracking, and course completion.
- * 
+ *
  * Requirements: 5.1, 5.3, 5.4, 5.5, 5.7
  */
 
@@ -93,16 +93,16 @@ export interface PaymentInfo {
 
 /**
  * Enrollment Service Interface
- * 
+ *
  * Provides methods for all enrollment business operations.
  * Orchestrates between domain entities and infrastructure services.
  */
 export interface IEnrollmentService {
   /**
    * Enrolls a student in a course
-   * 
+   *
    * Requirements: 5.1 - Student enrollment with duplicate check and limit validation
-   * 
+   *
    * @param data - Enrollment data
    * @returns The created enrollment with initialized progress
    * @throws ConflictError if student is already enrolled
@@ -114,9 +114,9 @@ export interface IEnrollmentService {
 
   /**
    * Updates lesson progress for a student
-   * 
+   *
    * Requirements: 5.3, 5.4 - Progress tracking and calculation
-   * 
+   *
    * @param data - Progress update data
    * @returns The updated lesson progress
    * @throws NotFoundError if enrollment or lesson doesn't exist
@@ -127,9 +127,9 @@ export interface IEnrollmentService {
 
   /**
    * Completes a course and generates certificate
-   * 
+   *
    * Requirements: 5.5, 5.6 - Course completion and certificate generation
-   * 
+   *
    * @param data - Course completion data
    * @returns The generated certificate
    * @throws NotFoundError if enrollment doesn't exist
@@ -140,9 +140,9 @@ export interface IEnrollmentService {
 
   /**
    * Withdraws a student from a course
-   * 
+   *
    * Requirements: 5.7 - Enrollment withdrawal
-   * 
+   *
    * @param data - Withdrawal data
    * @returns void
    * @throws NotFoundError if enrollment doesn't exist
@@ -153,9 +153,9 @@ export interface IEnrollmentService {
 
   /**
    * Gets comprehensive progress summary for an enrollment
-   * 
+   *
    * Requirements: 5.4 - Progress tracking and reporting
-   * 
+   *
    * @param enrollmentId - Enrollment ID
    * @returns Detailed progress summary
    * @throws NotFoundError if enrollment doesn't exist
@@ -165,9 +165,9 @@ export interface IEnrollmentService {
   /**
    * Initializes lesson progress records for all lessons in a course
    * Called internally after enrollment creation
-   * 
+   *
    * Requirements: 5.3 - Progress record initialization
-   * 
+   *
    * @param enrollmentId - Enrollment ID
    * @param courseId - Course ID
    * @returns Array of created lesson progress records
@@ -178,12 +178,15 @@ export interface IEnrollmentService {
   /**
    * Checks if a student can enroll in a course
    * Validates enrollment limits, prerequisites, and payment requirements
-   * 
+   *
    * @param studentId - Student ID
    * @param courseId - Course ID
    * @returns Enrollment eligibility result
    */
-  checkEnrollmentEligibility(studentId: string, courseId: string): Promise<{
+  checkEnrollmentEligibility(
+    studentId: string,
+    courseId: string
+  ): Promise<{
     eligible: boolean;
     reasons: string[];
     requiresPayment: boolean;
@@ -194,7 +197,7 @@ export interface IEnrollmentService {
 
   /**
    * Gets all enrollments for a student
-   * 
+   *
    * @param studentId - Student ID
    * @param filters - Optional filters
    * @returns Array of enrollments
@@ -209,7 +212,7 @@ export interface IEnrollmentService {
 
   /**
    * Gets all enrollments for a course
-   * 
+   *
    * @param courseId - Course ID
    * @param filters - Optional filters
    * @returns Array of enrollments
@@ -225,7 +228,7 @@ export interface IEnrollmentService {
   /**
    * Processes enrollment completion for eligible enrollments
    * Background job to check and complete courses automatically
-   * 
+   *
    * @param limit - Maximum number of enrollments to process
    * @returns Number of enrollments processed
    */
@@ -233,7 +236,7 @@ export interface IEnrollmentService {
 
   /**
    * Calculates estimated time remaining for course completion
-   * 
+   *
    * @param enrollmentId - Enrollment ID
    * @returns Estimated time in minutes
    */
@@ -241,7 +244,7 @@ export interface IEnrollmentService {
 
   /**
    * Identifies struggling areas for a student based on progress patterns
-   * 
+   *
    * @param enrollmentId - Enrollment ID
    * @returns Array of struggling area descriptions
    */
@@ -249,15 +252,18 @@ export interface IEnrollmentService {
 
   /**
    * Checks if a lesson can be accessed based on prerequisites
-   * 
+   *
    * Requirements: 5.8 - Prerequisite enforcement for lesson access
-   * 
+   *
    * @param enrollmentId - Enrollment ID
    * @param lessonId - Lesson ID to check access for
    * @returns Access result with eligibility and reasons
    * @throws NotFoundError if enrollment or lesson doesn't exist
    */
-  checkLessonAccess(enrollmentId: string, lessonId: string): Promise<{
+  checkLessonAccess(
+    enrollmentId: string,
+    lessonId: string
+  ): Promise<{
     canAccess: boolean;
     reasons: string[];
     prerequisiteModules?: {

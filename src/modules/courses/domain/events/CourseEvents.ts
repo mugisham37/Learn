@@ -1,6 +1,6 @@
 /**
  * Domain Events for Course Lifecycle
- * 
+ *
  * These events are published when significant course-related actions occur
  * and can be consumed by other modules for side effects like notifications,
  * analytics updates, cache invalidation, etc.
@@ -269,7 +269,7 @@ export class LessonsReorderedEvent implements DomainEvent {
 }
 
 // Type union for all course-related events
-export type CourseEvent = 
+export type CourseEvent =
   | CourseCreatedEvent
   | CourseUpdatedEvent
   | CoursePublishedEvent

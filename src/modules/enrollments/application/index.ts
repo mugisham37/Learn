@@ -1,6 +1,6 @@
 /**
  * Enrollments Application Layer
- * 
+ *
  * Exports all application components for the enrollments module.
  * Includes services, use cases, and DTOs.
  */

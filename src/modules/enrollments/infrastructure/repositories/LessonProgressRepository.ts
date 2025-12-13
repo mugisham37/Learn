@@ -1,29 +1,37 @@
 /**
  * Lesson Progress Repository Implementation
- * 
+ *
  * Implements lesson progress data access operations with Drizzle ORM queries,
  * Redis caching with 5-minute TTL, and cache invalidation on updates.
  * Handles database errors and maps them to domain errors.
- * 
+ *
  * Requirements: 5.3, 5.4, 5.5
  */
 
 import { eq, and, count, avg, sum, sql } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
-import { getWriteDb, getReadDb, withDrizzleTransaction } from '../../../../infrastructure/database/index.js';
-import { 
-  lessonProgress, 
-  LessonProgress, 
-  NewLessonProgress 
-} from '../../../../infrastructure/database/schema/enrollments.schema.js';
-import { lessons, courseModules } from '../../../../infrastructure/database/schema/courses.schema.js';
-import { cache, buildCacheKey, CachePrefix, CacheTTL } from '../../../../infrastructure/cache/index.js';
 import {
-  DatabaseError,
-  ConflictError,
-  NotFoundError,
-} from '../../../../shared/errors/index.js';
+  getWriteDb,
+  getReadDb,
+  withDrizzleTransaction,
+} from '../../../../infrastructure/database/index.js';
+import {
+  lessonProgress,
+  LessonProgress,
+  NewLessonProgress,
+} from '../../../../infrastructure/database/schema/enrollments.schema.js';
+import {
+  lessons,
+  courseModules,
+} from '../../../../infrastructure/database/schema/courses.schema.js';
+import {
+  cache,
+  buildCacheKey,
+  CachePrefix,
+  CacheTTL,
+} from '../../../../infrastructure/cache/index.js';
+import { DatabaseError, ConflictError, NotFoundError } from '../../../../shared/errors/index.js';
 import {
   ILessonProgressRepository,
   CreateLessonProgressDTO,
@@ -34,7 +42,7 @@ import {
 
 /**
  * Lesson Progress Repository Implementation
- * 
+ *
  * Provides data access methods for lesson progress entities with:
  * - Drizzle ORM for type-safe queries
  * - Redis caching with 5-minute TTL
@@ -60,8 +68,17 @@ export class LessonProgressRepository implements ILessonProgressRepository {
   /**
    * Builds cache key for lesson progress by enrollment and lesson
    */
-  private getLessonProgressEnrollmentLessonCacheKey(enrollmentId: string, lessonId: string): string {
-    return buildCacheKey(CachePrefix.ENROLLMENT, 'progress', 'enrollment-lesson', enrollmentId, lessonId);
+  private getLessonProgressEnrollmentLessonCacheKey(
+    enrollmentId: string,
+    lessonId: string
+  ): string {
+    return buildCacheKey(
+      CachePrefix.ENROLLMENT,
+      'progress',
+      'enrollment-lesson',
+      enrollmentId,
+      lessonId
+    );
   }
 
   /**
@@ -87,9 +104,9 @@ export class LessonProgressRepository implements ILessonProgressRepository {
 
   /**
    * Creates a new lesson progress record in the database
-   * 
+   *
    * Validates enrollment-lesson uniqueness before insertion.
-   * 
+   *
    * @param data - Lesson progress creation data
    * @returns The created lesson progress record
    * @throws ConflictError if progress record already exists for enrollment+lesson
@@ -98,7 +115,10 @@ export class LessonProgressRepository implements ILessonProgressRepository {
   async create(data: CreateLessonProgressDTO): Promise<LessonProgress> {
     try {
       // Check for existing progress record
-      const existingProgress = await this.findByEnrollmentAndLesson(data.enrollmentId, data.lessonId);
+      const existingProgress = await this.findByEnrollmentAndLesson(
+        data.enrollmentId,
+        data.lessonId
+      );
       if (existingProgress) {
         throw new ConflictError(
           'Progress record already exists for this enrollment and lesson',
@@ -123,10 +143,7 @@ export class LessonProgressRepository implements ILessonProgressRepository {
         .returning();
 
       if (!createdProgress) {
-        throw new DatabaseError(
-          'Failed to create lesson progress',
-          'insert'
-        );
+        throw new DatabaseError('Failed to create lesson progress', 'insert');
       }
 
       return createdProgress;
@@ -158,7 +175,7 @@ export class LessonProgressRepository implements ILessonProgressRepository {
   /**
    * Creates multiple lesson progress records in a single transaction
    * Used when initializing progress for all lessons in a course upon enrollment
-   * 
+   *
    * @param progressRecords - Array of lesson progress creation data
    * @returns Array of created lesson progress records
    * @throws DatabaseError if database operation fails
@@ -171,7 +188,7 @@ export class LessonProgressRepository implements ILessonProgressRepository {
 
       // Use transaction to ensure all records are created or none
       const createdRecords = await withDrizzleTransaction(async (tx) => {
-        const newProgressRecords: NewLessonProgress[] = progressRecords.map(data => ({
+        const newProgressRecords: NewLessonProgress[] = progressRecords.map((data) => ({
           enrollmentId: data.enrollmentId,
           lessonId: data.lessonId,
           status: data.status || 'not_started',
@@ -181,10 +198,7 @@ export class LessonProgressRepository implements ILessonProgressRepository {
         }));
 
         // Insert all records in a single query
-        const results = await tx
-          .insert(lessonProgress)
-          .values(newProgressRecords)
-          .returning();
+        const results = await tx.insert(lessonProgress).values(newProgressRecords).returning();
 
         return results;
       });
@@ -212,9 +226,9 @@ export class LessonProgressRepository implements ILessonProgressRepository {
 
   /**
    * Finds a lesson progress record by its unique ID
-   * 
+   *
    * Implements caching with 5-minute TTL.
-   * 
+   *
    * @param id - Lesson progress ID
    * @returns The lesson progress record if found, null otherwise
    * @throws DatabaseError if database operation fails
@@ -224,7 +238,7 @@ export class LessonProgressRepository implements ILessonProgressRepository {
       // Check cache first
       const cacheKey = this.getLessonProgressCacheKey(id);
       const cachedProgress = await cache.get<LessonProgress>(cacheKey);
-      
+
       if (cachedProgress) {
         return cachedProgress;
       }
@@ -255,20 +269,23 @@ export class LessonProgressRepository implements ILessonProgressRepository {
 
   /**
    * Finds a lesson progress record by enrollment and lesson IDs
-   * 
+   *
    * Implements caching with 5-minute TTL.
-   * 
+   *
    * @param enrollmentId - Enrollment ID
    * @param lessonId - Lesson ID
    * @returns The lesson progress record if found, null otherwise
    * @throws DatabaseError if database operation fails
    */
-  async findByEnrollmentAndLesson(enrollmentId: string, lessonId: string): Promise<LessonProgress | null> {
+  async findByEnrollmentAndLesson(
+    enrollmentId: string,
+    lessonId: string
+  ): Promise<LessonProgress | null> {
     try {
       // Check cache first
       const cacheKey = this.getLessonProgressEnrollmentLessonCacheKey(enrollmentId, lessonId);
       const cachedProgress = await cache.get<LessonProgress>(cacheKey);
-      
+
       if (cachedProgress) {
         return cachedProgress;
       }
@@ -278,10 +295,7 @@ export class LessonProgressRepository implements ILessonProgressRepository {
         .select()
         .from(lessonProgress)
         .where(
-          and(
-            eq(lessonProgress.enrollmentId, enrollmentId),
-            eq(lessonProgress.lessonId, lessonId)
-          )
+          and(eq(lessonProgress.enrollmentId, enrollmentId), eq(lessonProgress.lessonId, lessonId))
         )
         .limit(1);
 
@@ -308,9 +322,9 @@ export class LessonProgressRepository implements ILessonProgressRepository {
 
   /**
    * Finds all lesson progress records for a specific enrollment
-   * 
+   *
    * Implements caching with 5-minute TTL.
-   * 
+   *
    * @param enrollmentId - Enrollment ID
    * @returns Array of lesson progress records
    * @throws DatabaseError if database operation fails
@@ -320,7 +334,7 @@ export class LessonProgressRepository implements ILessonProgressRepository {
       // Check cache first
       const cacheKey = this.getEnrollmentProgressCacheKey(enrollmentId);
       const cachedProgress = await cache.get<LessonProgress[]>(cacheKey);
-      
+
       if (cachedProgress) {
         return cachedProgress;
       }
@@ -347,9 +361,9 @@ export class LessonProgressRepository implements ILessonProgressRepository {
 
   /**
    * Finds all lesson progress records for a specific lesson across all enrollments
-   * 
+   *
    * Implements caching with 5-minute TTL.
-   * 
+   *
    * @param lessonId - Lesson ID
    * @returns Array of lesson progress records
    * @throws DatabaseError if database operation fails
@@ -359,7 +373,7 @@ export class LessonProgressRepository implements ILessonProgressRepository {
       // Check cache first
       const cacheKey = this.getLessonProgressListCacheKey(lessonId);
       const cachedProgress = await cache.get<LessonProgress[]>(cacheKey);
-      
+
       if (cachedProgress) {
         return cachedProgress;
       }
@@ -386,9 +400,9 @@ export class LessonProgressRepository implements ILessonProgressRepository {
 
   /**
    * Updates a lesson progress record's data
-   * 
+   *
    * Invalidates all related cache entries after successful update.
-   * 
+   *
    * @param id - Lesson progress ID
    * @param data - Update data
    * @returns The updated lesson progress record
@@ -417,10 +431,7 @@ export class LessonProgressRepository implements ILessonProgressRepository {
         .returning();
 
       if (!updatedProgress) {
-        throw new DatabaseError(
-          'Failed to update lesson progress',
-          'update'
-        );
+        throw new DatabaseError('Failed to update lesson progress', 'update');
       }
 
       // Invalidate all cache entries for this progress record
@@ -431,10 +442,7 @@ export class LessonProgressRepository implements ILessonProgressRepository {
       return updatedProgress;
     } catch (error) {
       // Re-throw known errors
-      if (
-        error instanceof NotFoundError ||
-        error instanceof DatabaseError
-      ) {
+      if (error instanceof NotFoundError || error instanceof DatabaseError) {
         throw error;
       }
 
@@ -450,7 +458,7 @@ export class LessonProgressRepository implements ILessonProgressRepository {
   /**
    * Updates lesson progress by enrollment and lesson IDs
    * More convenient than finding the ID first
-   * 
+   *
    * @param enrollmentId - Enrollment ID
    * @param lessonId - Lesson ID
    * @param data - Update data
@@ -459,8 +467,8 @@ export class LessonProgressRepository implements ILessonProgressRepository {
    * @throws DatabaseError if database operation fails
    */
   async updateByEnrollmentAndLesson(
-    enrollmentId: string, 
-    lessonId: string, 
+    enrollmentId: string,
+    lessonId: string,
     data: UpdateLessonProgressDTO
   ): Promise<LessonProgress> {
     try {
@@ -474,10 +482,7 @@ export class LessonProgressRepository implements ILessonProgressRepository {
       return await this.update(existingProgress.id, data);
     } catch (error) {
       // Re-throw known errors
-      if (
-        error instanceof NotFoundError ||
-        error instanceof DatabaseError
-      ) {
+      if (error instanceof NotFoundError || error instanceof DatabaseError) {
         throw error;
       }
 
@@ -492,9 +497,9 @@ export class LessonProgressRepository implements ILessonProgressRepository {
 
   /**
    * Deletes a lesson progress record from the database
-   * 
+   *
    * Invalidates all cache entries after successful deletion.
-   * 
+   *
    * @param id - Lesson progress ID
    * @returns void
    * @throws NotFoundError if lesson progress record doesn't exist
@@ -515,10 +520,7 @@ export class LessonProgressRepository implements ILessonProgressRepository {
         .returning();
 
       if (!result || result.length === 0) {
-        throw new DatabaseError(
-          'Failed to delete lesson progress',
-          'delete'
-        );
+        throw new DatabaseError('Failed to delete lesson progress', 'delete');
       }
 
       // Invalidate all cache entries
@@ -543,7 +545,7 @@ export class LessonProgressRepository implements ILessonProgressRepository {
   /**
    * Gets progress summary for an enrollment
    * Calculates completion statistics and percentages
-   * 
+   *
    * @param enrollmentId - Enrollment ID
    * @returns Progress summary with statistics
    * @throws DatabaseError if database operation fails
@@ -553,7 +555,7 @@ export class LessonProgressRepository implements ILessonProgressRepository {
       // Check cache first
       const cacheKey = this.getProgressSummaryCacheKey(enrollmentId);
       const cachedSummary = await cache.get<ProgressSummaryDTO>(cacheKey);
-      
+
       if (cachedSummary) {
         return cachedSummary;
       }
@@ -563,8 +565,12 @@ export class LessonProgressRepository implements ILessonProgressRepository {
         .select({
           totalLessons: count(),
           completedLessons: count(sql`CASE WHEN ${lessonProgress.status} = 'completed' THEN 1 END`),
-          inProgressLessons: count(sql`CASE WHEN ${lessonProgress.status} = 'in_progress' THEN 1 END`),
-          notStartedLessons: count(sql`CASE WHEN ${lessonProgress.status} = 'not_started' THEN 1 END`),
+          inProgressLessons: count(
+            sql`CASE WHEN ${lessonProgress.status} = 'in_progress' THEN 1 END`
+          ),
+          notStartedLessons: count(
+            sql`CASE WHEN ${lessonProgress.status} = 'not_started' THEN 1 END`
+          ),
           totalTimeSpentSeconds: sum(lessonProgress.timeSpentSeconds),
           averageQuizScore: avg(lessonProgress.quizScore),
         })
@@ -572,16 +578,14 @@ export class LessonProgressRepository implements ILessonProgressRepository {
         .where(eq(lessonProgress.enrollmentId, enrollmentId));
 
       if (!stats) {
-        throw new DatabaseError(
-          'Failed to calculate progress summary',
-          'select'
-        );
+        throw new DatabaseError('Failed to calculate progress summary', 'select');
       }
 
       // Calculate progress percentage
-      const progressPercentage = stats.totalLessons > 0 
-        ? Math.round((stats.completedLessons / stats.totalLessons) * 100)
-        : 0;
+      const progressPercentage =
+        stats.totalLessons > 0
+          ? Math.round((stats.completedLessons / stats.totalLessons) * 100)
+          : 0;
 
       const summary: ProgressSummaryDTO = {
         enrollmentId,
@@ -591,7 +595,9 @@ export class LessonProgressRepository implements ILessonProgressRepository {
         notStartedLessons: stats.notStartedLessons,
         progressPercentage,
         totalTimeSpentSeconds: stats.totalTimeSpentSeconds || 0,
-        averageQuizScore: stats.averageQuizScore ? Math.round(stats.averageQuizScore * 100) / 100 : undefined,
+        averageQuizScore: stats.averageQuizScore
+          ? Math.round(stats.averageQuizScore * 100) / 100
+          : undefined,
       };
 
       // Cache the result with 5-minute TTL
@@ -609,7 +615,7 @@ export class LessonProgressRepository implements ILessonProgressRepository {
 
   /**
    * Gets progress summary for all modules in an enrollment
-   * 
+   *
    * @param enrollmentId - Enrollment ID
    * @returns Array of module progress summaries
    * @throws DatabaseError if database operation fails
@@ -631,11 +637,12 @@ export class LessonProgressRepository implements ILessonProgressRepository {
         .orderBy(courseModules.orderNumber);
 
       // Calculate progress percentages and completion status
-      const moduleProgress: ModuleProgressDTO[] = moduleStats.map(stats => {
-        const progressPercentage = stats.totalLessons > 0 
-          ? Math.round((stats.completedLessons / stats.totalLessons) * 100)
-          : 0;
-        
+      const moduleProgress: ModuleProgressDTO[] = moduleStats.map((stats) => {
+        const progressPercentage =
+          stats.totalLessons > 0
+            ? Math.round((stats.completedLessons / stats.totalLessons) * 100)
+            : 0;
+
         return {
           moduleId: stats.moduleId,
           totalLessons: stats.totalLessons,
@@ -657,7 +664,7 @@ export class LessonProgressRepository implements ILessonProgressRepository {
 
   /**
    * Finds completed lesson progress records for an enrollment
-   * 
+   *
    * @param enrollmentId - Enrollment ID
    * @returns Array of completed lesson progress records
    * @throws DatabaseError if database operation fails
@@ -668,10 +675,7 @@ export class LessonProgressRepository implements ILessonProgressRepository {
         .select()
         .from(lessonProgress)
         .where(
-          and(
-            eq(lessonProgress.enrollmentId, enrollmentId),
-            eq(lessonProgress.status, 'completed')
-          )
+          and(eq(lessonProgress.enrollmentId, enrollmentId), eq(lessonProgress.status, 'completed'))
         )
         .orderBy(lessonProgress.completedAt);
 
@@ -687,7 +691,7 @@ export class LessonProgressRepository implements ILessonProgressRepository {
 
   /**
    * Finds in-progress lesson progress records for an enrollment
-   * 
+   *
    * @param enrollmentId - Enrollment ID
    * @returns Array of in-progress lesson progress records
    * @throws DatabaseError if database operation fails
@@ -717,7 +721,7 @@ export class LessonProgressRepository implements ILessonProgressRepository {
 
   /**
    * Checks if all lessons in a course are completed for an enrollment
-   * 
+   *
    * @param enrollmentId - Enrollment ID
    * @returns True if all lessons are completed, false otherwise
    * @throws DatabaseError if database operation fails
@@ -749,7 +753,7 @@ export class LessonProgressRepository implements ILessonProgressRepository {
   /**
    * Gets the next lesson that should be accessed based on progress
    * Returns the first not-started or in-progress lesson
-   * 
+   *
    * @param enrollmentId - Enrollment ID
    * @returns The next lesson progress record, null if all completed
    * @throws DatabaseError if database operation fails
@@ -802,10 +806,10 @@ export class LessonProgressRepository implements ILessonProgressRepository {
 
   /**
    * Invalidates cache for a specific lesson progress record
-   * 
+   *
    * Removes all cache entries related to the progress record by ID.
    * Should be called after any update operation.
-   * 
+   *
    * @param id - Lesson progress ID
    * @returns void
    */
@@ -821,10 +825,10 @@ export class LessonProgressRepository implements ILessonProgressRepository {
 
   /**
    * Invalidates cache for lesson progress by enrollment
-   * 
+   *
    * Removes all cache entries related to the enrollment's progress.
    * Should be called after operations that affect enrollment progress.
-   * 
+   *
    * @param enrollmentId - Enrollment ID
    * @returns void
    */
@@ -835,8 +839,8 @@ export class LessonProgressRepository implements ILessonProgressRepository {
         buildCacheKey(CachePrefix.ENROLLMENT, 'progress', 'summary', enrollmentId),
         buildCacheKey(CachePrefix.ENROLLMENT, 'progress', 'enrollment-lesson', enrollmentId, '*'),
       ];
-      
-      await Promise.all(patterns.map(pattern => cache.deletePattern(pattern)));
+
+      await Promise.all(patterns.map((pattern) => cache.deletePattern(pattern)));
     } catch (error) {
       // Log error but don't throw - cache invalidation failure shouldn't break the operation
       console.error(`Failed to invalidate cache for enrollment progress ${enrollmentId}:`, error);
@@ -845,10 +849,10 @@ export class LessonProgressRepository implements ILessonProgressRepository {
 
   /**
    * Invalidates cache for lesson progress by lesson
-   * 
+   *
    * Removes all cache entries related to the lesson's progress across enrollments.
    * Should be called after operations that affect lesson progress across enrollments.
-   * 
+   *
    * @param lessonId - Lesson ID
    * @returns void
    */
@@ -858,8 +862,8 @@ export class LessonProgressRepository implements ILessonProgressRepository {
         buildCacheKey(CachePrefix.ENROLLMENT, 'progress', 'lesson', lessonId),
         buildCacheKey(CachePrefix.ENROLLMENT, 'progress', 'enrollment-lesson', '*', lessonId),
       ];
-      
-      await Promise.all(patterns.map(pattern => cache.deletePattern(pattern)));
+
+      await Promise.all(patterns.map((pattern) => cache.deletePattern(pattern)));
     } catch (error) {
       // Log error but don't throw - cache invalidation failure shouldn't break the operation
       console.error(`Failed to invalidate cache for lesson progress ${lessonId}:`, error);

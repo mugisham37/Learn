@@ -1,6 +1,6 @@
 /**
  * Queue Infrastructure Types
- * 
+ *
  * Type definitions for BullMQ queue infrastructure including
  * queue configurations, job data interfaces, and monitoring types.
  */

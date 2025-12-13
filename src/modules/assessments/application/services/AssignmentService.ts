@@ -1,11 +1,11 @@
 /**
  * Assignment Service Implementation
- * 
+ *
  * Implements assignment business operations in the application layer.
  * Orchestrates domain entities and infrastructure repositories to implement
  * assignment management use cases with proper validation, authorization, file handling,
  * and progress tracking.
- * 
+ *
  * Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7
  */
 
@@ -15,29 +15,32 @@ import {
   NotFoundError,
   ConflictError,
   DatabaseError,
-  ExternalServiceError
+  ExternalServiceError,
 } from '../../../../shared/errors/index.js';
 import { sanitizeByContentType } from '../../../../shared/utils/sanitization.js';
 import { IS3Service } from '../../../../shared/services/IS3Service.js';
 import { logger } from '../../../../shared/utils/logger.js';
 import { Assignment } from '../../domain/entities/Assignment.js';
-import { AssignmentSubmission, AssignmentGradingStatus } from '../../domain/entities/AssignmentSubmission.js';
+import {
+  AssignmentSubmission,
+  AssignmentGradingStatus,
+} from '../../domain/entities/AssignmentSubmission.js';
 import { IAssignmentRepository } from '../../infrastructure/repositories/IAssignmentRepository.js';
 import { IAssignmentSubmissionRepository } from '../../infrastructure/repositories/IAssignmentSubmissionRepository.js';
 
-import { 
+import {
   IAssignmentService,
   CreateAssignmentDTO,
   SubmitAssignmentDTO,
   GradeAssignmentDTO,
   RequestRevisionDTO,
   AssignmentSubmissionResult,
-  StudentAssignmentSummary
+  StudentAssignmentSummary,
 } from './IAssignmentService.js';
 
 /**
  * Assignment Service Implementation
- * 
+ *
  * Handles all assignment-related business operations with proper validation,
  * authorization, file handling, and error handling.
  */
@@ -53,7 +56,11 @@ export class AssignmentService implements IAssignmentService {
    */
   async createAssignment(educatorId: string, data: CreateAssignmentDTO): Promise<Assignment> {
     try {
-      logger.info('Creating assignment', { educatorId, lessonId: data.lessonId, title: data.title });
+      logger.info('Creating assignment', {
+        educatorId,
+        lessonId: data.lessonId,
+        title: data.title,
+      });
 
       // Validate input data
       this.validateCreateAssignmentData(data);
@@ -75,8 +82,8 @@ export class AssignmentService implements IAssignmentService {
           requiresFileUpload: data.requiresFileUpload !== false, // Default true
           allowedFileTypes: data.allowedFileTypes,
           maxFileSizeMb: data.maxFileSizeMb || 10,
-          rubric: data.rubric
-        }
+          rubric: data.rubric,
+        },
       };
 
       // Validate using domain entity
@@ -86,7 +93,9 @@ export class AssignmentService implements IAssignmentService {
       const createdAssignment = await this.assignmentRepository.create({
         lessonId: data.lessonId,
         title: data.title,
-        description: data.description ? sanitizeByContentType(data.description, 'assignment.description') : undefined,
+        description: data.description
+          ? sanitizeByContentType(data.description, 'assignment.description')
+          : undefined,
         instructions: sanitizeByContentType(data.instructions, 'assignment.instructions'),
         dueDate: data.dueDate,
         lateSubmissionAllowed: data.lateSubmissionAllowed || false,
@@ -95,10 +104,13 @@ export class AssignmentService implements IAssignmentService {
         requiresFileUpload: data.requiresFileUpload !== false,
         allowedFileTypes: data.allowedFileTypes,
         maxFileSizeMb: data.maxFileSizeMb || 10,
-        rubric: data.rubric
+        rubric: data.rubric,
       });
 
-      logger.info('Assignment created successfully', { assignmentId: createdAssignment.id, educatorId });
+      logger.info('Assignment created successfully', {
+        assignmentId: createdAssignment.id,
+        educatorId,
+      });
 
       return Assignment.fromPersistence(
         createdAssignment.id,
@@ -114,19 +126,18 @@ export class AssignmentService implements IAssignmentService {
           requiresFileUpload: createdAssignment.requiresFileUpload,
           allowedFileTypes: createdAssignment.allowedFileTypes as string[],
           maxFileSizeMb: createdAssignment.maxFileSizeMb,
-          rubric: createdAssignment.rubric as Record<string, unknown> | undefined
+          rubric: createdAssignment.rubric as Record<string, unknown> | undefined,
         },
         createdAssignment.createdAt,
         createdAssignment.updatedAt
       );
-
     } catch (error) {
       logger.error('Failed to create assignment', { error, educatorId, data });
-      
+
       if (error instanceof ValidationError || error instanceof AuthorizationError) {
         throw error;
       }
-      
+
       throw new DatabaseError('Failed to create assignment', 'create', error as Error);
     }
   }
@@ -136,11 +147,11 @@ export class AssignmentService implements IAssignmentService {
    */
   async submitAssignment(data: SubmitAssignmentDTO): Promise<AssignmentSubmissionResult> {
     try {
-      logger.info('Submitting assignment', { 
-        assignmentId: data.assignmentId, 
+      logger.info('Submitting assignment', {
+        assignmentId: data.assignmentId,
         studentId: data.studentId,
         hasFile: !!data.file,
-        isRevision: !!data.parentSubmissionId
+        isRevision: !!data.parentSubmissionId,
       });
 
       // Validate input data
@@ -167,7 +178,7 @@ export class AssignmentService implements IAssignmentService {
           requiresFileUpload: assignmentData.requiresFileUpload,
           allowedFileTypes: assignmentData.allowedFileTypes as string[],
           maxFileSizeMb: assignmentData.maxFileSizeMb,
-          rubric: assignmentData.rubric as Record<string, unknown> | undefined
+          rubric: assignmentData.rubric as Record<string, unknown> | undefined,
         },
         assignmentData.createdAt,
         assignmentData.updatedAt
@@ -180,7 +191,7 @@ export class AssignmentService implements IAssignmentService {
 
       // Handle file upload if provided
       let fileInfo: { url: string; name: string; sizeBytes: number } | undefined;
-      
+
       if (data.file) {
         // Validate file
         const fileValidation = assignment.validateFile(data.file.fileName, data.file.buffer.length);
@@ -201,26 +212,32 @@ export class AssignmentService implements IAssignmentService {
             metadata: {
               assignmentId: data.assignmentId,
               studentId: data.studentId,
-              originalFileName: data.file.fileName
-            }
+              originalFileName: data.file.fileName,
+            },
           });
 
           fileInfo = {
             url: uploadResult.url,
             name: data.file.fileName,
-            sizeBytes: data.file.buffer.length
+            sizeBytes: data.file.buffer.length,
           };
 
           logger.info('File uploaded successfully for assignment submission', {
             assignmentId: data.assignmentId,
             studentId: data.studentId,
             s3Key,
-            fileSize: data.file.buffer.length
+            fileSize: data.file.buffer.length,
           });
-
         } catch (error) {
-          logger.error('Failed to upload assignment file to S3', { error, assignmentId: data.assignmentId });
-          throw new ExternalServiceError('AWS S3', 'Failed to upload assignment file', error as Error);
+          logger.error('Failed to upload assignment file to S3', {
+            error,
+            assignmentId: data.assignmentId,
+          });
+          throw new ExternalServiceError(
+            'AWS S3',
+            'Failed to upload assignment file',
+            error as Error
+          );
         }
       }
 
@@ -231,14 +248,20 @@ export class AssignmentService implements IAssignmentService {
         if (!parentSubmission) {
           throw new NotFoundError('Parent submission', data.parentSubmissionId);
         }
-        
+
         // Verify parent submission belongs to same student and assignment
-        if (parentSubmission.studentId !== data.studentId || parentSubmission.assignmentId !== data.assignmentId) {
-          throw new ValidationError('Parent submission does not belong to this student and assignment');
+        if (
+          parentSubmission.studentId !== data.studentId ||
+          parentSubmission.assignmentId !== data.assignmentId
+        ) {
+          throw new ValidationError(
+            'Parent submission does not belong to this student and assignment'
+          );
         }
 
         // Get revision count to determine revision number
-        revisionNumber = await this.submissionRepository.getRevisionCount(data.parentSubmissionId) + 1;
+        revisionNumber =
+          (await this.submissionRepository.getRevisionCount(data.parentSubmissionId)) + 1;
       }
 
       // Create submission using domain entity
@@ -248,7 +271,7 @@ export class AssignmentService implements IAssignmentService {
         enrollmentId: data.enrollmentId,
         file: fileInfo,
         submissionText: data.submissionText,
-        parentSubmissionId: data.parentSubmissionId
+        parentSubmissionId: data.parentSubmissionId,
       };
 
       const domainSubmission = AssignmentSubmission.create(submissionData, assignment);
@@ -261,18 +284,20 @@ export class AssignmentService implements IAssignmentService {
         fileUrl: fileInfo?.url,
         fileName: fileInfo?.name,
         fileSizeBytes: fileInfo?.sizeBytes,
-        submissionText: data.submissionText ? sanitizeByContentType(data.submissionText, 'submission.text') : undefined,
+        submissionText: data.submissionText
+          ? sanitizeByContentType(data.submissionText, 'submission.text')
+          : undefined,
         isLate: domainSubmission.isLate,
         revisionNumber,
-        parentSubmissionId: data.parentSubmissionId
+        parentSubmissionId: data.parentSubmissionId,
       });
 
-      logger.info('Assignment submitted successfully', { 
+      logger.info('Assignment submitted successfully', {
         submissionId: createdSubmission.id,
         assignmentId: data.assignmentId,
         studentId: data.studentId,
         isLate: domainSubmission.isLate,
-        revisionNumber
+        revisionNumber,
       });
 
       // Convert back to domain entity
@@ -297,17 +322,20 @@ export class AssignmentService implements IAssignmentService {
       );
 
       return {
-        submission: resultSubmission
+        submission: resultSubmission,
       };
-
     } catch (error) {
       logger.error('Failed to submit assignment', { error, data });
-      
-      if (error instanceof ValidationError || error instanceof NotFoundError || 
-          error instanceof ConflictError || error instanceof ExternalServiceError) {
+
+      if (
+        error instanceof ValidationError ||
+        error instanceof NotFoundError ||
+        error instanceof ConflictError ||
+        error instanceof ExternalServiceError
+      ) {
         throw error;
       }
-      
+
       throw new DatabaseError('Failed to submit assignment', 'create', error as Error);
     }
   }
@@ -317,10 +345,10 @@ export class AssignmentService implements IAssignmentService {
    */
   async gradeAssignment(data: GradeAssignmentDTO): Promise<AssignmentSubmission> {
     try {
-      logger.info('Grading assignment submission', { 
-        submissionId: data.submissionId, 
+      logger.info('Grading assignment submission', {
+        submissionId: data.submissionId,
         gradedBy: data.gradedBy,
-        pointsAwarded: data.pointsAwarded
+        pointsAwarded: data.pointsAwarded,
       });
 
       // Get submission
@@ -337,7 +365,9 @@ export class AssignmentService implements IAssignmentService {
 
       // Validate points awarded
       if (data.pointsAwarded < 0 || data.pointsAwarded > assignmentData.maxPoints) {
-        throw new ValidationError(`Points awarded must be between 0 and ${assignmentData.maxPoints}`);
+        throw new ValidationError(
+          `Points awarded must be between 0 and ${assignmentData.maxPoints}`
+        );
       }
 
       // Check if submission is in a gradable state
@@ -349,11 +379,13 @@ export class AssignmentService implements IAssignmentService {
       // This would require checking if the grader is the course instructor
 
       // Convert to domain entity
-      const fileInfo = submissionData.fileUrl ? {
-        url: submissionData.fileUrl,
-        name: submissionData.fileName || '',
-        sizeBytes: submissionData.fileSizeBytes || 0
-      } : null;
+      const fileInfo = submissionData.fileUrl
+        ? {
+            url: submissionData.fileUrl,
+            name: submissionData.fileName || '',
+            sizeBytes: submissionData.fileSizeBytes || 0,
+          }
+        : null;
 
       const domainSubmission = AssignmentSubmission.fromPersistence(
         submissionData.id,
@@ -376,11 +408,14 @@ export class AssignmentService implements IAssignmentService {
       );
 
       // Grade using domain entity
-      const gradedSubmission = domainSubmission.grade({
-        pointsAwarded: data.pointsAwarded,
-        feedback: data.feedback,
-        gradedBy: data.gradedBy
-      }, assignmentData.maxPoints);
+      const gradedSubmission = domainSubmission.grade(
+        {
+          pointsAwarded: data.pointsAwarded,
+          feedback: data.feedback,
+          gradedBy: data.gradedBy,
+        },
+        assignmentData.maxPoints
+      );
 
       // Calculate final score with late penalty if applicable
       const finalScore = gradedSubmission.calculateFinalScore(assignmentData.latePenaltyPercentage);
@@ -391,14 +426,14 @@ export class AssignmentService implements IAssignmentService {
         feedback: sanitizeByContentType(data.feedback, 'feedback'),
         gradingStatus: 'graded',
         gradedAt: new Date(),
-        gradedBy: data.gradedBy
+        gradedBy: data.gradedBy,
       });
 
-      logger.info('Assignment submission graded successfully', { 
+      logger.info('Assignment submission graded successfully', {
         submissionId: data.submissionId,
         pointsAwarded: data.pointsAwarded,
         finalScore,
-        gradedBy: data.gradedBy
+        gradedBy: data.gradedBy,
       });
 
       // Update progress on grading completion
@@ -424,15 +459,18 @@ export class AssignmentService implements IAssignmentService {
         updatedSubmission.createdAt,
         updatedSubmission.updatedAt
       );
-
     } catch (error) {
       logger.error('Failed to grade assignment submission', { error, data });
-      
-      if (error instanceof ValidationError || error instanceof AuthorizationError || 
-          error instanceof NotFoundError || error instanceof ConflictError) {
+
+      if (
+        error instanceof ValidationError ||
+        error instanceof AuthorizationError ||
+        error instanceof NotFoundError ||
+        error instanceof ConflictError
+      ) {
         throw error;
       }
-      
+
       throw new DatabaseError('Failed to grade assignment submission', 'update', error as Error);
     }
   }
@@ -442,9 +480,9 @@ export class AssignmentService implements IAssignmentService {
    */
   async requestRevision(data: RequestRevisionDTO): Promise<AssignmentSubmission> {
     try {
-      logger.info('Requesting revision for assignment submission', { 
-        submissionId: data.submissionId, 
-        gradedBy: data.gradedBy
+      logger.info('Requesting revision for assignment submission', {
+        submissionId: data.submissionId,
+        gradedBy: data.gradedBy,
       });
 
       // Get submission
@@ -466,11 +504,13 @@ export class AssignmentService implements IAssignmentService {
       // This would require checking if the requester is the course instructor
 
       // Convert to domain entity
-      const fileInfo = submissionData.fileUrl ? {
-        url: submissionData.fileUrl,
-        name: submissionData.fileName || '',
-        sizeBytes: submissionData.fileSizeBytes || 0
-      } : null;
+      const fileInfo = submissionData.fileUrl
+        ? {
+            url: submissionData.fileUrl,
+            name: submissionData.fileName || '',
+            sizeBytes: submissionData.fileSizeBytes || 0,
+          }
+        : null;
 
       const domainSubmission = AssignmentSubmission.fromPersistence(
         submissionData.id,
@@ -501,12 +541,12 @@ export class AssignmentService implements IAssignmentService {
         gradingStatus: 'revision_requested',
         gradedAt: new Date(),
         gradedBy: data.gradedBy,
-        pointsAwarded: undefined // Clear points when requesting revision
+        pointsAwarded: undefined, // Clear points when requesting revision
       });
 
-      logger.info('Revision requested successfully', { 
+      logger.info('Revision requested successfully', {
         submissionId: data.submissionId,
-        gradedBy: data.gradedBy
+        gradedBy: data.gradedBy,
       });
 
       // Convert back to domain entity for return
@@ -529,15 +569,18 @@ export class AssignmentService implements IAssignmentService {
         updatedSubmission.createdAt,
         updatedSubmission.updatedAt
       );
-
     } catch (error) {
       logger.error('Failed to request revision', { error, data });
-      
-      if (error instanceof ValidationError || error instanceof AuthorizationError || 
-          error instanceof NotFoundError || error instanceof ConflictError) {
+
+      if (
+        error instanceof ValidationError ||
+        error instanceof AuthorizationError ||
+        error instanceof NotFoundError ||
+        error instanceof ConflictError
+      ) {
         throw error;
       }
-      
+
       throw new DatabaseError('Failed to request revision', 'update', error as Error);
     }
   }
@@ -545,7 +588,11 @@ export class AssignmentService implements IAssignmentService {
   /**
    * Gets assignment by ID with authorization check
    */
-  async getAssignment(assignmentId: string, _userId: string, _userRole: string): Promise<Assignment> {
+  async getAssignment(
+    assignmentId: string,
+    _userId: string,
+    _userRole: string
+  ): Promise<Assignment> {
     try {
       const assignmentData = await this.assignmentRepository.findById(assignmentId);
       if (!assignmentData) {
@@ -554,7 +601,7 @@ export class AssignmentService implements IAssignmentService {
 
       // TODO: Implement proper authorization logic
       // For now, allow all authenticated users to view assignments
-      
+
       return Assignment.fromPersistence(
         assignmentData.id,
         assignmentData.lessonId,
@@ -569,17 +616,16 @@ export class AssignmentService implements IAssignmentService {
           requiresFileUpload: assignmentData.requiresFileUpload,
           allowedFileTypes: assignmentData.allowedFileTypes as string[],
           maxFileSizeMb: assignmentData.maxFileSizeMb,
-          rubric: assignmentData.rubric as Record<string, unknown> | undefined
+          rubric: assignmentData.rubric as Record<string, unknown> | undefined,
         },
         assignmentData.createdAt,
         assignmentData.updatedAt
       );
-
     } catch (error) {
       if (error instanceof NotFoundError || error instanceof AuthorizationError) {
         throw error;
       }
-      
+
       throw new DatabaseError('Failed to get assignment', 'findById', error as Error);
     }
   }
@@ -587,7 +633,11 @@ export class AssignmentService implements IAssignmentService {
   /**
    * Gets assignment submission by ID with authorization check
    */
-  async getSubmission(submissionId: string, userId: string, userRole: string): Promise<AssignmentSubmission> {
+  async getSubmission(
+    submissionId: string,
+    userId: string,
+    userRole: string
+  ): Promise<AssignmentSubmission> {
     try {
       const submissionData = await this.submissionRepository.findById(submissionId);
       if (!submissionData) {
@@ -602,11 +652,13 @@ export class AssignmentService implements IAssignmentService {
       // TODO: For educators, verify they own the course/lesson
 
       // Convert to domain entity
-      const fileInfo = submissionData.fileUrl ? {
-        url: submissionData.fileUrl,
-        name: submissionData.fileName || '',
-        sizeBytes: submissionData.fileSizeBytes || 0
-      } : null;
+      const fileInfo = submissionData.fileUrl
+        ? {
+            url: submissionData.fileUrl,
+            name: submissionData.fileName || '',
+            sizeBytes: submissionData.fileSizeBytes || 0,
+          }
+        : null;
 
       return AssignmentSubmission.fromPersistence(
         submissionData.id,
@@ -627,12 +679,11 @@ export class AssignmentService implements IAssignmentService {
         submissionData.createdAt,
         submissionData.updatedAt
       );
-
     } catch (error) {
       if (error instanceof NotFoundError || error instanceof AuthorizationError) {
         throw error;
       }
-      
+
       throw new DatabaseError('Failed to get submission', 'findById', error as Error);
     }
   }
@@ -640,19 +691,27 @@ export class AssignmentService implements IAssignmentService {
   /**
    * Gets student's assignment summary
    */
-  async getStudentAssignmentSummary(assignmentId: string, studentId: string): Promise<StudentAssignmentSummary> {
+  async getStudentAssignmentSummary(
+    assignmentId: string,
+    studentId: string
+  ): Promise<StudentAssignmentSummary> {
     try {
-      const summary = await this.submissionRepository.getStudentSubmissionSummary(assignmentId, studentId);
+      const summary = await this.submissionRepository.getStudentSubmissionSummary(
+        assignmentId,
+        studentId
+      );
       const canSubmit = await this.canSubmitAssignment(assignmentId, studentId);
 
       // Convert latest submission to domain entity if exists
       let latestSubmission: AssignmentSubmission | undefined;
       if (summary.latestSubmission) {
-        const fileInfo = summary.latestSubmission.fileUrl ? {
-          url: summary.latestSubmission.fileUrl,
-          name: summary.latestSubmission.fileName || '',
-          sizeBytes: summary.latestSubmission.fileSizeBytes || 0
-        } : null;
+        const fileInfo = summary.latestSubmission.fileUrl
+          ? {
+              url: summary.latestSubmission.fileUrl,
+              name: summary.latestSubmission.fileName || '',
+              sizeBytes: summary.latestSubmission.fileSizeBytes || 0,
+            }
+          : null;
 
         latestSubmission = AssignmentSubmission.fromPersistence(
           summary.latestSubmission.id,
@@ -663,7 +722,9 @@ export class AssignmentService implements IAssignmentService {
           summary.latestSubmission.submissionText,
           summary.latestSubmission.submittedAt,
           summary.latestSubmission.isLate,
-          summary.latestSubmission.pointsAwarded ? parseFloat(summary.latestSubmission.pointsAwarded) : null,
+          summary.latestSubmission.pointsAwarded
+            ? parseFloat(summary.latestSubmission.pointsAwarded)
+            : null,
           summary.latestSubmission.feedback,
           summary.latestSubmission.gradingStatus as AssignmentGradingStatus,
           summary.latestSubmission.gradedAt,
@@ -682,12 +743,15 @@ export class AssignmentService implements IAssignmentService {
         latestSubmission,
         bestScore: summary.bestScore || undefined,
         hasRevisionRequested: summary.hasRevisionRequested,
-        canSubmit
+        canSubmit,
       };
-
     } catch (error) {
       logger.error('Failed to get student assignment summary', { error, assignmentId, studentId });
-      throw new DatabaseError('Failed to get student assignment summary', 'getStudentSubmissionSummary', error as Error);
+      throw new DatabaseError(
+        'Failed to get student assignment summary',
+        'getStudentSubmissionSummary',
+        error as Error
+      );
     }
   }
 
@@ -717,7 +781,7 @@ export class AssignmentService implements IAssignmentService {
           requiresFileUpload: assignmentData.requiresFileUpload,
           allowedFileTypes: assignmentData.allowedFileTypes as string[],
           maxFileSizeMb: assignmentData.maxFileSizeMb,
-          rubric: assignmentData.rubric as Record<string, unknown> | undefined
+          rubric: assignmentData.rubric as Record<string, unknown> | undefined,
         },
         assignmentData.createdAt,
         assignmentData.updatedAt
@@ -729,7 +793,10 @@ export class AssignmentService implements IAssignmentService {
       }
 
       // Check if student has a revision requested (can resubmit)
-      const latestSubmission = await this.submissionRepository.findLatestByStudentAndAssignment(assignmentId, studentId);
+      const latestSubmission = await this.submissionRepository.findLatestByStudentAndAssignment(
+        assignmentId,
+        studentId
+      );
       if (latestSubmission && latestSubmission.gradingStatus === 'revision_requested') {
         return true;
       }
@@ -740,9 +807,12 @@ export class AssignmentService implements IAssignmentService {
       }
 
       return true;
-
     } catch (error) {
-      logger.error('Failed to check if student can submit assignment', { error, assignmentId, studentId });
+      logger.error('Failed to check if student can submit assignment', {
+        error,
+        assignmentId,
+        studentId,
+      });
       return false;
     }
   }
@@ -767,16 +837,15 @@ export class AssignmentService implements IAssignmentService {
       // 2. Finding the enrollment for the student and course
       // 3. Updating the lesson progress to completed
       // 4. Recalculating overall course progress
-      // 
+      //
       // For now, we'll log the action and leave implementation for when
       // enrollment and progress modules are available
 
       logger.info('Progress update completed for assignment grading', {
         submissionId,
         studentId: submissionData.studentId,
-        assignmentId: submissionData.assignmentId
+        assignmentId: submissionData.assignmentId,
       });
-
     } catch (error) {
       logger.error('Failed to update progress on grading completion', { error, submissionId });
       // Don't throw error as this is a side effect - the grading should still succeed
@@ -811,8 +880,10 @@ export class AssignmentService implements IAssignmentService {
       throw new ValidationError('Max points must be positive');
     }
 
-    if (data.latePenaltyPercentage !== undefined && 
-        (data.latePenaltyPercentage < 0 || data.latePenaltyPercentage > 100)) {
+    if (
+      data.latePenaltyPercentage !== undefined &&
+      (data.latePenaltyPercentage < 0 || data.latePenaltyPercentage > 100)
+    ) {
       throw new ValidationError('Late penalty percentage must be between 0 and 100');
     }
 
@@ -828,7 +899,9 @@ export class AssignmentService implements IAssignmentService {
     const validExtensions = /^\.[a-zA-Z0-9]+$/;
     for (const fileType of data.allowedFileTypes) {
       if (!validExtensions.test(fileType)) {
-        throw new ValidationError(`Invalid file type format: ${fileType}. Must be in format like .pdf, .docx`);
+        throw new ValidationError(
+          `Invalid file type format: ${fileType}. Must be in format like .pdf, .docx`
+        );
       }
     }
   }

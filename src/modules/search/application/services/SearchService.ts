@@ -1,14 +1,19 @@
 /**
  * Search Service Implementation
- * 
+ *
  * Implements search operations using Elasticsearch through the search repository.
  * Provides methods for indexing content, performing searches with filters and facets,
  * autocomplete functionality, and trending search management.
- * 
+ *
  * Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 8.7
  */
 
-import type { ISearchRepository, CourseSearchDocument, LessonSearchDocument, SearchResult } from '../../../../infrastructure/search/ISearchRepository.js';
+import type {
+  ISearchRepository,
+  CourseSearchDocument,
+  LessonSearchDocument,
+  SearchResult,
+} from '../../../../infrastructure/search/ISearchRepository.js';
 import { ExternalServiceError } from '../../../../shared/errors/index.js';
 import { comprehensiveCacheService } from '../../../../shared/services/ComprehensiveCacheService.js';
 import type { Course } from '../../../courses/domain/entities/Course.js';
@@ -27,14 +32,12 @@ import type {
 
 /**
  * Search Service Implementation
- * 
+ *
  * Concrete implementation of ISearchService that orchestrates search operations
  * through the search repository and provides business logic for search features.
  */
 export class SearchService implements ISearchService {
-  constructor(
-    private readonly searchRepository: ISearchRepository
-  ) {}
+  constructor(private readonly searchRepository: ISearchRepository) {}
 
   // Content indexing operations
 
@@ -45,21 +48,18 @@ export class SearchService implements ISearchService {
     try {
       // Transform course entity to search document
       const searchDocument = this.transformCourseToSearchDocument(course);
-      
+
       // Index the document
       const success = await this.searchRepository.indexCourse(searchDocument);
-      
+
       if (!success) {
-        throw new ExternalServiceError(
-          'Elasticsearch',
-          'Failed to index course document'
-        );
+        throw new ExternalServiceError('Elasticsearch', 'Failed to index course document');
       }
     } catch (error) {
       if (error instanceof ExternalServiceError) {
         throw error;
       }
-      
+
       throw new ExternalServiceError(
         'SearchService',
         'Failed to index course',
@@ -75,21 +75,18 @@ export class SearchService implements ISearchService {
     try {
       // Transform lesson entity to search document
       const searchDocument = this.transformLessonToSearchDocument(lesson);
-      
+
       // Index the document
       const success = await this.searchRepository.indexLesson(searchDocument);
-      
+
       if (!success) {
-        throw new ExternalServiceError(
-          'Elasticsearch',
-          'Failed to index lesson document'
-        );
+        throw new ExternalServiceError('Elasticsearch', 'Failed to index lesson document');
       }
     } catch (error) {
       if (error instanceof ExternalServiceError) {
         throw error;
       }
-      
+
       throw new ExternalServiceError(
         'SearchService',
         'Failed to index lesson',
@@ -102,7 +99,7 @@ export class SearchService implements ISearchService {
 
   /**
    * Search courses with filters and facets
-   * 
+   *
    * Implements caching with 5-minute TTL and cache stampede prevention
    */
   async searchCourses(
@@ -116,14 +113,12 @@ export class SearchService implements ISearchService {
       // Create cache key from search parameters
       const filtersKey = JSON.stringify({ filters, sort, includeFacets });
       const page = Math.floor((pagination.from || 0) / (pagination.size || 20)) + 1;
-      
+
       // Check cache first
-      const cached = await comprehensiveCacheService.getCachedSearchResults<SearchResults<CourseSearchResult>>(
-        query, 
-        filtersKey, 
-        page
-      );
-      
+      const cached = await comprehensiveCacheService.getCachedSearchResults<
+        SearchResults<CourseSearchResult>
+      >(query, filtersKey, page);
+
       if (cached) {
         return cached;
       }
@@ -155,7 +150,10 @@ export class SearchService implements ISearchService {
 
           // Transform results
           const transformedResults: SearchResults<CourseSearchResult> = {
-            documents: result.documents.map((doc: CourseSearchDocument & { _highlight?: Record<string, string[]> }) => this.transformCourseSearchDocument(doc)),
+            documents: result.documents.map(
+              (doc: CourseSearchDocument & { _highlight?: Record<string, string[]> }) =>
+                this.transformCourseSearchDocument(doc)
+            ),
             total: result.total,
             took: result.took,
             maxScore: result.maxScore,
@@ -179,7 +177,7 @@ export class SearchService implements ISearchService {
       if (error instanceof ExternalServiceError) {
         throw error;
       }
-      
+
       throw new ExternalServiceError(
         'SearchService',
         'Failed to search courses',
@@ -217,7 +215,10 @@ export class SearchService implements ISearchService {
 
       // Transform results
       return {
-        documents: searchResult.documents.map((doc: LessonSearchDocument & { _highlight?: Record<string, string[]> }) => this.transformLessonSearchDocument(doc)),
+        documents: searchResult.documents.map(
+          (doc: LessonSearchDocument & { _highlight?: Record<string, string[]> }) =>
+            this.transformLessonSearchDocument(doc)
+        ),
         total: searchResult.total,
         took: searchResult.took,
         maxScore: searchResult.maxScore,
@@ -226,7 +227,7 @@ export class SearchService implements ISearchService {
       if (error instanceof ExternalServiceError) {
         throw error;
       }
-      
+
       throw new ExternalServiceError(
         'SearchService',
         'Failed to search lessons',
@@ -237,7 +238,7 @@ export class SearchService implements ISearchService {
 
   /**
    * Get autocomplete suggestions for search queries
-   * 
+   *
    * Implements caching with 5-minute TTL for better performance
    */
   async autocomplete(query: string, limit: number = 10): Promise<string[]> {
@@ -263,21 +264,21 @@ export class SearchService implements ISearchService {
 
       // Extract unique suggestions from course titles and categories
       const suggestions = new Set<string>();
-      
-      searchResult.documents.forEach(course => {
+
+      searchResult.documents.forEach((course) => {
         // Add course title words
         const titleWords = course.title.toLowerCase().split(/\s+/);
-        titleWords.forEach(word => {
+        titleWords.forEach((word) => {
           if (word.startsWith(query.toLowerCase()) && word.length > query.length) {
             suggestions.add(word);
           }
         });
-        
+
         // Add category if it matches
         if (course.category.toLowerCase().includes(query.toLowerCase())) {
           suggestions.add(course.category);
         }
-        
+
         // Add instructor name if it matches
         if (course.instructorName.toLowerCase().includes(query.toLowerCase())) {
           suggestions.add(course.instructorName);
@@ -285,7 +286,7 @@ export class SearchService implements ISearchService {
       });
 
       const result = Array.from(suggestions).slice(0, limit);
-      
+
       // Cache the result
       await comprehensiveCacheService.cacheAutocomplete(query, result);
 
@@ -299,7 +300,7 @@ export class SearchService implements ISearchService {
 
   /**
    * Get trending search terms based on recent search activity
-   * 
+   *
    * Implements caching with 30-minute TTL for trending data
    */
   async getTrendingSearches(limit: number = 10): Promise<string[]> {
@@ -313,7 +314,7 @@ export class SearchService implements ISearchService {
       // This is a simplified implementation
       // In production, you would track search queries and their frequency
       // For now, return popular course categories and trending topics
-      
+
       const trendingTerms = [
         'javascript',
         'python',
@@ -333,7 +334,7 @@ export class SearchService implements ISearchService {
       ];
 
       const result = trendingTerms.slice(0, limit);
-      
+
       // Cache the result
       await comprehensiveCacheService.cacheTrendingSearches(result);
 
@@ -341,13 +342,10 @@ export class SearchService implements ISearchService {
     } catch (error) {
       console.error('Failed to get trending searches:', error);
       // Return fallback data
-      return [
-        'javascript',
-        'python',
-        'react',
-        'machine learning',
-        'web development',
-      ].slice(0, limit);
+      return ['javascript', 'python', 'react', 'machine learning', 'web development'].slice(
+        0,
+        limit
+      );
     }
   }
 
@@ -363,7 +361,7 @@ export class SearchService implements ISearchService {
       if (error instanceof ExternalServiceError) {
         throw error;
       }
-      
+
       throw new ExternalServiceError(
         'SearchService',
         'Failed to remove course from search index',
@@ -382,7 +380,7 @@ export class SearchService implements ISearchService {
       if (error instanceof ExternalServiceError) {
         throw error;
       }
-      
+
       throw new ExternalServiceError(
         'SearchService',
         'Failed to remove lesson from search index',
@@ -401,7 +399,7 @@ export class SearchService implements ISearchService {
       if (error instanceof ExternalServiceError) {
         throw error;
       }
-      
+
       throw new ExternalServiceError(
         'SearchService',
         'Failed to remove lessons from search index',
@@ -420,7 +418,7 @@ export class SearchService implements ISearchService {
       if (error instanceof ExternalServiceError) {
         throw error;
       }
-      
+
       throw new ExternalServiceError(
         'SearchService',
         'Failed to refresh search indices',
@@ -446,7 +444,7 @@ export class SearchService implements ISearchService {
   }> {
     try {
       const health = await this.searchRepository.checkHealth();
-      
+
       // Get index statistics if healthy
       let statistics;
       if (health.healthy) {
@@ -455,7 +453,7 @@ export class SearchService implements ISearchService {
             this.searchRepository.getIndexStats('courses'),
             this.searchRepository.getIndexStats('lessons'),
           ]);
-          
+
           statistics = {
             coursesIndexed: courseStats.documentCount,
             lessonsIndexed: lessonStats.documentCount,
@@ -490,7 +488,7 @@ export class SearchService implements ISearchService {
     // This would typically involve fetching additional data like instructor name,
     // aggregating lesson content, calculating popularity scores, etc.
     // For now, we'll create a basic transformation
-    
+
     return {
       id: course.id,
       title: course.title,
@@ -512,7 +510,9 @@ export class SearchService implements ISearchService {
       modules: [], // TODO: Fetch and transform modules
       lessonContent: '', // TODO: Aggregate lesson content
       searchBoost: 1.0,
-      popularityScore: course.enrollmentCount * (course.averageRating ? parseFloat(course.averageRating.toString()) : 1),
+      popularityScore:
+        course.enrollmentCount *
+        (course.averageRating ? parseFloat(course.averageRating.toString()) : 1),
       recentEnrollmentVelocity: 0, // TODO: Calculate based on recent enrollments
     };
   }
@@ -523,7 +523,7 @@ export class SearchService implements ISearchService {
   private transformLessonToSearchDocument(lesson: Lesson): LessonSearchDocument {
     // This would typically involve fetching course context data
     // For now, we'll create a basic transformation
-    
+
     return {
       id: lesson.id,
       moduleId: lesson.moduleId,
@@ -546,7 +546,9 @@ export class SearchService implements ISearchService {
   /**
    * Transform course search document to result
    */
-  private transformCourseSearchDocument(doc: CourseSearchDocument & { _highlight?: Record<string, string[]> }): CourseSearchResult {
+  private transformCourseSearchDocument(
+    doc: CourseSearchDocument & { _highlight?: Record<string, string[]> }
+  ): CourseSearchResult {
     return {
       ...doc,
       _highlight: doc._highlight,
@@ -556,7 +558,9 @@ export class SearchService implements ISearchService {
   /**
    * Transform lesson search document to result
    */
-  private transformLessonSearchDocument(doc: LessonSearchDocument & { _highlight?: Record<string, string[]> }): LessonSearchResult {
+  private transformLessonSearchDocument(
+    doc: LessonSearchDocument & { _highlight?: Record<string, string[]> }
+  ): LessonSearchResult {
     return {
       ...doc,
       _highlight: doc._highlight,
@@ -566,7 +570,9 @@ export class SearchService implements ISearchService {
   /**
    * Map sort field from service interface to repository interface
    */
-  private mapSortField(field: string): 'relevance' | 'popularity' | 'rating' | 'price' | 'created' | 'updated' {
+  private mapSortField(
+    field: string
+  ): 'relevance' | 'popularity' | 'rating' | 'price' | 'created' | 'updated' {
     switch (field) {
       case 'trending':
         return 'popularity'; // Map trending to popularity for now
@@ -606,8 +612,11 @@ export class SearchService implements ISearchService {
     }
 
     // Use the repository's faceted search method
-    const searchResult = await (this.searchRepository as any).searchCoursesWithFacets(query, options);
-    
+    const searchResult = await (this.searchRepository as any).searchCoursesWithFacets(
+      query,
+      options
+    );
+
     // Transform facets to the expected format
     const facets: SearchFacets = {
       categories: searchResult.facets.categories,
@@ -634,7 +643,7 @@ export class SearchService implements ISearchService {
    * Generate facets for course search using aggregations
    */
   private async generateCourseFacets(
-    _query: string, 
+    _query: string,
     _currentFilters: {
       category?: string[];
       difficulty?: string[];
@@ -648,7 +657,7 @@ export class SearchService implements ISearchService {
     // 1. Execute a separate aggregation query to get real facet counts
     // 2. Use the SearchQueryBuilder to build faceted queries
     // 3. Parse Elasticsearch aggregation results
-    
+
     // For now, return realistic static facets
     return {
       categories: [

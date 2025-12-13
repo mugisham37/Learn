@@ -1,6 +1,6 @@
 /**
  * Email Template Service
- * 
+ *
  * Manages email templates with dynamic data population
  * Supports template loading, caching, and variable substitution
  */
@@ -37,7 +37,7 @@ export interface RenderedTemplate {
 
 /**
  * Email template service for managing and rendering templates
- * 
+ *
  * Requirements:
  * - 10.2: Email template system with dynamic data population
  */
@@ -61,7 +61,7 @@ export class EmailTemplateService {
         '<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">',
         '  <h1 style="color: #2563eb;">Welcome to {{platformName}}!</h1>',
         '  <p>Hi {{userName}},</p>',
-        '  <p>Thank you for joining our learning platform. We\'re excited to have you on board!</p>',
+        "  <p>Thank you for joining our learning platform. We're excited to have you on board!</p>",
         '  <p>Your account has been successfully created with the email: <strong>{{userEmail}}</strong></p>',
         '  <p>To get started, please verify your email address by clicking the button below:</p>',
         '  <div style="text-align: center; margin: 30px 0;">',
@@ -69,26 +69,26 @@ export class EmailTemplateService {
         '      Verify Email Address',
         '    </a>',
         '  </div>',
-        '  <p>If the button doesn\'t work, you can copy and paste this link into your browser:</p>',
+        "  <p>If the button doesn't work, you can copy and paste this link into your browser:</p>",
         '  <p><a href="{{verificationUrl}}">{{verificationUrl}}</a></p>',
         '  <p>Best regards,<br>The {{platformName}} Team</p>',
-        '</div>'
+        '</div>',
       ].join('\n'),
       textContent: [
         'Welcome to {{platformName}}!',
         '',
         'Hi {{userName}},',
         '',
-        'Thank you for joining our learning platform. We\'re excited to have you on board!',
+        "Thank you for joining our learning platform. We're excited to have you on board!",
         '',
         'Your account has been successfully created with the email: {{userEmail}}',
         '',
         'To get started, please verify your email address by visiting: {{verificationUrl}}',
         '',
         'Best regards,',
-        'The {{platformName}} Team'
+        'The {{platformName}} Team',
       ].join('\n'),
-      variables: ['platformName', 'userName', 'userEmail', 'verificationUrl']
+      variables: ['platformName', 'userName', 'userEmail', 'verificationUrl'],
     });
 
     // Email verification
@@ -107,10 +107,10 @@ export class EmailTemplateService {
         '    </a>',
         '  </div>',
         '  <p>This link will expire in 24 hours.</p>',
-        '  <p>If you didn\'t request this verification, please ignore this email.</p>',
-        '</div>'
+        "  <p>If you didn't request this verification, please ignore this email.</p>",
+        '</div>',
       ].join('\n'),
-      variables: ['userName', 'verificationUrl']
+      variables: ['userName', 'verificationUrl'],
     });
 
     // Password reset
@@ -129,10 +129,10 @@ export class EmailTemplateService {
         '    </a>',
         '  </div>',
         '  <p>This link will expire in 1 hour.</p>',
-        '  <p>If you didn\'t request this reset, please ignore this email and your password will remain unchanged.</p>',
-        '</div>'
+        "  <p>If you didn't request this reset, please ignore this email and your password will remain unchanged.</p>",
+        '</div>',
       ].join('\n'),
-      variables: ['userName', 'resetUrl']
+      variables: ['userName', 'resetUrl'],
     });
 
     // Notification templates based on NotificationType
@@ -154,9 +154,9 @@ export class EmailTemplateService {
         '      Read Message',
         '    </a>',
         '  </div>',
-        '</div>'
+        '</div>',
       ].join('\n'),
-      variables: ['recipientName', 'senderName', 'messageSubject', 'messagePreview', 'messageUrl']
+      variables: ['recipientName', 'senderName', 'messageSubject', 'messagePreview', 'messageUrl'],
     });
 
     this.registerTemplate({
@@ -179,9 +179,16 @@ export class EmailTemplateService {
         '      View Assignment',
         '    </a>',
         '  </div>',
-        '</div>'
+        '</div>',
       ].join('\n'),
-      variables: ['studentName', 'assignmentTitle', 'courseName', 'dueDate', 'timeRemaining', 'assignmentUrl']
+      variables: [
+        'studentName',
+        'assignmentTitle',
+        'courseName',
+        'dueDate',
+        'timeRemaining',
+        'assignmentUrl',
+      ],
     });
 
     this.registerTemplate({
@@ -204,9 +211,9 @@ export class EmailTemplateService {
         '      View Details',
         '    </a>',
         '  </div>',
-        '</div>'
+        '</div>',
       ].join('\n'),
-      variables: ['studentName', 'assignmentTitle', 'courseName', 'grade', 'feedback', 'gradeUrl']
+      variables: ['studentName', 'assignmentTitle', 'courseName', 'grade', 'feedback', 'gradeUrl'],
     });
 
     this.registerTemplate({
@@ -217,7 +224,7 @@ export class EmailTemplateService {
         '<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">',
         '  <h1 style="color: #2563eb;">Course Update</h1>',
         '  <p>Hi {{studentName}},</p>',
-        '  <p>There\'s been an update in your course:</p>',
+        "  <p>There's been an update in your course:</p>",
         '  <div style="background-color: #dbeafe; padding: 20px; border-radius: 6px; margin: 20px 0;">',
         '    <p><strong>Course:</strong> {{courseName}}</p>',
         '    <p><strong>Update:</strong> {{updateDescription}}</p>',
@@ -227,9 +234,9 @@ export class EmailTemplateService {
         '      View Course',
         '    </a>',
         '  </div>',
-        '</div>'
+        '</div>',
       ].join('\n'),
-      variables: ['studentName', 'courseName', 'updateDescription', 'courseUrl']
+      variables: ['studentName', 'courseName', 'updateDescription', 'courseUrl'],
     });
 
     this.registerTemplate({
@@ -251,9 +258,15 @@ export class EmailTemplateService {
         '      View Announcement',
         '    </a>',
         '  </div>',
-        '</div>'
+        '</div>',
       ].join('\n'),
-      variables: ['studentName', 'courseName', 'announcementTitle', 'announcementContent', 'announcementUrl']
+      variables: [
+        'studentName',
+        'courseName',
+        'announcementTitle',
+        'announcementContent',
+        'announcementUrl',
+      ],
     });
 
     this.registerTemplate({
@@ -264,7 +277,7 @@ export class EmailTemplateService {
         '<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">',
         '  <h1 style="color: #059669;">New Discussion Reply</h1>',
         '  <p>Hi {{recipientName}},</p>',
-        '  <p>{{replyAuthor}} replied to a discussion you\'re following:</p>',
+        "  <p>{{replyAuthor}} replied to a discussion you're following:</p>",
         '  <div style="background-color: #ecfdf5; padding: 20px; border-radius: 6px; margin: 20px 0;">',
         '    <p><strong>Thread:</strong> {{threadTitle}}</p>',
         '    <p><strong>Course:</strong> {{courseName}}</p>',
@@ -275,9 +288,16 @@ export class EmailTemplateService {
         '      View Discussion',
         '    </a>',
         '  </div>',
-        '</div>'
+        '</div>',
       ].join('\n'),
-      variables: ['recipientName', 'replyAuthor', 'threadTitle', 'courseName', 'replyPreview', 'discussionUrl']
+      variables: [
+        'recipientName',
+        'replyAuthor',
+        'threadTitle',
+        'courseName',
+        'replyPreview',
+        'discussionUrl',
+      ],
     });
 
     this.registerTemplate({
@@ -300,9 +320,16 @@ export class EmailTemplateService {
         '      Start Learning',
         '    </a>',
         '  </div>',
-        '</div>'
+        '</div>',
       ].join('\n'),
-      variables: ['studentName', 'courseName', 'instructorName', 'startDate', 'paymentAmount', 'courseUrl']
+      variables: [
+        'studentName',
+        'courseName',
+        'instructorName',
+        'startDate',
+        'paymentAmount',
+        'courseUrl',
+      ],
     });
 
     this.registerTemplate({
@@ -325,9 +352,16 @@ export class EmailTemplateService {
         '    </a>',
         '  </div>',
         '  <p>You can verify this certificate at: <a href="{{verificationUrl}}">{{verificationUrl}}</a></p>',
-        '</div>'
+        '</div>',
       ].join('\n'),
-      variables: ['studentName', 'courseName', 'completionDate', 'certificateId', 'certificateUrl', 'verificationUrl']
+      variables: [
+        'studentName',
+        'courseName',
+        'completionDate',
+        'certificateId',
+        'certificateUrl',
+        'verificationUrl',
+      ],
     });
 
     this.registerTemplate({
@@ -352,9 +386,17 @@ export class EmailTemplateService {
         '      Access Course',
         '    </a>',
         '  </div>',
-        '</div>'
+        '</div>',
       ].join('\n'),
-      variables: ['studentName', 'courseName', 'amount', 'paymentMethod', 'transactionId', 'paymentDate', 'courseUrl']
+      variables: [
+        'studentName',
+        'courseName',
+        'amount',
+        'paymentMethod',
+        'transactionId',
+        'paymentDate',
+        'courseUrl',
+      ],
     });
 
     this.registerTemplate({
@@ -375,9 +417,16 @@ export class EmailTemplateService {
         '  </div>',
         '  <p>The refund will appear in your original payment method within 5-10 business days.</p>',
         '  <p>If you have any questions, please contact our support team.</p>',
-        '</div>'
+        '</div>',
       ].join('\n'),
-      variables: ['studentName', 'courseName', 'refundAmount', 'originalAmount', 'refundId', 'refundDate']
+      variables: [
+        'studentName',
+        'courseName',
+        'refundAmount',
+        'originalAmount',
+        'refundId',
+        'refundDate',
+      ],
     });
   }
 
@@ -401,16 +450,16 @@ export class EmailTemplateService {
   public getTemplateIdForNotificationType(notificationType: NotificationType): string {
     // Map notification types to template IDs
     const mapping: Record<NotificationType, string> = {
-      'new_message': 'new_message',
-      'assignment_due': 'assignment_due',
-      'grade_posted': 'grade_posted',
-      'course_update': 'course_update',
-      'announcement': 'announcement',
-      'discussion_reply': 'discussion_reply',
-      'enrollment_confirmed': 'enrollment_confirmed',
-      'certificate_issued': 'certificate_issued',
-      'payment_received': 'payment_received',
-      'refund_processed': 'refund_processed'
+      new_message: 'new_message',
+      assignment_due: 'assignment_due',
+      grade_posted: 'grade_posted',
+      course_update: 'course_update',
+      announcement: 'announcement',
+      discussion_reply: 'discussion_reply',
+      enrollment_confirmed: 'enrollment_confirmed',
+      certificate_issued: 'certificate_issued',
+      payment_received: 'payment_received',
+      refund_processed: 'refund_processed',
     };
 
     return mapping[notificationType] || 'default';
@@ -429,14 +478,14 @@ export class EmailTemplateService {
     // In production, consider using a more robust template engine like Handlebars
     const subject = this.substituteVariables(template.subject, data);
     const htmlContent = this.substituteVariables(template.htmlContent, data);
-    const textContent = template.textContent 
+    const textContent = template.textContent
       ? this.substituteVariables(template.textContent, data)
       : undefined;
 
     return {
       subject,
       htmlContent,
-      textContent
+      textContent,
     };
   }
 
@@ -461,19 +510,22 @@ export class EmailTemplateService {
   /**
    * Validate template data against template variables
    */
-  public validateTemplateData(templateId: string, data: TemplateData): { valid: boolean; missingVariables: string[] } {
+  public validateTemplateData(
+    templateId: string,
+    data: TemplateData
+  ): { valid: boolean; missingVariables: string[] } {
     const template = this.getTemplate(templateId);
     if (!template) {
       return { valid: false, missingVariables: [] };
     }
 
-    const missingVariables = template.variables.filter(variable => 
-      data[variable] === undefined || data[variable] === null
+    const missingVariables = template.variables.filter(
+      (variable) => data[variable] === undefined || data[variable] === null
     );
 
     return {
       valid: missingVariables.length === 0,
-      missingVariables
+      missingVariables,
     };
   }
 }

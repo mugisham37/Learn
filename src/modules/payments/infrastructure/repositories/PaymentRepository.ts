@@ -1,10 +1,10 @@
 /**
  * Payment Repository Implementation
- * 
+ *
  * Implements payment data access operations with Drizzle ORM queries,
  * Redis caching with 5-minute TTL, and cache invalidation on updates.
  * Handles database errors and maps them to domain errors.
- * 
+ *
  * Requirements: 11.1, 11.5
  */
 
@@ -12,16 +12,18 @@ import { eq, and, desc, gte, lte, count, sum } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
 import { getWriteDb, getReadDb } from '../../../../infrastructure/database/index.js';
-import { 
-  payments, 
-  Payment, 
-  NewPayment 
-} from '../../../../infrastructure/database/schema/payments.schema.js';
-import { cache, buildCacheKey, CachePrefix, CacheTTL } from '../../../../infrastructure/cache/index.js';
 import {
-  DatabaseError,
-  NotFoundError,
-} from '../../../../shared/errors/index.js';
+  payments,
+  Payment,
+  NewPayment,
+} from '../../../../infrastructure/database/schema/payments.schema.js';
+import {
+  cache,
+  buildCacheKey,
+  CachePrefix,
+  CacheTTL,
+} from '../../../../infrastructure/cache/index.js';
+import { DatabaseError, NotFoundError } from '../../../../shared/errors/index.js';
 import {
   IPaymentRepository,
   CreatePaymentDTO,
@@ -33,7 +35,7 @@ import {
 
 /**
  * Payment Repository Implementation
- * 
+ *
  * Provides data access methods for payment entities with:
  * - Drizzle ORM for type-safe queries
  * - Redis caching with 5-minute TTL
@@ -80,7 +82,7 @@ export class PaymentRepository implements IPaymentRepository {
 
   /**
    * Creates a new payment in the database
-   * 
+   *
    * @param data - Payment creation data
    * @returns The created payment
    * @throws DatabaseError if database operation fails
@@ -101,16 +103,10 @@ export class PaymentRepository implements IPaymentRepository {
       };
 
       // Insert payment into database
-      const [createdPayment] = await this.writeDb
-        .insert(payments)
-        .values(newPayment)
-        .returning();
+      const [createdPayment] = await this.writeDb.insert(payments).values(newPayment).returning();
 
       if (!createdPayment) {
-        throw new DatabaseError(
-          'Failed to create payment',
-          'insert'
-        );
+        throw new DatabaseError('Failed to create payment', 'insert');
       }
 
       return createdPayment;
@@ -131,10 +127,10 @@ export class PaymentRepository implements IPaymentRepository {
 
   /**
    * Finds a payment by its unique ID
-   * 
+   *
    * Implements caching with 5-minute TTL.
    * Uses read database for query optimization.
-   * 
+   *
    * @param id - Payment ID
    * @returns The payment if found, null otherwise
    * @throws DatabaseError if database operation fails
@@ -144,7 +140,7 @@ export class PaymentRepository implements IPaymentRepository {
       // Check cache first
       const cacheKey = this.getPaymentCacheKey(id);
       const cachedPayment = await cache.get<Payment>(cacheKey);
-      
+
       if (cachedPayment) {
         return cachedPayment;
       }
@@ -175,9 +171,9 @@ export class PaymentRepository implements IPaymentRepository {
 
   /**
    * Finds a payment by Stripe payment intent ID
-   * 
+   *
    * Implements caching with 5-minute TTL.
-   * 
+   *
    * @param stripePaymentIntentId - Stripe payment intent ID
    * @returns The payment if found, null otherwise
    * @throws DatabaseError if database operation fails
@@ -187,7 +183,7 @@ export class PaymentRepository implements IPaymentRepository {
       // Check cache first
       const cacheKey = this.getPaymentStripeIntentCacheKey(stripePaymentIntentId);
       const cachedPayment = await cache.get<Payment>(cacheKey);
-      
+
       if (cachedPayment) {
         return cachedPayment;
       }
@@ -222,9 +218,9 @@ export class PaymentRepository implements IPaymentRepository {
 
   /**
    * Finds a payment by Stripe checkout session ID
-   * 
+   *
    * Implements caching with 5-minute TTL.
-   * 
+   *
    * @param stripeCheckoutSessionId - Stripe checkout session ID
    * @returns The payment if found, null otherwise
    * @throws DatabaseError if database operation fails
@@ -234,7 +230,7 @@ export class PaymentRepository implements IPaymentRepository {
       // Check cache first
       const cacheKey = this.getPaymentStripeSessionCacheKey(stripeCheckoutSessionId);
       const cachedPayment = await cache.get<Payment>(cacheKey);
-      
+
       if (cachedPayment) {
         return cachedPayment;
       }
@@ -269,9 +265,9 @@ export class PaymentRepository implements IPaymentRepository {
 
   /**
    * Updates a payment's data
-   * 
+   *
    * Invalidates all related cache entries after successful update.
-   * 
+   *
    * @param id - Payment ID
    * @param data - Update data
    * @returns The updated payment
@@ -300,10 +296,7 @@ export class PaymentRepository implements IPaymentRepository {
         .returning();
 
       if (!updatedPayment) {
-        throw new DatabaseError(
-          'Failed to update payment',
-          'update'
-        );
+        throw new DatabaseError('Failed to update payment', 'update');
       }
 
       // Invalidate all cache entries for this payment
@@ -318,10 +311,7 @@ export class PaymentRepository implements IPaymentRepository {
       return updatedPayment;
     } catch (error) {
       // Re-throw known errors
-      if (
-        error instanceof NotFoundError ||
-        error instanceof DatabaseError
-      ) {
+      if (error instanceof NotFoundError || error instanceof DatabaseError) {
         throw error;
       }
 
@@ -336,20 +326,27 @@ export class PaymentRepository implements IPaymentRepository {
 
   /**
    * Gets payment history for a user with pagination
-   * 
+   *
    * Implements caching for frequently accessed payment histories.
-   * 
+   *
    * @param userId - User ID
    * @param pagination - Pagination parameters
    * @returns Paginated payment history
    * @throws DatabaseError if database operation fails
    */
-  async getPaymentHistory(userId: string, pagination: PaginationDTO): Promise<PaginatedResult<Payment>> {
+  async getPaymentHistory(
+    userId: string,
+    pagination: PaginationDTO
+  ): Promise<PaginatedResult<Payment>> {
     try {
       // Check cache first
-      const cacheKey = this.getUserPaymentHistoryCacheKey(userId, pagination.page, pagination.limit);
+      const cacheKey = this.getUserPaymentHistoryCacheKey(
+        userId,
+        pagination.page,
+        pagination.limit
+      );
       const cachedResult = await cache.get<PaginatedResult<Payment>>(cacheKey);
-      
+
       if (cachedResult) {
         return cachedResult;
       }
@@ -396,14 +393,14 @@ export class PaymentRepository implements IPaymentRepository {
 
   /**
    * Gets payment history with filters and pagination
-   * 
+   *
    * @param filter - Filter criteria
    * @param pagination - Pagination parameters
    * @returns Paginated filtered payment history
    * @throws DatabaseError if database operation fails
    */
   async getFilteredPaymentHistory(
-    filter: PaymentHistoryFilter, 
+    filter: PaymentHistoryFilter,
     pagination: PaginationDTO
   ): Promise<PaginatedResult<Payment>> {
     try {
@@ -411,23 +408,23 @@ export class PaymentRepository implements IPaymentRepository {
 
       // Build where conditions
       const conditions = [];
-      
+
       if (filter.userId) {
         conditions.push(eq(payments.userId, filter.userId));
       }
-      
+
       if (filter.courseId) {
         conditions.push(eq(payments.courseId, filter.courseId));
       }
-      
+
       if (filter.status) {
         conditions.push(eq(payments.status, filter.status));
       }
-      
+
       if (filter.startDate) {
         conditions.push(gte(payments.createdAt, filter.startDate));
       }
-      
+
       if (filter.endDate) {
         conditions.push(lte(payments.createdAt, filter.endDate));
       }
@@ -469,7 +466,7 @@ export class PaymentRepository implements IPaymentRepository {
 
   /**
    * Gets payments by status
-   * 
+   *
    * @param status - Payment status
    * @param pagination - Pagination parameters
    * @returns Paginated payments with specified status
@@ -517,7 +514,7 @@ export class PaymentRepository implements IPaymentRepository {
 
   /**
    * Gets total revenue for a course
-   * 
+   *
    * @param courseId - Course ID
    * @returns Total revenue amount
    * @throws DatabaseError if database operation fails
@@ -527,12 +524,7 @@ export class PaymentRepository implements IPaymentRepository {
       const [result] = await this.readDb
         .select({ total: sum(payments.amount) })
         .from(payments)
-        .where(
-          and(
-            eq(payments.courseId, courseId),
-            eq(payments.status, 'succeeded')
-          )
-        );
+        .where(and(eq(payments.courseId, courseId), eq(payments.status, 'succeeded')));
 
       return result?.total || '0';
     } catch (error) {
@@ -546,7 +538,7 @@ export class PaymentRepository implements IPaymentRepository {
 
   /**
    * Gets total revenue for a user (instructor)
-   * 
+   *
    * @param userId - User ID
    * @returns Total revenue amount
    * @throws DatabaseError if database operation fails
@@ -556,12 +548,7 @@ export class PaymentRepository implements IPaymentRepository {
       const [result] = await this.readDb
         .select({ total: sum(payments.amount) })
         .from(payments)
-        .where(
-          and(
-            eq(payments.userId, userId),
-            eq(payments.status, 'succeeded')
-          )
-        );
+        .where(and(eq(payments.userId, userId), eq(payments.status, 'succeeded')));
 
       return result?.total || '0';
     } catch (error) {
@@ -576,7 +563,7 @@ export class PaymentRepository implements IPaymentRepository {
   /**
    * Invalidates cache for a specific payment
    * Should be called after any update operation
-   * 
+   *
    * @param id - Payment ID
    * @returns void
    */
@@ -592,7 +579,7 @@ export class PaymentRepository implements IPaymentRepository {
 
   /**
    * Invalidates cache for a payment by Stripe intent ID
-   * 
+   *
    * @param stripePaymentIntentId - Stripe payment intent ID
    * @returns void
    */
@@ -601,13 +588,16 @@ export class PaymentRepository implements IPaymentRepository {
       const cacheKey = this.getPaymentStripeIntentCacheKey(stripePaymentIntentId);
       await cache.delete(cacheKey);
     } catch (error) {
-      console.error(`Failed to invalidate cache for payment Stripe intent ${stripePaymentIntentId}:`, error);
+      console.error(
+        `Failed to invalidate cache for payment Stripe intent ${stripePaymentIntentId}:`,
+        error
+      );
     }
   }
 
   /**
    * Invalidates cache for a payment by Stripe session ID
-   * 
+   *
    * @param stripeCheckoutSessionId - Stripe checkout session ID
    * @returns void
    */
@@ -616,7 +606,10 @@ export class PaymentRepository implements IPaymentRepository {
       const cacheKey = this.getPaymentStripeSessionCacheKey(stripeCheckoutSessionId);
       await cache.delete(cacheKey);
     } catch (error) {
-      console.error(`Failed to invalidate cache for payment Stripe session ${stripeCheckoutSessionId}:`, error);
+      console.error(
+        `Failed to invalidate cache for payment Stripe session ${stripeCheckoutSessionId}:`,
+        error
+      );
     }
   }
 }

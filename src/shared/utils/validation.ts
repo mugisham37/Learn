@@ -1,9 +1,9 @@
 /**
  * Validation Utilities
- * 
+ *
  * Provides validation functions for email, password strength, file types,
  * URLs, and JSON Schema validation helpers.
- * 
+ *
  * Requirements: 1.1, 1.3, 13.1
  */
 
@@ -47,17 +47,18 @@ export interface URLValidationResult {
  * Standard email regex pattern
  * Validates format: local-part@domain.tld
  * Requires at least one dot in domain part
- * 
+ *
  * Requirements: 1.1
  */
-const EMAIL_REGEX = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
+const EMAIL_REGEX =
+  /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
 
 /**
  * Validates email format using standard regex patterns
- * 
+ *
  * @param email - Email address to validate
  * @returns Validation result with valid flag and optional error message
- * 
+ *
  * Requirements: 1.1
  */
 export function validateEmail(email: string): EmailValidationResult {
@@ -103,10 +104,10 @@ export function validateEmail(email: string): EmailValidationResult {
  * - At least one uppercase letter
  * - At least one lowercase letter
  * - At least one number
- * 
+ *
  * @param password - Password to validate
  * @returns Validation result with valid flag, errors array, and strength rating
- * 
+ *
  * Requirements: 1.3
  */
 export function validatePasswordStrength(password: string): PasswordValidationResult {
@@ -202,11 +203,11 @@ export const MAX_FILE_SIZES = {
 
 /**
  * Validates file type against allowed types
- * 
+ *
  * @param mimeType - MIME type of the file
  * @param allowedTypes - Array of allowed MIME types
  * @returns Validation result with valid flag and errors array
- * 
+ *
  * Requirements: 13.1
  */
 export function validateFileType(
@@ -236,11 +237,11 @@ export function validateFileType(
 
 /**
  * Validates file size against maximum allowed size
- * 
+ *
  * @param fileSizeBytes - Size of the file in bytes
  * @param maxSizeBytes - Maximum allowed size in bytes
  * @returns Validation result with valid flag and errors array
- * 
+ *
  * Requirements: 13.1
  */
 export function validateFileSize(
@@ -277,13 +278,13 @@ export function validateFileSize(
 
 /**
  * Validates both file type and size
- * 
+ *
  * @param mimeType - MIME type of the file
  * @param fileSizeBytes - Size of the file in bytes
  * @param allowedTypes - Array of allowed MIME types
  * @param maxSizeBytes - Maximum allowed size in bytes
  * @returns Validation result with valid flag and errors array
- * 
+ *
  * Requirements: 13.1
  */
 export function validateFile(
@@ -303,11 +304,11 @@ export function validateFile(
 
 /**
  * Validates and sanitizes URL
- * 
+ *
  * @param url - URL to validate
  * @param allowedProtocols - Array of allowed protocols (default: ['http:', 'https:'])
  * @returns Validation result with valid flag, sanitized URL, and optional error
- * 
+ *
  * Requirements: 13.1
  */
 export function validateURL(
@@ -366,10 +367,10 @@ export function validateURL(
 
 /**
  * Sanitizes URL by removing potentially dangerous components
- * 
+ *
  * @param url - URL to sanitize
  * @returns Sanitized URL or null if invalid
- * 
+ *
  * Requirements: 13.1
  */
 export function sanitizeURL(url: string): string | null {
@@ -379,11 +380,11 @@ export function sanitizeURL(url: string): string | null {
 
 /**
  * JSON Schema validation helper using Zod
- * 
+ *
  * @param schema - Zod schema to validate against
  * @param data - Data to validate
  * @returns Validation result with success flag, data, and optional errors
- * 
+ *
  * Requirements: 13.1
  */
 export function validateWithSchema<T>(
@@ -416,10 +417,10 @@ export function validateWithSchema<T>(
 
 /**
  * Creates a Zod schema validator function
- * 
+ *
  * @param schema - Zod schema to validate against
  * @returns Validator function that throws on validation failure
- * 
+ *
  * Requirements: 13.1
  */
 export function createSchemaValidator<T>(schema: ZodSchema<T>) {
@@ -430,10 +431,10 @@ export function createSchemaValidator<T>(schema: ZodSchema<T>) {
 
 /**
  * Creates a safe Zod schema validator function
- * 
+ *
  * @param schema - Zod schema to validate against
  * @returns Validator function that returns validation result
- * 
+ *
  * Requirements: 13.1
  */
 export function createSafeSchemaValidator<T>(schema: ZodSchema<T>) {

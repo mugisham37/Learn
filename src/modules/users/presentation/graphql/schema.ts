@@ -1,9 +1,9 @@
 /**
  * GraphQL Schema for Users Module
- * 
+ *
  * Defines GraphQL types, inputs, and schema for user authentication,
  * authorization, and profile management operations.
- * 
+ *
  * Requirements: 21.1, 21.2, 21.3
  */
 
@@ -16,7 +16,7 @@ export const userTypeDefs = gql`
   # Scalar types
   "Custom scalar type for date and time values in ISO 8601 format"
   scalar DateTime
-  
+
   "Custom scalar type for arbitrary JSON data"
   scalar JSON
 
@@ -346,7 +346,7 @@ export const userTypeDefs = gql`
     # Authentication mutations
     """
     Register a new user account with email, password, and role selection.
-    
+
     Example:
     mutation {
       register(input: {
@@ -366,14 +366,14 @@ export const userTypeDefs = gql`
         }
       }
     }
-    
+
     Requirements: 1.1, 1.2, 1.3
     """
     register(input: RegisterInput!): AuthPayload!
-    
+
     """
     Authenticate user with email and password credentials.
-    
+
     Example:
     mutation {
       login(input: {
@@ -389,14 +389,14 @@ export const userTypeDefs = gql`
         }
       }
     }
-    
+
     Requirements: 1.6
     """
     login(input: LoginInput!): AuthPayload!
-    
+
     """
     Obtain new access token using valid refresh token.
-    
+
     Example:
     mutation {
       refreshToken(input: {
@@ -406,57 +406,57 @@ export const userTypeDefs = gql`
         refreshToken
       }
     }
-    
+
     Requirements: 1.7
     """
     refreshToken(input: RefreshTokenInput!): RefreshTokenPayload!
-    
+
     """
     Log out user and invalidate refresh token.
-    
+
     Example:
     mutation {
       logout(input: {
         refreshToken: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
       })
     }
-    
+
     Requirements: 1.7
     """
     logout(input: LogoutInput): Boolean!
-    
+
     # Email verification and password reset
     """
     Verify user email address using verification token sent via email.
-    
+
     Example:
     mutation {
       verifyEmail(input: {
         token: "abc123def456"
       })
     }
-    
+
     Requirements: 1.5
     """
     verifyEmail(input: VerifyEmailInput!): Boolean!
-    
+
     """
     Request password reset email with reset token.
-    
+
     Example:
     mutation {
       requestPasswordReset(input: {
         email: "user@example.com"
       })
     }
-    
+
     Requirements: 1.5
     """
     requestPasswordReset(input: RequestPasswordResetInput!): Boolean!
-    
+
     """
     Reset password using valid reset token and new password.
-    
+
     Example:
     mutation {
       resetPassword(input: {
@@ -464,15 +464,15 @@ export const userTypeDefs = gql`
         newPassword: "NewSecurePass123!"
       })
     }
-    
+
     Requirements: 1.5
     """
     resetPassword(input: ResetPasswordInput!): Boolean!
-    
+
     # Profile management
     """
     Update user profile information including name, bio, and preferences.
-    
+
     Example:
     mutation {
       updateProfile(input: {
@@ -485,14 +485,14 @@ export const userTypeDefs = gql`
         timezone
       }
     }
-    
+
     Requirements: 10.7
     """
     updateProfile(input: UpdateProfileInput!): UserProfile!
-    
+
     """
     Update notification preferences across all channels and event types.
-    
+
     Example:
     mutation {
       updateNotificationPreferences(input: {
@@ -512,7 +512,7 @@ export const userTypeDefs = gql`
         }
       }
     }
-    
+
     Requirements: 10.7
     """
     updateNotificationPreferences(input: UpdateNotificationPreferencesInput!): UserProfile!
@@ -523,7 +523,7 @@ export const userTypeDefs = gql`
     """
     Get current authenticated user's complete profile information.
     Requires valid authentication token in Authorization header.
-    
+
     Example:
     query {
       me {
@@ -544,17 +544,17 @@ export const userTypeDefs = gql`
         }
       }
     }
-    
+
     Requirements: 21.2, 21.7
     """
     me: User!
-    
+
     """
     Get user information by ID. Requires appropriate permissions:
     - Users can view their own profile
     - Educators can view enrolled students' profiles
     - Admins can view any user profile
-    
+
     Example:
     query {
       user(id: "123e4567-e89b-12d3-a456-426614174000") {
@@ -567,7 +567,7 @@ export const userTypeDefs = gql`
         }
       }
     }
-    
+
     Requirements: 21.2, 2.4
     """
     user(id: ID!): User

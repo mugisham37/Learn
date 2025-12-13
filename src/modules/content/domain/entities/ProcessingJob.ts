@@ -1,9 +1,9 @@
 /**
  * Processing Job Domain Entity
- * 
+ *
  * Represents an asynchronous processing job for video transcoding and file processing.
  * Encapsulates business logic for job management, retry logic, and status tracking.
- * 
+ *
  * Requirements:
  * - 4.2: MediaConvert job tracking
  * - 4.3: Transcoding job status and retry logic
@@ -12,26 +12,31 @@
 
 import { ProcessingStatus } from '../../../../infrastructure/database/schema/content.schema.js';
 
-export type JobType = 'video_transcode' | 'image_process' | 'document_convert' | 'audio_process' | 'thumbnail_generate';
+export type JobType =
+  | 'video_transcode'
+  | 'image_process'
+  | 'document_convert'
+  | 'audio_process'
+  | 'thumbnail_generate';
 
 export interface JobConfiguration {
   // Video transcoding configuration
   outputFormats?: string[]; // ['hls', 'mp4', 'webm']
   resolutions?: string[]; // ['1080p', '720p', '480p', '360p']
   bitrates?: Record<string, number>; // resolution -> bitrate mapping
-  
+
   // Image processing configuration
   thumbnailSizes?: Array<{ width: number; height: number; quality?: number }>;
   compressionQuality?: number;
-  
+
   // Document processing configuration
   extractText?: boolean;
   generateThumbnails?: boolean;
-  
+
   // Audio processing configuration
   audioFormats?: string[]; // ['mp3', 'aac', 'ogg']
   audioBitrates?: number[];
-  
+
   // General configuration
   priority?: number;
   timeout?: number; // seconds
@@ -40,7 +45,7 @@ export interface JobConfiguration {
     backoffMultiplier: number;
     initialDelay: number; // seconds
   };
-  
+
   [key: string]: any;
 }
 
@@ -51,20 +56,20 @@ export interface JobResult {
   thumbnailUrl?: string;
   previewUrl?: string;
   durationSeconds?: number;
-  
+
   // Image processing results
   thumbnails?: Array<{ size: string; url: string }>;
   compressedUrl?: string;
-  
+
   // Document processing results
   extractedText?: string;
   pageCount?: number;
   documentThumbnails?: string[];
-  
+
   // Audio processing results
   audioUrls?: Record<string, string>; // format -> url
   waveformData?: number[];
-  
+
   // General results
   outputFiles?: Array<{
     type: string;
@@ -72,13 +77,13 @@ export interface JobResult {
     size: number;
     format: string;
   }>;
-  
+
   [key: string]: any;
 }
 
 /**
  * Processing Job Domain Entity
- * 
+ *
  * Encapsulates processing job business logic and state management
  */
 export class ProcessingJob {
@@ -199,9 +204,7 @@ export class ProcessingJob {
    * Check if job is ready for retry
    */
   isReadyForRetry(): boolean {
-    return this.canRetry() && 
-           this.nextRetryAt !== null && 
-           this.nextRetryAt <= new Date();
+    return this.canRetry() && this.nextRetryAt !== null && this.nextRetryAt <= new Date();
   }
 
   /**
@@ -215,8 +218,7 @@ export class ProcessingJob {
    * Check if job is ready to execute
    */
   isReadyToExecute(): boolean {
-    return this.isPending() && 
-           (this.scheduledFor === null || this.scheduledFor <= new Date());
+    return this.isPending() && (this.scheduledFor === null || this.scheduledFor <= new Date());
   }
 
   /**
@@ -270,12 +272,13 @@ export class ProcessingJob {
     const retryPolicy = this.jobConfiguration.retryPolicy || {
       maxAttempts: this.maxAttempts,
       backoffMultiplier: 2,
-      initialDelay: 60 // 1 minute
+      initialDelay: 60, // 1 minute
     };
 
-    const delay = retryPolicy.initialDelay * Math.pow(retryPolicy.backoffMultiplier, this.attemptCount);
+    const delay =
+      retryPolicy.initialDelay * Math.pow(retryPolicy.backoffMultiplier, this.attemptCount);
     const jitter = Math.random() * 0.1 * delay; // Add 10% jitter
-    
+
     return new Date(Date.now() + (delay + jitter) * 1000);
   }
 
@@ -297,10 +300,10 @@ export class ProcessingJob {
    */
   hasExceededTimeout(): boolean {
     if (!this.isInProgress() || !this.startedAt) return false;
-    
+
     const timeout = this.jobConfiguration.timeout || 3600; // Default 1 hour
     const elapsed = (Date.now() - this.startedAt.getTime()) / 1000;
-    
+
     return elapsed > timeout;
   }
 
@@ -327,12 +330,18 @@ export class ProcessingJob {
    */
   getJobTypeDescription(): string {
     switch (this.jobType) {
-      case 'video_transcode': return 'Video Transcoding';
-      case 'image_process': return 'Image Processing';
-      case 'document_convert': return 'Document Conversion';
-      case 'audio_process': return 'Audio Processing';
-      case 'thumbnail_generate': return 'Thumbnail Generation';
-      default: return 'Unknown Job Type';
+      case 'video_transcode':
+        return 'Video Transcoding';
+      case 'image_process':
+        return 'Image Processing';
+      case 'document_convert':
+        return 'Document Conversion';
+      case 'audio_process':
+        return 'Audio Processing';
+      case 'thumbnail_generate':
+        return 'Thumbnail Generation';
+      default:
+        return 'Unknown Job Type';
     }
   }
 
@@ -347,7 +356,7 @@ export class ProcessingJob {
     errorCode?: string
   ): ProcessingJob {
     const now = new Date();
-    
+
     return new ProcessingJob(
       this.id,
       this.videoAssetId,
@@ -359,7 +368,9 @@ export class ProcessingJob {
       status,
       progress !== undefined ? progress : this.progress,
       status === 'in_progress' && !this.startedAt ? now : this.startedAt,
-      (status === 'completed' || status === 'failed' || status === 'cancelled') ? now : this.completedAt,
+      status === 'completed' || status === 'failed' || status === 'cancelled'
+        ? now
+        : this.completedAt,
       result || this.result,
       errorMessage || this.errorMessage,
       errorCode || this.errorCode,

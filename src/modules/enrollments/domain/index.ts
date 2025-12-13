@@ -1,6 +1,6 @@
 /**
  * Enrollments Domain Layer
- * 
+ *
  * Exports all domain components for the enrollments module.
  * Includes entities, value objects, and domain services.
  */
@@ -16,5 +16,5 @@ export {
   CourseProgressUpdatedEvent,
   CourseCompletedEvent,
   CertificateGeneratedEvent,
-  EnrollmentWithdrawnEvent
+  EnrollmentWithdrawnEvent,
 } from './events/EnrollmentEvents.js';

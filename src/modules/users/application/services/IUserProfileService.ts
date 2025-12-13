@@ -1,9 +1,9 @@
 /**
  * User Profile Service Interface
- * 
+ *
  * Defines the contract for user profile management operations.
  * Handles profile updates, avatar uploads, and notification preferences.
- * 
+ *
  * Requirements: 10.7
  */
 
@@ -39,14 +39,14 @@ export interface AvatarUploadResult {
 
 /**
  * User Profile Service Interface
- * 
+ *
  * Provides methods for managing user profiles, including avatar uploads
  * and notification preference management.
  */
 export interface IUserProfileService {
   /**
    * Gets a user's profile by user ID
-   * 
+   *
    * @param userId - User ID
    * @returns The user profile if found, null otherwise
    * @throws NotFoundError if user doesn't exist
@@ -56,7 +56,7 @@ export interface IUserProfileService {
 
   /**
    * Updates a user's profile information
-   * 
+   *
    * @param userId - User ID
    * @param data - Profile update data
    * @returns The updated user profile
@@ -69,7 +69,7 @@ export interface IUserProfileService {
   /**
    * Uploads and processes a user's avatar image
    * Handles image optimization and thumbnail generation
-   * 
+   *
    * @param userId - User ID
    * @param upload - Avatar upload data
    * @returns Avatar upload result with URLs
@@ -81,7 +81,7 @@ export interface IUserProfileService {
 
   /**
    * Gets a user's notification preferences
-   * 
+   *
    * @param userId - User ID
    * @returns The user's notification preferences
    * @throws NotFoundError if user doesn't exist
@@ -91,7 +91,7 @@ export interface IUserProfileService {
 
   /**
    * Updates a user's notification preferences
-   * 
+   *
    * @param userId - User ID
    * @param preferences - New notification preferences
    * @returns The updated user profile
@@ -99,11 +99,14 @@ export interface IUserProfileService {
    * @throws ValidationError if preferences are invalid
    * @throws DatabaseError if database operation fails
    */
-  updateNotificationPreferences(userId: string, preferences: NotificationPreferences): Promise<UserProfile>;
+  updateNotificationPreferences(
+    userId: string,
+    preferences: NotificationPreferences
+  ): Promise<UserProfile>;
 
   /**
    * Updates a specific notification preference setting
-   * 
+   *
    * @param userId - User ID
    * @param channel - Notification channel ('email', 'push', 'inApp')
    * @param notificationType - Type of notification
@@ -114,9 +117,9 @@ export interface IUserProfileService {
    * @throws DatabaseError if database operation fails
    */
   updateNotificationPreference(
-    userId: string, 
-    channel: 'email' | 'push' | 'inApp', 
-    notificationType: string, 
+    userId: string,
+    channel: 'email' | 'push' | 'inApp',
+    notificationType: string,
     enabled: boolean
   ): Promise<UserProfile>;
 }

@@ -1,9 +1,9 @@
 /**
  * Authentication Service Interface
- * 
+ *
  * Defines the contract for authentication operations including registration,
  * login, token management, email verification, and password reset.
- * 
+ *
  * Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7
  */
 
@@ -46,14 +46,14 @@ export interface RefreshTokenResult {
 
 /**
  * Authentication Service Interface
- * 
+ *
  * Provides methods for all authentication operations with proper validation,
  * error handling, and security measures.
  */
 export interface IAuthService {
   /**
    * Registers a new user with email uniqueness check and password hashing
-   * 
+   *
    * @param data - Registration data
    * @returns User entity and verification token
    * @throws ConflictError if email already exists
@@ -64,7 +64,7 @@ export interface IAuthService {
 
   /**
    * Authenticates a user with credential verification and token generation
-   * 
+   *
    * @param email - User email
    * @param password - User password
    * @returns User entity and token pair
@@ -76,7 +76,7 @@ export interface IAuthService {
 
   /**
    * Refreshes access token using a valid refresh token
-   * 
+   *
    * @param refreshToken - Valid refresh token
    * @returns New token pair
    * @throws AuthenticationError if refresh token is invalid or expired
@@ -87,7 +87,7 @@ export interface IAuthService {
 
   /**
    * Logs out a user by deleting their refresh token from Redis
-   * 
+   *
    * @param userId - User ID
    * @param refreshToken - Refresh token to invalidate
    * @returns void
@@ -97,7 +97,7 @@ export interface IAuthService {
 
   /**
    * Verifies a user's email using verification token
-   * 
+   *
    * @param token - Email verification token
    * @returns Verified user entity
    * @throws AuthenticationError if token is invalid or expired
@@ -108,7 +108,7 @@ export interface IAuthService {
 
   /**
    * Initiates password reset by generating token and sending email
-   * 
+   *
    * @param email - User email
    * @returns void (always succeeds to prevent email enumeration)
    */
@@ -116,7 +116,7 @@ export interface IAuthService {
 
   /**
    * Resets user password using reset token
-   * 
+   *
    * @param token - Password reset token
    * @param newPassword - New password
    * @returns void

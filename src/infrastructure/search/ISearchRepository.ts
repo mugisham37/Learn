@@ -1,10 +1,10 @@
 /**
  * Search Repository Interface
- * 
+ *
  * Defines the contract for search operations using Elasticsearch.
  * Abstracts search operations behind a clean interface following
  * the Repository pattern for infrastructure independence.
- * 
+ *
  * Requirements: 8.1, 8.7
  */
 
@@ -100,17 +100,17 @@ export interface IndexStats {
 
 /**
  * Search Repository Interface
- * 
+ *
  * Provides methods for all search operations with Elasticsearch.
  * Implementations must handle Elasticsearch errors and provide
  * appropriate fallbacks or error mapping.
  */
 export interface ISearchRepository {
   // Document indexing operations
-  
+
   /**
    * Index a single course document
-   * 
+   *
    * @param document - Course search document
    * @returns Promise resolving to success status
    * @throws ExternalServiceError if Elasticsearch operation fails
@@ -119,7 +119,7 @@ export interface ISearchRepository {
 
   /**
    * Index a single lesson document
-   * 
+   *
    * @param document - Lesson search document
    * @returns Promise resolving to success status
    * @throws ExternalServiceError if Elasticsearch operation fails
@@ -128,7 +128,7 @@ export interface ISearchRepository {
 
   /**
    * Bulk index multiple course documents
-   * 
+   *
    * @param documents - Array of course search documents
    * @returns Promise resolving to bulk indexing result
    * @throws ExternalServiceError if Elasticsearch operation fails
@@ -137,7 +137,7 @@ export interface ISearchRepository {
 
   /**
    * Bulk index multiple lesson documents
-   * 
+   *
    * @param documents - Array of lesson search documents
    * @returns Promise resolving to bulk indexing result
    * @throws ExternalServiceError if Elasticsearch operation fails
@@ -148,7 +148,7 @@ export interface ISearchRepository {
 
   /**
    * Search courses with query and filters
-   * 
+   *
    * @param query - Search query string
    * @param options - Search options (filters, pagination, sorting)
    * @returns Promise resolving to search results
@@ -178,7 +178,7 @@ export interface ISearchRepository {
 
   /**
    * Search lessons with query and filters
-   * 
+   *
    * @param query - Search query string
    * @param options - Search options (filters, pagination, sorting)
    * @returns Promise resolving to search results
@@ -208,7 +208,7 @@ export interface ISearchRepository {
 
   /**
    * Delete a course document by ID
-   * 
+   *
    * @param courseId - Course ID to delete
    * @returns Promise resolving to success status
    * @throws ExternalServiceError if Elasticsearch operation fails
@@ -217,7 +217,7 @@ export interface ISearchRepository {
 
   /**
    * Delete a lesson document by ID
-   * 
+   *
    * @param lessonId - Lesson ID to delete
    * @returns Promise resolving to success status
    * @throws ExternalServiceError if Elasticsearch operation fails
@@ -226,7 +226,7 @@ export interface ISearchRepository {
 
   /**
    * Delete all lessons for a specific course
-   * 
+   *
    * @param courseId - Course ID
    * @returns Promise resolving to number of deleted documents
    * @throws ExternalServiceError if Elasticsearch operation fails
@@ -237,7 +237,7 @@ export interface ISearchRepository {
 
   /**
    * Refresh indices to make recent changes searchable
-   * 
+   *
    * @param indices - Optional array of index names to refresh
    * @returns Promise resolving when refresh is complete
    * @throws ExternalServiceError if Elasticsearch operation fails
@@ -246,7 +246,7 @@ export interface ISearchRepository {
 
   /**
    * Get statistics for a specific index
-   * 
+   *
    * @param indexName - Name of the index
    * @returns Promise resolving to index statistics
    * @throws ExternalServiceError if Elasticsearch operation fails
@@ -255,7 +255,7 @@ export interface ISearchRepository {
 
   /**
    * Check if indices exist and are healthy
-   * 
+   *
    * @returns Promise resolving to health status
    * @throws ExternalServiceError if Elasticsearch operation fails
    */
@@ -271,7 +271,7 @@ export interface ISearchRepository {
   /**
    * Perform bulk reindexing for initial data load
    * This method should handle large datasets efficiently
-   * 
+   *
    * @param type - Type of documents to reindex ('courses' | 'lessons' | 'all')
    * @returns Promise resolving to reindexing result
    * @throws ExternalServiceError if Elasticsearch operation fails

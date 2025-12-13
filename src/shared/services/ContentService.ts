@@ -1,6 +1,6 @@
 /**
  * Content Service Implementation
- * 
+ *
  * Implements content management operations combining S3 storage
  * with CloudFront CDN for optimal content delivery.
  */
@@ -11,19 +11,19 @@ import { ExternalServiceError } from '../errors/index.js';
 import { logger } from '../utils/logger.js';
 
 import { ICloudFrontService } from './ICloudFrontService.js';
-import { 
+import {
   IContentService,
   ContentUploadParams,
   ContentUploadResult,
   StreamingUrlParams,
   StreamingUrlResult,
-  ContentDeleteParams
+  ContentDeleteParams,
 } from './IContentService.js';
 import { IS3Service } from './IS3Service.js';
 
 /**
  * Content Service Implementation
- * 
+ *
  * Provides high-level content management operations with
  * S3 storage and CloudFront CDN integration.
  */

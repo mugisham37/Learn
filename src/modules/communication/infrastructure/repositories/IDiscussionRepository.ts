@@ -1,26 +1,26 @@
 /**
  * Discussion Repository Interface
- * 
+ *
  * Defines data access methods for discussion functionality
  * Supports threads, posts, voting, and solution marking
  */
 
-import type { 
-  DiscussionThread, 
+import type {
+  DiscussionThread,
   NewDiscussionThread,
   DiscussionPost,
   NewDiscussionPost,
   PostVote,
-  NewPostVote
+  NewPostVote,
 } from '../../../../infrastructure/database/schema/communication.schema.js';
-import type { 
-  CreateDiscussionThreadDTO, 
-  UpdateDiscussionThreadDTO 
+import type {
+  CreateDiscussionThreadDTO,
+  UpdateDiscussionThreadDTO,
 } from '../../domain/entities/DiscussionThread.js';
-import type { 
-  CreateDiscussionPostDTO, 
+import type {
+  CreateDiscussionPostDTO,
   UpdateDiscussionPostDTO,
-  VoteType 
+  VoteType,
 } from '../../domain/entities/DiscussionPost.js';
 
 /**
@@ -59,7 +59,7 @@ export enum ThreadSortBy {
   CREATED_AT = 'created_at',
   LAST_ACTIVITY = 'last_activity',
   REPLY_COUNT = 'reply_count',
-  VIEW_COUNT = 'view_count'
+  VIEW_COUNT = 'view_count',
 }
 
 /**
@@ -90,7 +90,7 @@ export interface ThreadWithDetails extends DiscussionThread {
 
 /**
  * Discussion Repository Interface
- * 
+ *
  * Requirements:
  * - 9.2: Discussion thread creation with enrollment validation
  * - 9.3: Reply threading with nested structure
@@ -207,7 +207,10 @@ export interface IDiscussionRepository {
   /**
    * Get posts voted by user
    */
-  getPostsVotedByUser(userId: string, pagination: DiscussionPagination): Promise<PaginatedResult<DiscussionPost>>;
+  getPostsVotedByUser(
+    userId: string,
+    pagination: DiscussionPagination
+  ): Promise<PaginatedResult<DiscussionPost>>;
 
   // Statistics and analytics
   /**
@@ -223,7 +226,10 @@ export interface IDiscussionRepository {
   /**
    * Get user participation statistics
    */
-  getUserParticipationStats(userId: string, courseId?: string): Promise<{
+  getUserParticipationStats(
+    userId: string,
+    courseId?: string
+  ): Promise<{
     threadsCreated: number;
     postsCreated: number;
     solutionsMarked: number;

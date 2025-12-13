@@ -1,9 +1,9 @@
 /**
  * Rate Limiting Middleware
- * 
+ *
  * Implements distributed rate limiting using Redis store with different limits
  * for IP addresses, authenticated users, and specific endpoints.
- * 
+ *
  * Requirements: 13.5, 13.6
  */
 
@@ -25,7 +25,7 @@ export const RateLimitConfig = {
     skipSuccessfulRequests: false,
     skipOnError: false,
   },
-  
+
   // Per-user rate limits for authenticated requests (Requirement 13.5)
   AUTHENTICATED_USER: {
     max: 200, // Higher limit for authenticated users
@@ -33,7 +33,7 @@ export const RateLimitConfig = {
     skipSuccessfulRequests: false,
     skipOnError: false,
   },
-  
+
   // Stricter limits for expensive operations (Requirement 13.5)
   EXPENSIVE_OPERATIONS: {
     max: 10, // Very low limit for expensive operations
@@ -41,7 +41,7 @@ export const RateLimitConfig = {
     skipSuccessfulRequests: false,
     skipOnError: false,
   },
-  
+
   // File upload endpoints
   FILE_UPLOAD: {
     max: 20,
@@ -49,7 +49,7 @@ export const RateLimitConfig = {
     skipSuccessfulRequests: false,
     skipOnError: false,
   },
-  
+
   // Authentication endpoints
   AUTH: {
     max: 30,
@@ -57,7 +57,7 @@ export const RateLimitConfig = {
     skipSuccessfulRequests: false,
     skipOnError: false,
   },
-  
+
   // Search endpoints
   SEARCH: {
     max: 50,
@@ -65,7 +65,7 @@ export const RateLimitConfig = {
     skipSuccessfulRequests: false,
     skipOnError: false,
   },
-  
+
   // Analytics endpoints
   ANALYTICS: {
     max: 20,
@@ -83,7 +83,7 @@ function generateRateLimitKey(request: FastifyRequest, prefix: string = 'global'
   // Extract user ID from JWT if available
   const userId = (request as any).user?.id;
   const ip = request.ip;
-  
+
   if (userId) {
     // For authenticated users, use user ID as primary key
     return `ratelimit:${prefix}:user:${userId}`;
@@ -109,12 +109,10 @@ function rateLimitErrorHandler(request: FastifyRequest, context: any) {
     remaining: context.remaining || 0,
     resetTime: context.resetTime,
   });
-  
+
   // Calculate retry after time in seconds
-  const retryAfter = context.resetTime 
-    ? Math.ceil((context.resetTime - Date.now()) / 1000)
-    : 900; // Default to 15 minutes if not available
-  
+  const retryAfter = context.resetTime ? Math.ceil((context.resetTime - Date.now()) / 1000) : 900; // Default to 15 minutes if not available
+
   // Create informative error response (Requirement 13.6)
   const errorResponse = {
     statusCode: 429,
@@ -129,11 +127,11 @@ function rateLimitErrorHandler(request: FastifyRequest, context: any) {
     },
     timestamp: new Date().toISOString(),
   };
-  
+
   const error = new Error(errorResponse.message);
   (error as any).statusCode = 429;
   (error as any).response = errorResponse;
-  
+
   return error;
 }
 
@@ -145,14 +143,14 @@ function addRateLimitHeaders(_request: FastifyRequest, reply: FastifyReply, cont
   // Ensure all required headers are present (Requirement 13.6)
   reply.header('X-RateLimit-Limit', context.max);
   reply.header('X-RateLimit-Remaining', context.remaining || 0);
-  
+
   // Calculate reset time if not provided
-  const resetTime = context.resetTime || (Date.now() + (parseTimeWindow(context.timeWindow) * 1000));
+  const resetTime = context.resetTime || Date.now() + parseTimeWindow(context.timeWindow) * 1000;
   reply.header('X-RateLimit-Reset', Math.floor(resetTime / 1000));
-  
+
   // Additional informative headers
   reply.header('X-RateLimit-Policy', `${context.max} requests per ${context.timeWindow}`);
-  
+
   // Add Retry-After header for 429 responses
   if (reply.statusCode === 429) {
     const retryAfter = Math.ceil((resetTime - Date.now()) / 1000);
@@ -169,31 +167,33 @@ export async function registerGlobalRateLimit(server: FastifyInstance): Promise<
     logger.info('Rate limiting is disabled via feature flag');
     return;
   }
-  
+
   try {
     await server.register(rateLimit, {
       max: RateLimitConfig.GLOBAL_IP.max,
       timeWindow: RateLimitConfig.GLOBAL_IP.timeWindow,
-      
+
       // Use Redis for distributed rate limiting
       redis: redis,
-      
+
       // Custom key generator for IP/user-based limiting
       keyGenerator: (request: FastifyRequest) => generateRateLimitKey(request, 'global'),
-      
+
       // Custom error response builder (Requirement 13.6)
       errorResponseBuilder: (request: FastifyRequest, context: any) => {
         const error = rateLimitErrorHandler(request, context);
-        
+
         // Return the structured error response
-        return (error as any).response || {
-          statusCode: 429,
-          error: 'Too Many Requests',
-          message: error.message,
-          timestamp: new Date().toISOString(),
-        };
+        return (
+          (error as any).response || {
+            statusCode: 429,
+            error: 'Too Many Requests',
+            message: error.message,
+            timestamp: new Date().toISOString(),
+          }
+        );
       },
-      
+
       // Add headers to response (Requirement 13.6)
       addHeaders: {
         'x-ratelimit-limit': true,
@@ -201,21 +201,21 @@ export async function registerGlobalRateLimit(server: FastifyInstance): Promise<
         'x-ratelimit-reset': true,
         'retry-after': true,
       },
-      
+
       // Hook to add custom headers
       onExceeding: addRateLimitHeaders,
       onExceeded: addRateLimitHeaders,
-      
+
       // Skip rate limiting for health checks
       skip: (request: FastifyRequest) => {
         const healthCheckPaths = ['/health', '/health/deep', '/health/ready', '/health/live'];
         return healthCheckPaths.includes(request.url);
       },
-      
+
       // Enable detailed logging in development
       enableDraftSpec: config.nodeEnv === 'development',
     });
-    
+
     logger.info('Global rate limiting registered successfully', {
       max: RateLimitConfig.GLOBAL_IP.max,
       timeWindow: RateLimitConfig.GLOBAL_IP.timeWindow,
@@ -232,7 +232,12 @@ export async function registerGlobalRateLimit(server: FastifyInstance): Promise<
  * Allows different limits for different types of operations
  */
 export function createEndpointRateLimit(
-  limitConfig: { max: number; timeWindow: string; skipSuccessfulRequests: boolean; skipOnError: boolean },
+  limitConfig: {
+    max: number;
+    timeWindow: string;
+    skipSuccessfulRequests: boolean;
+    skipOnError: boolean;
+  },
   endpointType: string
 ) {
   return {
@@ -240,27 +245,28 @@ export function createEndpointRateLimit(
       rateLimit: {
         max: limitConfig.max,
         timeWindow: limitConfig.timeWindow,
-        
+
         // Use Redis for consistency
         redis: redis,
-        
+
         // Custom key generator with endpoint type
-        keyGenerator: (request: FastifyRequest) => 
-          generateRateLimitKey(request, endpointType),
-        
+        keyGenerator: (request: FastifyRequest) => generateRateLimitKey(request, endpointType),
+
         // Custom error response builder (Requirement 13.6)
         errorResponseBuilder: (request: FastifyRequest, context: any) => {
           const error = rateLimitErrorHandler(request, context);
-          
+
           // Return the structured error response
-          return (error as any).response || {
-            statusCode: 429,
-            error: 'Too Many Requests',
-            message: error.message,
-            timestamp: new Date().toISOString(),
-          };
+          return (
+            (error as any).response || {
+              statusCode: 429,
+              error: 'Too Many Requests',
+              message: error.message,
+              timestamp: new Date().toISOString(),
+            }
+          );
         },
-        
+
         // Add headers (Requirement 13.6)
         addHeaders: {
           'x-ratelimit-limit': true,
@@ -268,7 +274,7 @@ export function createEndpointRateLimit(
           'x-ratelimit-reset': true,
           'retry-after': true,
         },
-        
+
         // Hook to add custom headers
         onExceeding: addRateLimitHeaders,
         onExceeded: addRateLimitHeaders,
@@ -283,16 +289,16 @@ export function createEndpointRateLimit(
 export const EndpointRateLimits = {
   // For expensive operations like video processing, analytics generation
   expensive: createEndpointRateLimit(RateLimitConfig.EXPENSIVE_OPERATIONS, 'expensive'),
-  
+
   // For file upload endpoints
   fileUpload: createEndpointRateLimit(RateLimitConfig.FILE_UPLOAD, 'upload'),
-  
+
   // For authentication endpoints (login, register, password reset)
   auth: createEndpointRateLimit(RateLimitConfig.AUTH, 'auth'),
-  
+
   // For search endpoints
   search: createEndpointRateLimit(RateLimitConfig.SEARCH, 'search'),
-  
+
   // For analytics endpoints
   analytics: createEndpointRateLimit(RateLimitConfig.ANALYTICS, 'analytics'),
 } as const;
@@ -314,26 +320,26 @@ export async function checkRateLimit(
     const now = Date.now();
     const windowStart = Math.floor(now / (windowSeconds * 1000)) * windowSeconds;
     const windowKey = `${key}:${windowStart}`;
-    
+
     // Use Redis pipeline for atomic operations
     const pipeline = redis.pipeline();
     pipeline.incr(windowKey);
     pipeline.expire(windowKey, windowSeconds);
     pipeline.ttl(windowKey);
-    
+
     const results = await pipeline.exec();
-    
+
     if (!results || results.length !== 3) {
       throw new Error('Redis pipeline failed');
     }
-    
+
     const count = results[0]?.[1] as number;
     const ttl = results[2]?.[1] as number;
-    
+
     const allowed = count <= max;
     const remaining = Math.max(0, max - count);
-    const resetTime = now + (ttl * 1000);
-    
+    const resetTime = now + ttl * 1000;
+
     return {
       allowed,
       remaining,
@@ -345,7 +351,7 @@ export async function checkRateLimit(
     return {
       allowed: true,
       remaining: max,
-      resetTime: Date.now() + (windowSeconds * 1000),
+      resetTime: Date.now() + windowSeconds * 1000,
     };
   }
 }
@@ -358,29 +364,32 @@ export async function registerAdaptiveRateLimit(server: FastifyInstance): Promis
   if (!config.features.enableRateLimiting) {
     return;
   }
-  
+
   // This will be applied after authentication middleware
   server.addHook('preHandler', async (request, reply) => {
     const isAuthenticated = !!(request as any).user;
-    const limitConfig = isAuthenticated 
-      ? RateLimitConfig.AUTHENTICATED_USER 
+    const limitConfig = isAuthenticated
+      ? RateLimitConfig.AUTHENTICATED_USER
       : RateLimitConfig.GLOBAL_IP;
-    
+
     const key = generateRateLimitKey(request, 'adaptive');
     const windowSeconds = parseTimeWindow(limitConfig.timeWindow);
-    
+
     const rateLimitResult = await checkRateLimit(key, limitConfig.max, windowSeconds);
-    
+
     if (!rateLimitResult.allowed) {
       const retryAfter = Math.ceil((rateLimitResult.resetTime - Date.now()) / 1000);
-      
+
       // Add rate limit headers (Requirement 13.6)
       reply.header('X-RateLimit-Limit', limitConfig.max);
       reply.header('X-RateLimit-Remaining', rateLimitResult.remaining);
       reply.header('X-RateLimit-Reset', Math.floor(rateLimitResult.resetTime / 1000));
-      reply.header('X-RateLimit-Policy', `${limitConfig.max} requests per ${limitConfig.timeWindow}`);
+      reply.header(
+        'X-RateLimit-Policy',
+        `${limitConfig.max} requests per ${limitConfig.timeWindow}`
+      );
       reply.header('Retry-After', retryAfter);
-      
+
       // Log rate limit violation
       logger.warn('Adaptive rate limit exceeded', {
         ip: request.ip,
@@ -391,7 +400,7 @@ export async function registerAdaptiveRateLimit(server: FastifyInstance): Promis
         remaining: rateLimitResult.remaining,
         resetTime: rateLimitResult.resetTime,
       });
-      
+
       // Return structured error response (Requirement 13.6)
       return reply.code(429).send({
         statusCode: 429,
@@ -408,13 +417,13 @@ export async function registerAdaptiveRateLimit(server: FastifyInstance): Promis
         timestamp: new Date().toISOString(),
       });
     }
-    
+
     // Add rate limit headers to successful responses
     reply.header('X-RateLimit-Limit', limitConfig.max);
     reply.header('X-RateLimit-Remaining', rateLimitResult.remaining);
     reply.header('X-RateLimit-Reset', Math.floor(rateLimitResult.resetTime / 1000));
   });
-  
+
   logger.info('Adaptive rate limiting registered successfully');
 }
 
@@ -426,17 +435,17 @@ function parseTimeWindow(timeWindow: string): number {
   if (!match || match.length < 3) {
     throw new Error(`Invalid time window format: ${timeWindow}`);
   }
-  
+
   const value = parseInt(match[1]!, 10);
   const unit = match[2]!.toLowerCase();
-  
+
   const multipliers = {
     second: 1,
     minute: 60,
     hour: 3600,
     day: 86400,
   };
-  
+
   return value * multipliers[unit as keyof typeof multipliers];
 }
 
@@ -451,10 +460,10 @@ export async function checkRateLimitHealth(): Promise<{
     // Test basic rate limit functionality
     const testKey = 'health:check:ratelimit';
     await checkRateLimit(testKey, 1, 60);
-    
+
     // Clean up test key
     await redis.del(`${testKey}:${Math.floor(Date.now() / 60000) * 60}`);
-    
+
     return {
       healthy: true,
     };

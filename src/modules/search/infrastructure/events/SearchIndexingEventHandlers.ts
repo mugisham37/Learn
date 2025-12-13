@@ -1,9 +1,9 @@
 /**
  * Search Indexing Event Handlers
- * 
+ *
  * Event handlers that listen to course and lesson domain events
  * and trigger appropriate search indexing operations.
- * 
+ *
  * Requirements: 8.7 - Implement event listeners for course/lesson changes
  */
 
@@ -25,14 +25,12 @@ import type {
 
 /**
  * Search Indexing Event Handlers
- * 
+ *
  * Handles domain events from the courses module and triggers appropriate
  * search indexing operations through the search indexing queue.
  */
 export class SearchIndexingEventHandlers {
-  constructor(
-    private readonly searchIndexingQueue: SearchIndexingQueue
-  ) {}
+  constructor(private readonly searchIndexingQueue: SearchIndexingQueue) {}
 
   /**
    * Handles course created events
@@ -63,7 +61,7 @@ export class SearchIndexingEventHandlers {
         courseId: event.aggregateId,
         error: error instanceof Error ? error.message : 'Unknown error',
       });
-      
+
       // Don't throw error to avoid breaking the event processing chain
       // The indexing job will be retried automatically
     }
@@ -83,12 +81,18 @@ export class SearchIndexingEventHandlers {
 
       // Check if the changes affect searchable fields
       const searchableFields = [
-        'title', 'description', 'category', 'difficulty', 
-        'price', 'status', 'thumbnailUrl'
+        'title',
+        'description',
+        'category',
+        'difficulty',
+        'price',
+        'status',
+        'thumbnailUrl',
       ];
-      
-      const hasSearchableChanges = !event.changes || 
-        Object.keys(event.changes).some(field => searchableFields.includes(field));
+
+      const hasSearchableChanges =
+        !event.changes ||
+        Object.keys(event.changes).some((field) => searchableFields.includes(field));
 
       if (hasSearchableChanges) {
         // Add indexing job with higher priority for updates
@@ -131,11 +135,7 @@ export class SearchIndexingEventHandlers {
       });
 
       // Add indexing job with high priority for published courses
-      await this.searchIndexingQueue.indexCourse(
-        event.aggregateId,
-        undefined,
-        { priority: 7 }
-      );
+      await this.searchIndexingQueue.indexCourse(event.aggregateId, undefined, { priority: 7 });
 
       logger.debug('Published course indexing job queued successfully', {
         eventId: event.eventId,
@@ -168,10 +168,7 @@ export class SearchIndexingEventHandlers {
       );
 
       // Also remove all lessons for this course
-      await this.searchIndexingQueue.removeLessonsByCourse(
-        event.aggregateId,
-        { priority: 8 }
-      );
+      await this.searchIndexingQueue.removeLessonsByCourse(event.aggregateId, { priority: 8 });
 
       logger.debug('Archived course removal jobs queued successfully', {
         eventId: event.eventId,
@@ -200,11 +197,7 @@ export class SearchIndexingEventHandlers {
       });
 
       // Re-index the course to include the new module
-      await this.searchIndexingQueue.indexCourse(
-        event.aggregateId,
-        undefined,
-        { priority: 5 }
-      );
+      await this.searchIndexingQueue.indexCourse(event.aggregateId, undefined, { priority: 5 });
 
       logger.debug('Course re-indexing job queued for module addition', {
         eventId: event.eventId,
@@ -234,11 +227,7 @@ export class SearchIndexingEventHandlers {
       });
 
       // Re-index the course to reflect module removal
-      await this.searchIndexingQueue.indexCourse(
-        event.aggregateId,
-        undefined,
-        { priority: 6 }
-      );
+      await this.searchIndexingQueue.indexCourse(event.aggregateId, undefined, { priority: 6 });
 
       // Note: Individual lesson removal should be handled by separate lesson events
       // This just updates the course-level information
@@ -355,11 +344,7 @@ export class SearchIndexingEventHandlers {
       );
 
       // Re-index the course to reflect lesson removal
-      await this.searchIndexingQueue.indexCourse(
-        event.courseId,
-        undefined,
-        { priority: 5 }
-      );
+      await this.searchIndexingQueue.indexCourse(event.courseId, undefined, { priority: 5 });
 
       logger.debug('Lesson removal and course re-indexing jobs queued', {
         eventId: event.eventId,
@@ -402,11 +387,7 @@ export class SearchIndexingEventHandlers {
       await Promise.all(lessonIndexingPromises);
 
       // Re-index the course to reflect new lesson order
-      await this.searchIndexingQueue.indexCourse(
-        event.courseId,
-        undefined,
-        { priority: 4 }
-      );
+      await this.searchIndexingQueue.indexCourse(event.courseId, undefined, { priority: 4 });
 
       logger.debug('Lesson and course re-indexing jobs queued for lesson reordering', {
         eventId: event.eventId,
@@ -433,43 +414,43 @@ export class SearchIndexingEventHandlers {
         case 'CourseCreated':
           await this.handleCourseCreated(event as CourseCreatedEvent);
           break;
-        
+
         case 'CourseUpdated':
           await this.handleCourseUpdated(event as CourseUpdatedEvent);
           break;
-        
+
         case 'CoursePublished':
           await this.handleCoursePublished(event as CoursePublishedEvent);
           break;
-        
+
         case 'CourseArchived':
           await this.handleCourseArchived(event as CourseArchivedEvent);
           break;
-        
+
         case 'ModuleAdded':
           await this.handleModuleAdded(event as ModuleAddedEvent);
           break;
-        
+
         case 'ModuleRemoved':
           await this.handleModuleRemoved(event as ModuleRemovedEvent);
           break;
-        
+
         case 'ModulesReordered':
           await this.handleModulesReordered(event as ModulesReorderedEvent);
           break;
-        
+
         case 'LessonAdded':
           await this.handleLessonAdded(event as LessonAddedEvent);
           break;
-        
+
         case 'LessonRemoved':
           await this.handleLessonRemoved(event as LessonRemovedEvent);
           break;
-        
+
         case 'LessonsReordered':
           await this.handleLessonsReordered(event as LessonsReorderedEvent);
           break;
-        
+
         default:
           logger.warn('Unknown course event type for search indexing', {
             eventType: (event as any).eventType,

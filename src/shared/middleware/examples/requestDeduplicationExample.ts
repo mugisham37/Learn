@@ -1,9 +1,9 @@
 /**
  * Request Deduplication Middleware Usage Examples
- * 
+ *
  * This file demonstrates how to use the request deduplication middleware
  * in different scenarios within the learning platform backend.
- * 
+ *
  * Requirements: 15.6
  */
 
@@ -22,13 +22,17 @@ import {
  */
 export function setupStandardDeduplication(fastify: FastifyInstance): void {
   // Apply standard deduplication to all course listing endpoints
-  fastify.get('/api/courses', {
-    preHandler: [standardRequestDeduplication]
-  }, async (request, reply) => {
-    // This endpoint will cache responses for 30 seconds
-    // Duplicate requests within this window will return cached responses
-    return { courses: [] };
-  });
+  fastify.get(
+    '/api/courses',
+    {
+      preHandler: [standardRequestDeduplication],
+    },
+    async (request, reply) => {
+      // This endpoint will cache responses for 30 seconds
+      // Duplicate requests within this window will return cached responses
+      return { courses: [] };
+    }
+  );
 }
 
 /**
@@ -36,13 +40,17 @@ export function setupStandardDeduplication(fastify: FastifyInstance): void {
  */
 export function setupAggressiveDeduplication(fastify: FastifyInstance): void {
   // Apply aggressive deduplication to analytics endpoints
-  fastify.get('/api/analytics/dashboard', {
-    preHandler: [aggressiveRequestDeduplication]
-  }, async (request, reply) => {
-    // This endpoint will cache responses for 2 minutes
-    // Includes authorization header in fingerprint for user-specific caching
-    return { metrics: {} };
-  });
+  fastify.get(
+    '/api/analytics/dashboard',
+    {
+      preHandler: [aggressiveRequestDeduplication],
+    },
+    async (request, reply) => {
+      // This endpoint will cache responses for 2 minutes
+      // Includes authorization header in fingerprint for user-specific caching
+      return { metrics: {} };
+    }
+  );
 }
 
 /**
@@ -50,13 +58,17 @@ export function setupAggressiveDeduplication(fastify: FastifyInstance): void {
  */
 export function setupConservativeDeduplication(fastify: FastifyInstance): void {
   // Apply conservative deduplication to real-time data endpoints
-  fastify.get('/api/notifications', {
-    preHandler: [conservativeRequestDeduplication]
-  }, async (request, reply) => {
-    // This endpoint will cache responses for only 10 seconds
-    // Suitable for data that changes frequently
-    return { notifications: [] };
-  });
+  fastify.get(
+    '/api/notifications',
+    {
+      preHandler: [conservativeRequestDeduplication],
+    },
+    async (request, reply) => {
+      // This endpoint will cache responses for only 10 seconds
+      // Suitable for data that changes frequently
+      return { notifications: [] };
+    }
+  );
 }
 
 /**
@@ -75,12 +87,16 @@ export function setupCustomDeduplication(fastify: FastifyInstance): void {
     keyPrefix: 'search_dedup',
   });
 
-  fastify.get('/api/search/courses', {
-    preHandler: [searchDeduplication]
-  }, async (request, reply) => {
-    // This endpoint will deduplicate based on query parameters and user context
-    return { results: [] };
-  });
+  fastify.get(
+    '/api/search/courses',
+    {
+      preHandler: [searchDeduplication],
+    },
+    async (request, reply) => {
+      // This endpoint will deduplicate based on query parameters and user context
+      return { results: [] };
+    }
+  );
 }
 
 /**
@@ -110,18 +126,22 @@ export function setupRoleBasedDeduplication(fastify: FastifyInstance): void {
       // (Admins might need real-time data)
       const authHeader = request.headers.authorization;
       if (!authHeader) return true;
-      
+
       // In a real implementation, you would decode the JWT to check the role
       // This is just an example
       return !authHeader.includes('admin');
     },
   });
 
-  fastify.get('/api/admin/users', {
-    preHandler: [roleBasedDeduplication]
-  }, async (request, reply) => {
-    return { users: [] };
-  });
+  fastify.get(
+    '/api/admin/users',
+    {
+      preHandler: [roleBasedDeduplication],
+    },
+    async (request, reply) => {
+      return { users: [] };
+    }
+  );
 }
 
 /**
@@ -141,21 +161,27 @@ export function setupModuleSpecificDeduplication(fastify: FastifyInstance): void
   });
 
   // Apply to respective endpoints
-  fastify.register(async function courseRoutes(fastify) {
-    fastify.addHook('preHandler', courseDeduplication);
-    
-    fastify.get('/courses/:id', async (request, reply) => {
-      return { course: {} };
-    });
-  }, { prefix: '/api' });
+  fastify.register(
+    async function courseRoutes(fastify) {
+      fastify.addHook('preHandler', courseDeduplication);
 
-  fastify.register(async function analyticsRoutes(fastify) {
-    fastify.addHook('preHandler', analyticsDeduplication);
-    
-    fastify.get('/analytics/reports', async (request, reply) => {
-      return { report: {} };
-    });
-  }, { prefix: '/api' });
+      fastify.get('/courses/:id', async (request, reply) => {
+        return { course: {} };
+      });
+    },
+    { prefix: '/api' }
+  );
+
+  fastify.register(
+    async function analyticsRoutes(fastify) {
+      fastify.addHook('preHandler', analyticsDeduplication);
+
+      fastify.get('/analytics/reports', async (request, reply) => {
+        return { report: {} };
+      });
+    },
+    { prefix: '/api' }
+  );
 }
 
 /**
@@ -163,10 +189,10 @@ export function setupModuleSpecificDeduplication(fastify: FastifyInstance): void
  */
 export async function monitorDeduplication(): Promise<void> {
   const { getDeduplicationStats } = await import('../requestDeduplication.js');
-  
+
   // Get statistics about deduplication performance
   const stats = await getDeduplicationStats();
-  
+
   console.log('Deduplication Statistics:', {
     totalCachedResponses: stats.totalCachedResponses,
     cacheHitRate: stats.cacheHitRate ? `${(stats.cacheHitRate * 100).toFixed(2)}%` : 'N/A',
@@ -178,11 +204,11 @@ export async function monitorDeduplication(): Promise<void> {
  */
 export async function manageDuplicationCache(): Promise<void> {
   const { clearDeduplicationCache } = await import('../requestDeduplication.js');
-  
+
   // Clear all deduplication cache entries
   const deletedCount = await clearDeduplicationCache();
   console.log(`Cleared ${deletedCount} cached responses`);
-  
+
   // Clear specific module cache
   const courseDeletedCount = await clearDeduplicationCache('course_dedup');
   console.log(`Cleared ${courseDeletedCount} course-specific cached responses`);
@@ -196,9 +222,11 @@ export function setupLearningPlatformDeduplication(fastify: FastifyInstance): vo
   registerRequestDeduplication(fastify, {
     cacheTtlSeconds: 30,
     enabled: (request) => {
-      return request.method === 'GET' && 
-             request.url.startsWith('/api/') &&
-             !request.url.includes('/admin/'); // Exclude admin endpoints
+      return (
+        request.method === 'GET' &&
+        request.url.startsWith('/api/') &&
+        !request.url.includes('/admin/')
+      ); // Exclude admin endpoints
     },
   });
 
@@ -217,7 +245,7 @@ export function setupLearningPlatformDeduplication(fastify: FastifyInstance): vo
     '/api/search/advanced',
   ];
 
-  expensiveEndpoints.forEach(endpoint => {
+  expensiveEndpoints.forEach((endpoint) => {
     fastify.addHook('preHandler', async (request, reply) => {
       if (request.url.startsWith(endpoint)) {
         await expensiveOperationsDeduplication(request, reply);

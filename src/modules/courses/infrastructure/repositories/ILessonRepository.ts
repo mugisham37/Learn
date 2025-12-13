@@ -1,9 +1,9 @@
 /**
  * Lesson Repository Interface
- * 
+ *
  * Defines the contract for lesson data access operations.
  * Handles lesson ordering, type-specific validation, and content management.
- * 
+ *
  * Requirements: 3.3
  */
 
@@ -50,14 +50,14 @@ export interface LessonFilters {
 
 /**
  * Lesson Repository Interface
- * 
+ *
  * Provides methods for lesson data access operations with caching support.
  * Handles lesson ordering and type-specific validation.
  */
 export interface ILessonRepository {
   /**
    * Creates a new lesson in the database
-   * 
+   *
    * @param data - Lesson creation data
    * @returns The created lesson
    * @throws ConflictError if order number already exists for the module
@@ -68,7 +68,7 @@ export interface ILessonRepository {
 
   /**
    * Finds a lesson by its unique ID
-   * 
+   *
    * @param id - Lesson ID
    * @returns The lesson if found, null otherwise
    * @throws DatabaseError if database operation fails
@@ -77,7 +77,7 @@ export interface ILessonRepository {
 
   /**
    * Finds all lessons for a module ordered by orderNumber
-   * 
+   *
    * @param moduleId - Module ID
    * @param filters - Optional filters
    * @returns Array of lessons ordered by orderNumber
@@ -87,7 +87,7 @@ export interface ILessonRepository {
 
   /**
    * Finds all lessons for a course across all modules
-   * 
+   *
    * @param courseId - Course ID
    * @param filters - Optional filters
    * @returns Array of lessons ordered by module and lesson order
@@ -97,7 +97,7 @@ export interface ILessonRepository {
 
   /**
    * Finds lessons by type across all courses
-   * 
+   *
    * @param lessonType - Lesson type
    * @param courseId - Optional course ID to filter by
    * @returns Array of lessons of the specified type
@@ -110,7 +110,7 @@ export interface ILessonRepository {
 
   /**
    * Finds preview lessons for a course (accessible without enrollment)
-   * 
+   *
    * @param courseId - Course ID
    * @returns Array of preview lessons
    * @throws DatabaseError if database operation fails
@@ -119,7 +119,7 @@ export interface ILessonRepository {
 
   /**
    * Updates a lesson's data
-   * 
+   *
    * @param id - Lesson ID
    * @param data - Update data
    * @returns The updated lesson
@@ -132,7 +132,7 @@ export interface ILessonRepository {
 
   /**
    * Deletes a lesson
-   * 
+   *
    * @param id - Lesson ID
    * @returns void
    * @throws NotFoundError if lesson doesn't exist
@@ -143,7 +143,7 @@ export interface ILessonRepository {
   /**
    * Reorders lessons within a module
    * Updates order numbers to maintain sequential integrity
-   * 
+   *
    * @param moduleId - Module ID
    * @param lessonIds - Array of lesson IDs in desired order
    * @returns Array of updated lessons
@@ -155,7 +155,7 @@ export interface ILessonRepository {
 
   /**
    * Gets the next available order number for a module
-   * 
+   *
    * @param moduleId - Module ID
    * @returns Next available order number
    * @throws DatabaseError if database operation fails
@@ -164,7 +164,7 @@ export interface ILessonRepository {
 
   /**
    * Updates lesson content URL (for video processing completion)
-   * 
+   *
    * @param id - Lesson ID
    * @param contentUrl - New content URL
    * @param metadata - Optional metadata update
@@ -176,7 +176,7 @@ export interface ILessonRepository {
 
   /**
    * Counts lessons by type for a course
-   * 
+   *
    * @param courseId - Course ID
    * @returns Object with counts by lesson type
    * @throws DatabaseError if database operation fails
@@ -191,7 +191,7 @@ export interface ILessonRepository {
 
   /**
    * Validates lesson type-specific requirements
-   * 
+   *
    * @param lessonType - Lesson type
    * @param data - Lesson data to validate
    * @returns True if valid, throws ValidationError if invalid
@@ -204,7 +204,7 @@ export interface ILessonRepository {
 
   /**
    * Invalidates cache for a specific lesson
-   * 
+   *
    * @param id - Lesson ID
    * @returns void
    */
@@ -212,7 +212,7 @@ export interface ILessonRepository {
 
   /**
    * Invalidates cache for all lessons in a module
-   * 
+   *
    * @param moduleId - Module ID
    * @returns void
    */
@@ -220,7 +220,7 @@ export interface ILessonRepository {
 
   /**
    * Invalidates cache for all lessons in a course
-   * 
+   *
    * @param courseId - Course ID
    * @returns void
    */

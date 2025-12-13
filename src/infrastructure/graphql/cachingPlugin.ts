@@ -1,21 +1,21 @@
 /**
  * GraphQL HTTP Caching Plugin
- * 
+ *
  * Adds HTTP caching support to GraphQL responses including ETag generation,
  * conditional requests, and appropriate Cache-Control headers.
- * 
+ *
  * Requirements: 15.4
  */
 
 import { ApolloServerPlugin, GraphQLRequestListener } from '@apollo/server';
 import { GraphQLError } from 'graphql';
-import { 
-  generateETag, 
-  buildCacheControlHeader, 
-  parseIfNoneMatch, 
+import {
+  generateETag,
+  buildCacheControlHeader,
+  parseIfNoneMatch,
   etagsMatch,
   CacheConfigs,
-  type CacheConfig 
+  type CacheConfig,
 } from '../../shared/middleware/httpCaching.js';
 import { logger } from '../../shared/utils/logger.js';
 
@@ -177,7 +177,7 @@ export function createGraphQLCachingPlugin(): ApolloServerPlugin {
             // Get operation info
             const operationName = request.operationName;
             const operationType = requestContext.operation?.operation || 'query';
-            
+
             // Get cache configuration
             const cacheConfig = getCacheConfigForOperation(operationName, operationType);
             if (!cacheConfig) {
@@ -193,9 +193,8 @@ export function createGraphQLCachingPlugin(): ApolloServerPlugin {
             );
 
             // Get response data
-            const responseData = response.body.kind === 'single' 
-              ? response.body.singleResult.data 
-              : null;
+            const responseData =
+              response.body.kind === 'single' ? response.body.singleResult.data : null;
 
             if (!responseData) {
               return;
@@ -222,19 +221,19 @@ export function createGraphQLCachingPlugin(): ApolloServerPlugin {
             const ifNoneMatch = requestContext.request.http?.headers.get('if-none-match');
             if (ifNoneMatch) {
               const clientETags = parseIfNoneMatch(ifNoneMatch);
-              const matches = clientETags.some(clientETag => 
-                clientETag === '*' || etagsMatch(clientETag, etag)
+              const matches = clientETags.some(
+                (clientETag) => clientETag === '*' || etagsMatch(clientETag, etag)
               );
 
               if (matches) {
                 // Return 304 Not Modified
                 response.http.status = 304;
                 response.http.body = '';
-                
+
                 // Remove content headers
                 response.http.headers.delete('Content-Type');
                 response.http.headers.delete('Content-Length');
-                
+
                 logger.debug('GraphQL 304 Not Modified response', {
                   operationName,
                   etag,
@@ -252,13 +251,12 @@ export function createGraphQLCachingPlugin(): ApolloServerPlugin {
               cacheControl: buildCacheControlHeader(cacheConfig),
               cacheKey,
             });
-
           } catch (error) {
             logger.error('Error in GraphQL caching plugin', {
               operationName: request.operationName,
               error: error instanceof Error ? error.message : String(error),
             });
-            
+
             // Continue without caching if plugin fails
           }
         },
@@ -266,10 +264,13 @@ export function createGraphQLCachingPlugin(): ApolloServerPlugin {
         async didEncounterErrors(requestContext) {
           // Don't cache responses with errors
           const { response } = requestContext;
-          
+
           // Set no-cache headers for error responses
-          response.http.headers.set('Cache-Control', buildCacheControlHeader(CacheConfigs.NO_CACHE));
-          
+          response.http.headers.set(
+            'Cache-Control',
+            buildCacheControlHeader(CacheConfigs.NO_CACHE)
+          );
+
           logger.debug('GraphQL error response - no caching applied', {
             operationName: requestContext.request.operationName,
             errorCount: requestContext.errors?.length || 0,

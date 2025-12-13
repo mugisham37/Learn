@@ -1,10 +1,10 @@
 /**
  * Analytics Repository Interface
- * 
+ *
  * Defines the contract for analytics data access operations.
  * Abstracts database operations behind a clean interface following
  * the Repository pattern for domain independence.
- * 
+ *
  * Requirements: 12.1, 12.2, 12.7
  */
 
@@ -86,14 +86,14 @@ export interface StudentAnalyticsAggregation {
 
 /**
  * Course Analytics Repository Interface
- * 
+ *
  * Provides methods for course analytics data access operations with caching support.
  * Implementations must handle database errors and map them to domain errors.
  */
 export interface ICourseAnalyticsRepository {
   /**
    * Creates or updates course analytics record
-   * 
+   *
    * @param courseId - Course ID
    * @param data - Analytics data
    * @returns The created/updated course analytics
@@ -103,7 +103,7 @@ export interface ICourseAnalyticsRepository {
 
   /**
    * Finds course analytics by course ID
-   * 
+   *
    * @param courseId - Course ID
    * @returns The course analytics if found, null otherwise
    * @throws DatabaseError if database operation fails
@@ -112,7 +112,7 @@ export interface ICourseAnalyticsRepository {
 
   /**
    * Finds course analytics for multiple courses
-   * 
+   *
    * @param courseIds - Array of course IDs
    * @returns Array of course analytics
    * @throws DatabaseError if database operation fails
@@ -121,7 +121,7 @@ export interface ICourseAnalyticsRepository {
 
   /**
    * Finds all course analytics with pagination
-   * 
+   *
    * @param pagination - Pagination parameters
    * @returns Paginated course analytics results
    * @throws DatabaseError if database operation fails
@@ -130,17 +130,20 @@ export interface ICourseAnalyticsRepository {
 
   /**
    * Finds course analytics by instructor
-   * 
+   *
    * @param instructorId - Instructor user ID
    * @param pagination - Pagination parameters
    * @returns Paginated course analytics results
    * @throws DatabaseError if database operation fails
    */
-  findByInstructor(instructorId: string, pagination: PaginationParams): Promise<PaginatedResult<CourseAnalytics>>;
+  findByInstructor(
+    instructorId: string,
+    pagination: PaginationParams
+  ): Promise<PaginatedResult<CourseAnalytics>>;
 
   /**
    * Updates course analytics last updated timestamp
-   * 
+   *
    * @param courseId - Course ID
    * @returns The updated course analytics
    * @throws NotFoundError if course analytics doesn't exist
@@ -150,7 +153,7 @@ export interface ICourseAnalyticsRepository {
 
   /**
    * Deletes course analytics record
-   * 
+   *
    * @param courseId - Course ID
    * @returns void
    * @throws DatabaseError if database operation fails
@@ -159,7 +162,7 @@ export interface ICourseAnalyticsRepository {
 
   /**
    * Invalidates cache for course analytics
-   * 
+   *
    * @param courseId - Course ID
    * @returns void
    */
@@ -167,7 +170,7 @@ export interface ICourseAnalyticsRepository {
 
   /**
    * Invalidates cache for instructor course analytics
-   * 
+   *
    * @param instructorId - Instructor user ID
    * @returns void
    */
@@ -176,14 +179,14 @@ export interface ICourseAnalyticsRepository {
 
 /**
  * Student Analytics Repository Interface
- * 
+ *
  * Provides methods for student analytics data access operations with caching support.
  * Implementations must handle database errors and map them to domain errors.
  */
 export interface IStudentAnalyticsRepository {
   /**
    * Creates or updates student analytics record
-   * 
+   *
    * @param userId - User ID
    * @param data - Analytics data
    * @returns The created/updated student analytics
@@ -193,7 +196,7 @@ export interface IStudentAnalyticsRepository {
 
   /**
    * Finds student analytics by user ID
-   * 
+   *
    * @param userId - User ID
    * @returns The student analytics if found, null otherwise
    * @throws DatabaseError if database operation fails
@@ -202,7 +205,7 @@ export interface IStudentAnalyticsRepository {
 
   /**
    * Finds student analytics for multiple users
-   * 
+   *
    * @param userIds - Array of user IDs
    * @returns Array of student analytics
    * @throws DatabaseError if database operation fails
@@ -211,7 +214,7 @@ export interface IStudentAnalyticsRepository {
 
   /**
    * Finds all student analytics with pagination
-   * 
+   *
    * @param pagination - Pagination parameters
    * @returns Paginated student analytics results
    * @throws DatabaseError if database operation fails
@@ -220,7 +223,7 @@ export interface IStudentAnalyticsRepository {
 
   /**
    * Finds top performing students by completion rate
-   * 
+   *
    * @param limit - Number of students to return
    * @returns Array of student analytics ordered by performance
    * @throws DatabaseError if database operation fails
@@ -229,7 +232,7 @@ export interface IStudentAnalyticsRepository {
 
   /**
    * Updates student analytics last updated timestamp
-   * 
+   *
    * @param userId - User ID
    * @returns The updated student analytics
    * @throws NotFoundError if student analytics doesn't exist
@@ -239,7 +242,7 @@ export interface IStudentAnalyticsRepository {
 
   /**
    * Deletes student analytics record
-   * 
+   *
    * @param userId - User ID
    * @returns void
    * @throws DatabaseError if database operation fails
@@ -248,7 +251,7 @@ export interface IStudentAnalyticsRepository {
 
   /**
    * Invalidates cache for student analytics
-   * 
+   *
    * @param userId - User ID
    * @returns void
    */
@@ -257,14 +260,14 @@ export interface IStudentAnalyticsRepository {
 
 /**
  * Analytics Events Repository Interface
- * 
+ *
  * Provides methods for analytics event data access operations with efficient querying.
  * Implementations must handle database errors and map them to domain errors.
  */
 export interface IAnalyticsEventsRepository {
   /**
    * Creates a new analytics event
-   * 
+   *
    * @param data - Event data
    * @returns The created analytics event
    * @throws DatabaseError if database operation fails
@@ -273,7 +276,7 @@ export interface IAnalyticsEventsRepository {
 
   /**
    * Creates multiple analytics events in batch
-   * 
+   *
    * @param events - Array of event data
    * @returns Array of created analytics events
    * @throws DatabaseError if database operation fails
@@ -282,7 +285,7 @@ export interface IAnalyticsEventsRepository {
 
   /**
    * Finds analytics events by user ID with pagination
-   * 
+   *
    * @param userId - User ID
    * @param pagination - Pagination parameters
    * @param filters - Optional filters
@@ -297,7 +300,7 @@ export interface IAnalyticsEventsRepository {
 
   /**
    * Finds analytics events by event type with pagination
-   * 
+   *
    * @param eventType - Event type
    * @param pagination - Pagination parameters
    * @param filters - Optional filters
@@ -312,7 +315,7 @@ export interface IAnalyticsEventsRepository {
 
   /**
    * Finds analytics events within date range
-   * 
+   *
    * @param dateRange - Date range filter
    * @param pagination - Pagination parameters
    * @param filters - Optional filters
@@ -327,7 +330,7 @@ export interface IAnalyticsEventsRepository {
 
   /**
    * Counts events by event type within date range
-   * 
+   *
    * @param eventType - Event type
    * @param dateRange - Date range filter
    * @returns Event count
@@ -337,7 +340,7 @@ export interface IAnalyticsEventsRepository {
 
   /**
    * Counts events by user within date range
-   * 
+   *
    * @param userId - User ID
    * @param dateRange - Date range filter
    * @returns Event count
@@ -347,7 +350,7 @@ export interface IAnalyticsEventsRepository {
 
   /**
    * Gets event type distribution within date range
-   * 
+   *
    * @param dateRange - Date range filter
    * @returns Object with event types as keys and counts as values
    * @throws DatabaseError if database operation fails
@@ -356,17 +359,20 @@ export interface IAnalyticsEventsRepository {
 
   /**
    * Gets hourly event counts for a specific date
-   * 
+   *
    * @param date - Date to analyze
    * @param eventType - Optional event type filter
    * @returns Array of hourly counts
    * @throws DatabaseError if database operation fails
    */
-  getHourlyEventCounts(date: Date, eventType?: string): Promise<Array<{ hour: number; count: number }>>;
+  getHourlyEventCounts(
+    date: Date,
+    eventType?: string
+  ): Promise<Array<{ hour: number; count: number }>>;
 
   /**
    * Deletes old analytics events beyond retention period
-   * 
+   *
    * @param retentionDays - Number of days to retain
    * @returns Number of deleted events
    * @throws DatabaseError if database operation fails
@@ -376,7 +382,7 @@ export interface IAnalyticsEventsRepository {
 
 /**
  * Main Analytics Repository Interface
- * 
+ *
  * Aggregates all analytics repository interfaces for convenience
  */
 export interface IAnalyticsRepository {

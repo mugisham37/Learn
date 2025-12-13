@@ -1,6 +1,6 @@
 /**
  * Announcement Domain Entity
- * 
+ *
  * Represents a course announcement from an educator to all enrolled students
  * Supports scheduling and notification delivery
  */
@@ -68,18 +68,22 @@ export function isAnnouncementPublished(announcement: Announcement): boolean {
  * Checks if an announcement is scheduled for future publication
  */
 export function isAnnouncementScheduled(announcement: Announcement): boolean {
-  return announcement.scheduledFor !== null && 
-         announcement.scheduledFor !== undefined && 
-         announcement.scheduledFor > new Date() &&
-         !isAnnouncementPublished(announcement);
+  return (
+    announcement.scheduledFor !== null &&
+    announcement.scheduledFor !== undefined &&
+    announcement.scheduledFor > new Date() &&
+    !isAnnouncementPublished(announcement)
+  );
 }
 
 /**
  * Checks if a scheduled announcement is ready to be published
  */
 export function isAnnouncementReadyToPublish(announcement: Announcement): boolean {
-  return announcement.scheduledFor !== null &&
-         announcement.scheduledFor !== undefined &&
-         announcement.scheduledFor <= new Date() &&
-         !isAnnouncementPublished(announcement);
+  return (
+    announcement.scheduledFor !== null &&
+    announcement.scheduledFor !== undefined &&
+    announcement.scheduledFor <= new Date() &&
+    !isAnnouncementPublished(announcement)
+  );
 }

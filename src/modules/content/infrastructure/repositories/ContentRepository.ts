@@ -1,9 +1,9 @@
 /**
  * Content Repository Implementation
- * 
+ *
  * Implements content data access operations using Drizzle ORM
  * for video assets, file assets, and processing jobs.
- * 
+ *
  * Requirements:
  * - 4.1: Video upload and file metadata tracking
  * - 4.4: Video processing status tracking and completion handling
@@ -35,7 +35,7 @@ import {
 
 /**
  * Content Repository Implementation
- * 
+ *
  * Provides concrete implementation of content data access operations
  * using Drizzle ORM with PostgreSQL.
  */
@@ -53,17 +53,13 @@ export class ContentRepository implements IContentRepository {
         updatedAt: new Date(),
       })
       .returning();
-    
+
     return created;
   }
 
   async findVideoAssetById(id: string): Promise<VideoAsset | null> {
-    const [asset] = await this.db
-      .select()
-      .from(videoAssets)
-      .where(eq(videoAssets.id, id))
-      .limit(1);
-    
+    const [asset] = await this.db.select().from(videoAssets).where(eq(videoAssets.id, id)).limit(1);
+
     return asset || null;
   }
 
@@ -71,12 +67,9 @@ export class ContentRepository implements IContentRepository {
     const [asset] = await this.db
       .select()
       .from(videoAssets)
-      .where(and(
-        eq(videoAssets.s3Bucket, s3Bucket),
-        eq(videoAssets.s3Key, s3Key)
-      ))
+      .where(and(eq(videoAssets.s3Bucket, s3Bucket), eq(videoAssets.s3Key, s3Key)))
       .limit(1);
-    
+
     return asset || null;
   }
 
@@ -86,7 +79,7 @@ export class ContentRepository implements IContentRepository {
       .from(videoAssets)
       .where(eq(videoAssets.processingJobId, processingJobId))
       .limit(1);
-    
+
     return asset || null;
   }
 
@@ -95,7 +88,7 @@ export class ContentRepository implements IContentRepository {
     pagination?: PaginationOptions
   ): Promise<PaginatedResult<VideoAsset>> {
     const conditions = [];
-    
+
     if (filters?.lessonId) {
       conditions.push(eq(videoAssets.lessonId, filters.lessonId));
     }
@@ -110,7 +103,7 @@ export class ContentRepository implements IContentRepository {
     }
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
-    
+
     // Get total count
     const [{ count }] = await this.db
       .select({ count: sql<number>`count(*)` })
@@ -152,11 +145,11 @@ export class ContentRepository implements IContentRepository {
       })
       .where(eq(videoAssets.id, id))
       .returning();
-    
+
     if (!updated) {
       throw new Error(`Video asset with id ${id} not found`);
     }
-    
+
     return updated;
   }
 
@@ -203,9 +196,7 @@ export class ContentRepository implements IContentRepository {
   }
 
   async deleteVideoAsset(id: string): Promise<void> {
-    await this.db
-      .delete(videoAssets)
-      .where(eq(videoAssets.id, id));
+    await this.db.delete(videoAssets).where(eq(videoAssets.id, id));
   }
 
   // File Asset Operations
@@ -219,17 +210,13 @@ export class ContentRepository implements IContentRepository {
         updatedAt: new Date(),
       })
       .returning();
-    
+
     return created;
   }
 
   async findFileAssetById(id: string): Promise<FileAsset | null> {
-    const [asset] = await this.db
-      .select()
-      .from(fileAssets)
-      .where(eq(fileAssets.id, id))
-      .limit(1);
-    
+    const [asset] = await this.db.select().from(fileAssets).where(eq(fileAssets.id, id)).limit(1);
+
     return asset || null;
   }
 
@@ -237,12 +224,9 @@ export class ContentRepository implements IContentRepository {
     const [asset] = await this.db
       .select()
       .from(fileAssets)
-      .where(and(
-        eq(fileAssets.s3Bucket, s3Bucket),
-        eq(fileAssets.s3Key, s3Key)
-      ))
+      .where(and(eq(fileAssets.s3Bucket, s3Bucket), eq(fileAssets.s3Key, s3Key)))
       .limit(1);
-    
+
     return asset || null;
   }
 
@@ -251,7 +235,7 @@ export class ContentRepository implements IContentRepository {
     pagination?: PaginationOptions
   ): Promise<PaginatedResult<FileAsset>> {
     const conditions = [];
-    
+
     if (filters?.courseId) {
       conditions.push(eq(fileAssets.courseId, filters.courseId));
     }
@@ -272,7 +256,7 @@ export class ContentRepository implements IContentRepository {
     }
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
-    
+
     // Get total count
     const [{ count }] = await this.db
       .select({ count: sql<number>`count(*)` })
@@ -314,28 +298,23 @@ export class ContentRepository implements IContentRepository {
       })
       .where(eq(fileAssets.id, id))
       .returning();
-    
+
     if (!updated) {
       throw new Error(`File asset with id ${id} not found`);
     }
-    
+
     return updated;
   }
 
   async deleteFileAsset(id: string): Promise<void> {
-    await this.db
-      .delete(fileAssets)
-      .where(eq(fileAssets.id, id));
+    await this.db.delete(fileAssets).where(eq(fileAssets.id, id));
   }
 
   async findExpiredFileAssets(beforeDate: Date): Promise<FileAsset[]> {
     return await this.db
       .select()
       .from(fileAssets)
-      .where(and(
-        lte(fileAssets.expiresAt, beforeDate),
-        isNull(fileAssets.expiresAt) === false
-      ));
+      .where(and(lte(fileAssets.expiresAt, beforeDate), isNull(fileAssets.expiresAt) === false));
   }
 
   // Processing Job Operations
@@ -349,7 +328,7 @@ export class ContentRepository implements IContentRepository {
         updatedAt: new Date(),
       })
       .returning();
-    
+
     return created;
   }
 
@@ -359,7 +338,7 @@ export class ContentRepository implements IContentRepository {
       .from(processingJobs)
       .where(eq(processingJobs.id, id))
       .limit(1);
-    
+
     return job || null;
   }
 
@@ -369,7 +348,7 @@ export class ContentRepository implements IContentRepository {
       .from(processingJobs)
       .where(eq(processingJobs.externalJobId, externalJobId))
       .limit(1);
-    
+
     return job || null;
   }
 
@@ -378,7 +357,7 @@ export class ContentRepository implements IContentRepository {
     pagination?: PaginationOptions
   ): Promise<PaginatedResult<ProcessingJob>> {
     const conditions = [];
-    
+
     if (filters?.videoAssetId) {
       conditions.push(eq(processingJobs.videoAssetId, filters.videoAssetId));
     }
@@ -399,7 +378,7 @@ export class ContentRepository implements IContentRepository {
     }
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
-    
+
     // Get total count
     const [{ count }] = await this.db
       .select({ count: sql<number>`count(*)` })
@@ -412,7 +391,8 @@ export class ContentRepository implements IContentRepository {
     const orderBy = pagination?.orderBy || 'createdAt';
     const orderDirection = pagination?.orderDirection || 'desc';
 
-    const orderColumn = processingJobs[orderBy as keyof typeof processingJobs] || processingJobs.createdAt;
+    const orderColumn =
+      processingJobs[orderBy as keyof typeof processingJobs] || processingJobs.createdAt;
     const orderFn = orderDirection === 'asc' ? asc : desc;
 
     const items = await this.db
@@ -436,13 +416,12 @@ export class ContentRepository implements IContentRepository {
     return await this.db
       .select()
       .from(processingJobs)
-      .where(and(
-        eq(processingJobs.status, 'pending'),
-        or(
-          isNull(processingJobs.scheduledFor),
-          lte(processingJobs.scheduledFor, new Date())
+      .where(
+        and(
+          eq(processingJobs.status, 'pending'),
+          or(isNull(processingJobs.scheduledFor), lte(processingJobs.scheduledFor, new Date()))
         )
-      ))
+      )
       .orderBy(desc(processingJobs.priority), asc(processingJobs.createdAt))
       .limit(limit);
   }
@@ -451,11 +430,13 @@ export class ContentRepository implements IContentRepository {
     return await this.db
       .select()
       .from(processingJobs)
-      .where(and(
-        eq(processingJobs.status, 'failed'),
-        lt(processingJobs.attemptCount, processingJobs.maxAttempts),
-        lte(processingJobs.nextRetryAt, beforeDate)
-      ))
+      .where(
+        and(
+          eq(processingJobs.status, 'failed'),
+          lt(processingJobs.attemptCount, processingJobs.maxAttempts),
+          lte(processingJobs.nextRetryAt, beforeDate)
+        )
+      )
       .orderBy(desc(processingJobs.priority), asc(processingJobs.nextRetryAt))
       .limit(limit);
   }
@@ -469,11 +450,11 @@ export class ContentRepository implements IContentRepository {
       })
       .where(eq(processingJobs.id, id))
       .returning();
-    
+
     if (!updated) {
       throw new Error(`Processing job with id ${id} not found`);
     }
-    
+
     return updated;
   }
 
@@ -523,41 +504,35 @@ export class ContentRepository implements IContentRepository {
       })
       .where(eq(processingJobs.id, id))
       .returning();
-    
+
     if (!updated) {
       throw new Error(`Processing job with id ${id} not found`);
     }
-    
+
     return updated;
   }
 
   async deleteProcessingJob(id: string): Promise<void> {
-    await this.db
-      .delete(processingJobs)
-      .where(eq(processingJobs.id, id));
+    await this.db.delete(processingJobs).where(eq(processingJobs.id, id));
   }
 
   // Bulk Operations
 
   async deleteVideoAssetsBulk(ids: string[]): Promise<void> {
     if (ids.length === 0) return;
-    
-    await this.db
-      .delete(videoAssets)
-      .where(inArray(videoAssets.id, ids));
+
+    await this.db.delete(videoAssets).where(inArray(videoAssets.id, ids));
   }
 
   async deleteFileAssetsBulk(ids: string[]): Promise<void> {
     if (ids.length === 0) return;
-    
-    await this.db
-      .delete(fileAssets)
-      .where(inArray(fileAssets.id, ids));
+
+    await this.db.delete(fileAssets).where(inArray(fileAssets.id, ids));
   }
 
   async updateProcessingJobsStatusBulk(ids: string[], status: ProcessingStatus): Promise<number> {
     if (ids.length === 0) return 0;
-    
+
     const result = await this.db
       .update(processingJobs)
       .set({
@@ -565,7 +540,7 @@ export class ContentRepository implements IContentRepository {
         updatedAt: new Date(),
       })
       .where(inArray(processingJobs.id, ids));
-    
+
     return result.rowCount || 0;
   }
 }

@@ -1,9 +1,9 @@
 /**
  * GraphQL PubSub Infrastructure
- * 
+ *
  * Provides Redis-backed publish/subscribe functionality for GraphQL subscriptions
  * with horizontal scaling support and proper error handling.
- * 
+ *
  * Requirements: 21.4
  */
 
@@ -22,23 +22,23 @@ export const SUBSCRIPTION_EVENTS = {
   NOTIFICATION_RECEIVED: 'NOTIFICATION_RECEIVED',
   NOTIFICATION_READ: 'NOTIFICATION_READ',
   UNREAD_COUNT_CHANGED: 'UNREAD_COUNT_CHANGED',
-  
+
   // Message events
   MESSAGE_RECEIVED: 'MESSAGE_RECEIVED',
   CONVERSATION_UPDATED: 'CONVERSATION_UPDATED',
-  
+
   // Discussion events
   NEW_DISCUSSION_POST: 'NEW_DISCUSSION_POST',
   THREAD_UPDATED: 'THREAD_UPDATED',
   POST_VOTED: 'POST_VOTED',
-  
+
   // Announcement events
   ANNOUNCEMENT_PUBLISHED: 'ANNOUNCEMENT_PUBLISHED',
-  
+
   // Real-time presence events
   USER_PRESENCE: 'USER_PRESENCE',
   TYPING_INDICATOR: 'TYPING_INDICATOR',
-  
+
   // Progress events
   ENROLLMENT_PROGRESS_UPDATED: 'ENROLLMENT_PROGRESS_UPDATED',
   LESSON_PROGRESS_UPDATED: 'LESSON_PROGRESS_UPDATED',
@@ -46,7 +46,7 @@ export const SUBSCRIPTION_EVENTS = {
   COURSE_COMPLETED: 'COURSE_COMPLETED',
 } as const;
 
-export type SubscriptionEvent = typeof SUBSCRIPTION_EVENTS[keyof typeof SUBSCRIPTION_EVENTS];
+export type SubscriptionEvent = (typeof SUBSCRIPTION_EVENTS)[keyof typeof SUBSCRIPTION_EVENTS];
 
 /**
  * PubSub instance for GraphQL subscriptions
@@ -65,7 +65,7 @@ export function createPubSub(): PubSub | RedisPubSub {
     // Use Redis PubSub for production/distributed environments
     if (config.nodeEnv === 'production' || config.redis.cluster) {
       logger.info('Initializing Redis PubSub for GraphQL subscriptions');
-      
+
       // Create Redis clients for pub/sub
       const publisher = new Redis({
         host: config.redis.host,
@@ -117,7 +117,6 @@ export function createPubSub(): PubSub | RedisPubSub {
           error: error.message,
         });
       });
-
     } else {
       // Use in-memory PubSub for development
       logger.info('Initializing in-memory PubSub for GraphQL subscriptions');
@@ -126,12 +125,11 @@ export function createPubSub(): PubSub | RedisPubSub {
 
     logger.info('PubSub initialized successfully for GraphQL subscriptions');
     return pubsub;
-
   } catch (error) {
     logger.error('Failed to initialize PubSub for GraphQL subscriptions', {
       error: error instanceof Error ? error.message : String(error),
     });
-    
+
     // Fallback to in-memory PubSub
     logger.warn('Falling back to in-memory PubSub');
     pubsub = new PubSub();
@@ -152,14 +150,11 @@ export function getPubSub(): PubSub | RedisPubSub {
 /**
  * Publishes an event to subscribers
  */
-export async function publishEvent(
-  event: SubscriptionEvent,
-  payload: any
-): Promise<void> {
+export async function publishEvent(event: SubscriptionEvent, payload: any): Promise<void> {
   try {
     const pubsubInstance = getPubSub();
     await pubsubInstance.publish(event, payload);
-    
+
     logger.debug('Event published successfully', {
       event,
       payloadKeys: Object.keys(payload || {}),

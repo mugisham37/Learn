@@ -1,6 +1,6 @@
 /**
  * Assessment Application Services
- * 
+ *
  * Exports all application layer services for the assessments module.
  * These services implement business logic and orchestrate domain entities
  * with infrastructure repositories.
@@ -23,7 +23,7 @@ export type {
   SubmitQuizDTO,
   GradeSubmissionDTO,
   QuizAttemptResult,
-  GradingResult
+  GradingResult,
 } from './IQuizService.js';
 
 export type {
@@ -32,5 +32,5 @@ export type {
   GradeAssignmentDTO,
   RequestRevisionDTO,
   AssignmentSubmissionResult,
-  StudentAssignmentSummary
+  StudentAssignmentSummary,
 } from './IAssignmentService.js';

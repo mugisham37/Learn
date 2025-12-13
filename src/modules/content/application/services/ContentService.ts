@@ -1,9 +1,9 @@
 /**
  * Content Service Implementation
- * 
+ *
  * Implements content management operations for the application layer.
  * Handles video uploads, processing, streaming URLs, and file management.
- * 
+ *
  * Requirements:
  * - 4.1: Video upload with presigned URLs and S3 integration
  * - 4.4: Video processing status tracking and completion handling
@@ -13,24 +13,24 @@
 import { randomUUID } from 'crypto';
 import { extname } from 'path';
 import { logger } from '../../../../shared/utils/logger.js';
-import { 
-  ValidationError, 
-  NotFoundError, 
+import {
+  ValidationError,
+  NotFoundError,
   AuthorizationError,
-  ExternalServiceError 
+  ExternalServiceError,
 } from '../../../../shared/errors/index.js';
 import { IContentRepository } from '../../infrastructure/repositories/IContentRepository.js';
 import { IS3Service } from '../../../../shared/services/IS3Service.js';
 import { ICloudFrontService } from '../../../../shared/services/ICloudFrontService.js';
 import { IMediaConvertService } from '../../../../shared/services/IMediaConvertService.js';
 import { VideoProcessingService } from '../../../../shared/services/VideoProcessingService.js';
-import { 
-  VideoAsset as VideoAssetData, 
-  FileAsset as FileAssetData, 
+import {
+  VideoAsset as VideoAssetData,
+  FileAsset as FileAssetData,
   ProcessingJob as ProcessingJobData,
   NewVideoAsset,
   NewFileAsset,
-  AssetType 
+  AssetType,
 } from '../../../../infrastructure/database/schema/content.schema.js';
 import { VideoAsset, FileAsset, ProcessingJob } from '../../domain/entities/index.js';
 import {
@@ -42,12 +42,12 @@ import {
   GenerateStreamingUrlParams,
   SignedUrl,
   UploadCourseResourceParams,
-  DeleteContentParams
+  DeleteContentParams,
 } from './IContentService.js';
 
 /**
  * Content Service Implementation
- * 
+ *
  * Provides application-level content management operations with
  * comprehensive error handling and logging.
  */
@@ -195,7 +195,7 @@ export class ContentService implements IContentService {
         originalFileSize: params.fileSize,
         processingStatus: 'pending',
         metadata: {
-          ...(videoAsset.metadata as Record<string, any> || {}),
+          ...((videoAsset.metadata as Record<string, any>) || {}),
           ...params.metadata,
           uploadCompletedAt: new Date().toISOString(),
         },
@@ -213,7 +213,7 @@ export class ContentService implements IContentService {
       });
 
       // Find the processing job that was created
-      const processingJob = result.processingJobId 
+      const processingJob = result.processingJobId
         ? await this.contentRepository.findProcessingJobById(result.processingJobId)
         : null;
 
@@ -262,7 +262,9 @@ export class ContentService implements IContentService {
       });
 
       // Find processing job
-      const processingJob = await this.contentRepository.findProcessingJobByExternalId(params.jobId);
+      const processingJob = await this.contentRepository.findProcessingJobByExternalId(
+        params.jobId
+      );
       if (!processingJob) {
         throw new NotFoundError(`Processing job not found: ${params.jobId}`);
       }
@@ -272,7 +274,9 @@ export class ContentService implements IContentService {
         throw new ValidationError('Processing job has no associated video asset');
       }
 
-      const videoAsset = await this.contentRepository.findVideoAssetById(processingJob.videoAssetId);
+      const videoAsset = await this.contentRepository.findVideoAssetById(
+        processingJob.videoAssetId
+      );
       if (!videoAsset) {
         throw new NotFoundError('Video asset not found for processing job');
       }
@@ -288,21 +292,24 @@ export class ContentService implements IContentService {
 
       // Update video asset based on transcoding result
       if (params.status === 'completed' && params.outputs) {
-        const availableResolutions = params.outputs.map(output => ({
+        const availableResolutions = params.outputs.map((output) => ({
           resolution: output.resolution,
           url: output.url,
           bitrate: output.bitrate,
           fileSize: output.fileSize,
         }));
 
-        const streamingUrls = params.outputs.reduce((urls, output) => {
-          urls[output.resolution] = output.url;
-          return urls;
-        }, {} as Record<string, string>);
+        const streamingUrls = params.outputs.reduce(
+          (urls, output) => {
+            urls[output.resolution] = output.url;
+            return urls;
+          },
+          {} as Record<string, string>
+        );
 
         // Find HLS manifest URL (usually the highest resolution or master playlist)
-        const hlsManifestUrl = params.outputs.find(o => o.resolution === '1080p')?.url || 
-                              params.outputs[0]?.url;
+        const hlsManifestUrl =
+          params.outputs.find((o) => o.resolution === '1080p')?.url || params.outputs[0]?.url;
 
         const updatedVideoAssetData = await this.contentRepository.updateVideoAssetProcessingStatus(
           videoAsset.id,
@@ -689,7 +696,7 @@ export class ContentService implements IContentService {
 
       // Find content by S3 key (could be video or file asset)
       const s3Bucket = process.env['S3_BUCKET_NAME']!;
-      
+
       let videoAsset = await this.contentRepository.findVideoAssetByS3Key(s3Bucket, params.fileKey);
       let fileAsset = await this.contentRepository.findFileAssetByS3Key(s3Bucket, params.fileKey);
 
@@ -768,7 +775,8 @@ export class ContentService implements IContentService {
     if (buffer.length === 0) {
       throw new ValidationError('File cannot be empty');
     }
-    if (buffer.length > 100 * 1024 * 1024) { // 100MB limit
+    if (buffer.length > 100 * 1024 * 1024) {
+      // 100MB limit
       throw new ValidationError('File size exceeds maximum limit of 100MB');
     }
 
@@ -815,11 +823,16 @@ export class ContentService implements IContentService {
 
   private mapFileTypeToAssetType(fileType: string): AssetType {
     switch (fileType) {
-      case 'video': return 'video';
-      case 'image': return 'image';
-      case 'audio': return 'audio';
-      case 'archive': return 'archive';
-      default: return 'document';
+      case 'video':
+        return 'video';
+      case 'image':
+        return 'image';
+      case 'audio':
+        return 'audio';
+      case 'archive':
+        return 'archive';
+      default:
+        return 'document';
     }
   }
 
@@ -827,7 +840,8 @@ export class ContentService implements IContentService {
     if (mimeType.startsWith('video/')) return 'video';
     if (mimeType.startsWith('image/')) return 'image';
     if (mimeType.startsWith('audio/')) return 'audio';
-    if (mimeType.includes('zip') || mimeType.includes('tar') || mimeType.includes('rar')) return 'archive';
+    if (mimeType.includes('zip') || mimeType.includes('tar') || mimeType.includes('rar'))
+      return 'archive';
     return 'document';
   }
 
@@ -837,12 +851,16 @@ export class ContentService implements IContentService {
     return urlParts.slice(3).join('/'); // Remove protocol and domain
   }
 
-  private async createVideoAssetRecord(data: Omit<NewVideoAsset, 'id' | 'createdAt' | 'updatedAt'>): Promise<VideoAsset> {
+  private async createVideoAssetRecord(
+    data: Omit<NewVideoAsset, 'id' | 'createdAt' | 'updatedAt'>
+  ): Promise<VideoAsset> {
     const videoData = await this.contentRepository.createVideoAsset(data);
     return this.mapToVideoAssetEntity(videoData);
   }
 
-  private async createFileAssetRecord(data: Omit<NewFileAsset, 'id' | 'createdAt' | 'updatedAt'>): Promise<FileAsset> {
+  private async createFileAssetRecord(
+    data: Omit<NewFileAsset, 'id' | 'createdAt' | 'updatedAt'>
+  ): Promise<FileAsset> {
     const fileData = await this.contentRepository.createFileAsset(data);
     return this.mapToFileAssetEntity(fileData);
   }
@@ -871,7 +889,7 @@ export class ContentService implements IContentService {
       data.hlsManifestUrl,
       data.thumbnailUrl,
       data.previewUrl,
-      Array.isArray(data.availableResolutions) ? data.availableResolutions as any[] : [],
+      Array.isArray(data.availableResolutions) ? (data.availableResolutions as any[]) : [],
       data.cloudfrontDistribution,
       (data.streamingUrls as any) || {},
       (data.metadata as any) || {},
@@ -901,7 +919,7 @@ export class ContentService implements IContentService {
       data.processingErrorMessage,
       (data.variants as any) || {},
       data.description,
-      Array.isArray(data.tags) ? data.tags as string[] : [],
+      Array.isArray(data.tags) ? (data.tags as string[]) : [],
       (data.metadata as any) || {},
       data.expiresAt,
       data.createdAt,

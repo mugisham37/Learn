@@ -1,14 +1,14 @@
 /**
  * Quiz Service Implementation
- * 
+ *
  * Implements quiz business operations in the application layer.
  * Orchestrates domain entities and infrastructure repositories to implement
  * quiz management use cases with proper validation and authorization.
- * 
+ *
  * Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8
  */
 
-import { 
+import {
   IQuizService,
   CreateQuizDTO,
   CreateQuestionDTO,
@@ -17,7 +17,7 @@ import {
   SubmitQuizDTO,
   GradeSubmissionDTO,
   QuizAttemptResult,
-  GradingResult
+  GradingResult,
 } from './IQuizService.js';
 
 import { Quiz } from '../../domain/entities/Quiz.js';
@@ -27,16 +27,14 @@ import { IQuizRepository } from '../../infrastructure/repositories/IQuizReposito
 import { IQuestionRepository } from '../../infrastructure/repositories/IQuestionRepository.js';
 import { IQuizSubmissionRepository } from '../../infrastructure/repositories/IQuizSubmissionRepository.js';
 
-import { 
-  QuizSubmission
-} from '../../../../infrastructure/database/schema/assessments.schema.js';
+import { QuizSubmission } from '../../../../infrastructure/database/schema/assessments.schema.js';
 
 import {
   ValidationError,
   AuthorizationError,
   NotFoundError,
   ConflictError,
-  DatabaseError
+  DatabaseError,
 } from '../../../../shared/errors/index.js';
 import { sanitizeByContentType } from '../../../../shared/utils/sanitization.js';
 
@@ -44,7 +42,7 @@ import { logger } from '../../../../shared/utils/logger.js';
 
 /**
  * Quiz Service Implementation
- * 
+ *
  * Handles all quiz-related business operations with proper validation,
  * authorization, and error handling.
  */
@@ -83,15 +81,17 @@ export class QuizService implements IQuizService {
           showCorrectAnswers: data.showCorrectAnswers !== false, // Default true
           showExplanations: data.showExplanations !== false, // Default true
           availableFrom: data.availableFrom,
-          availableUntil: data.availableUntil
-        }
+          availableUntil: data.availableUntil,
+        },
       });
 
       // Save to repository with sanitized content
       const createdQuiz = await this.quizRepository.create({
         lessonId: data.lessonId,
         title: data.title,
-        description: data.description ? sanitizeByContentType(data.description, 'quiz.description') : undefined,
+        description: data.description
+          ? sanitizeByContentType(data.description, 'quiz.description')
+          : undefined,
         quizType: data.quizType,
         timeLimitMinutes: data.timeLimitMinutes,
         passingScorePercentage: data.passingScorePercentage,
@@ -101,7 +101,7 @@ export class QuizService implements IQuizService {
         showCorrectAnswers: data.showCorrectAnswers !== false, // Default true
         showExplanations: data.showExplanations !== false, // Default true
         availableFrom: data.availableFrom,
-        availableUntil: data.availableUntil
+        availableUntil: data.availableUntil,
       });
 
       logger.info('Quiz created successfully', { quizId: createdQuiz.id, educatorId });
@@ -121,19 +121,18 @@ export class QuizService implements IQuizService {
           showCorrectAnswers: createdQuiz.showCorrectAnswers,
           showExplanations: createdQuiz.showExplanations,
           availableFrom: createdQuiz.availableFrom || undefined,
-          availableUntil: createdQuiz.availableUntil || undefined
+          availableUntil: createdQuiz.availableUntil || undefined,
         },
         createdQuiz.createdAt,
         createdQuiz.updatedAt
       );
-
     } catch (error) {
       logger.error('Failed to create quiz', { error, educatorId, data });
-      
+
       if (error instanceof ValidationError || error instanceof AuthorizationError) {
         throw error;
       }
-      
+
       throw new DatabaseError('Failed to create quiz', 'create', error as Error);
     }
   }
@@ -141,9 +140,17 @@ export class QuizService implements IQuizService {
   /**
    * Adds a question to an existing quiz with validation
    */
-  async addQuestion(educatorId: string, quizId: string, data: CreateQuestionDTO): Promise<Question> {
+  async addQuestion(
+    educatorId: string,
+    quizId: string,
+    data: CreateQuestionDTO
+  ): Promise<Question> {
     try {
-      logger.info('Adding question to quiz', { educatorId, quizId, questionType: data.questionType });
+      logger.info('Adding question to quiz', {
+        educatorId,
+        quizId,
+        questionType: data.questionType,
+      });
 
       // Validate input data
       this.validateCreateQuestionData(data);
@@ -168,13 +175,19 @@ export class QuizService implements IQuizService {
         questionMediaUrl: data.questionMediaUrl,
         options: data.options,
         correctAnswer: data.correctAnswer,
-        explanation: data.explanation ? sanitizeByContentType(data.explanation, 'question.explanation') : undefined,
+        explanation: data.explanation
+          ? sanitizeByContentType(data.explanation, 'question.explanation')
+          : undefined,
         points: data.points || 1,
         orderNumber,
-        difficulty: data.difficulty || 'medium'
+        difficulty: data.difficulty || 'medium',
       });
 
-      logger.info('Question added successfully', { questionId: createdQuestion.id, quizId, educatorId });
+      logger.info('Question added successfully', {
+        questionId: createdQuestion.id,
+        quizId,
+        educatorId,
+      });
 
       return Question.fromPersistence(
         createdQuestion.id,
@@ -191,14 +204,17 @@ export class QuizService implements IQuizService {
         createdQuestion.createdAt,
         createdQuestion.updatedAt
       );
-
     } catch (error) {
       logger.error('Failed to add question', { error, educatorId, quizId, data });
-      
-      if (error instanceof ValidationError || error instanceof AuthorizationError || error instanceof NotFoundError) {
+
+      if (
+        error instanceof ValidationError ||
+        error instanceof AuthorizationError ||
+        error instanceof NotFoundError
+      ) {
         throw error;
       }
-      
+
       throw new DatabaseError('Failed to add question', 'create', error as Error);
     }
   }
@@ -229,7 +245,10 @@ export class QuizService implements IQuizService {
       }
 
       // Get next attempt number
-      const attemptNumber = await this.submissionRepository.getNextAttemptNumber(data.quizId, data.studentId);
+      const attemptNumber = await this.submissionRepository.getNextAttemptNumber(
+        data.quizId,
+        data.studentId
+      );
 
       // Create submission
       const submission = await this.submissionRepository.create({
@@ -237,51 +256,56 @@ export class QuizService implements IQuizService {
         studentId: data.studentId,
         enrollmentId: data.enrollmentId,
         attemptNumber,
-        answers: {} // Initialize empty answers
+        answers: {}, // Initialize empty answers
       });
 
       // Get questions (with randomization if configured)
       const rawQuestions = await this.questionRepository.findAllByQuiz(
-        data.quizId, 
+        data.quizId,
         quiz.randomizeQuestions
       );
 
       // Convert to domain entities
-      const questions = rawQuestions.map(q => Question.fromPersistence(
-        q.id,
-        q.quizId,
-        q.questionType,
-        q.questionText,
-        q.questionMediaUrl || undefined,
-        q.options,
-        q.correctAnswer,
-        q.explanation || undefined,
-        q.points,
-        q.orderNumber,
-        q.difficulty,
-        q.createdAt,
-        q.updatedAt
-      ));
+      const questions = rawQuestions.map((q) =>
+        Question.fromPersistence(
+          q.id,
+          q.quizId,
+          q.questionType,
+          q.questionText,
+          q.questionMediaUrl || undefined,
+          q.options,
+          q.correctAnswer,
+          q.explanation || undefined,
+          q.points,
+          q.orderNumber,
+          q.difficulty,
+          q.createdAt,
+          q.updatedAt
+        )
+      );
 
-      logger.info('Quiz attempt started successfully', { 
-        submissionId: submission.id, 
-        quizId: data.quizId, 
+      logger.info('Quiz attempt started successfully', {
+        submissionId: submission.id,
+        quizId: data.quizId,
         studentId: data.studentId,
-        attemptNumber 
+        attemptNumber,
       });
 
       return {
         submission,
-        questions
+        questions,
       };
-
     } catch (error) {
       logger.error('Failed to start quiz attempt', { error, data });
-      
-      if (error instanceof ValidationError || error instanceof NotFoundError || error instanceof ConflictError) {
+
+      if (
+        error instanceof ValidationError ||
+        error instanceof NotFoundError ||
+        error instanceof ConflictError
+      ) {
         throw error;
       }
-      
+
       throw new DatabaseError('Failed to start quiz attempt', 'create', error as Error);
     }
   }
@@ -291,7 +315,10 @@ export class QuizService implements IQuizService {
    */
   async submitAnswer(data: SubmitAnswerDTO): Promise<QuizSubmission> {
     try {
-      logger.info('Submitting answer', { submissionId: data.submissionId, questionId: data.questionId });
+      logger.info('Submitting answer', {
+        submissionId: data.submissionId,
+        questionId: data.questionId,
+      });
 
       // Get submission
       const submission = await this.submissionRepository.findById(data.submissionId);
@@ -316,23 +343,26 @@ export class QuizService implements IQuizService {
 
       // Update submission with new answer
       const updatedSubmission = await this.submissionRepository.update(data.submissionId, {
-        answers: currentAnswers
+        answers: currentAnswers,
       });
 
-      logger.info('Answer submitted successfully', { 
-        submissionId: data.submissionId, 
-        questionId: data.questionId 
+      logger.info('Answer submitted successfully', {
+        submissionId: data.submissionId,
+        questionId: data.questionId,
       });
 
       return updatedSubmission;
-
     } catch (error) {
       logger.error('Failed to submit answer', { error, data });
-      
-      if (error instanceof ValidationError || error instanceof NotFoundError || error instanceof ConflictError) {
+
+      if (
+        error instanceof ValidationError ||
+        error instanceof NotFoundError ||
+        error instanceof ConflictError
+      ) {
         throw error;
       }
-      
+
       throw new DatabaseError('Failed to submit answer', 'update', error as Error);
     }
   }
@@ -365,32 +395,34 @@ export class QuizService implements IQuizService {
       }
 
       const rawQuestions = await this.questionRepository.findAllByQuiz(submission.quizId);
-      
+
       // Convert to domain entities
-      const questions = rawQuestions.map(q => Question.fromPersistence(
-        q.id,
-        q.quizId,
-        q.questionType,
-        q.questionText,
-        q.questionMediaUrl || undefined,
-        q.options,
-        q.correctAnswer,
-        q.explanation || undefined,
-        q.points,
-        q.orderNumber,
-        q.difficulty,
-        q.createdAt,
-        q.updatedAt
-      ));
+      const questions = rawQuestions.map((q) =>
+        Question.fromPersistence(
+          q.id,
+          q.quizId,
+          q.questionType,
+          q.questionText,
+          q.questionMediaUrl || undefined,
+          q.options,
+          q.correctAnswer,
+          q.explanation || undefined,
+          q.points,
+          q.orderNumber,
+          q.difficulty,
+          q.createdAt,
+          q.updatedAt
+        )
+      );
 
       // Auto-grade objective questions
       const gradingResult = await this.autoGradeSubmission(submission, questions);
 
       // Determine grading status
-      const hasSubjectiveQuestions = questions.some(q => 
-        q.questionType === 'essay' || q.questionType === 'short_answer'
+      const hasSubjectiveQuestions = questions.some(
+        (q) => q.questionType === 'essay' || q.questionType === 'short_answer'
       );
-      
+
       const gradingStatus = hasSubjectiveQuestions ? 'pending_review' : 'auto_graded';
 
       // Update submission with results
@@ -400,24 +432,27 @@ export class QuizService implements IQuizService {
         scorePercentage: gradingResult.scorePercentage.toString(),
         pointsEarned: gradingResult.earnedPoints.toString(),
         gradingStatus,
-        gradedAt: gradingStatus === 'auto_graded' ? new Date() : undefined
+        gradedAt: gradingStatus === 'auto_graded' ? new Date() : undefined,
       });
 
-      logger.info('Quiz submitted successfully', { 
+      logger.info('Quiz submitted successfully', {
         submissionId: data.submissionId,
         scorePercentage: gradingResult.scorePercentage,
-        gradingStatus
+        gradingStatus,
       });
 
       return updatedSubmission;
-
     } catch (error) {
       logger.error('Failed to submit quiz', { error, data });
-      
-      if (error instanceof ValidationError || error instanceof NotFoundError || error instanceof ConflictError) {
+
+      if (
+        error instanceof ValidationError ||
+        error instanceof NotFoundError ||
+        error instanceof ConflictError
+      ) {
         throw error;
       }
-      
+
       throw new DatabaseError('Failed to submit quiz', 'update', error as Error);
     }
   }
@@ -427,7 +462,10 @@ export class QuizService implements IQuizService {
    */
   async gradeSubmission(data: GradeSubmissionDTO): Promise<QuizSubmission> {
     try {
-      logger.info('Manually grading submission', { submissionId: data.submissionId, gradedBy: data.gradedBy });
+      logger.info('Manually grading submission', {
+        submissionId: data.submissionId,
+        gradedBy: data.gradedBy,
+      });
 
       // Get submission
       const submission = await this.submissionRepository.findById(data.submissionId);
@@ -453,14 +491,18 @@ export class QuizService implements IQuizService {
 
       if (data.questionGrades && data.questionGrades.length > 0) {
         // Recalculate based on question grades
-        const totalQuestionPoints = await this.questionRepository.getTotalPointsByQuiz(submission.quizId);
+        const totalQuestionPoints = await this.questionRepository.getTotalPointsByQuiz(
+          submission.quizId
+        );
         const earnedPoints = data.questionGrades.reduce((sum, grade) => sum + grade.points, 0);
-        
+
         finalPoints = earnedPoints;
         finalScore = totalQuestionPoints > 0 ? (earnedPoints / totalQuestionPoints) * 100 : 0;
       } else if (data.pointsAwarded !== undefined) {
         // Use provided points
-        const totalQuestionPoints = await this.questionRepository.getTotalPointsByQuiz(submission.quizId);
+        const totalQuestionPoints = await this.questionRepository.getTotalPointsByQuiz(
+          submission.quizId
+        );
         finalPoints = data.pointsAwarded;
         finalScore = totalQuestionPoints > 0 ? (data.pointsAwarded / totalQuestionPoints) * 100 : 0;
       }
@@ -472,25 +514,28 @@ export class QuizService implements IQuizService {
         feedback: data.feedback,
         gradingStatus: 'graded',
         gradedAt: new Date(),
-        gradedBy: data.gradedBy
+        gradedBy: data.gradedBy,
       });
 
-      logger.info('Submission graded successfully', { 
+      logger.info('Submission graded successfully', {
         submissionId: data.submissionId,
         finalScore,
-        gradedBy: data.gradedBy
+        gradedBy: data.gradedBy,
       });
 
       return updatedSubmission;
-
     } catch (error) {
       logger.error('Failed to grade submission', { error, data });
-      
-      if (error instanceof ValidationError || error instanceof AuthorizationError || 
-          error instanceof NotFoundError || error instanceof ConflictError) {
+
+      if (
+        error instanceof ValidationError ||
+        error instanceof AuthorizationError ||
+        error instanceof NotFoundError ||
+        error instanceof ConflictError
+      ) {
         throw error;
       }
-      
+
       throw new DatabaseError('Failed to grade submission', 'update', error as Error);
     }
   }
@@ -507,7 +552,7 @@ export class QuizService implements IQuizService {
 
       // TODO: Implement proper authorization logic
       // For now, allow all authenticated users to view quizzes
-      
+
       return Quiz.fromPersistence(
         quiz.id,
         quiz.lessonId,
@@ -523,17 +568,16 @@ export class QuizService implements IQuizService {
           showCorrectAnswers: quiz.showCorrectAnswers,
           showExplanations: quiz.showExplanations,
           availableFrom: quiz.availableFrom || undefined,
-          availableUntil: quiz.availableUntil || undefined
+          availableUntil: quiz.availableUntil || undefined,
         },
         quiz.createdAt,
         quiz.updatedAt
       );
-
     } catch (error) {
       if (error instanceof NotFoundError || error instanceof AuthorizationError) {
         throw error;
       }
-      
+
       throw new DatabaseError('Failed to get quiz', 'findById', error as Error);
     }
   }
@@ -541,7 +585,11 @@ export class QuizService implements IQuizService {
   /**
    * Gets quiz submission by ID with authorization check
    */
-  async getSubmission(submissionId: string, userId: string, userRole: string): Promise<QuizSubmission> {
+  async getSubmission(
+    submissionId: string,
+    userId: string,
+    userRole: string
+  ): Promise<QuizSubmission> {
     try {
       const submission = await this.submissionRepository.findById(submissionId);
       if (!submission) {
@@ -556,12 +604,11 @@ export class QuizService implements IQuizService {
       // TODO: For educators, verify they own the course/lesson
 
       return submission;
-
     } catch (error) {
       if (error instanceof NotFoundError || error instanceof AuthorizationError) {
         throw error;
       }
-      
+
       throw new DatabaseError('Failed to get submission', 'findById', error as Error);
     }
   }
@@ -585,14 +632,13 @@ export class QuizService implements IQuizService {
 
       // Check attempt count
       const attemptCount = await this.submissionRepository.countAttempts(quizId, studentId);
-      
+
       // If maxAttempts is 0, unlimited attempts are allowed
       if (quiz.maxAttempts === 0) {
         return true;
       }
 
       return attemptCount < quiz.maxAttempts;
-
     } catch (error) {
       logger.error('Failed to check if student can start attempt', { error, quizId, studentId });
       return false;
@@ -602,7 +648,10 @@ export class QuizService implements IQuizService {
   /**
    * Gets student's attempt summary for a quiz
    */
-  async getAttemptSummary(quizId: string, studentId: string): Promise<{
+  async getAttemptSummary(
+    quizId: string,
+    studentId: string
+  ): Promise<{
     totalAttempts: number;
     bestScore: number | null;
     hasPassingScore: boolean;
@@ -616,9 +665,8 @@ export class QuizService implements IQuizService {
         totalAttempts: summary.totalAttempts,
         bestScore: summary.bestScore,
         hasPassingScore: summary.hasPassingScore,
-        canStartNewAttempt: canStart
+        canStartNewAttempt: canStart,
       };
-
     } catch (error) {
       logger.error('Failed to get attempt summary', { error, quizId, studentId });
       throw new DatabaseError('Failed to get attempt summary', 'getAttemptSummary', error as Error);
@@ -666,8 +714,15 @@ export class QuizService implements IQuizService {
    * Validates question creation data
    */
   private validateCreateQuestionData(data: CreateQuestionDTO): void {
-    const validTypes = ['multiple_choice', 'true_false', 'short_answer', 'essay', 'fill_blank', 'matching'];
-    
+    const validTypes = [
+      'multiple_choice',
+      'true_false',
+      'short_answer',
+      'essay',
+      'fill_blank',
+      'matching',
+    ];
+
     if (!data.questionType || !validTypes.includes(data.questionType)) {
       throw new ValidationError('Valid question type is required');
     }
@@ -690,13 +745,21 @@ export class QuizService implements IQuizService {
   private validateQuestionTypeSpecificData(data: CreateQuestionDTO): void {
     switch (data.questionType) {
       case 'multiple_choice':
-        if (!data.options || !Array.isArray(data.options) || (data.options as string[]).length < 2) {
+        if (
+          !data.options ||
+          !Array.isArray(data.options) ||
+          (data.options as string[]).length < 2
+        ) {
           throw new ValidationError('Multiple choice questions must have at least 2 options');
         }
-        if (typeof data.correctAnswer !== 'number' || 
-            data.correctAnswer < 0 || 
-            data.correctAnswer >= (data.options as string[]).length) {
-          throw new ValidationError('Multiple choice questions must have a valid correct answer index');
+        if (
+          typeof data.correctAnswer !== 'number' ||
+          data.correctAnswer < 0 ||
+          data.correctAnswer >= (data.options as string[]).length
+        ) {
+          throw new ValidationError(
+            'Multiple choice questions must have a valid correct answer index'
+          );
         }
         break;
 
@@ -707,8 +770,10 @@ export class QuizService implements IQuizService {
         break;
 
       case 'short_answer':
-        if (!data.correctAnswer || 
-            (!Array.isArray(data.correctAnswer) && typeof data.correctAnswer !== 'string')) {
+        if (
+          !data.correctAnswer ||
+          (!Array.isArray(data.correctAnswer) && typeof data.correctAnswer !== 'string')
+        ) {
           throw new ValidationError('Short answer questions must have correct answer(s)');
         }
         break;
@@ -719,13 +784,17 @@ export class QuizService implements IQuizService {
 
       case 'fill_blank':
         if (!data.correctAnswer || !Array.isArray(data.correctAnswer)) {
-          throw new ValidationError('Fill in the blank questions must have an array of correct answers');
+          throw new ValidationError(
+            'Fill in the blank questions must have an array of correct answers'
+          );
         }
         break;
 
       case 'matching':
         if (!data.options || !data.correctAnswer) {
-          throw new ValidationError('Matching questions must have options and correct answer mappings');
+          throw new ValidationError(
+            'Matching questions must have options and correct answer mappings'
+          );
         }
         break;
     }
@@ -735,7 +804,7 @@ export class QuizService implements IQuizService {
    * Auto-grades objective questions in a submission
    */
   private async autoGradeSubmission(
-    submission: QuizSubmission, 
+    submission: QuizSubmission,
     questions: Question[]
   ): Promise<GradingResult> {
     const answers = (submission.answers as Record<string, unknown>) || {};
@@ -768,7 +837,7 @@ export class QuizService implements IQuizService {
         questionId: question.id,
         isCorrect,
         points,
-        feedback: question.explanation
+        feedback: question.explanation,
       });
     }
 
@@ -778,7 +847,7 @@ export class QuizService implements IQuizService {
       totalPoints,
       earnedPoints,
       scorePercentage,
-      questionResults
+      questionResults,
     };
   }
 
@@ -803,13 +872,14 @@ export class QuizService implements IQuizService {
         }
         const studentAnswers = studentAnswer as string[];
         const correctAnswers = question.correctAnswer as string[];
-        
+
         if (studentAnswers.length !== correctAnswers.length) {
           return false;
         }
-        
-        return studentAnswers.every((answer, index) => 
-          answer.toLowerCase().trim() === correctAnswers[index]?.toLowerCase().trim()
+
+        return studentAnswers.every(
+          (answer, index) =>
+            answer.toLowerCase().trim() === correctAnswers[index]?.toLowerCase().trim()
         );
 
       default:

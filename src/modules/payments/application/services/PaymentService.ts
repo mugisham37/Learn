@@ -1,9 +1,9 @@
 /**
  * Payment Service Implementation
- * 
+ *
  * Implements payment processing, webhook handling, refunds, and subscriptions.
  * Orchestrates between domain entities, repositories, and external services.
- * 
+ *
  * Requirements:
  * - 11.1: Stripe checkout session creation and payment processing
  * - 11.2: Webhook handling for payment events
@@ -13,42 +13,55 @@
 
 import Stripe from 'stripe';
 
-import { 
-  ValidationError, 
-  NotFoundError, 
-  ConflictError, 
+import {
+  ValidationError,
+  NotFoundError,
+  ConflictError,
   ExternalServiceError,
-  DatabaseError 
+  DatabaseError,
 } from '../../../../shared/errors/index.js';
 import { logger } from '../../../../shared/utils/logger.js';
 
-import { 
+import {
   IPaymentService,
   CreateCheckoutSessionParams,
   CheckoutSession,
   ProcessRefundParams,
   CreateSubscriptionParams,
-  CancelSubscriptionParams
+  CancelSubscriptionParams,
 } from './IPaymentService.js';
-import { Payment, Subscription, Refund, DEFAULT_REFUND_POLICY } from '../../domain/entities/index.js';
-import { 
+import {
+  Payment,
+  Subscription,
+  Refund,
+  DEFAULT_REFUND_POLICY,
+} from '../../domain/entities/index.js';
+import {
   IPaymentRepository,
   ISubscriptionRepository,
   IRefundRepository,
   CreatePaymentDTO,
   CreateSubscriptionDTO,
   CreateRefundDTO,
-  PaginationDTO
+  PaginationDTO,
 } from '../../infrastructure/repositories/IPaymentRepository.js';
-import { IStripeClient, CheckoutSessionParams, SubscriptionParams, RefundParams } from '../../infrastructure/clients/IStripeClient.js';
-import { IEnrollmentRepository, CreateEnrollmentDTO } from '../../../enrollments/infrastructure/repositories/IEnrollmentRepository.js';
+import {
+  IStripeClient,
+  CheckoutSessionParams,
+  SubscriptionParams,
+  RefundParams,
+} from '../../infrastructure/clients/IStripeClient.js';
+import {
+  IEnrollmentRepository,
+  CreateEnrollmentDTO,
+} from '../../../enrollments/infrastructure/repositories/IEnrollmentRepository.js';
 import { ICourseRepository } from '../../../courses/infrastructure/repositories/ICourseRepository.js';
 import { IUserRepository } from '../../../users/infrastructure/repositories/IUserRepository.js';
 import { INotificationService } from '../../../notifications/application/services/INotificationService.js';
 
 /**
  * Payment Service Implementation
- * 
+ *
  * Orchestrates payment operations between domain entities, repositories,
  * and external services. Handles complex business workflows and ensures
  * data consistency across payment, enrollment, and notification systems.
@@ -70,9 +83,9 @@ export class PaymentService implements IPaymentService {
    */
   async createCheckoutSession(params: CreateCheckoutSessionParams): Promise<CheckoutSession> {
     try {
-      logger.info('Creating checkout session', { 
-        courseId: params.courseId, 
-        studentId: params.studentId 
+      logger.info('Creating checkout session', {
+        courseId: params.courseId,
+        studentId: params.studentId,
       });
 
       // Validate input parameters
@@ -112,8 +125,8 @@ export class PaymentService implements IPaymentService {
         metadata: {
           courseTitle: course.title,
           studentEmail: student.email,
-          ...params.metadata
-        }
+          ...params.metadata,
+        },
       };
 
       const payment = await this.paymentRepository.create(paymentData);
@@ -131,40 +144,47 @@ export class PaymentService implements IPaymentService {
           paymentId: payment.id,
           courseId: params.courseId,
           studentId: params.studentId,
-          ...params.metadata
-        }
+          ...params.metadata,
+        },
       };
 
       const stripeSession = await this.stripeClient.createCheckoutSession(checkoutParams);
 
       // Update payment with Stripe session ID
       await this.paymentRepository.update(payment.id, {
-        stripeCheckoutSessionId: stripeSession.id
+        stripeCheckoutSessionId: stripeSession.id,
       });
 
       logger.info('Checkout session created successfully', {
         paymentId: payment.id,
-        sessionId: stripeSession.id
+        sessionId: stripeSession.id,
       });
 
       return {
         sessionId: stripeSession.id,
         sessionUrl: stripeSession.url!,
-        paymentId: payment.id
+        paymentId: payment.id,
       };
-
     } catch (error) {
-      logger.error('Failed to create checkout session', { 
+      logger.error('Failed to create checkout session', {
         error: error instanceof Error ? error.message : String(error),
         courseId: params.courseId,
-        studentId: params.studentId
+        studentId: params.studentId,
       });
 
-      if (error instanceof ValidationError || error instanceof NotFoundError || error instanceof ConflictError) {
+      if (
+        error instanceof ValidationError ||
+        error instanceof NotFoundError ||
+        error instanceof ConflictError
+      ) {
         throw error;
       }
 
-      throw new ExternalServiceError('Stripe', 'Failed to create checkout session', error instanceof Error ? error : new Error(String(error)));
+      throw new ExternalServiceError(
+        'Stripe',
+        'Failed to create checkout session',
+        error instanceof Error ? error : new Error(String(error))
+      );
     }
   }
 
@@ -173,9 +193,9 @@ export class PaymentService implements IPaymentService {
    */
   async handleWebhook(event: Stripe.Event): Promise<void> {
     try {
-      logger.info('Processing webhook event', { 
-        type: event.type, 
-        id: event.id 
+      logger.info('Processing webhook event', {
+        type: event.type,
+        id: event.id,
       });
 
       switch (event.type) {
@@ -219,18 +239,21 @@ export class PaymentService implements IPaymentService {
           logger.info('Unhandled webhook event type', { type: event.type });
       }
 
-      logger.info('Webhook event processed successfully', { 
-        type: event.type, 
-        id: event.id 
+      logger.info('Webhook event processed successfully', {
+        type: event.type,
+        id: event.id,
       });
-
     } catch (error) {
       logger.error('Failed to process webhook event', {
         error: error instanceof Error ? error.message : String(error),
         eventType: event.type,
-        eventId: event.id
+        eventId: event.id,
       });
-      throw new ExternalServiceError('Stripe', 'Failed to process webhook event', error instanceof Error ? error : new Error(String(error)));
+      throw new ExternalServiceError(
+        'Stripe',
+        'Failed to process webhook event',
+        error instanceof Error ? error : new Error(String(error))
+      );
     }
   }
 
@@ -239,9 +262,9 @@ export class PaymentService implements IPaymentService {
    */
   async processRefund(params: ProcessRefundParams): Promise<Refund> {
     try {
-      logger.info('Processing refund', { 
+      logger.info('Processing refund', {
         enrollmentId: params.enrollmentId,
-        reason: params.reason
+        reason: params.reason,
       });
 
       // Validate refund eligibility
@@ -271,7 +294,7 @@ export class PaymentService implements IPaymentService {
 
       // Calculate refund amount
       const refundAmount = params.amount || eligibility.maxRefundAmount || payment.amount;
-      
+
       if (parseFloat(refundAmount) > parseFloat(payment.amount)) {
         throw new ValidationError('Refund amount cannot exceed original payment amount');
       }
@@ -280,7 +303,7 @@ export class PaymentService implements IPaymentService {
       const refundParams: RefundParams = {
         paymentIntentId: payment.stripePaymentIntentId,
         amount: Math.round(parseFloat(refundAmount) * 100), // Convert to cents
-        reason: params.reason
+        reason: params.reason,
       };
 
       const stripeRefund = await this.stripeClient.createRefund(refundParams);
@@ -292,7 +315,7 @@ export class PaymentService implements IPaymentService {
         stripeRefundId: stripeRefund.id,
         amount: refundAmount,
         reason: params.reason,
-        status: stripeRefund.status === 'succeeded' ? 'succeeded' : 'pending'
+        status: stripeRefund.status === 'succeeded' ? 'succeeded' : 'pending',
       };
 
       const refund = await this.refundRepository.create(refundData);
@@ -303,8 +326,8 @@ export class PaymentService implements IPaymentService {
       }
 
       // Update enrollment status
-      await this.enrollmentRepository.update(params.enrollmentId, { 
-        status: 'dropped'
+      await this.enrollmentRepository.update(params.enrollmentId, {
+        status: 'dropped',
       });
 
       // Send notification
@@ -317,15 +340,15 @@ export class PaymentService implements IPaymentService {
           metadata: {
             refundId: refund.id,
             amount: refundAmount,
-            enrollmentId: params.enrollmentId
-          }
+            enrollmentId: params.enrollmentId,
+          },
         });
       }
 
       logger.info('Refund processed successfully', {
         refundId: refund.id,
         amount: refundAmount,
-        enrollmentId: params.enrollmentId
+        enrollmentId: params.enrollmentId,
       });
 
       return Refund.fromData({
@@ -337,20 +360,27 @@ export class PaymentService implements IPaymentService {
         reason: refund.reason,
         status: refund.status,
         createdAt: refund.createdAt,
-        updatedAt: refund.updatedAt
+        updatedAt: refund.updatedAt,
       });
-
     } catch (error) {
       logger.error('Failed to process refund', {
         error: error instanceof Error ? error.message : String(error),
-        enrollmentId: params.enrollmentId
+        enrollmentId: params.enrollmentId,
       });
 
-      if (error instanceof ValidationError || error instanceof NotFoundError || error instanceof ConflictError) {
+      if (
+        error instanceof ValidationError ||
+        error instanceof NotFoundError ||
+        error instanceof ConflictError
+      ) {
         throw error;
       }
 
-      throw new ExternalServiceError('Stripe', 'Failed to process refund', error instanceof Error ? error : new Error(String(error)));
+      throw new ExternalServiceError(
+        'Stripe',
+        'Failed to process refund',
+        error instanceof Error ? error : new Error(String(error))
+      );
     }
   }
 
@@ -359,9 +389,9 @@ export class PaymentService implements IPaymentService {
    */
   async createSubscription(params: CreateSubscriptionParams): Promise<Subscription> {
     try {
-      logger.info('Creating subscription', { 
+      logger.info('Creating subscription', {
         userId: params.userId,
-        planId: params.planId
+        planId: params.planId,
       });
 
       // Validate user exists
@@ -383,8 +413,8 @@ export class PaymentService implements IPaymentService {
         priceId: params.planId,
         metadata: {
           userId: params.userId,
-          ...params.metadata
-        }
+          ...params.metadata,
+        },
       };
 
       const stripeSubscription = await this.stripeClient.createSubscription(subscriptionParams);
@@ -398,14 +428,14 @@ export class PaymentService implements IPaymentService {
         status: stripeSubscription.status as any,
         currentPeriodStart: new Date(stripeSubscription.current_period_start * 1000),
         currentPeriodEnd: new Date(stripeSubscription.current_period_end * 1000),
-        cancelAtPeriodEnd: stripeSubscription.cancel_at_period_end
+        cancelAtPeriodEnd: stripeSubscription.cancel_at_period_end,
       };
 
       const subscription = await this.subscriptionRepository.create(subscriptionData);
 
       logger.info('Subscription created successfully', {
         subscriptionId: subscription.id,
-        stripeSubscriptionId: stripeSubscription.id
+        stripeSubscriptionId: stripeSubscription.id,
       });
 
       return Subscription.fromData({
@@ -419,21 +449,24 @@ export class PaymentService implements IPaymentService {
         currentPeriodEnd: subscription.currentPeriodEnd,
         cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
         createdAt: subscription.createdAt,
-        updatedAt: subscription.updatedAt
+        updatedAt: subscription.updatedAt,
       });
-
     } catch (error) {
       logger.error('Failed to create subscription', {
         error: error instanceof Error ? error.message : String(error),
         userId: params.userId,
-        planId: params.planId
+        planId: params.planId,
       });
 
       if (error instanceof ValidationError || error instanceof NotFoundError) {
         throw error;
       }
 
-      throw new ExternalServiceError('Stripe', 'Failed to create subscription', error instanceof Error ? error : new Error(String(error)));
+      throw new ExternalServiceError(
+        'Stripe',
+        'Failed to create subscription',
+        error instanceof Error ? error : new Error(String(error))
+      );
     }
   }
 
@@ -442,8 +475,8 @@ export class PaymentService implements IPaymentService {
    */
   async cancelSubscription(params: CancelSubscriptionParams): Promise<Subscription> {
     try {
-      logger.info('Canceling subscription', { 
-        subscriptionId: params.subscriptionId
+      logger.info('Canceling subscription', {
+        subscriptionId: params.subscriptionId,
       });
 
       // Find subscription
@@ -453,12 +486,14 @@ export class PaymentService implements IPaymentService {
       }
 
       // Cancel with Stripe
-      const stripeSubscription = await this.stripeClient.cancelSubscription(subscription.stripeSubscriptionId);
+      const stripeSubscription = await this.stripeClient.cancelSubscription(
+        subscription.stripeSubscriptionId
+      );
 
       // Update subscription record
       const updatedSubscription = await this.subscriptionRepository.update(subscription.id, {
         status: stripeSubscription.status as any,
-        cancelAtPeriodEnd: stripeSubscription.cancel_at_period_end
+        cancelAtPeriodEnd: stripeSubscription.cancel_at_period_end,
       });
 
       // Send notification
@@ -467,18 +502,18 @@ export class PaymentService implements IPaymentService {
           recipientId: subscription.userId,
           notificationType: 'subscription_canceled' as any,
           title: 'Subscription Canceled',
-          content: params.cancelAtPeriodEnd 
+          content: params.cancelAtPeriodEnd
             ? 'Your subscription will be canceled at the end of the current billing period.'
             : 'Your subscription has been canceled immediately.',
           metadata: {
             subscriptionId: params.subscriptionId,
-            reason: params.reason
-          }
+            reason: params.reason,
+          },
         });
       }
 
       logger.info('Subscription canceled successfully', {
-        subscriptionId: params.subscriptionId
+        subscriptionId: params.subscriptionId,
       });
 
       return Subscription.fromData({
@@ -492,20 +527,23 @@ export class PaymentService implements IPaymentService {
         currentPeriodEnd: updatedSubscription.currentPeriodEnd,
         cancelAtPeriodEnd: updatedSubscription.cancelAtPeriodEnd,
         createdAt: updatedSubscription.createdAt,
-        updatedAt: updatedSubscription.updatedAt
+        updatedAt: updatedSubscription.updatedAt,
       });
-
     } catch (error) {
       logger.error('Failed to cancel subscription', {
         error: error instanceof Error ? error.message : String(error),
-        subscriptionId: params.subscriptionId
+        subscriptionId: params.subscriptionId,
       });
 
       if (error instanceof NotFoundError) {
         throw error;
       }
 
-      throw new ExternalServiceError('Stripe', 'Failed to cancel subscription', error instanceof Error ? error : new Error(String(error)));
+      throw new ExternalServiceError(
+        'Stripe',
+        'Failed to cancel subscription',
+        error instanceof Error ? error : new Error(String(error))
+      );
     }
   }
 
@@ -526,26 +564,27 @@ export class PaymentService implements IPaymentService {
       const result = await this.paymentRepository.getPaymentHistory(userId, pagination);
 
       return {
-        payments: result.data.map(payment => Payment.fromData({
-          id: payment.id,
-          userId: payment.userId,
-          courseId: payment.courseId,
-          stripePaymentIntentId: payment.stripePaymentIntentId,
-          stripeCheckoutSessionId: payment.stripeCheckoutSessionId,
-          amount: payment.amount,
-          currency: payment.currency,
-          status: payment.status,
-          paymentMethod: payment.paymentMethod,
-          metadata: payment.metadata as Record<string, any>,
-          createdAt: payment.createdAt,
-          updatedAt: payment.updatedAt
-        })),
+        payments: result.data.map((payment) =>
+          Payment.fromData({
+            id: payment.id,
+            userId: payment.userId,
+            courseId: payment.courseId,
+            stripePaymentIntentId: payment.stripePaymentIntentId,
+            stripeCheckoutSessionId: payment.stripeCheckoutSessionId,
+            amount: payment.amount,
+            currency: payment.currency,
+            status: payment.status,
+            paymentMethod: payment.paymentMethod,
+            metadata: payment.metadata as Record<string, any>,
+            createdAt: payment.createdAt,
+            updatedAt: payment.updatedAt,
+          })
+        ),
         total: result.total,
         page: result.page,
         limit: result.limit,
-        totalPages: result.totalPages
+        totalPages: result.totalPages,
       };
-
     } catch (error) {
       if (error instanceof ValidationError) {
         throw error;
@@ -553,10 +592,14 @@ export class PaymentService implements IPaymentService {
 
       logger.error('Failed to get payment history', {
         error: error instanceof Error ? error.message : String(error),
-        userId
+        userId,
       });
 
-      throw new DatabaseError('Failed to retrieve payment history', 'getPaymentHistory', error instanceof Error ? error : new Error(String(error)));
+      throw new DatabaseError(
+        'Failed to retrieve payment history',
+        'getPaymentHistory',
+        error instanceof Error ? error : new Error(String(error))
+      );
     }
   }
 
@@ -571,20 +614,21 @@ export class PaymentService implements IPaymentService {
 
       const subscriptions = await this.subscriptionRepository.findByUserId(userId);
 
-      return subscriptions.map(subscription => Subscription.fromData({
-        id: subscription.id,
-        userId: subscription.userId,
-        stripeSubscriptionId: subscription.stripeSubscriptionId,
-        stripeCustomerId: subscription.stripeCustomerId,
-        planId: subscription.planId,
-        status: subscription.status,
-        currentPeriodStart: subscription.currentPeriodStart,
-        currentPeriodEnd: subscription.currentPeriodEnd,
-        cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
-        createdAt: subscription.createdAt,
-        updatedAt: subscription.updatedAt
-      }));
-
+      return subscriptions.map((subscription) =>
+        Subscription.fromData({
+          id: subscription.id,
+          userId: subscription.userId,
+          stripeSubscriptionId: subscription.stripeSubscriptionId,
+          stripeCustomerId: subscription.stripeCustomerId,
+          planId: subscription.planId,
+          status: subscription.status,
+          currentPeriodStart: subscription.currentPeriodStart,
+          currentPeriodEnd: subscription.currentPeriodEnd,
+          cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
+          createdAt: subscription.createdAt,
+          updatedAt: subscription.updatedAt,
+        })
+      );
     } catch (error) {
       if (error instanceof ValidationError) {
         throw error;
@@ -592,10 +636,14 @@ export class PaymentService implements IPaymentService {
 
       logger.error('Failed to get user subscriptions', {
         error: error instanceof Error ? error.message : String(error),
-        userId
+        userId,
       });
 
-      throw new DatabaseError('Failed to retrieve user subscriptions', 'getUserSubscriptions', error instanceof Error ? error : new Error(String(error)));
+      throw new DatabaseError(
+        'Failed to retrieve user subscriptions',
+        'getUserSubscriptions',
+        error instanceof Error ? error : new Error(String(error))
+      );
     }
   }
 
@@ -612,7 +660,7 @@ export class PaymentService implements IPaymentService {
       return {
         eligible: false,
         reason: 'No payment associated with this enrollment',
-        refundPolicy: DEFAULT_REFUND_POLICY
+        refundPolicy: DEFAULT_REFUND_POLICY,
       };
     }
 
@@ -621,21 +669,22 @@ export class PaymentService implements IPaymentService {
       return {
         eligible: false,
         reason: 'Payment not found or not successful',
-        refundPolicy: DEFAULT_REFUND_POLICY
+        refundPolicy: DEFAULT_REFUND_POLICY,
       };
     }
 
     // Check if already refunded
     const existingRefunds = await this.refundRepository.findByPaymentId(payment.id);
-    const totalRefunded = existingRefunds.reduce((sum, refund) => 
-      sum + parseFloat(refund.amount), 0
+    const totalRefunded = existingRefunds.reduce(
+      (sum, refund) => sum + parseFloat(refund.amount),
+      0
     );
 
     if (totalRefunded >= parseFloat(payment.amount)) {
       return {
         eligible: false,
         reason: 'Payment has already been fully refunded',
-        refundPolicy: DEFAULT_REFUND_POLICY
+        refundPolicy: DEFAULT_REFUND_POLICY,
       };
     }
 
@@ -651,18 +700,21 @@ export class PaymentService implements IPaymentService {
       return {
         eligible: true,
         maxRefundAmount: remainingAmount,
-        refundPolicy: policy
+        refundPolicy: policy,
       };
     }
 
     // After full refund period, calculate based on content consumption
     // For now, assume 50% refund as minimum (this would be calculated based on actual progress)
-    const minimumRefundAmount = (parseFloat(remainingAmount) * (policy.minimumRefundPercentage / 100)).toFixed(2);
-    
+    const minimumRefundAmount = (
+      parseFloat(remainingAmount) *
+      (policy.minimumRefundPercentage / 100)
+    ).toFixed(2);
+
     return {
       eligible: true,
       maxRefundAmount: minimumRefundAmount,
-      refundPolicy: policy
+      refundPolicy: policy,
     };
   }
 
@@ -682,7 +734,7 @@ export class PaymentService implements IPaymentService {
 
       // Reset payment status to pending
       const updatedPayment = await this.paymentRepository.update(paymentId, {
-        status: 'pending'
+        status: 'pending',
       });
 
       logger.info('Payment retry initiated', { paymentId });
@@ -699,9 +751,8 @@ export class PaymentService implements IPaymentService {
         paymentMethod: updatedPayment.paymentMethod,
         metadata: updatedPayment.metadata as Record<string, any>,
         createdAt: updatedPayment.createdAt,
-        updatedAt: updatedPayment.updatedAt
+        updatedAt: updatedPayment.updatedAt,
       });
-
     } catch (error) {
       if (error instanceof NotFoundError || error instanceof ConflictError) {
         throw error;
@@ -709,10 +760,14 @@ export class PaymentService implements IPaymentService {
 
       logger.error('Failed to retry payment', {
         error: error instanceof Error ? error.message : String(error),
-        paymentId
+        paymentId,
       });
 
-      throw new DatabaseError('Failed to retry payment', 'retryFailedPayment', error instanceof Error ? error : new Error(String(error)));
+      throw new DatabaseError(
+        'Failed to retry payment',
+        'retryFailedPayment',
+        error instanceof Error ? error : new Error(String(error))
+      );
     }
   }
 
@@ -762,7 +817,7 @@ export class PaymentService implements IPaymentService {
     // Update payment with session details
     await this.paymentRepository.update(paymentId, {
       stripeCheckoutSessionId: session.id,
-      paymentMethod: session.payment_method_types?.[0]
+      paymentMethod: session.payment_method_types?.[0],
     });
 
     // Create enrollment if payment is for a course
@@ -771,7 +826,7 @@ export class PaymentService implements IPaymentService {
         studentId: payment.userId,
         courseId: payment.courseId,
         paymentId: payment.id,
-        status: 'active'
+        status: 'active',
       };
 
       await this.enrollmentRepository.create(enrollmentData);
@@ -779,7 +834,7 @@ export class PaymentService implements IPaymentService {
       logger.info('Enrollment created for successful payment', {
         paymentId,
         courseId: payment.courseId,
-        studentId: payment.userId
+        studentId: payment.userId,
       });
     }
   }
@@ -793,7 +848,7 @@ export class PaymentService implements IPaymentService {
 
     await this.paymentRepository.update(payment.id, {
       status: 'succeeded',
-      paymentMethod: paymentIntent.payment_method_types?.[0]
+      paymentMethod: paymentIntent.payment_method_types?.[0],
     });
 
     // Send success notification
@@ -805,8 +860,8 @@ export class PaymentService implements IPaymentService {
         content: `Your payment of $${payment.amount} has been processed successfully.`,
         metadata: {
           paymentId: payment.id,
-          amount: payment.amount
-        }
+          amount: payment.amount,
+        },
       });
     }
 
@@ -825,9 +880,9 @@ export class PaymentService implements IPaymentService {
     await this.paymentRepository.update(payment.id, {
       status: 'failed',
       metadata: {
-        ...payment.metadata as Record<string, any>,
-        failureReason
-      }
+        ...(payment.metadata as Record<string, any>),
+        failureReason,
+      },
     });
 
     // Send failure notification
@@ -840,21 +895,23 @@ export class PaymentService implements IPaymentService {
         metadata: {
           paymentId: payment.id,
           amount: payment.amount,
-          reason: failureReason
-        }
+          reason: failureReason,
+        },
       });
     }
 
-    logger.info('Payment marked as failed', { 
-      paymentId: payment.id, 
-      reason: failureReason 
+    logger.info('Payment marked as failed', {
+      paymentId: payment.id,
+      reason: failureReason,
     });
   }
 
   private async handleInvoicePaymentSucceeded(invoice: Stripe.Invoice): Promise<void> {
     if (!invoice.subscription) return;
 
-    const subscription = await this.subscriptionRepository.findByStripeSubscriptionId(invoice.subscription as string);
+    const subscription = await this.subscriptionRepository.findByStripeSubscriptionId(
+      invoice.subscription as string
+    );
     if (!subscription) {
       logger.warn('Subscription not found for invoice', { subscriptionId: invoice.subscription });
       return;
@@ -864,16 +921,18 @@ export class PaymentService implements IPaymentService {
     // Note: In a real implementation, you'd fetch the subscription details from Stripe
     // This is simplified for the example
 
-    logger.info('Invoice payment succeeded', { 
+    logger.info('Invoice payment succeeded', {
       subscriptionId: subscription.id,
-      invoiceId: invoice.id 
+      invoiceId: invoice.id,
     });
   }
 
   private async handleInvoicePaymentFailed(invoice: Stripe.Invoice): Promise<void> {
     if (!invoice.subscription) return;
 
-    const subscription = await this.subscriptionRepository.findByStripeSubscriptionId(invoice.subscription as string);
+    const subscription = await this.subscriptionRepository.findByStripeSubscriptionId(
+      invoice.subscription as string
+    );
     if (!subscription) {
       logger.warn('Subscription not found for invoice', { subscriptionId: invoice.subscription });
       return;
@@ -885,32 +944,37 @@ export class PaymentService implements IPaymentService {
         recipientId: subscription.userId,
         notificationType: 'subscription_payment_failed' as any,
         title: 'Subscription Payment Failed',
-        content: 'Your subscription payment could not be processed. Please update your payment method.',
+        content:
+          'Your subscription payment could not be processed. Please update your payment method.',
         metadata: {
           subscriptionId: subscription.id,
-          invoiceId: invoice.id
-        }
+          invoiceId: invoice.id,
+        },
       });
     }
 
-    logger.info('Invoice payment failed', { 
+    logger.info('Invoice payment failed', {
       subscriptionId: subscription.id,
-      invoiceId: invoice.id 
+      invoiceId: invoice.id,
     });
   }
 
   private async handleSubscriptionCreated(stripeSubscription: Stripe.Subscription): Promise<void> {
     // This is typically handled by the createSubscription method
     // But we can log it for audit purposes
-    logger.info('Subscription created in Stripe', { 
-      stripeSubscriptionId: stripeSubscription.id 
+    logger.info('Subscription created in Stripe', {
+      stripeSubscriptionId: stripeSubscription.id,
     });
   }
 
   private async handleSubscriptionUpdated(stripeSubscription: Stripe.Subscription): Promise<void> {
-    const subscription = await this.subscriptionRepository.findByStripeSubscriptionId(stripeSubscription.id);
+    const subscription = await this.subscriptionRepository.findByStripeSubscriptionId(
+      stripeSubscription.id
+    );
     if (!subscription) {
-      logger.warn('Subscription not found for update', { stripeSubscriptionId: stripeSubscription.id });
+      logger.warn('Subscription not found for update', {
+        stripeSubscriptionId: stripeSubscription.id,
+      });
       return;
     }
 
@@ -918,21 +982,25 @@ export class PaymentService implements IPaymentService {
       status: stripeSubscription.status as any,
       currentPeriodStart: new Date(stripeSubscription.current_period_start * 1000),
       currentPeriodEnd: new Date(stripeSubscription.current_period_end * 1000),
-      cancelAtPeriodEnd: stripeSubscription.cancel_at_period_end
+      cancelAtPeriodEnd: stripeSubscription.cancel_at_period_end,
     });
 
     logger.info('Subscription updated', { subscriptionId: subscription.id });
   }
 
   private async handleSubscriptionDeleted(stripeSubscription: Stripe.Subscription): Promise<void> {
-    const subscription = await this.subscriptionRepository.findByStripeSubscriptionId(stripeSubscription.id);
+    const subscription = await this.subscriptionRepository.findByStripeSubscriptionId(
+      stripeSubscription.id
+    );
     if (!subscription) {
-      logger.warn('Subscription not found for deletion', { stripeSubscriptionId: stripeSubscription.id });
+      logger.warn('Subscription not found for deletion', {
+        stripeSubscriptionId: stripeSubscription.id,
+      });
       return;
     }
 
     await this.subscriptionRepository.update(subscription.id, {
-      status: 'canceled'
+      status: 'canceled',
     });
 
     logger.info('Subscription deleted', { subscriptionId: subscription.id });
@@ -940,11 +1008,11 @@ export class PaymentService implements IPaymentService {
 
   private async handleChargeDisputeCreated(dispute: Stripe.Dispute): Promise<void> {
     // Handle chargeback/dispute
-    logger.warn('Charge dispute created', { 
+    logger.warn('Charge dispute created', {
       disputeId: dispute.id,
       chargeId: dispute.charge,
       amount: dispute.amount,
-      reason: dispute.reason
+      reason: dispute.reason,
     });
 
     // In a real implementation, you might want to:

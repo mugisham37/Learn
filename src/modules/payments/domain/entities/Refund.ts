@@ -1,16 +1,20 @@
 /**
  * Refund Domain Entity
- * 
+ *
  * Represents a refund transaction for payments.
  * Contains business logic for refund calculation and processing.
- * 
+ *
  * Requirements:
  * - 11.5: Refund processing with reason tracking
  * - 11.5: Refund status updates and enrollment status changes
  */
 
 import { randomUUID } from 'crypto';
-import { RefundCreatedEvent, RefundProcessedEvent, RefundFailedEvent } from '../events/PaymentEvents';
+import {
+  RefundCreatedEvent,
+  RefundProcessedEvent,
+  RefundFailedEvent,
+} from '../events/PaymentEvents';
 
 export type RefundStatus = 'pending' | 'succeeded' | 'failed';
 
@@ -60,7 +64,7 @@ export const DEFAULT_REFUND_POLICY: RefundPolicy = {
 
 /**
  * Refund Entity
- * 
+ *
  * Encapsulates refund business logic and calculation rules.
  * Ensures refund processing follows business policies.
  */
@@ -71,7 +75,7 @@ export class Refund {
 
   /**
    * Creates a new Refund entity
-   * 
+   *
    * @param data - Refund creation data
    * @returns Refund entity
    * @throws Error if validation fails
@@ -90,21 +94,23 @@ export class Refund {
     };
 
     const refund = new Refund(refundData);
-    
+
     // Emit domain event for refund creation
-    refund.addDomainEvent(new RefundCreatedEvent(
-      refund.getId(),
-      refund.getPaymentId(),
-      refund.getAmount(),
-      refund.getReason()
-    ));
-    
+    refund.addDomainEvent(
+      new RefundCreatedEvent(
+        refund.getId(),
+        refund.getPaymentId(),
+        refund.getAmount(),
+        refund.getReason()
+      )
+    );
+
     return refund;
   }
 
   /**
    * Reconstructs Refund entity from database data
-   * 
+   *
    * @param data - Complete refund data from database
    * @returns Refund entity
    */
@@ -114,7 +120,7 @@ export class Refund {
 
   /**
    * Calculates refund amount based on business policy and content consumption
-   * 
+   *
    * @param originalAmount - Original payment amount
    * @param purchaseDate - Date of original purchase
    * @param contentConsumedPercentage - Percentage of content consumed (0-100)
@@ -129,7 +135,9 @@ export class Refund {
   ): string {
     const amount = parseFloat(originalAmount);
     const now = new Date();
-    const daysSincePurchase = Math.floor((now.getTime() - purchaseDate.getTime()) / (1000 * 3600 * 24));
+    const daysSincePurchase = Math.floor(
+      (now.getTime() - purchaseDate.getTime()) / (1000 * 3600 * 24)
+    );
 
     // Validate inputs
     if (amount <= 0) {
@@ -141,7 +149,10 @@ export class Refund {
     }
 
     // If within full refund period and low content consumption, give full refund minus admin fee
-    if (daysSincePurchase <= policy.fullRefundDays && contentConsumedPercentage <= policy.contentConsumptionThreshold) {
+    if (
+      daysSincePurchase <= policy.fullRefundDays &&
+      contentConsumedPercentage <= policy.contentConsumptionThreshold
+    ) {
       const adminFee = amount * (policy.administrativeFeePercentage / 100);
       const refundAmount = amount - adminFee;
       return Math.max(0, refundAmount).toFixed(2);
@@ -168,7 +179,7 @@ export class Refund {
 
   /**
    * Validates refund data according to business rules
-   * 
+   *
    * @throws Error if validation fails
    */
   private validateRefund(): void {
@@ -201,7 +212,7 @@ export class Refund {
 
   /**
    * Marks refund as succeeded
-   * 
+   *
    * @param stripeRefundId - Stripe refund ID
    */
   markAsSucceeded(stripeRefundId: string): void {
@@ -218,17 +229,14 @@ export class Refund {
     this.data.updatedAt = new Date();
 
     // Emit domain event for refund success
-    this.addDomainEvent(new RefundProcessedEvent(
-      this.data.id,
-      this.data.paymentId,
-      this.data.amount,
-      'succeeded'
-    ));
+    this.addDomainEvent(
+      new RefundProcessedEvent(this.data.id, this.data.paymentId, this.data.amount, 'succeeded')
+    );
   }
 
   /**
    * Marks refund as failed
-   * 
+   *
    * @param reason - Failure reason
    */
   markAsFailed(reason?: string): void {
@@ -245,16 +253,14 @@ export class Refund {
     }
 
     // Emit domain event for refund failure
-    this.addDomainEvent(new RefundFailedEvent(
-      this.data.id,
-      this.data.paymentId,
-      reason || 'Refund processing failed'
-    ));
+    this.addDomainEvent(
+      new RefundFailedEvent(this.data.id, this.data.paymentId, reason || 'Refund processing failed')
+    );
   }
 
   /**
    * Updates refund reason
-   * 
+   *
    * @param reason - New refund reason
    */
   updateReason(reason: string): void {
@@ -268,7 +274,7 @@ export class Refund {
 
   /**
    * Checks if refund is still pending
-   * 
+   *
    * @returns true if refund is pending
    */
   isPending(): boolean {
@@ -277,7 +283,7 @@ export class Refund {
 
   /**
    * Checks if refund was successful
-   * 
+   *
    * @returns true if refund succeeded
    */
   isSucceeded(): boolean {
@@ -286,7 +292,7 @@ export class Refund {
 
   /**
    * Checks if refund failed
-   * 
+   *
    * @returns true if refund failed
    */
   isFailed(): boolean {
@@ -295,7 +301,7 @@ export class Refund {
 
   /**
    * Gets refund amount as number for calculations
-   * 
+   *
    * @returns Refund amount as number
    */
   getAmountAsNumber(): number {
@@ -341,7 +347,7 @@ export class Refund {
 
   /**
    * Converts entity to plain object for persistence
-   * 
+   *
    * @returns Plain object representation
    */
   toData(): RefundData {

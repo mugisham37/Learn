@@ -1,9 +1,9 @@
 /**
  * Progress Calculator Service Implementation
- * 
+ *
  * Implements progress calculation operations including course progress calculation,
  * time estimation, and struggling area identification using historical data analysis.
- * 
+ *
  * Requirements: 5.4
  */
 
@@ -16,12 +16,12 @@ import {
   IProgressCalculator,
   StrugglingArea,
   ProgressCalculationResult,
-  TimeEstimationResult
+  TimeEstimationResult,
 } from './IProgressCalculator.js';
 
 /**
  * Progress Calculator Service Implementation
- * 
+ *
  * Provides comprehensive progress analysis using statistical methods
  * and historical data patterns to generate insights and predictions.
  */
@@ -34,31 +34,32 @@ export class ProgressCalculatorService implements IProgressCalculator {
 
   /**
    * Calculates comprehensive course progress for an enrollment
-   * 
+   *
    * Requirements: 5.4 - Progress percentage calculation
    */
   async calculateCourseProgress(enrollment: Enrollment): Promise<ProgressCalculationResult> {
     if (!enrollment.id) {
       throw new ValidationError('Enrollment must have a valid ID', [
-        { field: 'enrollment.id', message: 'Enrollment ID is required' }
+        { field: 'enrollment.id', message: 'Enrollment ID is required' },
       ]);
     }
 
     // Get all lesson progress records for this enrollment
     const progressRecords = await this.lessonProgressRepository.findByEnrollment(enrollment.id);
-    
+
     if (progressRecords.length === 0) {
       throw new NotFoundError('No lesson progress records found for enrollment');
     }
 
     // Calculate progress statistics
     const totalLessons = progressRecords.length;
-    const completedLessons = progressRecords.filter(p => p.status === 'completed').length;
-    const inProgressLessons = progressRecords.filter(p => p.status === 'in_progress').length;
-    const notStartedLessons = progressRecords.filter(p => p.status === 'not_started').length;
+    const completedLessons = progressRecords.filter((p) => p.status === 'completed').length;
+    const inProgressLessons = progressRecords.filter((p) => p.status === 'in_progress').length;
+    const notStartedLessons = progressRecords.filter((p) => p.status === 'not_started').length;
 
     // Calculate progress percentage
-    const progressPercentage = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
+    const progressPercentage =
+      totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
 
     // Find the most recent update
     const lastUpdated = progressRecords.reduce((latest, record) => {
@@ -72,25 +73,25 @@ export class ProgressCalculatorService implements IProgressCalculator {
       totalLessons,
       inProgressLessons,
       notStartedLessons,
-      lastUpdated
+      lastUpdated,
     };
   }
 
   /**
    * Estimates time remaining for course completion
-   * 
+   *
    * Requirements: 5.4 - Time estimation for course completion
    */
   async estimateTimeRemaining(enrollment: Enrollment): Promise<TimeEstimationResult> {
     if (!enrollment.id) {
       throw new ValidationError('Enrollment must have a valid ID', [
-        { field: 'enrollment.id', message: 'Enrollment ID is required' }
+        { field: 'enrollment.id', message: 'Enrollment ID is required' },
       ]);
     }
 
     if (enrollment.status === 'completed') {
       throw new ValidationError('Cannot estimate time for completed enrollment', [
-        { field: 'enrollment.status', message: 'Enrollment is already completed' }
+        { field: 'enrollment.status', message: 'Enrollment is already completed' },
       ]);
     }
 
@@ -103,8 +104,8 @@ export class ProgressCalculatorService implements IProgressCalculator {
     }
 
     // Filter completed lessons with time data
-    const completedWithTime = progressRecords.filter(p => 
-      p.status === 'completed' && p.timeSpentSeconds > 0
+    const completedWithTime = progressRecords.filter(
+      (p) => p.status === 'completed' && p.timeSpentSeconds > 0
     );
 
     if (completedWithTime.length === 0) {
@@ -117,7 +118,7 @@ export class ProgressCalculatorService implements IProgressCalculator {
     const averageTimePerLesson = totalTimeSpent / completedWithTime.length;
 
     // Count remaining lessons
-    const remainingLessons = progressRecords.filter(p => p.status !== 'completed').length;
+    const remainingLessons = progressRecords.filter((p) => p.status !== 'completed').length;
 
     // Apply lesson type weighting
     const weightedEstimate = await this.applyLessonTypeWeighting(
@@ -128,31 +129,34 @@ export class ProgressCalculatorService implements IProgressCalculator {
     );
 
     // Determine confidence level based on data quality
-    const confidenceLevel = this.determineConfidenceLevel(completedWithTime.length, progressRecords.length);
+    const confidenceLevel = this.determineConfidenceLevel(
+      completedWithTime.length,
+      progressRecords.length
+    );
 
     return {
       estimatedMinutesRemaining: Math.round(weightedEstimate / 60),
       confidenceLevel,
       basedOnLessons: completedWithTime.length,
       averageTimePerLesson: Math.round(averageTimePerLesson / 60),
-      methodology: 'historical_data_with_type_weighting'
+      methodology: 'historical_data_with_type_weighting',
     };
   }
 
   /**
    * Identifies areas where the student may be struggling
-   * 
+   *
    * Requirements: 5.4 - Struggling area identification
    */
   async identifyStrugglingAreas(enrollment: Enrollment): Promise<StrugglingArea[]> {
     if (!enrollment.id) {
       throw new ValidationError('Enrollment must have a valid ID', [
-        { field: 'enrollment.id', message: 'Enrollment ID is required' }
+        { field: 'enrollment.id', message: 'Enrollment ID is required' },
       ]);
     }
 
     const progressRecords = await this.lessonProgressRepository.findByEnrollment(enrollment.id);
-    
+
     if (progressRecords.length === 0) {
       throw new NotFoundError('No lesson progress data found for analysis');
     }
@@ -192,26 +196,27 @@ export class ProgressCalculatorService implements IProgressCalculator {
     comparedToAverage: 'faster' | 'average' | 'slower';
   }> {
     const progressRecords = await this.lessonProgressRepository.findByEnrollment(enrollment.id);
-    const completedLessons = progressRecords.filter(p => p.status === 'completed');
+    const completedLessons = progressRecords.filter((p) => p.status === 'completed');
 
     if (completedLessons.length === 0) {
       return {
         lessonsPerWeek: 0,
         minutesPerWeek: 0,
         velocityTrend: 'stable',
-        comparedToAverage: 'average'
+        comparedToAverage: 'average',
       };
     }
 
     // Calculate time since enrollment
-    const enrollmentDays = Math.max(1, Math.ceil(
-      (Date.now() - enrollment.enrolledAt.getTime()) / (1000 * 60 * 60 * 24)
-    ));
+    const enrollmentDays = Math.max(
+      1,
+      Math.ceil((Date.now() - enrollment.enrolledAt.getTime()) / (1000 * 60 * 60 * 24))
+    );
     const weeks = enrollmentDays / 7;
 
     // Calculate current velocity
     const lessonsPerWeek = completedLessons.length / weeks;
-    const totalMinutes = completedLessons.reduce((sum, p) => sum + (p.timeSpentSeconds / 60), 0);
+    const totalMinutes = completedLessons.reduce((sum, p) => sum + p.timeSpentSeconds / 60, 0);
     const minutesPerWeek = totalMinutes / weeks;
 
     // Analyze trend (compare first half vs second half)
@@ -219,14 +224,18 @@ export class ProgressCalculatorService implements IProgressCalculator {
 
     // Compare to course average (simplified - would use historical data in production)
     const courseAverageVelocity = await this.getCourseAverageVelocity(enrollment.courseId);
-    const comparedToAverage = lessonsPerWeek > courseAverageVelocity * 1.2 ? 'faster' :
-                             lessonsPerWeek < courseAverageVelocity * 0.8 ? 'slower' : 'average';
+    const comparedToAverage =
+      lessonsPerWeek > courseAverageVelocity * 1.2
+        ? 'faster'
+        : lessonsPerWeek < courseAverageVelocity * 0.8
+          ? 'slower'
+          : 'average';
 
     return {
       lessonsPerWeek: Math.round(lessonsPerWeek * 10) / 10,
       minutesPerWeek: Math.round(minutesPerWeek),
       velocityTrend,
-      comparedToAverage
+      comparedToAverage,
     };
   }
 
@@ -241,7 +250,7 @@ export class ProgressCalculatorService implements IProgressCalculator {
   }> {
     const progressRecords = await this.lessonProgressRepository.findByEnrollment(enrollment.id);
     const progress = await this.calculateCourseProgress(enrollment);
-    
+
     let completionProbability = 0.5; // Base probability
     const keyFactors: string[] = [];
     const recommendedActions: string[] = [];
@@ -282,7 +291,8 @@ export class ProgressCalculatorService implements IProgressCalculator {
     }
 
     // Factor 4: Time since enrollment
-    const daysSinceEnrollment = (Date.now() - enrollment.enrolledAt.getTime()) / (1000 * 60 * 60 * 24);
+    const daysSinceEnrollment =
+      (Date.now() - enrollment.enrolledAt.getTime()) / (1000 * 60 * 60 * 24);
     if (daysSinceEnrollment > 90 && progress.progressPercentage < 50) {
       completionProbability -= 0.1;
       keyFactors.push('Extended enrollment with low progress');
@@ -293,14 +303,14 @@ export class ProgressCalculatorService implements IProgressCalculator {
     completionProbability = Math.max(0, Math.min(1, completionProbability));
 
     // Determine confidence level
-    const confidenceLevel = progressRecords.length > 10 ? 'high' : 
-                           progressRecords.length > 5 ? 'medium' : 'low';
+    const confidenceLevel =
+      progressRecords.length > 10 ? 'high' : progressRecords.length > 5 ? 'medium' : 'low';
 
     return {
       completionProbability: Math.round(completionProbability * 100) / 100,
       confidenceLevel,
       keyFactors,
-      recommendedActions
+      recommendedActions,
     };
   }
 
@@ -319,12 +329,12 @@ export class ProgressCalculatorService implements IProgressCalculator {
   }> {
     const progressRecords = await this.lessonProgressRepository.findByEnrollment(enrollment.id);
     const strugglingAreas = await this.identifyStrugglingAreas(enrollment);
-    
+
     // Analyze study patterns
     const studyPatterns = this.analyzeStudyPatterns(progressRecords);
-    
+
     // Generate recommendations based on analysis
-    const focusAreas = strugglingAreas.map(area => area.area);
+    const focusAreas = strugglingAreas.map((area) => area.area);
     const nextSteps = await this.generateNextSteps(enrollment, progressRecords);
     const motivationalTips = this.generateMotivationalTips(enrollment, progressRecords);
 
@@ -332,11 +342,11 @@ export class ProgressCalculatorService implements IProgressCalculator {
       studySchedule: {
         recommendedSessionLength: studyPatterns.optimalSessionLength,
         recommendedFrequency: studyPatterns.optimalFrequency,
-        bestTimeOfDay: studyPatterns.bestTimeOfDay
+        bestTimeOfDay: studyPatterns.bestTimeOfDay,
       },
       focusAreas,
       nextSteps,
-      motivationalTips
+      motivationalTips,
     };
   }
 
@@ -346,12 +356,12 @@ export class ProgressCalculatorService implements IProgressCalculator {
     progressRecords: any[],
     lessons: any[]
   ): Promise<TimeEstimationResult> {
-    const remainingLessons = progressRecords.filter(p => p.status !== 'completed');
-    
+    const remainingLessons = progressRecords.filter((p) => p.status !== 'completed');
+
     // Use lesson duration metadata if available
     let totalEstimatedMinutes = 0;
     for (const progress of remainingLessons) {
-      const lesson = lessons.find(l => l.id === progress.lessonId);
+      const lesson = lessons.find((l) => l.id === progress.lessonId);
       if (lesson?.durationMinutes) {
         totalEstimatedMinutes += lesson.durationMinutes;
       } else {
@@ -365,7 +375,7 @@ export class ProgressCalculatorService implements IProgressCalculator {
       confidenceLevel: 'low',
       basedOnLessons: 0,
       averageTimePerLesson: totalEstimatedMinutes / Math.max(1, remainingLessons.length),
-      methodology: 'lesson_duration_estimates'
+      methodology: 'lesson_duration_estimates',
     };
   }
 
@@ -376,13 +386,13 @@ export class ProgressCalculatorService implements IProgressCalculator {
     lessons: any[]
   ): Promise<number> {
     let weightedTime = 0;
-    
-    const remainingProgress = progressRecords.filter(p => p.status !== 'completed');
-    
+
+    const remainingProgress = progressRecords.filter((p) => p.status !== 'completed');
+
     for (const progress of remainingProgress) {
-      const lesson = lessons.find(l => l.id === progress.lessonId);
+      const lesson = lessons.find((l) => l.id === progress.lessonId);
       const lessonType = lesson?.lessonType || 'text';
-      
+
       // Apply type-specific multipliers
       const multiplier = this.getLessonTypeMultiplier(lessonType);
       weightedTime += averageTimePerLesson * multiplier;
@@ -393,29 +403,32 @@ export class ProgressCalculatorService implements IProgressCalculator {
 
   private getLessonTypeMultiplier(lessonType: string): number {
     const multipliers = {
-      'video': 1.0,      // Base time
-      'text': 0.7,       // Usually faster to read
-      'quiz': 1.2,       // May need multiple attempts
-      'assignment': 1.8   // Usually takes longer
+      video: 1.0, // Base time
+      text: 0.7, // Usually faster to read
+      quiz: 1.2, // May need multiple attempts
+      assignment: 1.8, // Usually takes longer
     };
-    
+
     return multipliers[lessonType as keyof typeof multipliers] || 1.0;
   }
 
   private getDefaultLessonDuration(lessonType: string): number {
     const defaults = {
-      'video': 15,       // 15 minutes
-      'text': 10,        // 10 minutes
-      'quiz': 20,        // 20 minutes
-      'assignment': 45   // 45 minutes
+      video: 15, // 15 minutes
+      text: 10, // 10 minutes
+      quiz: 20, // 20 minutes
+      assignment: 45, // 45 minutes
     };
-    
+
     return defaults[lessonType as keyof typeof defaults] || 15;
   }
 
-  private determineConfidenceLevel(completedLessons: number, totalLessons: number): 'low' | 'medium' | 'high' {
+  private determineConfidenceLevel(
+    completedLessons: number,
+    totalLessons: number
+  ): 'low' | 'medium' | 'high' {
     const completionRatio = completedLessons / totalLessons;
-    
+
     if (completedLessons >= 10 && completionRatio >= 0.3) {
       return 'high';
     } else if (completedLessons >= 5 && completionRatio >= 0.2) {
@@ -427,17 +440,17 @@ export class ProgressCalculatorService implements IProgressCalculator {
 
   private async analyzeQuizPerformance(progressRecords: any[]): Promise<StrugglingArea[]> {
     const areas: StrugglingArea[] = [];
-    
+
     const quizScores = progressRecords
-      .filter(p => p.quizScore !== undefined && p.quizScore !== null)
-      .map(p => p.quizScore);
+      .filter((p) => p.quizScore !== undefined && p.quizScore !== null)
+      .map((p) => p.quizScore);
 
     if (quizScores.length === 0) {
       return areas;
     }
 
     const averageScore = quizScores.reduce((sum, score) => sum + score, 0) / quizScores.length;
-    const lowScores = quizScores.filter(score => score < 70).length;
+    const lowScores = quizScores.filter((score) => score < 70).length;
     const lowScoreRatio = lowScores / quizScores.length;
 
     if (averageScore < 70) {
@@ -448,8 +461,8 @@ export class ProgressCalculatorService implements IProgressCalculator {
         suggestions: [
           'Review lesson materials more thoroughly before taking quizzes',
           'Take notes while studying to improve retention',
-          'Consider retaking lessons with low quiz scores'
-        ]
+          'Consider retaking lessons with low quiz scores',
+        ],
       });
     }
 
@@ -461,8 +474,8 @@ export class ProgressCalculatorService implements IProgressCalculator {
         suggestions: [
           'Slow down and read questions more carefully',
           'Practice active recall techniques while studying',
-          'Seek help from instructors or study groups'
-        ]
+          'Seek help from instructors or study groups',
+        ],
       });
     }
 
@@ -471,14 +484,15 @@ export class ProgressCalculatorService implements IProgressCalculator {
 
   private async analyzeTimeSpentPatterns(progressRecords: any[]): Promise<StrugglingArea[]> {
     const areas: StrugglingArea[] = [];
-    
-    const timeRecords = progressRecords.filter(p => p.timeSpentSeconds > 0);
+
+    const timeRecords = progressRecords.filter((p) => p.timeSpentSeconds > 0);
     if (timeRecords.length === 0) {
       return areas;
     }
 
-    const averageTime = timeRecords.reduce((sum, p) => sum + p.timeSpentSeconds, 0) / timeRecords.length;
-    const highTimeRecords = timeRecords.filter(p => p.timeSpentSeconds > averageTime * 2);
+    const averageTime =
+      timeRecords.reduce((sum, p) => sum + p.timeSpentSeconds, 0) / timeRecords.length;
+    const highTimeRecords = timeRecords.filter((p) => p.timeSpentSeconds > averageTime * 2);
     const highTimeRatio = highTimeRecords.length / timeRecords.length;
 
     if (highTimeRatio > 0.3) {
@@ -489,13 +503,13 @@ export class ProgressCalculatorService implements IProgressCalculator {
         suggestions: [
           'Break study sessions into smaller chunks',
           'Eliminate distractions during study time',
-          'Consider adjusting study environment for better focus'
-        ]
+          'Consider adjusting study environment for better focus',
+        ],
       });
     }
 
     // Check for very short sessions that might indicate lack of engagement
-    const shortSessions = timeRecords.filter(p => p.timeSpentSeconds < 300); // Less than 5 minutes
+    const shortSessions = timeRecords.filter((p) => p.timeSpentSeconds < 300); // Less than 5 minutes
     const shortSessionRatio = shortSessions.length / timeRecords.length;
 
     if (shortSessionRatio > 0.4) {
@@ -506,8 +520,8 @@ export class ProgressCalculatorService implements IProgressCalculator {
         suggestions: [
           'Spend more time engaging with lesson content',
           'Take notes to improve comprehension and retention',
-          'Avoid rushing through materials'
-        ]
+          'Avoid rushing through materials',
+        ],
       });
     }
 
@@ -516,8 +530,8 @@ export class ProgressCalculatorService implements IProgressCalculator {
 
   private async analyzeCompletionPatterns(progressRecords: any[]): Promise<StrugglingArea[]> {
     const areas: StrugglingArea[] = [];
-    
-    const inProgressCount = progressRecords.filter(p => p.status === 'in_progress').length;
+
+    const inProgressCount = progressRecords.filter((p) => p.status === 'in_progress').length;
     const totalCount = progressRecords.length;
     const inProgressRatio = inProgressCount / totalCount;
 
@@ -529,8 +543,8 @@ export class ProgressCalculatorService implements IProgressCalculator {
         suggestions: [
           'Focus on completing one lesson at a time',
           'Set specific goals for lesson completion',
-          'Review and finish in-progress lessons before starting new ones'
-        ]
+          'Review and finish in-progress lessons before starting new ones',
+        ],
       });
     }
 
@@ -539,8 +553,8 @@ export class ProgressCalculatorService implements IProgressCalculator {
 
   private async analyzeAttemptPatterns(progressRecords: any[]): Promise<StrugglingArea[]> {
     const areas: StrugglingArea[] = [];
-    
-    const highAttemptRecords = progressRecords.filter(p => p.attemptsCount > 3);
+
+    const highAttemptRecords = progressRecords.filter((p) => p.attemptsCount > 3);
     const highAttemptRatio = highAttemptRecords.length / progressRecords.length;
 
     if (highAttemptRatio > 0.2) {
@@ -551,17 +565,20 @@ export class ProgressCalculatorService implements IProgressCalculator {
         suggestions: [
           'Review prerequisite materials before attempting lessons',
           'Take more time to understand concepts before moving forward',
-          'Consider seeking additional help or resources'
-        ]
+          'Consider seeking additional help or resources',
+        ],
       });
     }
 
     return areas;
   }
 
-  private async analyzeEngagementPatterns(progressRecords: any[], enrollment: Enrollment): Promise<StrugglingArea[]> {
+  private async analyzeEngagementPatterns(
+    progressRecords: any[],
+    enrollment: Enrollment
+  ): Promise<StrugglingArea[]> {
     const areas: StrugglingArea[] = [];
-    
+
     // Check for long gaps in activity
     const recentActivity = this.hasRecentActivity(progressRecords, 14); // Last 14 days
     if (!recentActivity && enrollment.status === 'active') {
@@ -572,8 +589,8 @@ export class ProgressCalculatorService implements IProgressCalculator {
         suggestions: [
           'Set a regular study schedule',
           'Use calendar reminders to maintain consistency',
-          'Start with shorter, more frequent study sessions'
-        ]
+          'Start with shorter, more frequent study sessions',
+        ],
       });
     }
 
@@ -587,7 +604,7 @@ export class ProgressCalculatorService implements IProgressCalculator {
 
     // Sort by completion date
     const sorted = completedLessons
-      .filter(l => l.completedAt)
+      .filter((l) => l.completedAt)
       .sort((a, b) => new Date(a.completedAt).getTime() - new Date(b.completedAt).getTime());
 
     const midpoint = Math.floor(sorted.length / 2);
@@ -618,11 +635,11 @@ export class ProgressCalculatorService implements IProgressCalculator {
 
   private calculateDaySpan(lessons: any[]): number {
     if (lessons.length === 0) return 1;
-    
-    const dates = lessons.map(l => new Date(l.completedAt).getTime());
+
+    const dates = lessons.map((l) => new Date(l.completedAt).getTime());
     const minDate = Math.min(...dates);
     const maxDate = Math.max(...dates);
-    
+
     return Math.max(1, Math.ceil((maxDate - minDate) / (1000 * 60 * 60 * 24)));
   }
 
@@ -633,9 +650,9 @@ export class ProgressCalculatorService implements IProgressCalculator {
   }
 
   private hasRecentActivity(progressRecords: any[], days: number): boolean {
-    const cutoffDate = new Date(Date.now() - (days * 24 * 60 * 60 * 1000));
-    
-    return progressRecords.some(p => {
+    const cutoffDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+    return progressRecords.some((p) => {
       const lastAccessed = p.lastAccessedAt ? new Date(p.lastAccessedAt) : new Date(p.updatedAt);
       return lastAccessed > cutoffDate;
     });
@@ -643,11 +660,11 @@ export class ProgressCalculatorService implements IProgressCalculator {
 
   private calculateAverageQuizScore(progressRecords: any[]): number {
     const scores = progressRecords
-      .filter(p => p.quizScore !== undefined && p.quizScore !== null)
-      .map(p => p.quizScore);
+      .filter((p) => p.quizScore !== undefined && p.quizScore !== null)
+      .map((p) => p.quizScore);
 
     if (scores.length === 0) return 0;
-    
+
     return scores.reduce((sum, score) => sum + score, 0) / scores.length;
   }
 
@@ -657,52 +674,60 @@ export class ProgressCalculatorService implements IProgressCalculator {
     bestTimeOfDay?: 'morning' | 'afternoon' | 'evening';
   } {
     // Analyze current patterns and suggest improvements
-    const completedLessons = progressRecords.filter(p => p.status === 'completed');
-    
+    const completedLessons = progressRecords.filter((p) => p.status === 'completed');
+
     if (completedLessons.length === 0) {
       return {
         optimalSessionLength: 30, // Default 30 minutes
-        optimalFrequency: 3       // Default 3 times per week
+        optimalFrequency: 3, // Default 3 times per week
       };
     }
 
     // Calculate average session length based on time spent
-    const avgTimePerLesson = completedLessons.reduce((sum, p) => sum + p.timeSpentSeconds, 0) / completedLessons.length;
+    const avgTimePerLesson =
+      completedLessons.reduce((sum, p) => sum + p.timeSpentSeconds, 0) / completedLessons.length;
     const avgMinutesPerLesson = Math.round(avgTimePerLesson / 60);
 
     // Suggest optimal session length (aim for 2-3 lessons per session)
     const optimalSessionLength = Math.max(20, Math.min(60, avgMinutesPerLesson * 2.5));
 
     // Calculate current frequency and suggest improvement
-    const enrollmentDays = Math.max(1, Math.ceil(
-      (Date.now() - new Date(completedLessons[0]?.createdAt || Date.now()).getTime()) / (1000 * 60 * 60 * 24)
-    ));
+    const enrollmentDays = Math.max(
+      1,
+      Math.ceil(
+        (Date.now() - new Date(completedLessons[0]?.createdAt || Date.now()).getTime()) /
+          (1000 * 60 * 60 * 24)
+      )
+    );
     const currentFrequency = (completedLessons.length / enrollmentDays) * 7;
     const optimalFrequency = Math.max(2, Math.min(5, Math.ceil(currentFrequency * 1.2)));
 
     return {
       optimalSessionLength,
-      optimalFrequency
+      optimalFrequency,
     };
   }
 
-  private async generateNextSteps(enrollment: Enrollment, progressRecords: any[]): Promise<string[]> {
+  private async generateNextSteps(
+    enrollment: Enrollment,
+    progressRecords: any[]
+  ): Promise<string[]> {
     const nextSteps: string[] = [];
-    
+
     // Find next lesson to complete
-    const nextLesson = progressRecords.find(p => p.status !== 'completed');
+    const nextLesson = progressRecords.find((p) => p.status !== 'completed');
     if (nextLesson) {
       nextSteps.push(`Continue with the next lesson in your course`);
     }
 
     // Check for in-progress lessons
-    const inProgress = progressRecords.filter(p => p.status === 'in_progress');
+    const inProgress = progressRecords.filter((p) => p.status === 'in_progress');
     if (inProgress.length > 0) {
       nextSteps.push(`Complete ${inProgress.length} lesson(s) you've already started`);
     }
 
     // Check for low quiz scores to review
-    const lowScoreLessons = progressRecords.filter(p => p.quizScore && p.quizScore < 70);
+    const lowScoreLessons = progressRecords.filter((p) => p.quizScore && p.quizScore < 70);
     if (lowScoreLessons.length > 0) {
       nextSteps.push(`Review and retake ${lowScoreLessons.length} lesson(s) with low quiz scores`);
     }
@@ -712,7 +737,7 @@ export class ProgressCalculatorService implements IProgressCalculator {
     if (progress.progressPercentage < 25) {
       nextSteps.push('Set a daily study goal to build momentum');
     } else if (progress.progressPercentage > 75) {
-      nextSteps.push('You\'re almost done! Focus on completing the remaining lessons');
+      nextSteps.push("You're almost done! Focus on completing the remaining lessons");
     }
 
     return nextSteps;
@@ -720,13 +745,13 @@ export class ProgressCalculatorService implements IProgressCalculator {
 
   private generateMotivationalTips(_enrollment: Enrollment, progressRecords: unknown[]): string[] {
     const tips: string[] = [];
-    
-    const completedCount = progressRecords.filter(p => p.status === 'completed').length;
+
+    const completedCount = progressRecords.filter((p) => p.status === 'completed').length;
     const totalCount = progressRecords.length;
     const progressPercentage = (completedCount / totalCount) * 100;
 
     if (progressPercentage > 50) {
-      tips.push('Great progress! You\'re more than halfway through the course.');
+      tips.push("Great progress! You're more than halfway through the course.");
     }
 
     if (completedCount > 0) {
@@ -738,7 +763,7 @@ export class ProgressCalculatorService implements IProgressCalculator {
     tips.push('Every lesson completed brings you closer to your learning goals.');
 
     if (progressPercentage < 25) {
-      tips.push('Starting is often the hardest part. You\'ve got this!');
+      tips.push("Starting is often the hardest part. You've got this!");
     }
 
     return tips;

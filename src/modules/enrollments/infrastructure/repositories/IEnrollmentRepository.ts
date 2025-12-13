@@ -1,10 +1,10 @@
 /**
  * Enrollment Repository Interface
- * 
+ *
  * Defines the contract for enrollment data access operations.
  * Abstracts database operations behind a clean interface following
  * the Repository pattern for domain independence.
- * 
+ *
  * Requirements: 5.1, 5.3, 5.6
  */
 
@@ -61,14 +61,14 @@ export interface EnrollmentFilterDTO {
 
 /**
  * Enrollment Repository Interface
- * 
+ *
  * Provides methods for all enrollment data access operations with caching support.
  * Implementations must handle database errors and map them to domain errors.
  */
 export interface IEnrollmentRepository {
   /**
    * Creates a new enrollment in the database
-   * 
+   *
    * @param data - Enrollment creation data
    * @returns The created enrollment
    * @throws ConflictError if student is already enrolled in the course
@@ -78,7 +78,7 @@ export interface IEnrollmentRepository {
 
   /**
    * Finds an enrollment by its unique ID
-   * 
+   *
    * @param id - Enrollment ID
    * @returns The enrollment if found, null otherwise
    * @throws DatabaseError if database operation fails
@@ -87,7 +87,7 @@ export interface IEnrollmentRepository {
 
   /**
    * Finds an enrollment by student and course IDs
-   * 
+   *
    * @param studentId - Student ID
    * @param courseId - Course ID
    * @returns The enrollment if found, null otherwise
@@ -97,7 +97,7 @@ export interface IEnrollmentRepository {
 
   /**
    * Finds all enrollments for a specific student
-   * 
+   *
    * @param studentId - Student ID
    * @param filters - Optional filters
    * @param pagination - Pagination parameters
@@ -105,14 +105,14 @@ export interface IEnrollmentRepository {
    * @throws DatabaseError if database operation fails
    */
   findByStudent(
-    studentId: string, 
+    studentId: string,
     filters?: EnrollmentFilterDTO,
     pagination?: EnrollmentPaginationDTO
   ): Promise<PaginatedEnrollmentResult>;
 
   /**
    * Finds all enrollments for a specific course
-   * 
+   *
    * @param courseId - Course ID
    * @param filters - Optional filters
    * @param pagination - Pagination parameters
@@ -127,7 +127,7 @@ export interface IEnrollmentRepository {
 
   /**
    * Updates an enrollment's data
-   * 
+   *
    * @param id - Enrollment ID
    * @param data - Update data
    * @returns The updated enrollment
@@ -138,7 +138,7 @@ export interface IEnrollmentRepository {
 
   /**
    * Soft deletes an enrollment (sets status to 'dropped')
-   * 
+   *
    * @param id - Enrollment ID
    * @returns void
    * @throws NotFoundError if enrollment doesn't exist
@@ -149,7 +149,7 @@ export interface IEnrollmentRepository {
   /**
    * Permanently deletes an enrollment from the database
    * USE WITH CAUTION - This is irreversible
-   * 
+   *
    * @param id - Enrollment ID
    * @returns void
    * @throws NotFoundError if enrollment doesn't exist
@@ -159,7 +159,7 @@ export interface IEnrollmentRepository {
 
   /**
    * Checks if a student is already enrolled in a course
-   * 
+   *
    * @param studentId - Student ID
    * @param courseId - Course ID
    * @returns True if enrollment exists, false otherwise
@@ -169,7 +169,7 @@ export interface IEnrollmentRepository {
 
   /**
    * Gets the count of active enrollments for a course
-   * 
+   *
    * @param courseId - Course ID
    * @returns Number of active enrollments
    * @throws DatabaseError if database operation fails
@@ -178,7 +178,7 @@ export interface IEnrollmentRepository {
 
   /**
    * Gets the count of completed enrollments for a course
-   * 
+   *
    * @param courseId - Course ID
    * @returns Number of completed enrollments
    * @throws DatabaseError if database operation fails
@@ -188,7 +188,7 @@ export interface IEnrollmentRepository {
   /**
    * Finds enrollments that are eligible for completion
    * (all lessons completed but enrollment not marked as completed)
-   * 
+   *
    * @param limit - Maximum number of enrollments to return
    * @returns List of enrollments eligible for completion
    * @throws DatabaseError if database operation fails
@@ -198,7 +198,7 @@ export interface IEnrollmentRepository {
   /**
    * Invalidates cache for a specific enrollment
    * Should be called after any update operation
-   * 
+   *
    * @param id - Enrollment ID
    * @returns void
    */
@@ -207,7 +207,7 @@ export interface IEnrollmentRepository {
   /**
    * Invalidates cache for enrollments by student
    * Should be called after operations that affect student's enrollments
-   * 
+   *
    * @param studentId - Student ID
    * @returns void
    */
@@ -216,7 +216,7 @@ export interface IEnrollmentRepository {
   /**
    * Invalidates cache for enrollments by course
    * Should be called after operations that affect course enrollments
-   * 
+   *
    * @param courseId - Course ID
    * @returns void
    */

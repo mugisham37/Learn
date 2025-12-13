@@ -1,9 +1,9 @@
 /**
  * LessonProgress Domain Entity
- * 
+ *
  * Represents the progress of a student on a specific lesson within an enrollment.
  * Tracks completion status, time spent, quiz scores, and attempts.
- * 
+ *
  * Requirements: 5.3, 5.4, 5.5
  */
 
@@ -35,21 +35,47 @@ export class LessonProgress {
   }
 
   // Getters
-  get id(): string { return this._props.id; }
-  get enrollmentId(): string { return this._props.enrollmentId; }
-  get lessonId(): string { return this._props.lessonId; }
-  get status(): ProgressStatus { return this._props.status; }
-  get timeSpentSeconds(): number { return this._props.timeSpentSeconds; }
-  get completedAt(): Date | undefined { return this._props.completedAt; }
-  get quizScore(): number | undefined { return this._props.quizScore; }
-  get attemptsCount(): number { return this._props.attemptsCount; }
-  get lastAccessedAt(): Date | undefined { return this._props.lastAccessedAt; }
-  get createdAt(): Date { return this._props.createdAt; }
-  get updatedAt(): Date { return this._props.updatedAt; }
-  get domainEvents(): any[] { return [...this._domainEvents]; }
+  get id(): string {
+    return this._props.id;
+  }
+  get enrollmentId(): string {
+    return this._props.enrollmentId;
+  }
+  get lessonId(): string {
+    return this._props.lessonId;
+  }
+  get status(): ProgressStatus {
+    return this._props.status;
+  }
+  get timeSpentSeconds(): number {
+    return this._props.timeSpentSeconds;
+  }
+  get completedAt(): Date | undefined {
+    return this._props.completedAt;
+  }
+  get quizScore(): number | undefined {
+    return this._props.quizScore;
+  }
+  get attemptsCount(): number {
+    return this._props.attemptsCount;
+  }
+  get lastAccessedAt(): Date | undefined {
+    return this._props.lastAccessedAt;
+  }
+  get createdAt(): Date {
+    return this._props.createdAt;
+  }
+  get updatedAt(): Date {
+    return this._props.updatedAt;
+  }
+  get domainEvents(): any[] {
+    return [...this._domainEvents];
+  }
 
   // Static factory method for creating new lesson progress
-  static create(props: Omit<LessonProgressProps, 'id' | 'createdAt' | 'updatedAt'>): LessonProgress {
+  static create(
+    props: Omit<LessonProgressProps, 'id' | 'createdAt' | 'updatedAt'>
+  ): LessonProgress {
     const now = new Date();
     const progressProps: LessonProgressProps = {
       ...props,
@@ -80,16 +106,15 @@ export class LessonProgress {
     this._props.lastAccessedAt = new Date();
     this._props.updatedAt = new Date();
 
-    this.addDomainEvent(new LessonProgressUpdatedEvent(
-      this.id,
-      {
+    this.addDomainEvent(
+      new LessonProgressUpdatedEvent(this.id, {
         enrollmentId: this.enrollmentId,
         lessonId: this.lessonId,
         previousStatus,
         newStatus: this._props.status,
         timeSpentSeconds: this._props.timeSpentSeconds,
-      }
-    ));
+      })
+    );
   }
 
   /**
@@ -110,16 +135,15 @@ export class LessonProgress {
     this._props.lastAccessedAt = new Date();
     this._props.updatedAt = new Date();
 
-    this.addDomainEvent(new LessonProgressUpdatedEvent(
-      this.id,
-      {
+    this.addDomainEvent(
+      new LessonProgressUpdatedEvent(this.id, {
         enrollmentId: this.enrollmentId,
         lessonId: this.lessonId,
         previousStatus,
         newStatus: this._props.status,
         timeSpentSeconds: this._props.timeSpentSeconds,
-      }
-    ));
+      })
+    );
   }
 
   /**
@@ -137,17 +161,16 @@ export class LessonProgress {
     this._props.lastAccessedAt = new Date();
     this._props.updatedAt = new Date();
 
-    this.addDomainEvent(new LessonProgressUpdatedEvent(
-      this.id,
-      {
+    this.addDomainEvent(
+      new LessonProgressUpdatedEvent(this.id, {
         enrollmentId: this.enrollmentId,
         lessonId: this.lessonId,
         previousStatus,
         newStatus: this._props.status,
         timeSpentSeconds: this._props.timeSpentSeconds,
         completedAt: this._props.completedAt,
-      }
-    ));
+      })
+    );
   }
 
   /**
@@ -170,16 +193,15 @@ export class LessonProgress {
       this._props.status = 'in_progress';
     }
 
-    this.addDomainEvent(new LessonProgressUpdatedEvent(
-      this.id,
-      {
+    this.addDomainEvent(
+      new LessonProgressUpdatedEvent(this.id, {
         enrollmentId: this.enrollmentId,
         lessonId: this.lessonId,
         previousStatus,
         newStatus: this._props.status,
         timeSpentSeconds: this._props.timeSpentSeconds,
-      }
-    ));
+      })
+    );
   }
 
   /**
@@ -196,16 +218,15 @@ export class LessonProgress {
     this._props.lastAccessedAt = undefined;
     this._props.updatedAt = new Date();
 
-    this.addDomainEvent(new LessonProgressUpdatedEvent(
-      this.id,
-      {
+    this.addDomainEvent(
+      new LessonProgressUpdatedEvent(this.id, {
         enrollmentId: this.enrollmentId,
         lessonId: this.lessonId,
         previousStatus,
         newStatus: this._props.status,
         timeSpentSeconds: this._props.timeSpentSeconds,
-      }
-    ));
+      })
+    );
   }
 
   /**

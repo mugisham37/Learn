@@ -1,6 +1,6 @@
 /**
  * Shared Utility Functions
- * 
+ *
  * Common utility functions used across the application
  */
 

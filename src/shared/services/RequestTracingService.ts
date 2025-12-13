@@ -1,10 +1,10 @@
 /**
  * Request Tracing Service
- * 
+ *
  * Implements distributed request tracing with unique request IDs, correlation
  * across services, and comprehensive request flow tracking. Integrates with
  * logging and monitoring systems for end-to-end observability.
- * 
+ *
  * Requirements: 17.3
  */
 
@@ -75,22 +75,27 @@ export interface IRequestTracingService {
   createTraceContext(request: FastifyRequest): RequestTraceContext;
   getCurrentContext(): RequestTraceContext | undefined;
   setContext(context: RequestTraceContext): void;
-  
+
   // Span management
   startSpan(operationName: string, parentSpanId?: string): TraceSpan;
   finishSpan(spanId: string, status?: 'ok' | 'error' | 'timeout', error?: Error): void;
   addSpanTag(spanId: string, key: string, value: unknown): void;
-  addSpanLog(spanId: string, level: string, message: string, fields?: Record<string, unknown>): void;
-  
+  addSpanLog(
+    spanId: string,
+    level: string,
+    message: string,
+    fields?: Record<string, unknown>
+  ): void;
+
   // Trace management
   getTrace(traceId: string): RequestTrace | undefined;
   finishTrace(traceId: string): void;
-  
+
   // Utilities
   generateRequestId(): string;
   generateTraceId(): string;
   generateSpanId(): string;
-  
+
   // Middleware integration
   extractTraceHeaders(headers: Record<string, unknown>): Partial<RequestTraceContext>;
   injectTraceHeaders(context: RequestTraceContext): Record<string, string>;
@@ -118,7 +123,7 @@ export class RequestTracingService implements IRequestTracingService {
   createTraceContext(request: FastifyRequest): RequestTraceContext {
     // Extract existing trace context from headers
     const existingContext = this.extractTraceHeaders(request.headers);
-    
+
     // Generate IDs
     const requestId = request.id || this.generateRequestId();
     const traceId = existingContext.traceId || this.generateTraceId();
@@ -168,7 +173,7 @@ export class RequestTracingService implements IRequestTracingService {
   startSpan(operationName: string, parentSpanId?: string): TraceSpan {
     const context = this.getCurrentContext();
     const spanId = this.generateSpanId();
-    
+
     const span: TraceSpan = {
       spanId,
       parentSpanId: parentSpanId || context?.spanId,
@@ -214,7 +219,7 @@ export class RequestTracingService implements IRequestTracingService {
     span.endTime = now;
     span.duration = now - span.startTime;
     span.status = status;
-    
+
     if (error) {
       span.error = error;
       span.tags['error'] = true;
@@ -250,7 +255,12 @@ export class RequestTracingService implements IRequestTracingService {
   /**
    * Add log entry to span
    */
-  addSpanLog(spanId: string, level: string, message: string, fields?: Record<string, unknown>): void {
+  addSpanLog(
+    spanId: string,
+    level: string,
+    message: string,
+    fields?: Record<string, unknown>
+  ): void {
     const context = this.getCurrentContext();
     if (!context) return;
 
@@ -370,7 +380,7 @@ export class RequestTracingService implements IRequestTracingService {
    */
   private createOrUpdateTrace(context: RequestTraceContext): void {
     let trace = this.traces.get(context.traceId);
-    
+
     if (!trace) {
       trace = {
         traceId: context.traceId,
@@ -379,9 +389,9 @@ export class RequestTracingService implements IRequestTracingService {
         startTime: context.startTime,
         metadata: { ...context.metadata },
       };
-      
+
       this.traces.set(context.traceId, trace);
-      
+
       // Limit memory usage
       if (this.traces.size > this.maxTraces) {
         const oldestTraceId = this.traces.keys().next().value;
@@ -399,7 +409,7 @@ export class RequestTracingService implements IRequestTracingService {
         'http.method': context.method,
         'http.url': context.url,
         'user.id': context.userId,
-        'user_agent': context.userAgent,
+        user_agent: context.userAgent,
         'client.ip': context.ip,
       },
       logs: [],
@@ -415,7 +425,7 @@ export class RequestTracingService implements IRequestTracingService {
   private cleanupOldTraces(): void {
     const now = Date.now();
     const cutoff = now - this.traceRetentionMs;
-    
+
     for (const [traceId, trace] of this.traces.entries()) {
       if (trace.startTime < cutoff) {
         this.traces.delete(traceId);
@@ -433,12 +443,16 @@ export const requestTracingService = new RequestTracingService();
  * Trace decorator for functions
  */
 export function trace(operationName: string) {
-  return function (_target: unknown, _propertyKey: string, descriptor: PropertyDescriptor): PropertyDescriptor {
+  return function (
+    _target: unknown,
+    _propertyKey: string,
+    descriptor: PropertyDescriptor
+  ): PropertyDescriptor {
     const originalMethod = descriptor.value as (...args: unknown[]) => Promise<unknown>;
 
     descriptor.value = async function (this: unknown, ...args: unknown[]): Promise<unknown> {
       const span = requestTracingService.startSpan(operationName);
-      
+
       try {
         const result = await originalMethod.apply(this, args);
         requestTracingService.finishSpan(span.spanId, 'ok');
@@ -462,7 +476,7 @@ export async function traceAsync<T>(
   tags?: Record<string, unknown>
 ): Promise<T> {
   const span = requestTracingService.startSpan(operationName);
-  
+
   if (tags) {
     Object.entries(tags).forEach(([key, value]) => {
       requestTracingService.addSpanTag(span.spanId, key, value);

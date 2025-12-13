@@ -1,10 +1,10 @@
 /**
  * Analytics Queue Implementation
- * 
+ *
  * Implements BullMQ queue for analytics aggregation jobs with scheduled execution.
  * Handles real-time metrics, course analytics, student analytics, trend reports,
  * and executive summaries with appropriate concurrency and retry logic.
- * 
+ *
  * Requirements:
  * - 12.5: Scheduled analytics aggregation (hourly, daily, weekly, monthly)
  * - 14.3: Analytics aggregation queue with batch processing
@@ -54,11 +54,11 @@ export interface ExecutiveSummaryJobData {
   includeGrowthMetrics: boolean;
 }
 
-export type AnalyticsJobData = 
-  | RealTimeMetricsJobData 
-  | CourseAnalyticsJobData 
-  | StudentAnalyticsJobData 
-  | TrendReportsJobData 
+export type AnalyticsJobData =
+  | RealTimeMetricsJobData
+  | CourseAnalyticsJobData
+  | StudentAnalyticsJobData
+  | TrendReportsJobData
   | ExecutiveSummaryJobData;
 
 /**
@@ -90,7 +90,7 @@ const ANALYTICS_WORKER_OPTIONS: WorkerOptions = {
 
 /**
  * Analytics Queue Implementation
- * 
+ *
  * Manages analytics aggregation jobs with BullMQ, implements scheduled execution,
  * handles batch processing for large datasets, and provides comprehensive analytics
  * processing capabilities.
@@ -132,7 +132,10 @@ export class AnalyticsQueue {
       logger.info(`Analytics job ${job.id} completed successfully`, {
         jobId: job.id,
         type: job.data.type,
-        result: typeof result === 'object' && result !== null ? Object.keys(result as Record<string, unknown>) : String(result),
+        result:
+          typeof result === 'object' && result !== null
+            ? Object.keys(result as Record<string, unknown>)
+            : String(result),
       });
     });
 
@@ -226,7 +229,7 @@ export class AnalyticsQueue {
         startDate: new Date(Date.now() - 24 * 60 * 60 * 1000), // Last 24 hours
         endDate: new Date(),
       };
-      
+
       await this.analyticsService.getTrendingCourses(10, trendingDateRange);
       metricsUpdated.push('trending-courses');
 
@@ -263,7 +266,7 @@ export class AnalyticsQueue {
     processedCourses: number;
     batchesProcessed: number;
   }> {
-    logger.info('Processing course analytics', { 
+    logger.info('Processing course analytics', {
       courseIds: data.courseIds?.length || 'all',
       batchSize: data.batchSize || 10,
     });
@@ -277,8 +280,8 @@ export class AnalyticsQueue {
         .select({ id: courses.id })
         .from(courses)
         .where(eq(courses.status, 'published'));
-      
-      courseIds = publishedCourses.map(course => course.id);
+
+      courseIds = publishedCourses.map((course) => course.id);
     }
 
     if (courseIds.length === 0) {
@@ -292,7 +295,7 @@ export class AnalyticsQueue {
     // Process courses in batches
     for (let i = 0; i < courseIds.length; i += batchSize) {
       const batch = courseIds.slice(i, i + batchSize);
-      
+
       try {
         await this.analyticsService.batchUpdateCourseAnalytics(batch);
         processedCourses += batch.length;
@@ -328,7 +331,7 @@ export class AnalyticsQueue {
     processedStudents: number;
     batchesProcessed: number;
   }> {
-    logger.info('Processing student analytics', { 
+    logger.info('Processing student analytics', {
       userIds: data.userIds?.length || 'all',
       batchSize: data.batchSize || 10,
     });
@@ -342,8 +345,8 @@ export class AnalyticsQueue {
         .select({ id: users.id })
         .from(users)
         .where(eq(users.role, 'student'));
-      
-      userIds = students.map(student => student.id);
+
+      userIds = students.map((student) => student.id);
     }
 
     if (userIds.length === 0) {
@@ -357,7 +360,7 @@ export class AnalyticsQueue {
     // Process students in batches
     for (let i = 0; i < userIds.length; i += batchSize) {
       const batch = userIds.slice(i, i + batchSize);
-      
+
       try {
         await this.analyticsService.batchUpdateStudentAnalytics(batch);
         processedStudents += batch.length;
@@ -393,7 +396,7 @@ export class AnalyticsQueue {
     reportsGenerated: string[];
     dateRange: DateRange;
   }> {
-    logger.info('Processing trend reports', { 
+    logger.info('Processing trend reports', {
       dateRange: data.dateRange,
       reportTypes: data.reportTypes,
     });
@@ -404,7 +407,7 @@ export class AnalyticsQueue {
       for (const reportType of data.reportTypes) {
         try {
           const trends = await this.metricsCalculator.identifyTrends(reportType, data.dateRange);
-          
+
           logger.info(`Generated trend report for ${reportType}`, {
             metric: trends.metric,
             trend: trends.trend,
@@ -444,7 +447,7 @@ export class AnalyticsQueue {
     dateRange: DateRange;
     keyMetrics: Record<string, unknown>;
   }> {
-    logger.info('Processing executive summary', { 
+    logger.info('Processing executive summary', {
       dateRange: data.dateRange,
       includeGrowthMetrics: data.includeGrowthMetrics,
     });
@@ -452,10 +455,10 @@ export class AnalyticsQueue {
     try {
       // Generate comprehensive platform metrics
       const platformMetrics = await this.analyticsService.getPlatformMetrics(data.dateRange);
-      
+
       // Get trending courses for the period
       const trendingCourses = await this.analyticsService.getTrendingCourses(5, data.dateRange);
-      
+
       // Get top performing students
       const topStudents = await this.analyticsService.getTopPerformingStudents(5);
 
@@ -534,7 +537,7 @@ export class AnalyticsQueue {
       }
     );
 
-    logger.info('Course analytics job queued', { 
+    logger.info('Course analytics job queued', {
       jobId: job.id,
       courseCount: courseIds?.length || 'all',
       batchSize,
@@ -558,7 +561,7 @@ export class AnalyticsQueue {
       }
     );
 
-    logger.info('Student analytics job queued', { 
+    logger.info('Student analytics job queued', {
       jobId: job.id,
       studentCount: userIds?.length || 'all',
       batchSize,
@@ -582,7 +585,7 @@ export class AnalyticsQueue {
       }
     );
 
-    logger.info('Trend reports job queued', { 
+    logger.info('Trend reports job queued', {
       jobId: job.id,
       dateRange,
       reportTypes,
@@ -593,7 +596,10 @@ export class AnalyticsQueue {
   /**
    * Queue executive summary job (called by monthly cron)
    */
-  async queueExecutiveSummary(dateRange: DateRange, includeGrowthMetrics: boolean = true): Promise<string> {
+  async queueExecutiveSummary(
+    dateRange: DateRange,
+    includeGrowthMetrics: boolean = true
+  ): Promise<string> {
     const job = await this.queue.add(
       'executive-summary',
       {
@@ -606,7 +612,7 @@ export class AnalyticsQueue {
       }
     );
 
-    logger.info('Executive summary job queued', { 
+    logger.info('Executive summary job queued', {
       jobId: job.id,
       dateRange,
       includeGrowthMetrics,
@@ -644,7 +650,7 @@ export class AnalyticsQueue {
       logger.error('Failed to get analytics queue stats', {
         error: error instanceof Error ? error.message : 'Unknown error',
       });
-      
+
       return {
         waiting: 0,
         active: 0,
@@ -662,7 +668,7 @@ export class AnalyticsQueue {
     try {
       // Clean completed jobs older than 7 days
       await this.queue.clean(7 * 24 * 60 * 60 * 1000, 50, 'completed');
-      
+
       // Clean failed jobs older than 14 days
       await this.queue.clean(14 * 24 * 60 * 60 * 1000, 25, 'failed');
 
@@ -679,7 +685,7 @@ export class AnalyticsQueue {
    */
   async shutdown(): Promise<void> {
     logger.info('Shutting down analytics queue...');
-    
+
     try {
       await this.worker.close();
       await this.queue.close();
@@ -727,16 +733,16 @@ export function getAnalyticsQueue(): AnalyticsQueue {
  * Initialize analytics queue (call this during application startup)
  */
 export async function initializeAnalyticsQueue(
-  analyticsService: AnalyticsService, 
+  analyticsService: AnalyticsService,
   metricsCalculator: MetricsCalculator
 ): Promise<AnalyticsQueue> {
   if (!analyticsQueueInstance) {
     analyticsQueueInstance = new AnalyticsQueue(analyticsService, metricsCalculator);
   }
-  
+
   // Perform health check
   await analyticsQueueInstance.healthCheck();
-  
+
   logger.info('Analytics queue initialized successfully');
   return analyticsQueueInstance;
 }

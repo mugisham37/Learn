@@ -1,9 +1,9 @@
 /**
  * NotificationPreference Value Object
- * 
+ *
  * Immutable value object representing user notification preferences.
  * Defines which notification types should be delivered through which channels.
- * 
+ *
  * Requirements: 10.1, 10.7
  */
 
@@ -61,7 +61,7 @@ const DEFAULT_PREFERENCES: NotificationPreferencesMap = {
 
 /**
  * NotificationPreference value object
- * 
+ *
  * Represents user preferences for notification delivery across different channels.
  * Ensures valid channel configurations and provides methods for checking preferences.
  */
@@ -70,7 +70,7 @@ export class NotificationPreference {
 
   /**
    * Creates a new NotificationPreference value object
-   * 
+   *
    * @param preferences - Notification preferences mapping
    */
   private constructor(preferences: NotificationPreferencesMap) {
@@ -79,7 +79,7 @@ export class NotificationPreference {
 
   /**
    * Factory method to create NotificationPreference with custom preferences
-   * 
+   *
    * @param preferences - Partial preferences (missing values use defaults)
    * @returns NotificationPreference value object
    * @throws Error if preferences are invalid
@@ -112,13 +112,15 @@ export class NotificationPreference {
         'enrollment_confirmed',
         'certificate_issued',
         'payment_received',
-        'refund_processed'
+        'refund_processed',
       ];
 
       if (criticalTypes.includes(notificationType as NotificationType)) {
         const hasEnabledChannel = channelPrefs.email || channelPrefs.push || channelPrefs.in_app;
         if (!hasEnabledChannel) {
-          throw new Error(`At least one channel must be enabled for critical notification type: ${notificationType}`);
+          throw new Error(
+            `At least one channel must be enabled for critical notification type: ${notificationType}`
+          );
         }
       }
     }
@@ -128,7 +130,7 @@ export class NotificationPreference {
 
   /**
    * Factory method to create default NotificationPreference
-   * 
+   *
    * @returns NotificationPreference with default settings
    */
   static createDefault(): NotificationPreference {
@@ -137,7 +139,7 @@ export class NotificationPreference {
 
   /**
    * Factory method to create NotificationPreference from JSON
-   * 
+   *
    * @param json - JSON representation of preferences
    * @returns NotificationPreference value object
    * @throws Error if JSON is invalid
@@ -152,7 +154,7 @@ export class NotificationPreference {
 
   /**
    * Gets the complete preferences mapping
-   * 
+   *
    * @returns Notification preferences mapping
    */
   get preferences(): NotificationPreferencesMap {
@@ -161,7 +163,7 @@ export class NotificationPreference {
 
   /**
    * Checks if a notification type should be delivered via a specific channel
-   * 
+   *
    * @param notificationType - Type of notification
    * @param channel - Delivery channel
    * @returns True if notification should be delivered via the channel
@@ -177,7 +179,7 @@ export class NotificationPreference {
 
   /**
    * Gets enabled channels for a specific notification type
-   * 
+   *
    * @param notificationType - Type of notification
    * @returns Array of enabled channels
    */
@@ -197,7 +199,7 @@ export class NotificationPreference {
 
   /**
    * Checks if email notifications are enabled for a notification type
-   * 
+   *
    * @param notificationType - Type of notification
    * @returns True if email is enabled
    */
@@ -207,7 +209,7 @@ export class NotificationPreference {
 
   /**
    * Checks if push notifications are enabled for a notification type
-   * 
+   *
    * @param notificationType - Type of notification
    * @returns True if push is enabled
    */
@@ -217,7 +219,7 @@ export class NotificationPreference {
 
   /**
    * Checks if in-app notifications are enabled for a notification type
-   * 
+   *
    * @param notificationType - Type of notification
    * @returns True if in-app is enabled
    */
@@ -227,7 +229,7 @@ export class NotificationPreference {
 
   /**
    * Creates a new NotificationPreference with updated preferences for a specific type
-   * 
+   *
    * @param notificationType - Type of notification to update
    * @param channelPreferences - New channel preferences
    * @returns New NotificationPreference with updated preferences
@@ -246,7 +248,7 @@ export class NotificationPreference {
 
   /**
    * Creates a new NotificationPreference with a specific channel enabled/disabled for a type
-   * 
+   *
    * @param notificationType - Type of notification
    * @param channel - Channel to update
    * @param enabled - Whether to enable or disable the channel
@@ -268,7 +270,7 @@ export class NotificationPreference {
 
   /**
    * Checks equality with another NotificationPreference
-   * 
+   *
    * @param other - Another NotificationPreference
    * @returns True if preferences are equal
    */
@@ -278,7 +280,7 @@ export class NotificationPreference {
 
   /**
    * Returns JSON representation of the preferences
-   * 
+   *
    * @returns JSON object
    */
   toJSON(): NotificationPreferencesMap {
@@ -287,7 +289,7 @@ export class NotificationPreference {
 
   /**
    * Returns string representation of the preferences
-   * 
+   *
    * @returns JSON string
    */
   toString(): string {

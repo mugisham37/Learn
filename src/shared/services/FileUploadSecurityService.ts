@@ -1,9 +1,9 @@
 /**
  * File Upload Security Service
- * 
+ *
  * Provides comprehensive file upload security including type validation,
  * size validation, malware scanning, and content validation.
- * 
+ *
  * Requirements: 13.4
  */
 
@@ -12,21 +12,21 @@ import { extname } from 'path';
 
 import { ExternalServiceError } from '../errors/index.js';
 import { logger } from '../utils/logger.js';
-import { 
-  validateFileType, 
-  validateFileSize, 
-  ALLOWED_FILE_TYPES, 
-  MAX_FILE_SIZES 
+import {
+  validateFileType,
+  validateFileSize,
+  ALLOWED_FILE_TYPES,
+  MAX_FILE_SIZES,
 } from '../utils/validation.js';
 
 /**
  * File upload context types
  */
-export type FileUploadContext = 
-  | 'avatar' 
-  | 'course_resource' 
-  | 'assignment_submission' 
-  | 'video_content' 
+export type FileUploadContext =
+  | 'avatar'
+  | 'course_resource'
+  | 'assignment_submission'
+  | 'video_content'
   | 'document';
 
 /**
@@ -76,7 +76,7 @@ export interface ContentValidationResult {
 
 /**
  * File Upload Security Service
- * 
+ *
  * Provides comprehensive security validation for file uploads
  */
 export class FileUploadSecurityService {
@@ -88,12 +88,15 @@ export class FileUploadSecurityService {
     this.allowedMimeTypes = new Map([
       ['avatar', [...ALLOWED_FILE_TYPES.images]],
       ['course_resource', [...ALLOWED_FILE_TYPES.documents, ...ALLOWED_FILE_TYPES.images]],
-      ['assignment_submission', [
-        ...ALLOWED_FILE_TYPES.documents, 
-        ...ALLOWED_FILE_TYPES.images,
-        ...ALLOWED_FILE_TYPES.archives,
-        ...ALLOWED_FILE_TYPES.code
-      ]],
+      [
+        'assignment_submission',
+        [
+          ...ALLOWED_FILE_TYPES.documents,
+          ...ALLOWED_FILE_TYPES.images,
+          ...ALLOWED_FILE_TYPES.archives,
+          ...ALLOWED_FILE_TYPES.code,
+        ],
+      ],
       ['video_content', [...ALLOWED_FILE_TYPES.videos]],
       ['document', [...ALLOWED_FILE_TYPES.documents]],
     ]);
@@ -151,7 +154,8 @@ export class FileUploadSecurityService {
     const uniqueFileName = this.generateUniqueFileName(sanitizedFileName, params.userId);
 
     // 3. File size validation
-    const maxSize = params.maxSizeOverride || this.maxFileSizes.get(params.context) || MAX_FILE_SIZES.document;
+    const maxSize =
+      params.maxSizeOverride || this.maxFileSizes.get(params.context) || MAX_FILE_SIZES.document;
     const sizeValidation = validateFileSize(params.fileBuffer.length, maxSize);
     if (!sizeValidation.valid) {
       errors.push(...sizeValidation.errors);
@@ -165,7 +169,10 @@ export class FileUploadSecurityService {
     }
 
     // 5. Content-based MIME type detection
-    const contentValidation = await this.validateFileContent(params.fileBuffer, params.declaredMimeType);
+    const contentValidation = await this.validateFileContent(
+      params.fileBuffer,
+      params.declaredMimeType
+    );
     if (!contentValidation.valid) {
       errors.push(...contentValidation.errors);
     } else if (contentValidation.detectedMimeType !== params.declaredMimeType) {
@@ -219,7 +226,7 @@ export class FileUploadSecurityService {
   private sanitizeFileName(fileName: string): string {
     // Remove path traversal attempts
     const baseName = fileName.replace(/^.*[\\/]/, '');
-    
+
     // Replace dangerous characters with underscores
     const sanitized = baseName
       .replace(/[<>:"/\\|?*]/g, '_')
@@ -258,27 +265,32 @@ export class FileUploadSecurityService {
 
     // Include user ID hash for additional uniqueness and security
     const userHash = createHash('sha256').update(userId).digest('hex').slice(0, 8);
-    
+
     return `${nameWithoutExt}_${timestamp}_${userHash}_${uuid}${ext}`;
   }
 
   /**
    * Validates file content by detecting actual MIME type
    */
-  private validateFileContent(buffer: Buffer, declaredMimeType: string): Promise<ContentValidationResult> {
+  private validateFileContent(
+    buffer: Buffer,
+    declaredMimeType: string
+  ): Promise<ContentValidationResult> {
     try {
       const detectedMimeType = this.detectMimeType(buffer);
-      
+
       // Check if detected type matches declared type or is compatible
       const isCompatible = this.isMimeTypeCompatible(declaredMimeType, detectedMimeType);
-      
+
       return Promise.resolve({
         valid: isCompatible,
         detectedMimeType,
         confidence: 0.9, // High confidence for magic number detection
-        errors: isCompatible ? [] : [
-          `File content does not match declared type. Expected: ${declaredMimeType}, Detected: ${detectedMimeType}`
-        ],
+        errors: isCompatible
+          ? []
+          : [
+              `File content does not match declared type. Expected: ${declaredMimeType}, Detected: ${detectedMimeType}`,
+            ],
       });
     } catch (error) {
       logger.error('File content validation failed', {
@@ -307,16 +319,19 @@ export class FileUploadSecurityService {
     const header = buffer.subarray(0, 16);
 
     // Images
-    if (header[0] === 0xFF && header[1] === 0xD8 && header[2] === 0xFF) {
+    if (header[0] === 0xff && header[1] === 0xd8 && header[2] === 0xff) {
       return 'image/jpeg';
     }
-    if (header[0] === 0x89 && header[1] === 0x50 && header[2] === 0x4E && header[3] === 0x47) {
+    if (header[0] === 0x89 && header[1] === 0x50 && header[2] === 0x4e && header[3] === 0x47) {
       return 'image/png';
     }
     if (header[0] === 0x47 && header[1] === 0x49 && header[2] === 0x46) {
       return 'image/gif';
     }
-    if (header.subarray(0, 4).toString() === 'RIFF' && header.subarray(8, 12).toString() === 'WEBP') {
+    if (
+      header.subarray(0, 4).toString() === 'RIFF' &&
+      header.subarray(8, 12).toString() === 'WEBP'
+    ) {
       return 'image/webp';
     }
 
@@ -324,7 +339,10 @@ export class FileUploadSecurityService {
     if (header.subarray(4, 8).toString() === 'ftyp') {
       return 'video/mp4';
     }
-    if (header.subarray(0, 4).toString() === 'RIFF' && header.subarray(8, 12).toString() === 'AVI ') {
+    if (
+      header.subarray(0, 4).toString() === 'RIFF' &&
+      header.subarray(8, 12).toString() === 'AVI '
+    ) {
       return 'video/x-msvideo';
     }
 
@@ -332,7 +350,7 @@ export class FileUploadSecurityService {
     if (header.subarray(0, 4).toString() === '%PDF') {
       return 'application/pdf';
     }
-    if (header[0] === 0xD0 && header[1] === 0xCF && header[2] === 0x11 && header[3] === 0xE0) {
+    if (header[0] === 0xd0 && header[1] === 0xcf && header[2] === 0x11 && header[3] === 0xe0) {
       return 'application/msword'; // Could also be Excel or PowerPoint
     }
     if (header.subarray(0, 2).toString() === 'PK') {
@@ -354,18 +372,21 @@ export class FileUploadSecurityService {
   private isTextFile(buffer: Buffer): boolean {
     // Check first 1KB for text content
     const sample = buffer.subarray(0, Math.min(1024, buffer.length));
-    
+
     // Count printable characters
     let printableCount = 0;
     for (let i = 0; i < sample.length; i++) {
       const byte = sample[i];
-      if (byte !== undefined && ((byte >= 32 && byte <= 126) || byte === 9 || byte === 10 || byte === 13)) {
+      if (
+        byte !== undefined &&
+        ((byte >= 32 && byte <= 126) || byte === 9 || byte === 10 || byte === 13)
+      ) {
         printableCount++;
       }
     }
 
     // If more than 95% are printable characters, consider it text
-    return (printableCount / sample.length) > 0.95;
+    return printableCount / sample.length > 0.95;
   }
 
   /**
@@ -462,7 +483,7 @@ export class FileUploadSecurityService {
     // 4. Clean up the temporary file
 
     logger.info('AWS GuardDuty malware scanning not implemented', { fileName });
-    
+
     // For testing purposes, perform basic signature checks
     const signatures = this.checkForKnownMalwareSignatures(buffer);
     if (signatures.length > 0) {
@@ -473,7 +494,7 @@ export class FileUploadSecurityService {
         scanTime: new Date(),
       });
     }
-    
+
     // For now, return a clean result if no signatures found
     return Promise.resolve({
       clean: true,
@@ -489,13 +510,13 @@ export class FileUploadSecurityService {
     try {
       // Check for known malware signatures in the buffer
       const malwareSignatures = this.checkForKnownMalwareSignatures(buffer);
-      
+
       if (malwareSignatures.length > 0) {
-        logger.warn('Malware signature detected', { 
-          fileName, 
-          signatures: malwareSignatures 
+        logger.warn('Malware signature detected', {
+          fileName,
+          signatures: malwareSignatures,
         });
-        
+
         return Promise.resolve({
           clean: false,
           threat: `Known malware signatures: ${malwareSignatures.join(', ')}`,
@@ -507,12 +528,12 @@ export class FileUploadSecurityService {
       // In a real implementation, you would connect to ClamAV daemon
       // For now, we'll do basic heuristic checks
       const heuristicResult = this.performHeuristicAnalysis(buffer, fileName);
-      
-      logger.info('ClamAV malware scanning completed', { 
-        fileName, 
-        clean: heuristicResult.clean 
+
+      logger.info('ClamAV malware scanning completed', {
+        fileName,
+        clean: heuristicResult.clean,
       });
-      
+
       return Promise.resolve({
         clean: heuristicResult.clean,
         threat: heuristicResult.threat,
@@ -524,12 +545,14 @@ export class FileUploadSecurityService {
         fileName,
         error: error instanceof Error ? error.message : 'Unknown error',
       });
-      
-      return Promise.reject(new ExternalServiceError(
-        'ClamAV',
-        'Malware scanning failed',
-        error instanceof Error ? error : new Error('Unknown error')
-      ));
+
+      return Promise.reject(
+        new ExternalServiceError(
+          'ClamAV',
+          'Malware scanning failed',
+          error instanceof Error ? error : new Error('Unknown error')
+        )
+      );
     }
   }
 
@@ -538,30 +561,33 @@ export class FileUploadSecurityService {
    */
   private checkForKnownMalwareSignatures(buffer: Buffer): string[] {
     const signatures: string[] = [];
-    
+
     // Check for EICAR test signature (standard antivirus test file)
     const eicarSignature = 'X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*';
     if (buffer.includes(Buffer.from(eicarSignature))) {
       signatures.push('EICAR-Test-File');
     }
-    
+
     // Check for suspicious executable patterns
     if (this.containsSuspiciousExecutablePatterns(buffer)) {
       signatures.push('Suspicious-Executable-Pattern');
     }
-    
+
     // Check for script injection patterns
     if (this.containsScriptInjectionPatterns(buffer)) {
       signatures.push('Script-Injection-Pattern');
     }
-    
+
     return signatures;
   }
 
   /**
    * Performs heuristic analysis for malware detection
    */
-  private performHeuristicAnalysis(buffer: Buffer, fileName: string): { clean: boolean; threat?: string } {
+  private performHeuristicAnalysis(
+    buffer: Buffer,
+    fileName: string
+  ): { clean: boolean; threat?: string } {
     // Check for suspicious file size patterns
     if (buffer.length < 10) {
       return {
@@ -569,29 +595,29 @@ export class FileUploadSecurityService {
         threat: 'Suspiciously small file size',
       };
     }
-    
+
     // Check for excessive null bytes (potential padding attack)
-    const nullByteCount = buffer.filter(byte => byte === 0).length;
+    const nullByteCount = buffer.filter((byte) => byte === 0).length;
     const nullByteRatio = nullByteCount / buffer.length;
-    
+
     if (nullByteRatio > 0.9 && buffer.length > 1024) {
       return {
         clean: false,
         threat: 'Excessive null bytes detected (potential padding attack)',
       };
     }
-    
+
     // Check for suspicious file extensions vs content mismatch
     const ext = extname(fileName).toLowerCase();
     const detectedType = this.detectMimeType(buffer);
-    
+
     if (this.isSuspiciousExtensionMismatch(ext, detectedType)) {
       return {
         clean: false,
         threat: `Suspicious file extension mismatch: ${ext} vs ${detectedType}`,
       };
     }
-    
+
     return { clean: true };
   }
 
@@ -612,24 +638,28 @@ export class FileUploadSecurityService {
         }
       }
     }
-    
+
     // Check for ELF header (Linux executable)
     if (buffer.length >= 4) {
       const elfHeader = buffer.subarray(0, 4);
-      if (elfHeader[0] === 0x7F && elfHeader.subarray(1, 4).toString() === 'ELF') {
+      if (elfHeader[0] === 0x7f && elfHeader.subarray(1, 4).toString() === 'ELF') {
         return true;
       }
     }
-    
+
     // Check for Mach-O header (macOS executable)
     if (buffer.length >= 4) {
       const machHeader = buffer.readUInt32BE(0);
-      if (machHeader === 0xFEEDFACE || machHeader === 0xFEEDFACF || 
-          machHeader === 0xCEFAEDFE || machHeader === 0xCFFAEDFE) {
+      if (
+        machHeader === 0xfeedface ||
+        machHeader === 0xfeedfacf ||
+        machHeader === 0xcefaedfe ||
+        machHeader === 0xcffaedfe
+      ) {
         return true;
       }
     }
-    
+
     return false;
   }
 
@@ -638,7 +668,7 @@ export class FileUploadSecurityService {
    */
   private containsScriptInjectionPatterns(buffer: Buffer): boolean {
     const content = buffer.toString('utf8', 0, Math.min(buffer.length, 8192));
-    
+
     // Check for common script injection patterns
     const suspiciousPatterns = [
       /<script[^>]*>/i,
@@ -656,8 +686,8 @@ export class FileUploadSecurityService {
       /\/bin\/sh/i,
       /\/bin\/bash/i,
     ];
-    
-    return suspiciousPatterns.some(pattern => pattern.test(content));
+
+    return suspiciousPatterns.some((pattern) => pattern.test(content));
   }
 
   /**
@@ -672,7 +702,7 @@ export class FileUploadSecurityService {
       '.doc': ['text/html', 'application/javascript', 'text/javascript'],
       '.docx': ['text/html', 'application/javascript', 'text/javascript'],
     };
-    
+
     const suspiciousTypes = suspiciousMismatches[extension];
     return suspiciousTypes ? suspiciousTypes.includes(detectedMimeType) : false;
   }

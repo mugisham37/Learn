@@ -1,20 +1,28 @@
 /**
  * User Profile Service Implementation
- * 
+ *
  * Implements user profile management operations including profile updates,
  * avatar uploads with S3 integration, and notification preference management.
- * 
+ *
  * Requirements: 10.7
  */
 
 import { randomUUID } from 'crypto';
 
-import { ValidationError, NotFoundError, ExternalServiceError } from '../../../../shared/errors/index.js';
+import {
+  ValidationError,
+  NotFoundError,
+  ExternalServiceError,
+} from '../../../../shared/errors/index.js';
 import { sanitizeByContentType } from '../../../../shared/utils/sanitization.js';
 import { logger } from '../../../../shared/utils/logger.js';
 import { IS3Service } from '../../../../shared/services/IS3Service.js';
 import { IImageProcessingService } from '../../../../shared/services/IImageProcessingService.js';
-import { UserProfile as UserProfileEntity, NotificationPreferences, PrivacySettings } from '../../domain/value-objects/UserProfile.js';
+import {
+  UserProfile as UserProfileEntity,
+  NotificationPreferences,
+  PrivacySettings,
+} from '../../domain/value-objects/UserProfile.js';
 import { IUserProfileRepository } from '../../infrastructure/repositories/IUserProfileRepository.js';
 import { IUserRepository } from '../../infrastructure/repositories/IUserRepository.js';
 import {
@@ -26,7 +34,7 @@ import {
 
 /**
  * User Profile Service Implementation
- * 
+ *
  * Provides user profile management with:
  * - Profile CRUD operations
  * - Avatar upload and processing
@@ -84,7 +92,9 @@ export class UserProfileService implements IUserProfileService {
         throw error;
       }
 
-      throw new Error(`Failed to get user profile: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to get user profile: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -106,7 +116,7 @@ export class UserProfileService implements IUserProfileService {
 
       // Check if profile exists, create if not
       let profileData = await this.userProfileRepository.findByUserId(userId);
-      
+
       if (!profileData) {
         // Create new profile with default values and sanitized bio
         profileData = await this.userProfileRepository.create({
@@ -120,7 +130,7 @@ export class UserProfileService implements IUserProfileService {
         // Update existing profile with sanitized bio
         const sanitizedData = {
           ...data,
-          ...(data.bio && { bio: sanitizeByContentType(data.bio, 'user.bio') })
+          ...(data.bio && { bio: sanitizeByContentType(data.bio, 'user.bio') }),
         };
         profileData = await this.userProfileRepository.update(userId, sanitizedData);
       }
@@ -148,7 +158,9 @@ export class UserProfileService implements IUserProfileService {
         throw error;
       }
 
-      throw new Error(`Failed to update user profile: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to update user profile: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -245,7 +257,9 @@ export class UserProfileService implements IUserProfileService {
         throw error;
       }
 
-      throw new Error(`Failed to upload avatar: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to upload avatar: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -264,15 +278,15 @@ export class UserProfileService implements IUserProfileService {
 
       // Get profile from database
       const profileData = await this.userProfileRepository.findByUserId(userId);
-      
+
       if (!profileData) {
         // Return default preferences if no profile exists
         logger.info('No profile found, returning default notification preferences', { userId });
         return this.getDefaultNotificationPreferences();
       }
 
-      const preferences = profileData.notificationPreferences as NotificationPreferences || {};
-      
+      const preferences = (profileData.notificationPreferences as NotificationPreferences) || {};
+
       // Merge with defaults to ensure all preferences are present
       const mergedPreferences = this.mergeWithDefaultPreferences(preferences);
 
@@ -288,14 +302,19 @@ export class UserProfileService implements IUserProfileService {
         throw error;
       }
 
-      throw new Error(`Failed to get notification preferences: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to get notification preferences: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
   /**
    * Updates a user's notification preferences
    */
-  async updateNotificationPreferences(userId: string, preferences: NotificationPreferences): Promise<UserProfileEntity> {
+  async updateNotificationPreferences(
+    userId: string,
+    preferences: NotificationPreferences
+  ): Promise<UserProfileEntity> {
     try {
       logger.info('Updating notification preferences', { userId });
 
@@ -310,7 +329,7 @@ export class UserProfileService implements IUserProfileService {
 
       // Get existing profile or create if not exists
       let profileData = await this.userProfileRepository.findByUserId(userId);
-      
+
       if (!profileData) {
         // Create new profile with default values
         profileData = await this.userProfileRepository.create({
@@ -320,9 +339,13 @@ export class UserProfileService implements IUserProfileService {
         });
       } else {
         // Merge with existing preferences to preserve unspecified settings
-        const existingPreferences = profileData.notificationPreferences as NotificationPreferences || {};
-        const mergedPreferences = this.mergeNotificationPreferences(existingPreferences, preferences);
-        
+        const existingPreferences =
+          (profileData.notificationPreferences as NotificationPreferences) || {};
+        const mergedPreferences = this.mergeNotificationPreferences(
+          existingPreferences,
+          preferences
+        );
+
         // Update existing profile
         profileData = await this.userProfileRepository.update(userId, {
           notificationPreferences: mergedPreferences,
@@ -352,7 +375,9 @@ export class UserProfileService implements IUserProfileService {
         throw error;
       }
 
-      throw new Error(`Failed to update notification preferences: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to update notification preferences: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -360,17 +385,17 @@ export class UserProfileService implements IUserProfileService {
    * Updates a specific notification preference setting
    */
   async updateNotificationPreference(
-    userId: string, 
-    channel: 'email' | 'push' | 'inApp', 
-    notificationType: string, 
+    userId: string,
+    channel: 'email' | 'push' | 'inApp',
+    notificationType: string,
     enabled: boolean
   ): Promise<UserProfileEntity> {
     try {
-      logger.info('Updating specific notification preference', { 
-        userId, 
-        channel, 
-        notificationType, 
-        enabled 
+      logger.info('Updating specific notification preference', {
+        userId,
+        channel,
+        notificationType,
+        enabled,
       });
 
       // Validate parameters
@@ -381,21 +406,21 @@ export class UserProfileService implements IUserProfileService {
 
       // Update the specific preference
       const updatedPreferences = { ...currentPreferences };
-      
+
       if (!updatedPreferences[channel]) {
         updatedPreferences[channel] = {};
       }
-      
+
       updatedPreferences[channel]![notificationType] = enabled;
 
       // Update the full preferences
       const profile = await this.updateNotificationPreferences(userId, updatedPreferences);
 
-      logger.info('Specific notification preference updated successfully', { 
-        userId, 
-        channel, 
-        notificationType, 
-        enabled 
+      logger.info('Specific notification preference updated successfully', {
+        userId,
+        channel,
+        notificationType,
+        enabled,
       });
 
       return profile;
@@ -412,7 +437,9 @@ export class UserProfileService implements IUserProfileService {
         throw error;
       }
 
-      throw new Error(`Failed to update notification preference: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to update notification preference: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
   }
 
@@ -512,7 +539,9 @@ export class UserProfileService implements IUserProfileService {
   /**
    * Merges user preferences with defaults to ensure all preferences are present
    */
-  private mergeWithDefaultPreferences(userPreferences: NotificationPreferences): NotificationPreferences {
+  private mergeWithDefaultPreferences(
+    userPreferences: NotificationPreferences
+  ): NotificationPreferences {
     const defaults = this.getDefaultNotificationPreferences();
     const merged: NotificationPreferences = {};
 
@@ -531,7 +560,7 @@ export class UserProfileService implements IUserProfileService {
    * Merges existing preferences with new preferences
    */
   private mergeNotificationPreferences(
-    existing: NotificationPreferences, 
+    existing: NotificationPreferences,
     updates: NotificationPreferences
   ): NotificationPreferences {
     const merged: NotificationPreferences = { ...existing };
@@ -553,8 +582,8 @@ export class UserProfileService implements IUserProfileService {
    * Validates notification preference parameters
    */
   private validateNotificationPreferenceParameters(
-    channel: string, 
-    notificationType: string, 
+    channel: string,
+    notificationType: string,
     enabled: boolean
   ): void {
     const validChannels = ['email', 'push', 'inApp'];
@@ -568,11 +597,15 @@ export class UserProfileService implements IUserProfileService {
     ];
 
     if (!validChannels.includes(channel)) {
-      throw new ValidationError(`Invalid notification channel: ${channel}. Valid channels: ${validChannels.join(', ')}`);
+      throw new ValidationError(
+        `Invalid notification channel: ${channel}. Valid channels: ${validChannels.join(', ')}`
+      );
     }
 
     if (!validTypes.includes(notificationType)) {
-      throw new ValidationError(`Invalid notification type: ${notificationType}. Valid types: ${validTypes.join(', ')}`);
+      throw new ValidationError(
+        `Invalid notification type: ${notificationType}. Valid types: ${validTypes.join(', ')}`
+      );
     }
 
     if (typeof enabled !== 'boolean') {
@@ -610,7 +643,9 @@ export class UserProfileService implements IUserProfileService {
             throw new ValidationError(`Invalid notification type: ${type}`);
           }
           if (typeof enabled !== 'boolean') {
-            throw new ValidationError(`Notification preference value must be boolean: ${channel}.${type}`);
+            throw new ValidationError(
+              `Notification preference value must be boolean: ${channel}.${type}`
+            );
           }
         }
       }

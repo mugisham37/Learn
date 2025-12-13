@@ -1,13 +1,13 @@
 /**
  * Startup Service
- * 
+ *
  * Handles application startup sequence including:
  * - Secrets manager initialization
  * - Configuration validation
  * - Database connection
  * - Cache initialization
  * - Health checks
- * 
+ *
  * Requirements: 13.7, 16.5, 17.1
  */
 
@@ -116,7 +116,7 @@ export class StartupService {
    */
   private async validateBasicConfig(): Promise<void> {
     logger.info('Validating basic configuration');
-    
+
     try {
       validateConfig();
       logger.info('Basic configuration validation completed');
@@ -133,7 +133,7 @@ export class StartupService {
    */
   private async initializeSecretsManager(): Promise<void> {
     logger.info('Initializing secrets manager');
-    
+
     try {
       await secretsManager.initialize();
       logger.info('Secrets manager initialization completed');
@@ -150,7 +150,7 @@ export class StartupService {
    */
   private async validateSecrets(): Promise<void> {
     logger.info('Validating secrets');
-    
+
     try {
       secretsManager.validateSecrets();
       logger.info('Secrets validation completed');
@@ -167,7 +167,7 @@ export class StartupService {
    */
   private async initializeDatabase(): Promise<void> {
     logger.info('Initializing database connection');
-    
+
     try {
       // Import database module dynamically to avoid circular dependencies
       const { testConnection } = await import('../../infrastructure/database/index.js');
@@ -186,16 +186,16 @@ export class StartupService {
    */
   private async initializeCache(): Promise<void> {
     logger.info('Initializing cache connection');
-    
+
     try {
       // Import cache module dynamically to avoid circular dependencies
       const { checkRedisHealth } = await import('../../infrastructure/cache/index.js');
       const health = await checkRedisHealth();
-      
+
       if (!health.healthy) {
         throw new Error(`Cache health check failed: ${health.error}`);
       }
-      
+
       logger.info('Cache connection initialization completed');
 
       // Initialize comprehensive caching with cache warming
@@ -223,7 +223,7 @@ export class StartupService {
    */
   private async runHealthChecks(options: StartupOptions): Promise<void> {
     logger.info('Running startup health checks');
-    
+
     const healthChecks: Array<{ name: string; check: () => Promise<boolean> }> = [];
 
     // Secrets manager health check
@@ -288,10 +288,10 @@ export class StartupService {
           const result = await check();
           return { name, success: result };
         } catch (error) {
-          return { 
-            name, 
-            success: false, 
-            error: error instanceof Error ? error.message : 'Unknown error' 
+          return {
+            name,
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error',
           };
         }
       })
@@ -310,8 +310,8 @@ export class StartupService {
         }
       } else {
         const name = healthChecks[index].name;
-        logger.error(`Health check error: ${name}`, { 
-          error: result.reason instanceof Error ? result.reason.message : 'Unknown error' 
+        logger.error(`Health check error: ${name}`, {
+          error: result.reason instanceof Error ? result.reason.message : 'Unknown error',
         });
         failedChecks.push(name);
       }

@@ -1,6 +1,6 @@
 /**
  * Email Service Interface
- * 
+ *
  * Defines the contract for email sending operations.
  */
 

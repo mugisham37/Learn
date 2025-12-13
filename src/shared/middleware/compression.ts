@@ -1,9 +1,9 @@
 /**
  * Compression Middleware
- * 
+ *
  * Implements gzip and brotli compression for HTTP responses.
  * Provides intelligent compression based on content type and size.
- * 
+ *
  * Requirements: 15.5
  */
 
@@ -53,9 +53,9 @@ const DEFAULT_OPTIONS: Required<CompressionOptions> = {
  */
 function shouldCompress(contentType: string, allowedTypes: string[]): boolean {
   if (!contentType) return false;
-  
+
   const type = contentType.toLowerCase().split(';')[0].trim();
-  return allowedTypes.some(allowed => type.includes(allowed));
+  return allowedTypes.some((allowed) => type.includes(allowed));
 }
 
 /**
@@ -63,21 +63,21 @@ function shouldCompress(contentType: string, allowedTypes: string[]): boolean {
  */
 function getBestCompression(acceptEncoding: string, preferBrotli: boolean): 'br' | 'gzip' | null {
   if (!acceptEncoding) return null;
-  
+
   const encoding = acceptEncoding.toLowerCase();
-  
+
   if (preferBrotli && encoding.includes('br')) {
     return 'br';
   }
-  
+
   if (encoding.includes('gzip')) {
     return 'gzip';
   }
-  
+
   if (encoding.includes('br')) {
     return 'br';
   }
-  
+
   return null;
 }
 
@@ -86,7 +86,7 @@ function getBestCompression(acceptEncoding: string, preferBrotli: boolean): 'br'
  */
 export function createCompressionMiddleware(options: CompressionOptions = {}) {
   const config = { ...DEFAULT_OPTIONS, ...options };
-  
+
   return async function compressionMiddleware(
     request: FastifyRequest,
     reply: FastifyReply
@@ -103,7 +103,7 @@ export function createCompressionMiddleware(options: CompressionOptions = {}) {
 
     const acceptEncoding = request.headers['accept-encoding'] as string;
     const compression = getBestCompression(acceptEncoding, config.preferBrotli);
-    
+
     if (!compression) {
       return;
     }
@@ -123,7 +123,7 @@ export function createCompressionMiddleware(options: CompressionOptions = {}) {
 
       try {
         let compressedPayload: Buffer;
-        
+
         if (compression === 'br') {
           // Brotli compression
           const brotli = createBrotliCompress({
@@ -131,7 +131,7 @@ export function createCompressionMiddleware(options: CompressionOptions = {}) {
               [require('zlib').constants.BROTLI_PARAM_QUALITY]: config.level,
             },
           });
-          
+
           compressedPayload = await compressStream(payload, brotli);
           reply.header('content-encoding', 'br');
         } else {
@@ -143,10 +143,10 @@ export function createCompressionMiddleware(options: CompressionOptions = {}) {
 
         // Update content length
         reply.header('content-length', compressedPayload.length);
-        
+
         // Add Vary header for proper caching
         const varyHeader = reply.getHeader('vary') as string;
-        const varyValues = varyHeader ? varyHeader.split(',').map(v => v.trim()) : [];
+        const varyValues = varyHeader ? varyHeader.split(',').map((v) => v.trim()) : [];
         if (!varyValues.includes('Accept-Encoding')) {
           varyValues.push('Accept-Encoding');
           reply.header('vary', varyValues.join(', '));
@@ -158,7 +158,12 @@ export function createCompressionMiddleware(options: CompressionOptions = {}) {
           compression,
           originalSize: typeof payload === 'string' ? payload.length : payload.length,
           compressedSize: compressedPayload.length,
-          ratio: Math.round((1 - compressedPayload.length / (typeof payload === 'string' ? payload.length : payload.length)) * 100),
+          ratio: Math.round(
+            (1 -
+              compressedPayload.length /
+                (typeof payload === 'string' ? payload.length : payload.length)) *
+              100
+          ),
         });
 
         return compressedPayload;
@@ -169,7 +174,7 @@ export function createCompressionMiddleware(options: CompressionOptions = {}) {
           url: request.url,
           compression,
         });
-        
+
         // Return original payload if compression fails
         return payload;
       }
@@ -182,25 +187,25 @@ export function createCompressionMiddleware(options: CompressionOptions = {}) {
  */
 async function compressStream(payload: string | Buffer, compressionStream: any): Promise<Buffer> {
   const chunks: Buffer[] = [];
-  
+
   compressionStream.on('data', (chunk: Buffer) => {
     chunks.push(chunk);
   });
-  
+
   return new Promise((resolve, reject) => {
     compressionStream.on('end', () => {
       resolve(Buffer.concat(chunks));
     });
-    
+
     compressionStream.on('error', reject);
-    
+
     // Write payload to compression stream
     if (typeof payload === 'string') {
       compressionStream.write(Buffer.from(payload, 'utf8'));
     } else {
       compressionStream.write(payload);
     }
-    
+
     compressionStream.end();
   });
 }
@@ -213,10 +218,10 @@ export async function registerCompression(
   options: CompressionOptions = {}
 ): Promise<void> {
   const middleware = createCompressionMiddleware(options);
-  
+
   // Register as a global hook
   fastify.addHook('preHandler', middleware);
-  
+
   logger.info('Compression middleware registered', {
     threshold: options.threshold || DEFAULT_OPTIONS.threshold,
     level: options.level || DEFAULT_OPTIONS.level,

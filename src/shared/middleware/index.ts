@@ -1,8 +1,8 @@
 /**
  * Shared Middleware
- * 
+ *
  * Common middleware functions used across the application
- * 
+ *
  * Requirements: 1.6, 21.7
  */
 
@@ -26,29 +26,24 @@ export interface AuthenticatedRequest extends FastifyRequest {
 /**
  * Type guard to check if request is authenticated
  */
-export function isAuthenticatedRequest(
-  request: FastifyRequest
-): request is AuthenticatedRequest {
+export function isAuthenticatedRequest(request: FastifyRequest): request is AuthenticatedRequest {
   return 'user' in request && request.user !== undefined;
 }
 
 /**
  * Authentication middleware that extracts and validates JWT tokens
- * 
+ *
  * Extracts JWT from Authorization header (Bearer token format),
  * validates the token signature and expiration, and attaches
  * user context to the request object for downstream handlers.
- * 
+ *
  * @param request - Fastify request object
  * @param _reply - Fastify reply object (unused but required by Fastify preHandler signature)
  * @throws AuthenticationError if token is missing, invalid, or expired
- * 
+ *
  * Requirements: 1.6, 21.7
  */
-export function requireAuth(
-  request: FastifyRequest,
-  _reply: FastifyReply
-): void {
+export function requireAuth(request: FastifyRequest, _reply: FastifyReply): void {
   const requestId = request.id;
 
   try {
@@ -56,10 +51,7 @@ export function requireAuth(
     const authHeader = request.headers.authorization;
 
     if (!authHeader) {
-      request.log.warn(
-        { requestId },
-        'Authentication failed: Missing Authorization header'
-      );
+      request.log.warn({ requestId }, 'Authentication failed: Missing Authorization header');
       throw new AuthenticationError('Missing Authorization header');
     }
 
@@ -70,16 +62,15 @@ export function requireAuth(
         { requestId, authHeader: authHeader.substring(0, 20) },
         'Authentication failed: Invalid Authorization header format'
       );
-      throw new AuthenticationError('Invalid Authorization header format. Expected: Bearer <token>');
+      throw new AuthenticationError(
+        'Invalid Authorization header format. Expected: Bearer <token>'
+      );
     }
 
     const token = parts[1];
 
     if (!token) {
-      request.log.warn(
-        { requestId },
-        'Authentication failed: Empty token'
-      );
+      request.log.warn({ requestId }, 'Authentication failed: Empty token');
       throw new AuthenticationError('Empty token provided');
     }
 
@@ -152,20 +143,20 @@ export function requireAuth(
 
 /**
  * Authorization middleware factory that checks if user has required role
- * 
+ *
  * Creates a middleware function that verifies the authenticated user
  * has one of the allowed roles. Must be used after requireAuth middleware.
- * 
+ *
  * @param allowedRoles - Array of roles that are permitted to access the endpoint
  * @returns Fastify preHandler middleware function
  * @throws AuthorizationError if user doesn't have required role
- * 
+ *
  * Requirements: 2.2, 2.3
- * 
+ *
  * @example
  * // Only educators can access this endpoint
  * fastify.get('/courses', { preHandler: [requireAuth, requireRole(['educator'])] }, handler);
- * 
+ *
  * @example
  * // Both educators and admins can access
  * fastify.post('/courses', { preHandler: [requireAuth, requireRole(['educator', 'admin'])] }, handler);
@@ -176,10 +167,7 @@ export function requireRole(allowedRoles: Role[]) {
 
     // Ensure request is authenticated
     if (!isAuthenticatedRequest(request)) {
-      request.log.error(
-        { requestId },
-        'Authorization check failed: Request not authenticated'
-      );
+      request.log.error({ requestId }, 'Authorization check failed: Request not authenticated');
       throw new AuthenticationError('Authentication required');
     }
 
@@ -196,9 +184,7 @@ export function requireRole(allowedRoles: Role[]) {
         },
         'Authorization failed: Insufficient role permissions'
       );
-      throw new AuthorizationError(
-        `Access forbidden. Required role: ${allowedRoles.join(' or ')}`
-      );
+      throw new AuthorizationError(`Access forbidden. Required role: ${allowedRoles.join(' or ')}`);
     }
 
     request.log.info(
@@ -216,15 +202,19 @@ export function requireRole(allowedRoles: Role[]) {
 /**
  * Resource type for ownership verification
  */
-export type ResourceType = 'course' | 'enrollment' | 'assignment_submission' | 'quiz_submission' | 'message' | 'discussion_thread' | 'discussion_post';
+export type ResourceType =
+  | 'course'
+  | 'enrollment'
+  | 'assignment_submission'
+  | 'quiz_submission'
+  | 'message'
+  | 'discussion_thread'
+  | 'discussion_post';
 
 /**
  * Ownership verification function type
  */
-export type OwnershipVerifier = (
-  userId: string,
-  resourceId: string
-) => Promise<boolean>;
+export type OwnershipVerifier = (userId: string, resourceId: string) => Promise<boolean>;
 
 /**
  * Registry of ownership verification functions by resource type
@@ -233,13 +223,13 @@ const ownershipVerifiers: Map<ResourceType, OwnershipVerifier> = new Map();
 
 /**
  * Register an ownership verification function for a resource type
- * 
+ *
  * This allows modules to register their own ownership verification logic
  * without creating circular dependencies.
- * 
+ *
  * @param resourceType - Type of resource to verify ownership for
  * @param verifier - Async function that returns true if user owns the resource
- * 
+ *
  * @example
  * // In courses module
  * registerOwnershipVerifier('course', async (userId, courseId) => {
@@ -256,7 +246,7 @@ export function registerOwnershipVerifier(
 
 /**
  * Get ownership verifier for a resource type
- * 
+ *
  * @param resourceType - Type of resource
  * @returns Ownership verifier function
  * @throws Error if no verifier registered for resource type
@@ -264,53 +254,45 @@ export function registerOwnershipVerifier(
 function getOwnershipVerifier(resourceType: ResourceType): OwnershipVerifier {
   const verifier = ownershipVerifiers.get(resourceType);
   if (!verifier) {
-    throw new Error(
-      `No ownership verifier registered for resource type: ${resourceType}`
-    );
+    throw new Error(`No ownership verifier registered for resource type: ${resourceType}`);
   }
   return verifier;
 }
 
 /**
  * Authorization middleware factory that checks resource ownership
- * 
+ *
  * Creates a middleware function that verifies the authenticated user
  * owns the specified resource. The resource ID is extracted from the
  * request parameters. Must be used after requireAuth middleware.
- * 
+ *
  * @param resourceType - Type of resource to check ownership for
  * @param resourceIdParam - Name of the route parameter containing the resource ID (defaults to 'id')
  * @returns Fastify preHandler middleware function
  * @throws AuthorizationError if user doesn't own the resource
  * @throws NotFoundError if resource doesn't exist
- * 
+ *
  * Requirements: 2.4
- * 
+ *
  * @example
  * // Only course owner (instructor) can update their course
  * fastify.put('/courses/:id', {
  *   preHandler: [requireAuth, requireOwnership('course')]
  * }, handler);
- * 
+ *
  * @example
  * // Only enrollment owner (student) can view their progress
  * fastify.get('/enrollments/:enrollmentId/progress', {
  *   preHandler: [requireAuth, requireOwnership('enrollment', 'enrollmentId')]
  * }, handler);
  */
-export function requireOwnership(
-  resourceType: ResourceType,
-  resourceIdParam: string = 'id'
-) {
+export function requireOwnership(resourceType: ResourceType, resourceIdParam: string = 'id') {
   return async function (request: FastifyRequest, _reply: FastifyReply): Promise<void> {
     const requestId = request.id;
 
     // Ensure request is authenticated
     if (!isAuthenticatedRequest(request)) {
-      request.log.error(
-        { requestId },
-        'Ownership check failed: Request not authenticated'
-      );
+      request.log.error({ requestId }, 'Ownership check failed: Request not authenticated');
       throw new AuthenticationError('Authentication required');
     }
 
@@ -323,9 +305,7 @@ export function requireOwnership(
         { requestId, resourceIdParam, params },
         'Ownership check failed: Resource ID not found in parameters'
       );
-      throw new ValidationError(
-        `Resource ID parameter '${resourceIdParam}' not found in request`
-      );
+      throw new ValidationError(`Resource ID parameter '${resourceIdParam}' not found in request`);
     }
 
     const userId = request.user.userId;

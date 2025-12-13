@@ -1,16 +1,16 @@
 /**
  * GraphQL Complexity Analysis Tests
- * 
+ *
  * Tests for GraphQL query complexity analysis functionality
- * 
+ *
  * Requirements: 15.6
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { 
-  createComplexityAnalysisRule, 
+import {
+  createComplexityAnalysisRule,
   getComplexityConfig,
-  COMPLEXITY_LIMITS 
+  COMPLEXITY_LIMITS,
 } from '../complexityAnalysis.js';
 import { complexityMonitor } from '../complexityMonitoring.js';
 import { validate, parse, buildSchema } from 'graphql';
@@ -65,24 +65,24 @@ describe('GraphQL Complexity Analysis', () => {
     it('should return development config by default', () => {
       const originalEnv = process.env.NODE_ENV;
       process.env.NODE_ENV = 'development';
-      
+
       const config = getComplexityConfig();
-      
+
       expect(config.maximumComplexity).toBeGreaterThan(0);
       expect(config.maximumDepth).toBeGreaterThan(0);
-      
+
       process.env.NODE_ENV = originalEnv;
     });
 
     it('should return production config for production environment', () => {
       const originalEnv = process.env.NODE_ENV;
       process.env.NODE_ENV = 'production';
-      
+
       const config = getComplexityConfig();
-      
+
       expect(config.maximumComplexity).toBe(COMPLEXITY_LIMITS.production.maximumComplexity);
       expect(config.maximumDepth).toBe(COMPLEXITY_LIMITS.production.maximumDepth);
-      
+
       process.env.NODE_ENV = originalEnv;
     });
   });
@@ -90,7 +90,7 @@ describe('GraphQL Complexity Analysis', () => {
   describe('createComplexityAnalysisRule', () => {
     it('should allow simple queries under complexity limit', () => {
       const rule = createComplexityAnalysisRule({ maximumComplexity: 100 });
-      
+
       const query = parse(`
         query {
           user(id: "1") {
@@ -106,7 +106,7 @@ describe('GraphQL Complexity Analysis', () => {
 
     it('should reject queries exceeding complexity limit', () => {
       const rule = createComplexityAnalysisRule({ maximumComplexity: 5 });
-      
+
       const complexQuery = parse(`
         query {
           users(first: 100) {
@@ -140,7 +140,7 @@ describe('GraphQL Complexity Analysis', () => {
 
     it('should handle queries with pagination arguments', () => {
       const rule = createComplexityAnalysisRule({ maximumComplexity: 1000 });
-      
+
       const query = parse(`
         query {
           users(first: 10) {
@@ -156,7 +156,7 @@ describe('GraphQL Complexity Analysis', () => {
 
     it('should assign higher complexity to search operations', () => {
       const rule = createComplexityAnalysisRule({ maximumComplexity: 30 });
-      
+
       const searchQuery = parse(`
         query {
           searchCourses(query: "test", first: 10) {
@@ -251,7 +251,7 @@ describe('GraphQL Complexity Analysis', () => {
 
       const user1Queries = complexityMonitor.getQueriesByUser(userId1);
       expect(user1Queries).toHaveLength(2);
-      expect(user1Queries.every(q => q.userId === userId1)).toBe(true);
+      expect(user1Queries.every((q) => q.userId === userId1)).toBe(true);
 
       const user2Queries = complexityMonitor.getQueriesByUser(userId2);
       expect(user2Queries).toHaveLength(1);
@@ -278,7 +278,7 @@ describe('GraphQL Complexity Analysis', () => {
   describe('environment configuration', () => {
     it('should use environment-specific limits', () => {
       const originalEnv = process.env.NODE_ENV;
-      
+
       // Test development limits
       process.env.NODE_ENV = 'development';
       const devConfig = getComplexityConfig();

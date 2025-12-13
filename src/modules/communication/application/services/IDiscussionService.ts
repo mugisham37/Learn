@@ -1,10 +1,10 @@
 /**
  * Discussion Service Interface
- * 
+ *
  * Defines the contract for discussion-related business operations.
  * Handles thread creation, replies, voting, and solution marking
  * with proper authorization and notification integration.
- * 
+ *
  * Requirements:
  * - 9.2: Discussion thread creation with enrollment validation
  * - 9.3: Reply threading with nested structure
@@ -14,13 +14,13 @@
 
 import type { DiscussionThread } from '../../domain/entities/DiscussionThread.js';
 import type { DiscussionPost, VoteType } from '../../domain/entities/DiscussionPost.js';
-import type { 
-  ThreadWithDetails, 
-  PostWithReplies, 
+import type {
+  ThreadWithDetails,
+  PostWithReplies,
   PaginatedResult,
   DiscussionPagination,
   ThreadFilter,
-  ThreadSortBy
+  ThreadSortBy,
 } from '../../infrastructure/repositories/IDiscussionRepository.js';
 
 /**
@@ -97,14 +97,14 @@ export interface SolutionResult {
 
 /**
  * Discussion Service Interface
- * 
+ *
  * Provides high-level business operations for discussion functionality
  * with proper validation, authorization, and side effects (notifications)
  */
 export interface IDiscussionService {
   /**
    * Create a new discussion thread with enrollment validation
-   * 
+   *
    * @param data - Thread creation data
    * @returns Thread creation result with validation status
    * @throws ValidationError if input data is invalid
@@ -115,7 +115,7 @@ export interface IDiscussionService {
 
   /**
    * Reply to a discussion thread with threading support
-   * 
+   *
    * @param data - Reply creation data
    * @returns Reply creation result with notification details
    * @throws ValidationError if input data is invalid
@@ -126,7 +126,7 @@ export interface IDiscussionService {
 
   /**
    * Vote on a post with duplicate prevention
-   * 
+   *
    * @param data - Vote data
    * @returns Vote result with duplicate prevention details
    * @throws ValidationError if input data is invalid
@@ -137,7 +137,7 @@ export interface IDiscussionService {
 
   /**
    * Mark a post as solution with educator authorization
-   * 
+   *
    * @param data - Solution marking data
    * @returns Solution result with notification details
    * @throws ValidationError if input data is invalid
@@ -148,7 +148,7 @@ export interface IDiscussionService {
 
   /**
    * Get threads for a course with filtering and pagination
-   * 
+   *
    * @param courseId - Course ID
    * @param userId - User ID for enrollment validation
    * @param filter - Thread filter options
@@ -169,7 +169,7 @@ export interface IDiscussionService {
 
   /**
    * Get posts for a thread with nested structure
-   * 
+   *
    * @param threadId - Thread ID
    * @param userId - User ID for enrollment validation and vote status
    * @param pagination - Pagination parameters
@@ -186,7 +186,7 @@ export interface IDiscussionService {
   /**
    * Update thread activity timestamp
    * Internal method called when posts are added to a thread
-   * 
+   *
    * @param threadId - Thread ID
    */
   updateThreadActivity(threadId: string): Promise<void>;

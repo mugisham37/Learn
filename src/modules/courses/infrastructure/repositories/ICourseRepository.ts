@@ -1,16 +1,14 @@
 /**
  * Course Repository Interface
- * 
+ *
  * Defines the contract for course data access operations.
  * Abstracts database operations behind a clean interface following
  * the Repository pattern for domain independence.
- * 
+ *
  * Requirements: 3.1, 3.6
  */
 
-import { 
-  Course
-} from '../../../../infrastructure/database/schema/courses.schema.js';
+import { Course } from '../../../../infrastructure/database/schema/courses.schema.js';
 
 /**
  * Pagination parameters for list queries
@@ -74,14 +72,14 @@ export interface UpdateCourseDTO {
 
 /**
  * Course Repository Interface
- * 
+ *
  * Provides methods for all course data access operations with caching support.
  * Implementations must handle database errors and map them to domain errors.
  */
 export interface ICourseRepository {
   /**
    * Creates a new course in the database
-   * 
+   *
    * @param data - Course creation data
    * @returns The created course
    * @throws ConflictError if slug already exists
@@ -91,7 +89,7 @@ export interface ICourseRepository {
 
   /**
    * Finds a course by its unique ID
-   * 
+   *
    * @param id - Course ID
    * @returns The course if found, null otherwise
    * @throws DatabaseError if database operation fails
@@ -100,7 +98,7 @@ export interface ICourseRepository {
 
   /**
    * Finds a course by its URL slug
-   * 
+   *
    * @param slug - Course slug
    * @returns The course if found, null otherwise
    * @throws DatabaseError if database operation fails
@@ -109,7 +107,7 @@ export interface ICourseRepository {
 
   /**
    * Finds courses by instructor with pagination
-   * 
+   *
    * @param instructorId - Instructor user ID
    * @param pagination - Pagination parameters
    * @param filters - Optional filters
@@ -117,14 +115,14 @@ export interface ICourseRepository {
    * @throws DatabaseError if database operation fails
    */
   findByInstructor(
-    instructorId: string, 
+    instructorId: string,
     pagination: PaginationParams,
     filters?: CourseFilters
   ): Promise<PaginatedResult<Course>>;
 
   /**
    * Finds published courses with pagination and filtering
-   * 
+   *
    * @param pagination - Pagination parameters
    * @param filters - Optional filters
    * @returns Paginated course results
@@ -137,7 +135,7 @@ export interface ICourseRepository {
 
   /**
    * Updates a course's data
-   * 
+   *
    * @param id - Course ID
    * @param data - Update data
    * @returns The updated course
@@ -149,7 +147,7 @@ export interface ICourseRepository {
 
   /**
    * Publishes a course by updating status and setting publishedAt
-   * 
+   *
    * @param id - Course ID
    * @returns The published course
    * @throws NotFoundError if course doesn't exist
@@ -160,7 +158,7 @@ export interface ICourseRepository {
 
   /**
    * Soft deletes a course by setting status to archived
-   * 
+   *
    * @param id - Course ID
    * @returns void
    * @throws NotFoundError if course doesn't exist
@@ -171,7 +169,7 @@ export interface ICourseRepository {
   /**
    * Permanently deletes a course from the database
    * USE WITH CAUTION - This is irreversible and cascades to modules/lessons
-   * 
+   *
    * @param id - Course ID
    * @returns void
    * @throws NotFoundError if course doesn't exist
@@ -181,7 +179,7 @@ export interface ICourseRepository {
 
   /**
    * Checks if a course with the given slug exists
-   * 
+   *
    * @param slug - Course slug
    * @returns True if course exists, false otherwise
    * @throws DatabaseError if database operation fails
@@ -190,7 +188,7 @@ export interface ICourseRepository {
 
   /**
    * Increments the enrollment count for a course
-   * 
+   *
    * @param id - Course ID
    * @returns The updated course
    * @throws NotFoundError if course doesn't exist
@@ -200,7 +198,7 @@ export interface ICourseRepository {
 
   /**
    * Decrements the enrollment count for a course
-   * 
+   *
    * @param id - Course ID
    * @returns The updated course
    * @throws NotFoundError if course doesn't exist
@@ -210,7 +208,7 @@ export interface ICourseRepository {
 
   /**
    * Updates course rating statistics
-   * 
+   *
    * @param id - Course ID
    * @param averageRating - New average rating
    * @param totalReviews - Total number of reviews
@@ -223,7 +221,7 @@ export interface ICourseRepository {
   /**
    * Invalidates cache for a specific course
    * Should be called after any update operation
-   * 
+   *
    * @param id - Course ID
    * @returns void
    */
@@ -232,7 +230,7 @@ export interface ICourseRepository {
   /**
    * Invalidates cache for a course by slug
    * Should be called after operations that affect slug lookups
-   * 
+   *
    * @param slug - Course slug
    * @returns void
    */
@@ -241,7 +239,7 @@ export interface ICourseRepository {
   /**
    * Invalidates cache for courses by instructor
    * Should be called after operations that affect instructor course lists
-   * 
+   *
    * @param instructorId - Instructor user ID
    * @returns void
    */

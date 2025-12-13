@@ -1,9 +1,9 @@
 /**
  * GraphQL Infrastructure Index
- * 
+ *
  * Exports all GraphQL infrastructure components including Apollo Server
  * configuration, Fastify plugin, and context creation utilities.
- * 
+ *
  * Requirements: 21.1
  */
 
@@ -19,7 +19,7 @@ export {
   createAuthenticationError,
   createAuthorizationError,
   createNotFoundError,
-  createConflictError
+  createConflictError,
 } from './errorFormatter.js';
 
 // GraphQL utilities
@@ -33,7 +33,7 @@ export {
   validatePagination,
   createCursor,
   throwNotFound,
-  throwConflict
+  throwConflict,
 } from './utils.js';
 
 // Response optimization utilities
@@ -46,7 +46,7 @@ export {
   resetOptimizationStats,
   isOptimizationEnabled,
   type ResponseOptimizationConfig,
-  type OptimizationMetrics
+  type OptimizationMetrics,
 } from './responseOptimization.js';
 
 // Field selection utilities
@@ -58,7 +58,7 @@ export {
   isFieldRequested,
   getNestedFieldSelection,
   createMinimalResponse,
-  type FieldSelection
+  type FieldSelection,
 } from './fieldSelection.js';
 
 // Pagination utilities
@@ -76,5 +76,5 @@ export {
   type Edge,
   type PageInfo,
   type OffsetPaginationResult,
-  type PaginationConfig
+  type PaginationConfig,
 } from './pagination.js';

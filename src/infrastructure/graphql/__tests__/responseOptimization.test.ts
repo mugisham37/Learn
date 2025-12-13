@@ -1,9 +1,9 @@
 /**
  * Response Optimization Tests
- * 
+ *
  * Tests for GraphQL response optimization including field selection,
  * null value removal, and payload size reduction.
- * 
+ *
  * Requirements: 15.6
  */
 
@@ -83,7 +83,7 @@ const testSchema = buildSchema(`
 function createMockResolveInfo(query: string): GraphQLResolveInfo {
   const document = parse(query);
   const operationDefinition = document.definitions[0] as any;
-  
+
   return {
     fieldName: 'test',
     fieldNodes: operationDefinition.selectionSet.selections,
@@ -112,15 +112,15 @@ describe('Field Selection', () => {
         }
       }
     `;
-    
+
     const info = createMockResolveInfo(query);
     const selection = createFieldSelection(info);
-    
+
     expect(selection.hasField('id')).toBe(true);
     expect(selection.hasField('email')).toBe(true);
     expect(selection.hasField('profile')).toBe(true);
     expect(selection.hasField('createdAt')).toBe(false);
-    
+
     const profileSelection = selection.getNestedSelection('profile');
     expect(profileSelection?.hasField('fullName')).toBe(true);
     expect(profileSelection?.hasField('bio')).toBe(true);
@@ -139,10 +139,10 @@ describe('Field Selection', () => {
         }
       }
     `;
-    
+
     const info = createMockResolveInfo(query);
     const selection = createFieldSelection(info);
-    
+
     const userData = {
       id: '1',
       email: 'test@example.com',
@@ -154,9 +154,9 @@ describe('Field Selection', () => {
       createdAt: '2024-01-01T00:00:00Z',
       lastLogin: null,
     };
-    
+
     const filtered = filterObjectFields(userData, selection);
-    
+
     expect(filtered).toEqual({
       id: '1',
       email: 'test@example.com',
@@ -179,10 +179,10 @@ describe('Field Selection', () => {
         }
       }
     `;
-    
+
     const info = createMockResolveInfo(query);
     const selection = createFieldSelection(info);
-    
+
     const coursesData = [
       {
         id: '1',
@@ -192,18 +192,16 @@ describe('Field Selection', () => {
           {
             id: 'module-1',
             title: 'Module 1',
-            lessons: [
-              { id: 'lesson-1', title: 'Lesson 1', type: 'video' },
-            ],
+            lessons: [{ id: 'lesson-1', title: 'Lesson 1', type: 'video' }],
           },
         ],
         enrollmentCount: 100,
       },
     ];
-    
+
     // For arrays, we need to filter each item in the array
-    const filtered = coursesData.map(course => filterObjectFields(course, selection));
-    
+    const filtered = coursesData.map((course) => filterObjectFields(course, selection));
+
     expect(filtered).toEqual([
       {
         id: '1',
@@ -235,9 +233,9 @@ describe('Null Value Removal', () => {
       },
       tags: ['javascript', null, 'react', undefined],
     };
-    
+
     const cleaned = removeNullValues(data);
-    
+
     expect(cleaned).toEqual({
       id: '1',
       name: 'John',
@@ -258,9 +256,9 @@ describe('Null Value Removal', () => {
       { id: 2, name: null, description: 'Item 2' },
       undefined,
     ];
-    
+
     const cleaned = removeNullValues(data);
-    
+
     expect(cleaned).toEqual([
       { id: 1, name: 'Item 1' },
       { id: 2, description: 'Item 2' },
@@ -285,9 +283,9 @@ describe('Response Optimization', () => {
         }
       }
     `;
-    
+
     const info = createMockResolveInfo(query);
-    
+
     const userData = {
       id: '1',
       email: 'test@example.com',
@@ -300,7 +298,7 @@ describe('Response Optimization', () => {
       lastLogin: null,
       deletedAt: undefined,
     };
-    
+
     const config: ResponseOptimizationConfig = {
       enableFieldSelection: true,
       removeNullValues: true,
@@ -309,9 +307,9 @@ describe('Response Optimization', () => {
       maxPayloadSize: 1024 * 1024,
       warnThreshold: 512 * 1024,
     };
-    
+
     const { data, metrics } = optimizeResponse(userData, info, config);
-    
+
     expect(data).toEqual({
       id: '1',
       email: 'test@example.com',
@@ -319,7 +317,7 @@ describe('Response Optimization', () => {
         fullName: 'John Doe',
       },
     });
-    
+
     expect(metrics.reductionPercentage).toBeGreaterThan(0);
     expect(metrics.fieldsRequested).toBe(3); // id, email, profile
   });
@@ -333,9 +331,9 @@ describe('Response Optimization', () => {
         }
       }
     `;
-    
+
     const info = createMockResolveInfo(query);
-    
+
     const userData = {
       id: '1',
       email: 'test@example.com',
@@ -345,9 +343,9 @@ describe('Response Optimization', () => {
       },
       createdAt: '2024-01-01T00:00:00Z',
     };
-    
+
     optimizeResponse(userData, info);
-    
+
     const stats = getOptimizationStats();
     expect(stats.totalRequests).toBe(1);
     expect(stats.totalOriginalBytes).toBeGreaterThan(0);
@@ -363,22 +361,22 @@ describe('Response Optimization', () => {
         }
       }
     `;
-    
+
     const info = createMockResolveInfo(query);
-    
+
     // Create circular reference to cause JSON.stringify to fail
     const userData: any = { id: '1' };
     userData.self = userData;
-    
+
     // Mock console.error to avoid noise in test output
     const originalError = console.error;
     console.error = () => {};
-    
+
     const { data, metrics } = optimizeResponse(userData, info);
-    
+
     // Restore console.error
     console.error = originalError;
-    
+
     // Should return original data when optimization fails
     expect(data).toBe(userData);
     expect(metrics.reductionPercentage).toBe(0);
@@ -404,9 +402,9 @@ describe('Pagination Optimization', () => {
         }
       }
     `;
-    
+
     const info = createMockResolveInfo(query);
-    
+
     const courses = [
       {
         id: '1',
@@ -423,10 +421,10 @@ describe('Pagination Optimization', () => {
         averageRating: 4.5,
       },
     ];
-    
+
     const paginationInput = { first: 10 };
     const connection = optimizeListResponse(courses, paginationInput, info, 2);
-    
+
     expect(connection.edges).toHaveLength(2);
     expect(connection.edges[0].node).toEqual({
       id: '1',
@@ -444,9 +442,9 @@ describe('Pagination Optimization', () => {
       first: 10,
       after: 'cursor123',
     };
-    
+
     const paginationInput = extractPaginationInput(args);
-    
+
     expect(paginationInput).toEqual({
       first: 10,
       after: 'cursor123',
@@ -467,9 +465,9 @@ describe('Resolver Wrapper', () => {
         tags: [null, 'tag1', undefined, 'tag2'],
       };
     };
-    
+
     const optimizedResolver = withResponseOptimization(mockResolver);
-    
+
     const query = `
       query {
         test {
@@ -478,10 +476,10 @@ describe('Resolver Wrapper', () => {
         }
       }
     `;
-    
+
     const info = createMockResolveInfo(query);
     const result = await optimizedResolver({}, {}, {}, info);
-    
+
     expect(result).toEqual({
       id: '1',
       name: 'Test',
@@ -502,9 +500,9 @@ describe('Utility Functions', () => {
         }
       }
     `;
-    
+
     const info = createMockResolveInfo(query);
-    
+
     expect(isFieldRequested(info, 'id')).toBe(true);
     expect(isFieldRequested(info, 'email')).toBe(true);
     expect(isFieldRequested(info, 'profile')).toBe(true);
@@ -533,26 +531,26 @@ describe('Utility Functions', () => {
         }
       }
     `;
-    
+
     const info = createMockResolveInfo(query);
     const selection = createFieldSelection(info);
-    
+
     expect(selection.hasField('id')).toBe(true);
     expect(selection.hasField('title')).toBe(true);
     expect(selection.hasField('instructor')).toBe(true);
     expect(selection.hasField('modules')).toBe(true);
-    
+
     const instructorSelection = selection.getNestedSelection('instructor');
     expect(instructorSelection?.hasField('id')).toBe(true);
     expect(instructorSelection?.hasField('profile')).toBe(true);
-    
+
     const profileSelection = instructorSelection?.getNestedSelection('profile');
     expect(profileSelection?.hasField('fullName')).toBe(true);
-    
+
     const modulesSelection = selection.getNestedSelection('modules');
     expect(modulesSelection?.hasField('id')).toBe(true);
     expect(modulesSelection?.hasField('lessons')).toBe(true);
-    
+
     const lessonsSelection = modulesSelection?.getNestedSelection('lessons');
     expect(lessonsSelection?.hasField('id')).toBe(true);
     expect(lessonsSelection?.hasField('title')).toBe(true);

@@ -1,29 +1,30 @@
 /**
  * Quiz Repository Implementation
- * 
+ *
  * Implements quiz data access operations with Drizzle ORM queries,
  * Redis caching with 5-minute TTL, and cache invalidation on updates.
  * Handles database errors and maps them to domain errors.
- * 
+ *
  * Requirements: 6.1, 6.2, 6.3
  */
 
 import { eq, and, desc, count, sql } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
-import { cache, buildCacheKey, CachePrefix, CacheTTL } from '../../../../infrastructure/cache/index.js';
-import { getWriteDb, getReadDb } from '../../../../infrastructure/database/index.js';
-import { 
-  quizzes, 
-  questions,
-  Quiz, 
-  NewQuiz
-} from '../../../../infrastructure/database/schema/assessments.schema.js';
 import {
-  DatabaseError,
-  NotFoundError,
-  ValidationError,
-} from '../../../../shared/errors/index.js';
+  cache,
+  buildCacheKey,
+  CachePrefix,
+  CacheTTL,
+} from '../../../../infrastructure/cache/index.js';
+import { getWriteDb, getReadDb } from '../../../../infrastructure/database/index.js';
+import {
+  quizzes,
+  questions,
+  Quiz,
+  NewQuiz,
+} from '../../../../infrastructure/database/schema/assessments.schema.js';
+import { DatabaseError, NotFoundError, ValidationError } from '../../../../shared/errors/index.js';
 
 import {
   IQuizRepository,
@@ -37,7 +38,7 @@ import {
 
 /**
  * Quiz Repository Implementation
- * 
+ *
  * Provides data access methods for quiz entities with:
  * - Drizzle ORM for type-safe queries
  * - Redis caching with 5-minute TTL
@@ -72,8 +73,8 @@ export class QuizRepository implements IQuizRepository {
    * Builds cache key for lesson quizzes list
    */
   private getLessonQuizzesCacheKey(
-    lessonId: string, 
-    page: number, 
+    lessonId: string,
+    page: number,
     limit: number,
     filters?: QuizFilters
   ): string {
@@ -84,18 +85,14 @@ export class QuizRepository implements IQuizRepository {
   /**
    * Builds cache key for all quizzes list
    */
-  private getAllQuizzesCacheKey(
-    page: number, 
-    limit: number,
-    filters?: QuizFilters
-  ): string {
+  private getAllQuizzesCacheKey(page: number, limit: number, filters?: QuizFilters): string {
     const filterKey = filters ? JSON.stringify(filters) : 'all';
     return buildCacheKey(CachePrefix.QUIZ, 'all', page, limit, filterKey);
   }
 
   /**
    * Creates a new quiz in the database
-   * 
+   *
    * @param data - Quiz creation data
    * @returns The created quiz
    * @throws ValidationError if lesson doesn't exist
@@ -121,16 +118,10 @@ export class QuizRepository implements IQuizRepository {
       };
 
       // Insert quiz into database
-      const [createdQuiz] = await this.writeDb
-        .insert(quizzes)
-        .values(newQuiz)
-        .returning();
+      const [createdQuiz] = await this.writeDb.insert(quizzes).values(newQuiz).returning();
 
       if (!createdQuiz) {
-        throw new DatabaseError(
-          'Failed to create quiz',
-          'insert'
-        );
+        throw new DatabaseError('Failed to create quiz', 'insert');
       }
 
       // Invalidate lesson quizzes cache
@@ -146,10 +137,9 @@ export class QuizRepository implements IQuizRepository {
       // Handle database constraint violations
       if (error instanceof Error) {
         if (error.message.includes('foreign key') || error.message.includes('lesson')) {
-          throw new ValidationError(
-            'Invalid lesson ID',
-            [{ field: 'lessonId', message: 'Lesson does not exist' }]
-          );
+          throw new ValidationError('Invalid lesson ID', [
+            { field: 'lessonId', message: 'Lesson does not exist' },
+          ]);
         }
       }
 
@@ -164,7 +154,7 @@ export class QuizRepository implements IQuizRepository {
 
   /**
    * Finds a quiz by its unique ID
-   * 
+   *
    * @param id - Quiz ID
    * @returns The quiz if found, null otherwise
    * @throws DatabaseError if database operation fails
@@ -174,17 +164,13 @@ export class QuizRepository implements IQuizRepository {
       // Check cache first
       const cacheKey = this.getQuizCacheKey(id);
       const cachedQuiz = await cache.get<Quiz>(cacheKey);
-      
+
       if (cachedQuiz) {
         return cachedQuiz;
       }
 
       // Query database if not in cache
-      const [quiz] = await this.readDb
-        .select()
-        .from(quizzes)
-        .where(eq(quizzes.id, id))
-        .limit(1);
+      const [quiz] = await this.readDb.select().from(quizzes).where(eq(quizzes.id, id)).limit(1);
 
       if (!quiz) {
         return null;
@@ -205,7 +191,7 @@ export class QuizRepository implements IQuizRepository {
 
   /**
    * Finds a quiz by ID with all questions included
-   * 
+   *
    * @param id - Quiz ID
    * @returns The quiz with questions if found, null otherwise
    * @throws DatabaseError if database operation fails
@@ -215,7 +201,7 @@ export class QuizRepository implements IQuizRepository {
       // Check cache first
       const cacheKey = this.getQuizWithQuestionsCacheKey(id);
       const cachedQuizWithQuestions = await cache.get<QuizWithQuestions>(cacheKey);
-      
+
       if (cachedQuizWithQuestions) {
         return cachedQuizWithQuestions;
       }
@@ -253,7 +239,7 @@ export class QuizRepository implements IQuizRepository {
 
   /**
    * Finds quizzes by lesson with pagination
-   * 
+   *
    * @param lessonId - Lesson ID
    * @param pagination - Pagination parameters
    * @param filters - Optional filters
@@ -268,24 +254,24 @@ export class QuizRepository implements IQuizRepository {
     try {
       // Check cache first
       const cacheKey = this.getLessonQuizzesCacheKey(
-        lessonId, 
-        pagination.page, 
-        pagination.limit, 
+        lessonId,
+        pagination.page,
+        pagination.limit,
         filters
       );
       const cachedResult = await cache.get<PaginatedResult<Quiz>>(cacheKey);
-      
+
       if (cachedResult) {
         return cachedResult;
       }
 
       // Build where conditions
       const whereConditions = [eq(quizzes.lessonId, lessonId)];
-      
+
       if (filters?.quizType) {
         whereConditions.push(eq(quizzes.quizType, filters.quizType));
       }
-      
+
       if (filters?.availableOnly) {
         const now = new Date();
         whereConditions.push(
@@ -296,16 +282,14 @@ export class QuizRepository implements IQuizRepository {
         );
       }
 
-      const whereClause = whereConditions.length > 1 
-        ? and(...whereConditions) 
-        : whereConditions[0];
+      const whereClause = whereConditions.length > 1 ? and(...whereConditions) : whereConditions[0];
 
       // Get total count
       const [totalResult] = await this.readDb
         .select({ total: count() })
         .from(quizzes)
         .where(whereClause);
-      
+
       const total = totalResult?.total || 0;
 
       // Get paginated results
@@ -341,7 +325,7 @@ export class QuizRepository implements IQuizRepository {
 
   /**
    * Finds all quizzes with pagination and filtering
-   * 
+   *
    * @param pagination - Pagination parameters
    * @param filters - Optional filters
    * @returns Paginated quiz results
@@ -353,28 +337,24 @@ export class QuizRepository implements IQuizRepository {
   ): Promise<PaginatedResult<Quiz>> {
     try {
       // Check cache first
-      const cacheKey = this.getAllQuizzesCacheKey(
-        pagination.page, 
-        pagination.limit, 
-        filters
-      );
+      const cacheKey = this.getAllQuizzesCacheKey(pagination.page, pagination.limit, filters);
       const cachedResult = await cache.get<PaginatedResult<Quiz>>(cacheKey);
-      
+
       if (cachedResult) {
         return cachedResult;
       }
 
       // Build where conditions
       const whereConditions = [];
-      
+
       if (filters?.lessonId) {
         whereConditions.push(eq(quizzes.lessonId, filters.lessonId));
       }
-      
+
       if (filters?.quizType) {
         whereConditions.push(eq(quizzes.quizType, filters.quizType));
       }
-      
+
       if (filters?.availableOnly) {
         const now = new Date();
         whereConditions.push(
@@ -385,18 +365,19 @@ export class QuizRepository implements IQuizRepository {
         );
       }
 
-      const whereClause = whereConditions.length > 1 
-        ? and(...whereConditions) 
-        : whereConditions.length === 1 
-        ? whereConditions[0] 
-        : undefined;
+      const whereClause =
+        whereConditions.length > 1
+          ? and(...whereConditions)
+          : whereConditions.length === 1
+            ? whereConditions[0]
+            : undefined;
 
       // Get total count
       const [totalResult] = await this.readDb
         .select({ total: count() })
         .from(quizzes)
         .where(whereClause);
-      
+
       const total = totalResult?.total || 0;
 
       // Get paginated results
@@ -432,7 +413,7 @@ export class QuizRepository implements IQuizRepository {
 
   /**
    * Updates a quiz's data
-   * 
+   *
    * @param id - Quiz ID
    * @param data - Update data
    * @returns The updated quiz
@@ -461,10 +442,7 @@ export class QuizRepository implements IQuizRepository {
         .returning();
 
       if (!updatedQuiz) {
-        throw new DatabaseError(
-          'Failed to update quiz',
-          'update'
-        );
+        throw new DatabaseError('Failed to update quiz', 'update');
       }
 
       // Invalidate all cache entries for this quiz
@@ -474,10 +452,7 @@ export class QuizRepository implements IQuizRepository {
       return updatedQuiz;
     } catch (error) {
       // Re-throw known errors
-      if (
-        error instanceof NotFoundError ||
-        error instanceof DatabaseError
-      ) {
+      if (error instanceof NotFoundError || error instanceof DatabaseError) {
         throw error;
       }
 
@@ -493,7 +468,7 @@ export class QuizRepository implements IQuizRepository {
   /**
    * Deletes a quiz from the database
    * This cascades to delete all questions and submissions
-   * 
+   *
    * @param id - Quiz ID
    * @returns void
    * @throws NotFoundError if quiz doesn't exist
@@ -508,16 +483,10 @@ export class QuizRepository implements IQuizRepository {
       }
 
       // Delete quiz (cascades to questions and submissions)
-      const result = await this.writeDb
-        .delete(quizzes)
-        .where(eq(quizzes.id, id))
-        .returning();
+      const result = await this.writeDb.delete(quizzes).where(eq(quizzes.id, id)).returning();
 
       if (!result || result.length === 0) {
-        throw new DatabaseError(
-          'Failed to delete quiz',
-          'delete'
-        );
+        throw new DatabaseError('Failed to delete quiz', 'delete');
       }
 
       // Invalidate all cache entries
@@ -540,7 +509,7 @@ export class QuizRepository implements IQuizRepository {
 
   /**
    * Checks if a quiz exists
-   * 
+   *
    * @param id - Quiz ID
    * @returns True if quiz exists, false otherwise
    * @throws DatabaseError if database operation fails
@@ -560,7 +529,7 @@ export class QuizRepository implements IQuizRepository {
 
   /**
    * Checks if a quiz is available for taking at the current time
-   * 
+   *
    * @param id - Quiz ID
    * @returns True if quiz is available, false otherwise
    * @throws NotFoundError if quiz doesn't exist
@@ -574,12 +543,12 @@ export class QuizRepository implements IQuizRepository {
       }
 
       const now = new Date();
-      
+
       // Check availability window
       if (quiz.availableFrom && quiz.availableFrom > now) {
         return false;
       }
-      
+
       if (quiz.availableUntil && quiz.availableUntil < now) {
         return false;
       }
@@ -600,7 +569,7 @@ export class QuizRepository implements IQuizRepository {
 
   /**
    * Gets the total number of questions in a quiz
-   * 
+   *
    * @param id - Quiz ID
    * @returns Number of questions
    * @throws NotFoundError if quiz doesn't exist
@@ -635,7 +604,7 @@ export class QuizRepository implements IQuizRepository {
 
   /**
    * Gets the total points possible for a quiz
-   * 
+   *
    * @param id - Quiz ID
    * @returns Total points
    * @throws NotFoundError if quiz doesn't exist
@@ -671,17 +640,14 @@ export class QuizRepository implements IQuizRepository {
   /**
    * Invalidates cache for a specific quiz
    * Should be called after any update operation
-   * 
+   *
    * @param id - Quiz ID
    * @returns void
    */
   async invalidateCache(id: string): Promise<void> {
     try {
-      const cacheKeys = [
-        this.getQuizCacheKey(id),
-        this.getQuizWithQuestionsCacheKey(id),
-      ];
-      
+      const cacheKeys = [this.getQuizCacheKey(id), this.getQuizWithQuestionsCacheKey(id)];
+
       await cache.deleteMany(cacheKeys);
     } catch (error) {
       // Log error but don't throw - cache invalidation failure shouldn't break the operation
@@ -692,7 +658,7 @@ export class QuizRepository implements IQuizRepository {
   /**
    * Invalidates cache for quizzes by lesson
    * Should be called after operations that affect lesson quiz lists
-   * 
+   *
    * @param lessonId - Lesson ID
    * @returns void
    */
@@ -701,7 +667,7 @@ export class QuizRepository implements IQuizRepository {
       // Invalidate lesson quiz list cache entries
       const lessonPattern = buildCacheKey(CachePrefix.QUIZ, 'lesson', lessonId, '*');
       await cache.deletePattern(lessonPattern);
-      
+
       // Also invalidate all quizzes cache as it might be affected
       const allPattern = buildCacheKey(CachePrefix.QUIZ, 'all', '*');
       await cache.deletePattern(allPattern);

@@ -1,23 +1,23 @@
 /**
  * GraphQL Resolvers for Analytics Module
- * 
+ *
  * Implements GraphQL resolvers for analytics queries with:
  * - Role-based authorization checks
  * - Caching for expensive operations
  * - Error handling and validation
  * - Performance optimization
- * 
+ *
  * Requirements: 21.2, 21.3
  */
 
 import { GraphQLError } from 'graphql';
 
-import { 
-  AuthenticationError, 
-  AuthorizationError, 
-  NotFoundError, 
+import {
+  AuthenticationError,
+  AuthorizationError,
+  NotFoundError,
   ValidationError,
-  DatabaseError 
+  DatabaseError,
 } from '../../../../shared/errors/index.js';
 import type { AuthenticatedRequest } from '../../../../shared/middleware/index.js';
 import type { Role, DateRange } from '../../../../shared/types/index.js';
@@ -63,23 +63,23 @@ function parseDateRange(input: DateRangeInput): DateRange {
 
   if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
     throw new ValidationError('Invalid date format', [
-      { field: 'dateRange', message: 'Dates must be valid ISO 8601 strings' }
+      { field: 'dateRange', message: 'Dates must be valid ISO 8601 strings' },
     ]);
   }
 
   if (startDate >= endDate) {
     throw new ValidationError('Invalid date range', [
-      { field: 'dateRange', message: 'Start date must be before end date' }
+      { field: 'dateRange', message: 'Start date must be before end date' },
     ]);
   }
 
   // Limit date range to prevent excessive queries
   const maxDays = 365; // 1 year
   const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-  
+
   if (daysDiff > maxDays) {
     throw new ValidationError('Date range too large', [
-      { field: 'dateRange', message: `Date range cannot exceed ${maxDays} days` }
+      { field: 'dateRange', message: `Date range cannot exceed ${maxDays} days` },
     ]);
   }
 
@@ -89,7 +89,10 @@ function parseDateRange(input: DateRangeInput): DateRange {
 /**
  * Helper function to check if user can access analytics for a specific user
  */
-function canAccessUserAnalytics(requestingUser: { userId: string; role: Role }, targetUserId: string): boolean {
+function canAccessUserAnalytics(
+  requestingUser: { userId: string; role: Role },
+  targetUserId: string
+): boolean {
   // Users can always access their own analytics
   if (requestingUser.userId === targetUserId) {
     return true;
@@ -109,7 +112,10 @@ function canAccessUserAnalytics(requestingUser: { userId: string; role: Role }, 
 /**
  * Helper function to check if user can access course analytics
  */
-function canAccessCourseAnalytics(requestingUser: { userId: string; role: Role }, _courseId: string): boolean {
+function canAccessCourseAnalytics(
+  requestingUser: { userId: string; role: Role },
+  _courseId: string
+): boolean {
   // Admins can access any course analytics
   if (requestingUser.role === 'admin') {
     return true;
@@ -133,8 +139,8 @@ function formatGraphQLError(error: unknown, operation: string): GraphQLError {
     return new GraphQLError(error.message, {
       extensions: {
         code: 'UNAUTHENTICATED',
-        operation
-      }
+        operation,
+      },
     });
   }
 
@@ -142,8 +148,8 @@ function formatGraphQLError(error: unknown, operation: string): GraphQLError {
     return new GraphQLError(error.message, {
       extensions: {
         code: 'FORBIDDEN',
-        operation
-      }
+        operation,
+      },
     });
   }
 
@@ -153,8 +159,8 @@ function formatGraphQLError(error: unknown, operation: string): GraphQLError {
         code: 'NOT_FOUND',
         operation,
         resourceType: error.resourceType,
-        resourceId: error.resourceId
-      }
+        resourceId: error.resourceId,
+      },
     });
   }
 
@@ -163,8 +169,8 @@ function formatGraphQLError(error: unknown, operation: string): GraphQLError {
       extensions: {
         code: 'BAD_USER_INPUT',
         operation,
-        validationErrors: error.details
-      }
+        validationErrors: error.details,
+      },
     });
   }
 
@@ -172,8 +178,8 @@ function formatGraphQLError(error: unknown, operation: string): GraphQLError {
     return new GraphQLError('Internal server error', {
       extensions: {
         code: 'INTERNAL_ERROR',
-        operation
-      }
+        operation,
+      },
     });
   }
 
@@ -181,14 +187,14 @@ function formatGraphQLError(error: unknown, operation: string): GraphQLError {
   return new GraphQLError('An unexpected error occurred', {
     extensions: {
       code: 'INTERNAL_ERROR',
-      operation
-    }
+      operation,
+    },
   });
 }
 
 /**
  * Analytics GraphQL Resolvers
- * 
+ *
  * Implements all analytics queries with proper authorization,
  * caching, and error handling.
  */
@@ -196,7 +202,7 @@ export const analyticsResolvers = {
   Query: {
     /**
      * Gets course analytics with caching and authorization
-     * 
+     *
      * @param _parent - GraphQL parent (unused)
      * @param args - Query arguments
      * @param context - GraphQL context with authenticated user
@@ -215,7 +221,7 @@ export const analyticsResolvers = {
         // Validate input
         if (!courseId) {
           throw new ValidationError('Course ID is required', [
-            { field: 'courseId', message: 'Course ID cannot be empty' }
+            { field: 'courseId', message: 'Course ID cannot be empty' },
           ]);
         }
 
@@ -233,7 +239,7 @@ export const analyticsResolvers = {
 
         // Get analytics from service
         const analytics = await analyticsService.updateCourseAnalytics(courseId);
-        
+
         return analytics as unknown;
       } catch (error) {
         throw formatGraphQLError(error, 'courseAnalytics');
@@ -242,7 +248,7 @@ export const analyticsResolvers = {
 
     /**
      * Gets student analytics with caching and authorization
-     * 
+     *
      * @param _parent - GraphQL parent (unused)
      * @param args - Query arguments
      * @param context - GraphQL context with authenticated user
@@ -261,7 +267,7 @@ export const analyticsResolvers = {
         // Validate input
         if (!userId) {
           throw new ValidationError('User ID is required', [
-            { field: 'userId', message: 'User ID cannot be empty' }
+            { field: 'userId', message: 'User ID cannot be empty' },
           ]);
         }
 
@@ -279,7 +285,7 @@ export const analyticsResolvers = {
 
         // Get analytics from service
         const analytics = await analyticsService.updateStudentAnalytics(userId);
-        
+
         return analytics as unknown;
       } catch (error) {
         throw formatGraphQLError(error, 'studentAnalytics');
@@ -288,7 +294,7 @@ export const analyticsResolvers = {
 
     /**
      * Gets role-specific dashboard metrics with caching
-     * 
+     *
      * @param _parent - GraphQL parent (unused)
      * @param _args - Query arguments (unused)
      * @param context - GraphQL context with authenticated user
@@ -313,7 +319,7 @@ export const analyticsResolvers = {
 
         // Get metrics from service
         const metrics = await analyticsService.getDashboardMetrics(userId, role);
-        
+
         return metrics;
       } catch (error) {
         throw formatGraphQLError(error, 'dashboardMetrics');
@@ -322,7 +328,7 @@ export const analyticsResolvers = {
 
     /**
      * Generates comprehensive course report with caching
-     * 
+     *
      * @param _parent - GraphQL parent (unused)
      * @param args - Query arguments
      * @param context - GraphQL context with authenticated user
@@ -341,7 +347,7 @@ export const analyticsResolvers = {
         // Validate input
         if (!input.courseId) {
           throw new ValidationError('Course ID is required', [
-            { field: 'courseId', message: 'Course ID cannot be empty' }
+            { field: 'courseId', message: 'Course ID cannot be empty' },
           ]);
         }
 
@@ -360,7 +366,7 @@ export const analyticsResolvers = {
 
         // Generate report from service
         const report = await analyticsService.generateCourseReport(input.courseId, dateRange);
-        
+
         return report;
       } catch (error) {
         throw formatGraphQLError(error, 'generateCourseReport');
@@ -369,7 +375,7 @@ export const analyticsResolvers = {
 
     /**
      * Generates comprehensive student report with caching
-     * 
+     *
      * @param _parent - GraphQL parent (unused)
      * @param args - Query arguments
      * @param context - GraphQL context with authenticated user
@@ -388,7 +394,7 @@ export const analyticsResolvers = {
         // Validate input
         if (!input.studentId) {
           throw new ValidationError('Student ID is required', [
-            { field: 'studentId', message: 'Student ID cannot be empty' }
+            { field: 'studentId', message: 'Student ID cannot be empty' },
           ]);
         }
 
@@ -407,7 +413,7 @@ export const analyticsResolvers = {
 
         // Generate report from service
         const report = await analyticsService.generateStudentReport(input.studentId, dateRange);
-        
+
         return report;
       } catch (error) {
         throw formatGraphQLError(error, 'generateStudentReport');
@@ -416,7 +422,7 @@ export const analyticsResolvers = {
 
     /**
      * Gets platform-wide metrics (admin only) with caching
-     * 
+     *
      * @param _parent - GraphQL parent (unused)
      * @param args - Query arguments
      * @param context - GraphQL context with authenticated user
@@ -448,7 +454,7 @@ export const analyticsResolvers = {
 
         // Get metrics from service
         const metrics = await analyticsService.getPlatformMetrics(dateRange);
-        
+
         return metrics as unknown;
       } catch (error) {
         throw formatGraphQLError(error, 'platformMetrics');
@@ -457,7 +463,7 @@ export const analyticsResolvers = {
 
     /**
      * Gets trending courses with caching
-     * 
+     *
      * @param _parent - GraphQL parent (unused)
      * @param args - Query arguments
      * @param context - GraphQL context with authenticated user
@@ -481,7 +487,7 @@ export const analyticsResolvers = {
         // Validate limit
         if (limit < 1 || limit > 50) {
           throw new ValidationError('Invalid limit', [
-            { field: 'limit', message: 'Limit must be between 1 and 50' }
+            { field: 'limit', message: 'Limit must be between 1 and 50' },
           ]);
         }
 
@@ -495,7 +501,7 @@ export const analyticsResolvers = {
 
         // Get trending courses from service
         const trendingCourses = await analyticsService.getTrendingCourses(limit, dateRange);
-        
+
         return trendingCourses as unknown[];
       } catch (error) {
         throw formatGraphQLError(error, 'trendingCourses');
@@ -504,7 +510,7 @@ export const analyticsResolvers = {
 
     /**
      * Gets top performing students (admin only) with caching
-     * 
+     *
      * @param _parent - GraphQL parent (unused)
      * @param args - Query arguments
      * @param context - GraphQL context with authenticated user
@@ -528,7 +534,7 @@ export const analyticsResolvers = {
         // Validate limit
         if (limit < 1 || limit > 50) {
           throw new ValidationError('Invalid limit', [
-            { field: 'limit', message: 'Limit must be between 1 and 50' }
+            { field: 'limit', message: 'Limit must be between 1 and 50' },
           ]);
         }
 
@@ -540,12 +546,12 @@ export const analyticsResolvers = {
 
         // Get top performers from service
         const topStudents = await analyticsService.getTopPerformingStudents(limit);
-        
+
         return topStudents as unknown[];
       } catch (error) {
         throw formatGraphQLError(error, 'topPerformingStudents');
       }
-    }
+    },
   },
 
   // Field resolvers for complex types
@@ -564,16 +570,20 @@ export const analyticsResolvers = {
           email: 'instructor@example.com',
           role: 'educator',
           profile: {
-            fullName: 'Instructor Name'
-          }
-        }
+            fullName: 'Instructor Name',
+          },
+        },
       };
     },
 
     /**
      * Resolves most difficult lesson reference
      */
-    mostDifficultLesson(parent: { mostDifficultLessonId?: string }, _args: unknown, _context: GraphQLContext): unknown {
+    mostDifficultLesson(
+      parent: { mostDifficultLessonId?: string },
+      _args: unknown,
+      _context: GraphQLContext
+    ): unknown {
       if (!parent.mostDifficultLessonId) {
         return null;
       }
@@ -592,12 +602,12 @@ export const analyticsResolvers = {
             instructor: {
               id: 'instructor-id',
               email: 'instructor@example.com',
-              role: 'educator'
-            }
-          }
-        }
+              role: 'educator',
+            },
+          },
+        },
       };
-    }
+    },
   },
 
   StudentAnalytics: {
@@ -612,9 +622,9 @@ export const analyticsResolvers = {
         email: 'student@example.com', // Would be fetched from users service
         role: 'student',
         profile: {
-          fullName: 'Student Name'
+          fullName: 'Student Name',
         },
-        createdAt: new Date()
+        createdAt: new Date(),
       };
     },
 
@@ -631,7 +641,10 @@ export const analyticsResolvers = {
     /**
      * Calculates average time per course
      */
-    averageTimePerCourse(parent: { totalTimeInvestedMinutes: number; coursesCompleted: number }): number {
+    averageTimePerCourse(parent: {
+      totalTimeInvestedMinutes: number;
+      coursesCompleted: number;
+    }): number {
       if (parent.coursesCompleted === 0) {
         return 0;
       }
@@ -648,9 +661,10 @@ export const analyticsResolvers = {
       currentStreakDays: number;
       badgesEarned: string[];
     }): unknown {
-      const completionRate = parent.totalCoursesEnrolled > 0 
-        ? (parent.coursesCompleted / parent.totalCoursesEnrolled) * 100 
-        : 0;
+      const completionRate =
+        parent.totalCoursesEnrolled > 0
+          ? (parent.coursesCompleted / parent.totalCoursesEnrolled) * 100
+          : 0;
 
       // Determine performance level based on completion rate and quiz scores
       let performanceLevel = 'POOR';
@@ -686,7 +700,7 @@ export const analyticsResolvers = {
         engagementLevel,
         learningConsistency,
         totalBadges: parent.badgesEarned.length,
-        averageSkillRating
+        averageSkillRating,
       };
     },
 
@@ -698,10 +712,11 @@ export const analyticsResolvers = {
         currentStreak: parent.currentStreakDays,
         longestStreak: parent.longestStreakDays,
         lastActivityDate: new Date(), // Would be fetched from actual data
-        streakStartDate: parent.currentStreakDays > 0 
-          ? new Date(Date.now() - (parent.currentStreakDays * 24 * 60 * 60 * 1000))
-          : null
+        streakStartDate:
+          parent.currentStreakDays > 0
+            ? new Date(Date.now() - parent.currentStreakDays * 24 * 60 * 60 * 1000)
+            : null,
       };
-    }
-  }
+    },
+  },
 };

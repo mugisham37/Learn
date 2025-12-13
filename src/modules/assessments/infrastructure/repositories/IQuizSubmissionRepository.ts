@@ -1,16 +1,14 @@
 /**
  * Quiz Submission Repository Interface
- * 
+ *
  * Defines the contract for quiz submission data access operations.
  * Abstracts database operations behind a clean interface following
  * the Repository pattern for domain independence.
- * 
+ *
  * Requirements: 6.3, 6.4, 6.5, 6.6, 6.7
  */
 
-import { 
-  QuizSubmission
-} from '../../../../infrastructure/database/schema/assessments.schema.js';
+import { QuizSubmission } from '../../../../infrastructure/database/schema/assessments.schema.js';
 
 /**
  * Pagination parameters for list queries
@@ -103,14 +101,14 @@ export interface StudentAttemptSummary {
 
 /**
  * Quiz Submission Repository Interface
- * 
+ *
  * Provides methods for all quiz submission data access operations with caching support.
  * Implementations must handle database errors and map them to domain errors.
  */
 export interface IQuizSubmissionRepository {
   /**
    * Creates a new quiz submission in the database
-   * 
+   *
    * @param data - Quiz submission creation data
    * @returns The created quiz submission
    * @throws ValidationError if quiz, student, or enrollment doesn't exist
@@ -121,7 +119,7 @@ export interface IQuizSubmissionRepository {
 
   /**
    * Finds a quiz submission by its unique ID
-   * 
+   *
    * @param id - Quiz submission ID
    * @returns The quiz submission if found, null otherwise
    * @throws DatabaseError if database operation fails
@@ -130,7 +128,7 @@ export interface IQuizSubmissionRepository {
 
   /**
    * Finds a quiz submission by ID with related quiz and student data
-   * 
+   *
    * @param id - Quiz submission ID
    * @returns The quiz submission with details if found, null otherwise
    * @throws DatabaseError if database operation fails
@@ -139,7 +137,7 @@ export interface IQuizSubmissionRepository {
 
   /**
    * Finds quiz submissions by quiz with pagination
-   * 
+   *
    * @param quizId - Quiz ID
    * @param pagination - Pagination parameters
    * @param filters - Optional filters
@@ -154,7 +152,7 @@ export interface IQuizSubmissionRepository {
 
   /**
    * Finds quiz submissions by student with pagination
-   * 
+   *
    * @param studentId - Student ID
    * @param pagination - Pagination parameters
    * @param filters - Optional filters
@@ -169,7 +167,7 @@ export interface IQuizSubmissionRepository {
 
   /**
    * Finds quiz submissions by enrollment with pagination
-   * 
+   *
    * @param enrollmentId - Enrollment ID
    * @param pagination - Pagination parameters
    * @param filters - Optional filters
@@ -184,18 +182,22 @@ export interface IQuizSubmissionRepository {
 
   /**
    * Finds a specific attempt for a student and quiz
-   * 
+   *
    * @param quizId - Quiz ID
    * @param studentId - Student ID
    * @param attemptNumber - Attempt number
    * @returns The quiz submission if found, null otherwise
    * @throws DatabaseError if database operation fails
    */
-  findAttempt(quizId: string, studentId: string, attemptNumber: number): Promise<QuizSubmission | null>;
+  findAttempt(
+    quizId: string,
+    studentId: string,
+    attemptNumber: number
+  ): Promise<QuizSubmission | null>;
 
   /**
    * Finds the latest attempt for a student and quiz
-   * 
+   *
    * @param quizId - Quiz ID
    * @param studentId - Student ID
    * @returns The latest quiz submission if found, null otherwise
@@ -205,7 +207,7 @@ export interface IQuizSubmissionRepository {
 
   /**
    * Finds all attempts for a student and quiz
-   * 
+   *
    * @param quizId - Quiz ID
    * @param studentId - Student ID
    * @returns All quiz submissions for the student and quiz
@@ -215,7 +217,7 @@ export interface IQuizSubmissionRepository {
 
   /**
    * Finds submissions pending manual grading
-   * 
+   *
    * @param pagination - Pagination parameters
    * @param filters - Optional filters
    * @returns Paginated submissions pending review
@@ -228,7 +230,7 @@ export interface IQuizSubmissionRepository {
 
   /**
    * Updates a quiz submission's data
-   * 
+   *
    * @param id - Quiz submission ID
    * @param data - Update data
    * @returns The updated quiz submission
@@ -239,7 +241,7 @@ export interface IQuizSubmissionRepository {
 
   /**
    * Deletes a quiz submission from the database
-   * 
+   *
    * @param id - Quiz submission ID
    * @returns void
    * @throws NotFoundError if quiz submission doesn't exist
@@ -249,7 +251,7 @@ export interface IQuizSubmissionRepository {
 
   /**
    * Deletes all submissions for a quiz
-   * 
+   *
    * @param quizId - Quiz ID
    * @returns Number of deleted submissions
    * @throws DatabaseError if database operation fails
@@ -258,7 +260,7 @@ export interface IQuizSubmissionRepository {
 
   /**
    * Gets the next attempt number for a student and quiz
-   * 
+   *
    * @param quizId - Quiz ID
    * @param studentId - Student ID
    * @returns Next attempt number
@@ -268,7 +270,7 @@ export interface IQuizSubmissionRepository {
 
   /**
    * Counts total attempts for a student and quiz
-   * 
+   *
    * @param quizId - Quiz ID
    * @param studentId - Student ID
    * @returns Number of attempts
@@ -278,7 +280,7 @@ export interface IQuizSubmissionRepository {
 
   /**
    * Gets the best score for a student and quiz
-   * 
+   *
    * @param quizId - Quiz ID
    * @param studentId - Student ID
    * @returns Best score percentage, null if no attempts
@@ -288,7 +290,7 @@ export interface IQuizSubmissionRepository {
 
   /**
    * Gets attempt summary for a student and quiz
-   * 
+   *
    * @param quizId - Quiz ID
    * @param studentId - Student ID
    * @returns Student attempt summary
@@ -298,7 +300,7 @@ export interface IQuizSubmissionRepository {
 
   /**
    * Checks if a student has a passing score for a quiz
-   * 
+   *
    * @param quizId - Quiz ID
    * @param studentId - Student ID
    * @returns True if student has passing score, false otherwise
@@ -308,7 +310,7 @@ export interface IQuizSubmissionRepository {
 
   /**
    * Checks if a quiz submission exists
-   * 
+   *
    * @param id - Quiz submission ID
    * @returns True if submission exists, false otherwise
    * @throws DatabaseError if database operation fails
@@ -318,7 +320,7 @@ export interface IQuizSubmissionRepository {
   /**
    * Invalidates cache for quiz submissions
    * Should be called after any update operation
-   * 
+   *
    * @param quizId - Quiz ID
    * @param studentId - Optional student ID for targeted invalidation
    * @returns void

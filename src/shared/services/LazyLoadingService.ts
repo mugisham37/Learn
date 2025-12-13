@@ -1,6 +1,6 @@
 /**
  * Lazy Loading Service
- * 
+ *
  * Handles lazy loading configuration for various resource types.
  */
 
@@ -25,7 +25,7 @@ export class LazyLoadingService {
    */
   generateLazyConfig(resource: LazyResource): LazyConfig {
     const shouldLoad = resource.critical || resource.priority <= 2;
-    
+
     return {
       shouldLoad,
       placeholder: this.generatePlaceholder(resource),
@@ -48,7 +48,7 @@ export class LazyLoadingService {
         </svg>`
       ).toString('base64')}`;
     }
-    
+
     return '';
   }
 

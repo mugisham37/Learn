@@ -1,35 +1,39 @@
 /**
  * Analytics Service Implementation
- * 
+ *
  * Implements analytics application services for data aggregation, report generation,
  * dashboard metrics, and event tracking. Handles complex aggregation queries and
  * provides role-specific dashboard data.
- * 
+ *
  * Requirements: 12.1, 12.2, 12.3, 12.4, 12.7
  */
 
 import { eq, and, gte, lte, count, avg, sum, desc } from 'drizzle-orm';
 
-import { cache, buildCacheKey, CachePrefix, CacheTTL } from '../../../../infrastructure/cache/index.js';
+import {
+  cache,
+  buildCacheKey,
+  CachePrefix,
+  CacheTTL,
+} from '../../../../infrastructure/cache/index.js';
 import { analyticsCacheService } from '../../infrastructure/cache/AnalyticsCacheService.js';
 import { getReadDb } from '../../../../infrastructure/database/index.js';
 import { quizSubmissions } from '../../../../infrastructure/database/schema/assessments.schema.js';
 import { courses } from '../../../../infrastructure/database/schema/courses.schema.js';
-import { enrollments, lessonProgress } from '../../../../infrastructure/database/schema/enrollments.schema.js';
+import {
+  enrollments,
+  lessonProgress,
+} from '../../../../infrastructure/database/schema/enrollments.schema.js';
 import { payments } from '../../../../infrastructure/database/schema/payments.schema.js';
 import { users, userProfiles } from '../../../../infrastructure/database/schema/users.schema.js';
-import { 
-  NotFoundError, 
-  DatabaseError, 
-  ValidationError 
-} from '../../../../shared/errors/index.js';
+import { NotFoundError, DatabaseError, ValidationError } from '../../../../shared/errors/index.js';
 import type { Role, DateRange } from '../../../../shared/types/index.js';
-import { 
-  CourseAnalytics, 
-  StudentAnalytics, 
+import {
+  CourseAnalytics,
+  StudentAnalytics,
   AnalyticsEvent,
   type CourseAnalyticsData,
-  type StudentAnalyticsData
+  type StudentAnalyticsData,
 } from '../../domain/entities/index.js';
 import type { IAnalyticsRepository } from '../../infrastructure/repositories/IAnalyticsRepository.js';
 
@@ -38,12 +42,12 @@ import type {
   IAnalyticsService,
   CourseReport,
   StudentReport,
-  DashboardMetrics
+  DashboardMetrics,
 } from './IAnalyticsService.js';
 
 /**
  * Analytics Service Implementation
- * 
+ *
  * Provides comprehensive analytics functionality including:
  * - Course and student analytics aggregation
  * - Report generation with detailed metrics
@@ -54,22 +58,20 @@ import type {
 export class AnalyticsService implements IAnalyticsService {
   private readDb = getReadDb();
 
-  constructor(
-    private analyticsRepository: IAnalyticsRepository
-  ) {}
+  constructor(private analyticsRepository: IAnalyticsRepository) {}
 
   /**
    * Updates course analytics by aggregating data from enrollments, progress, and payments
-   * 
+   *
    * Performs complex aggregation queries to calculate:
    * - Enrollment metrics (total, active, completed)
    * - Completion and dropout rates
    * - Revenue metrics
    * - Engagement metrics
    * - Performance indicators
-   * 
+   *
    * Implements cache-aside pattern with cache invalidation on updates.
-   * 
+   *
    * @param courseId - Course ID to update analytics for
    * @returns Updated course analytics
    * @throws NotFoundError if course doesn't exist
@@ -90,27 +92,31 @@ export class AnalyticsService implements IAnalyticsService {
 
       // Aggregate enrollment metrics
       const enrollmentMetrics = await this.aggregateEnrollmentMetrics(courseId);
-      
+
       // Aggregate revenue metrics
       const revenueMetrics = await this.aggregateRevenueMetrics(courseId);
-      
+
       // Aggregate engagement metrics
       const engagementMetrics = await this.aggregateEngagementMetrics(courseId);
-      
+
       // Find most difficult lesson
       const mostDifficultLesson = await this.findMostDifficultLesson(courseId);
 
       // Calculate completion rate
-      const completionRate = enrollmentMetrics.totalEnrollments > 0 
-        ? (enrollmentMetrics.completionCount / enrollmentMetrics.totalEnrollments) * 100 
-        : 0;
+      const completionRate =
+        enrollmentMetrics.totalEnrollments > 0
+          ? (enrollmentMetrics.completionCount / enrollmentMetrics.totalEnrollments) * 100
+          : 0;
 
       // Calculate dropout rate
-      const droppedEnrollments = enrollmentMetrics.totalEnrollments - 
-        enrollmentMetrics.activeEnrollments - enrollmentMetrics.completionCount;
-      const dropoutRate = enrollmentMetrics.totalEnrollments > 0 
-        ? (droppedEnrollments / enrollmentMetrics.totalEnrollments) * 100 
-        : 0;
+      const droppedEnrollments =
+        enrollmentMetrics.totalEnrollments -
+        enrollmentMetrics.activeEnrollments -
+        enrollmentMetrics.completionCount;
+      const dropoutRate =
+        enrollmentMetrics.totalEnrollments > 0
+          ? (droppedEnrollments / enrollmentMetrics.totalEnrollments) * 100
+          : 0;
 
       // Calculate average time to completion
       const avgTimeToCompletion = await this.calculateAverageTimeToCompletion(courseId);
@@ -134,13 +140,13 @@ export class AnalyticsService implements IAnalyticsService {
           quizAttemptRate: engagementMetrics.quizAttemptRate,
           averageQuizScore: engagementMetrics.averageQuizScore,
           lessonCompletionVelocity: engagementMetrics.lessonCompletionVelocity,
-          studentRetentionRate: engagementMetrics.studentRetentionRate
-        }
+          studentRetentionRate: engagementMetrics.studentRetentionRate,
+        },
       };
 
       // Upsert course analytics
       const updatedAnalytics = await this.analyticsRepository.courseAnalytics.upsert(
-        courseId, 
+        courseId,
         aggregationData
       );
 
@@ -151,13 +157,15 @@ export class AnalyticsService implements IAnalyticsService {
         activeEnrollments: updatedAnalytics.activeEnrollments,
         completionCount: updatedAnalytics.completionCount,
         completionRate: parseFloat(updatedAnalytics.completionRate),
-        averageRating: updatedAnalytics.averageRating ? parseFloat(updatedAnalytics.averageRating) : undefined,
+        averageRating: updatedAnalytics.averageRating
+          ? parseFloat(updatedAnalytics.averageRating)
+          : undefined,
         totalRevenue: parseFloat(updatedAnalytics.totalRevenue),
         averageTimeToCompletionDays: updatedAnalytics.averageTimeToCompletionDays || undefined,
         dropoutRate: parseFloat(updatedAnalytics.dropoutRate),
         mostDifficultLessonId: updatedAnalytics.mostDifficultLessonId || undefined,
         engagementMetrics: updatedAnalytics.engagementMetrics as Record<string, unknown>,
-        lastUpdated: updatedAnalytics.lastUpdated
+        lastUpdated: updatedAnalytics.lastUpdated,
       };
 
       const courseAnalytics = new CourseAnalytics(courseAnalyticsData);
@@ -165,7 +173,7 @@ export class AnalyticsService implements IAnalyticsService {
       // Cache the updated analytics and invalidate related caches
       await Promise.all([
         analyticsCacheService.setCourseAnalytics(courseId, courseAnalytics),
-        analyticsCacheService.invalidateCourseCache(courseId)
+        analyticsCacheService.invalidateCourseCache(courseId),
       ]);
 
       return courseAnalytics;
@@ -183,13 +191,13 @@ export class AnalyticsService implements IAnalyticsService {
 
   /**
    * Updates student analytics by aggregating data from enrollments, submissions, and progress
-   * 
+   *
    * Performs complex aggregation queries to calculate:
    * - Course enrollment and completion metrics
    * - Quiz and assignment performance
    * - Time investment and learning streaks
    * - Skill ratings and badge progress
-   * 
+   *
    * @param userId - User ID to update analytics for
    * @returns Updated student analytics
    * @throws NotFoundError if user doesn't exist
@@ -210,19 +218,19 @@ export class AnalyticsService implements IAnalyticsService {
 
       // Aggregate course metrics
       const courseMetrics = await this.aggregateStudentCourseMetrics(userId);
-      
+
       // Aggregate quiz performance
       const quizMetrics = await this.aggregateStudentQuizMetrics(userId);
-      
+
       // Aggregate time investment
       const timeMetrics = await this.aggregateStudentTimeMetrics(userId);
-      
+
       // Calculate learning streak
       const streakMetrics = await this.calculateStudentStreak(userId);
-      
+
       // Get badges earned
       const badgesEarned = await this.getStudentBadges(userId);
-      
+
       // Get skill ratings
       const skillRatings = await this.getStudentSkillRatings(userId);
 
@@ -236,12 +244,12 @@ export class AnalyticsService implements IAnalyticsService {
         currentStreakDays: streakMetrics.currentStreak,
         longestStreakDays: streakMetrics.longestStreak,
         badgesEarned: badgesEarned,
-        skillRatings: skillRatings
+        skillRatings: skillRatings,
       };
 
       // Upsert student analytics
       const updatedAnalytics = await this.analyticsRepository.studentAnalytics.upsert(
-        userId, 
+        userId,
         aggregationData
       );
 
@@ -251,13 +259,17 @@ export class AnalyticsService implements IAnalyticsService {
         totalCoursesEnrolled: updatedAnalytics.totalCoursesEnrolled,
         coursesCompleted: updatedAnalytics.coursesCompleted,
         coursesInProgress: updatedAnalytics.coursesInProgress,
-        averageQuizScore: updatedAnalytics.averageQuizScore ? parseFloat(updatedAnalytics.averageQuizScore) : undefined,
+        averageQuizScore: updatedAnalytics.averageQuizScore
+          ? parseFloat(updatedAnalytics.averageQuizScore)
+          : undefined,
         totalTimeInvestedMinutes: updatedAnalytics.totalTimeInvestedMinutes,
         currentStreakDays: updatedAnalytics.currentStreakDays,
         longestStreakDays: updatedAnalytics.longestStreakDays,
-        badgesEarned: Array.isArray(updatedAnalytics.badgesEarned) ? updatedAnalytics.badgesEarned as string[] : [],
+        badgesEarned: Array.isArray(updatedAnalytics.badgesEarned)
+          ? (updatedAnalytics.badgesEarned as string[])
+          : [],
         skillRatings: (updatedAnalytics.skillRatings as Record<string, number>) || {},
-        lastUpdated: updatedAnalytics.lastUpdated
+        lastUpdated: updatedAnalytics.lastUpdated,
       };
 
       const studentAnalytics = new StudentAnalytics(studentAnalyticsData);
@@ -265,7 +277,7 @@ export class AnalyticsService implements IAnalyticsService {
       // Cache the updated analytics and invalidate related caches
       await Promise.all([
         analyticsCacheService.setStudentAnalytics(userId, studentAnalytics),
-        analyticsCacheService.invalidateStudentCache(userId)
+        analyticsCacheService.invalidateStudentCache(userId),
       ]);
 
       return studentAnalytics;
@@ -283,9 +295,9 @@ export class AnalyticsService implements IAnalyticsService {
 
   /**
    * Generates comprehensive course report with enrollment trends, performance, and engagement
-   * 
+   *
    * Implements cache-aside pattern for expensive report generation.
-   * 
+   *
    * @param courseId - Course ID to generate report for
    * @param dateRange - Date range for the report
    * @returns Detailed course report
@@ -305,7 +317,7 @@ export class AnalyticsService implements IAnalyticsService {
         .select({
           id: courses.id,
           title: courses.title,
-          instructorId: courses.instructorId
+          instructorId: courses.instructorId,
         })
         .from(courses)
         .where(eq(courses.id, courseId))
@@ -329,13 +341,13 @@ export class AnalyticsService implements IAnalyticsService {
         performanceMetrics,
         engagementMetrics,
         revenueMetrics,
-        difficultContent
+        difficultContent,
       ] = await Promise.all([
         this.generateEnrollmentTrends(courseId, dateRange),
         this.generatePerformanceMetrics(courseId, dateRange),
         this.generateEngagementMetrics(courseId, dateRange),
         this.generateRevenueMetrics(courseId, dateRange),
-        this.generateDifficultContentAnalysis(courseId, dateRange)
+        this.generateDifficultContentAnalysis(courseId, dateRange),
       ]);
 
       const report: CourseReport = {
@@ -347,7 +359,7 @@ export class AnalyticsService implements IAnalyticsService {
         performanceMetrics,
         engagementMetrics,
         revenueMetrics,
-        difficultContent
+        difficultContent,
       };
 
       // Cache the generated report
@@ -368,9 +380,9 @@ export class AnalyticsService implements IAnalyticsService {
 
   /**
    * Generates comprehensive student report with learning progress, performance, and recommendations
-   * 
+   *
    * Implements cache-aside pattern for expensive report generation.
-   * 
+   *
    * @param userId - User ID to generate report for
    * @param dateRange - Date range for the report
    * @returns Detailed student report
@@ -389,7 +401,7 @@ export class AnalyticsService implements IAnalyticsService {
       const [student] = await this.readDb
         .select({
           id: users.id,
-          fullName: userProfiles.fullName
+          fullName: userProfiles.fullName,
         })
         .from(users)
         .innerJoin(userProfiles, eq(users.id, userProfiles.userId))
@@ -406,13 +418,13 @@ export class AnalyticsService implements IAnalyticsService {
         performanceMetrics,
         engagementMetrics,
         skillDevelopment,
-        recommendations
+        recommendations,
       ] = await Promise.all([
         this.generateStudentLearningProgress(userId, dateRange),
         this.generateStudentPerformanceMetrics(userId, dateRange),
         this.generateStudentEngagementMetrics(userId, dateRange),
         this.generateStudentSkillDevelopment(userId, dateRange),
-        this.generateStudentRecommendations(userId)
+        this.generateStudentRecommendations(userId),
       ]);
 
       const report: StudentReport = {
@@ -423,7 +435,7 @@ export class AnalyticsService implements IAnalyticsService {
         performanceMetrics,
         engagementMetrics,
         skillDevelopment,
-        recommendations
+        recommendations,
       };
 
       // Cache the generated report
@@ -444,9 +456,9 @@ export class AnalyticsService implements IAnalyticsService {
 
   /**
    * Gets dashboard metrics tailored to user role (student, educator, admin)
-   * 
+   *
    * Implements cache-aside pattern with cache warming for frequently accessed dashboards.
-   * 
+   *
    * @param userId - User ID requesting dashboard metrics
    * @param role - User role for role-specific data
    * @returns Role-specific dashboard metrics
@@ -475,7 +487,9 @@ export class AnalyticsService implements IAnalyticsService {
           metrics = await this.generateAdminDashboard(userId);
           break;
         default:
-          throw new ValidationError('Invalid user role', [{ field: 'role', message: 'Must be student, educator, or admin' }]);
+          throw new ValidationError('Invalid user role', [
+            { field: 'role', message: 'Must be student, educator, or admin' },
+          ]);
       }
 
       // Cache the result using analytics cache service
@@ -496,7 +510,7 @@ export class AnalyticsService implements IAnalyticsService {
 
   /**
    * Tracks user action by creating analytics event for logging and analysis
-   * 
+   *
    * @param event - Analytics event to track
    * @returns Created analytics event
    * @throws ValidationError if event data is invalid
@@ -509,7 +523,7 @@ export class AnalyticsService implements IAnalyticsService {
         userId: event.userId,
         eventType: event.eventType,
         eventData: event.eventData,
-        timestamp: event.timestamp
+        timestamp: event.timestamp,
       });
 
       // Convert back to domain entity
@@ -518,7 +532,7 @@ export class AnalyticsService implements IAnalyticsService {
         userId: createdEvent.userId,
         eventType: createdEvent.eventType,
         eventData: createdEvent.eventData,
-        timestamp: createdEvent.timestamp
+        timestamp: createdEvent.timestamp,
       });
     } catch (error) {
       throw new DatabaseError(
@@ -530,7 +544,7 @@ export class AnalyticsService implements IAnalyticsService {
 
   /**
    * Batch updates multiple course analytics (for scheduled jobs)
-   * 
+   *
    * @param courseIds - Array of course IDs to update
    * @returns Array of updated course analytics
    * @throws DatabaseError if batch update fails
@@ -544,7 +558,7 @@ export class AnalyticsService implements IAnalyticsService {
       for (let i = 0; i < courseIds.length; i += batchSize) {
         const batch = courseIds.slice(i, i + batchSize);
         const batchResults = await Promise.all(
-          batch.map(courseId => this.updateCourseAnalytics(courseId))
+          batch.map((courseId) => this.updateCourseAnalytics(courseId))
         );
         results.push(...batchResults);
       }
@@ -560,7 +574,7 @@ export class AnalyticsService implements IAnalyticsService {
 
   /**
    * Batch updates multiple student analytics (for scheduled jobs)
-   * 
+   *
    * @param userIds - Array of user IDs to update
    * @returns Array of updated student analytics
    * @throws DatabaseError if batch update fails
@@ -574,7 +588,7 @@ export class AnalyticsService implements IAnalyticsService {
       for (let i = 0; i < userIds.length; i += batchSize) {
         const batch = userIds.slice(i, i + batchSize);
         const batchResults = await Promise.all(
-          batch.map(userId => this.updateStudentAnalytics(userId))
+          batch.map((userId) => this.updateStudentAnalytics(userId))
         );
         results.push(...batchResults);
       }
@@ -590,9 +604,9 @@ export class AnalyticsService implements IAnalyticsService {
 
   /**
    * Gets trending courses based on recent enrollment velocity
-   * 
+   *
    * Implements cache-aside pattern for expensive trending calculations.
-   * 
+   *
    * @param limit - Number of trending courses to return
    * @param dateRange - Date range to analyze trends
    * @returns Array of trending course analytics
@@ -610,7 +624,7 @@ export class AnalyticsService implements IAnalyticsService {
       const trendingCourseIds = await this.readDb
         .select({
           courseId: enrollments.courseId,
-          enrollmentCount: count(enrollments.id)
+          enrollmentCount: count(enrollments.id),
         })
         .from(enrollments)
         .where(
@@ -624,14 +638,17 @@ export class AnalyticsService implements IAnalyticsService {
         .limit(limit);
 
       // Get analytics for trending courses
-      const courseIds = trendingCourseIds.map(c => c.courseId);
+      const courseIds = trendingCourseIds.map((c) => c.courseId);
       const analytics = await this.analyticsRepository.courseAnalytics.findByCourseIds(courseIds);
 
       // Convert to domain entities and maintain order
-      const trendingCourses = courseIds.map(courseId => {
-        const analyticsData = analytics.find(a => a.courseId === courseId);
+      const trendingCourses = courseIds.map((courseId) => {
+        const analyticsData = analytics.find((a) => a.courseId === courseId);
         if (!analyticsData) {
-          throw new DatabaseError(`Analytics not found for trending course ${courseId}`, 'getTrendingCourses');
+          throw new DatabaseError(
+            `Analytics not found for trending course ${courseId}`,
+            'getTrendingCourses'
+          );
         }
 
         return new CourseAnalytics({
@@ -640,13 +657,15 @@ export class AnalyticsService implements IAnalyticsService {
           activeEnrollments: analyticsData.activeEnrollments,
           completionCount: analyticsData.completionCount,
           completionRate: parseFloat(analyticsData.completionRate),
-          averageRating: analyticsData.averageRating ? parseFloat(analyticsData.averageRating) : undefined,
+          averageRating: analyticsData.averageRating
+            ? parseFloat(analyticsData.averageRating)
+            : undefined,
           totalRevenue: parseFloat(analyticsData.totalRevenue),
           averageTimeToCompletionDays: analyticsData.averageTimeToCompletionDays || undefined,
           dropoutRate: parseFloat(analyticsData.dropoutRate),
           mostDifficultLessonId: analyticsData.mostDifficultLessonId || undefined,
           engagementMetrics: analyticsData.engagementMetrics as Record<string, unknown>,
-          lastUpdated: analyticsData.lastUpdated
+          lastUpdated: analyticsData.lastUpdated,
         });
       });
 
@@ -664,9 +683,9 @@ export class AnalyticsService implements IAnalyticsService {
 
   /**
    * Gets top performing students based on completion rate and scores
-   * 
+   *
    * Implements cache-aside pattern for expensive performance calculations.
-   * 
+   *
    * @param limit - Number of top students to return
    * @returns Array of top student analytics
    * @throws DatabaseError if performance calculation fails
@@ -681,19 +700,26 @@ export class AnalyticsService implements IAnalyticsService {
 
       const topStudents = await this.analyticsRepository.studentAnalytics.findTopPerformers(limit);
 
-      const topPerformers = topStudents.map(student => new StudentAnalytics({
-        userId: student.userId,
-        totalCoursesEnrolled: student.totalCoursesEnrolled,
-        coursesCompleted: student.coursesCompleted,
-        coursesInProgress: student.coursesInProgress,
-        averageQuizScore: student.averageQuizScore ? parseFloat(student.averageQuizScore) : undefined,
-        totalTimeInvestedMinutes: student.totalTimeInvestedMinutes,
-        currentStreakDays: student.currentStreakDays,
-        longestStreakDays: student.longestStreakDays,
-        badgesEarned: Array.isArray(student.badgesEarned) ? student.badgesEarned as string[] : [],
-        skillRatings: (student.skillRatings as Record<string, number>) || {},
-        lastUpdated: student.lastUpdated
-      }));
+      const topPerformers = topStudents.map(
+        (student) =>
+          new StudentAnalytics({
+            userId: student.userId,
+            totalCoursesEnrolled: student.totalCoursesEnrolled,
+            coursesCompleted: student.coursesCompleted,
+            coursesInProgress: student.coursesInProgress,
+            averageQuizScore: student.averageQuizScore
+              ? parseFloat(student.averageQuizScore)
+              : undefined,
+            totalTimeInvestedMinutes: student.totalTimeInvestedMinutes,
+            currentStreakDays: student.currentStreakDays,
+            longestStreakDays: student.longestStreakDays,
+            badgesEarned: Array.isArray(student.badgesEarned)
+              ? (student.badgesEarned as string[])
+              : [],
+            skillRatings: (student.skillRatings as Record<string, number>) || {},
+            lastUpdated: student.lastUpdated,
+          })
+      );
 
       // Cache the results
       await analyticsCacheService.setTopPerformers(limit, topPerformers);
@@ -709,9 +735,9 @@ export class AnalyticsService implements IAnalyticsService {
 
   /**
    * Calculates platform-wide metrics for admin dashboard
-   * 
+   *
    * Implements cache-aside pattern for expensive platform-wide calculations.
-   * 
+   *
    * @param dateRange - Date range for metrics calculation
    * @returns Platform-wide analytics summary
    * @throws DatabaseError if metrics calculation fails
@@ -739,34 +765,43 @@ export class AnalyticsService implements IAnalyticsService {
       }
 
       // Calculate current period metrics
-      const [currentMetrics] = await Promise.all([
-        this.calculateCurrentPlatformMetrics(dateRange)
-      ]);
+      const [currentMetrics] = await Promise.all([this.calculateCurrentPlatformMetrics(dateRange)]);
 
       // Calculate previous period for growth comparison
       const previousPeriodDays = Math.ceil(
         (dateRange.endDate.getTime() - dateRange.startDate.getTime()) / (1000 * 60 * 60 * 24)
       );
       const previousDateRange: DateRange = {
-        startDate: new Date(dateRange.startDate.getTime() - (previousPeriodDays * 24 * 60 * 60 * 1000)),
-        endDate: dateRange.startDate
+        startDate: new Date(
+          dateRange.startDate.getTime() - previousPeriodDays * 24 * 60 * 60 * 1000
+        ),
+        endDate: dateRange.startDate,
       };
 
       const [previousMetrics] = await Promise.all([
-        this.calculateCurrentPlatformMetrics(previousDateRange)
+        this.calculateCurrentPlatformMetrics(previousDateRange),
       ]);
 
       // Calculate growth rates
       const growthMetrics = {
         userGrowth: this.calculateGrowthRate(previousMetrics.totalUsers, currentMetrics.totalUsers),
-        courseGrowth: this.calculateGrowthRate(previousMetrics.totalCourses, currentMetrics.totalCourses),
-        enrollmentGrowth: this.calculateGrowthRate(previousMetrics.totalEnrollments, currentMetrics.totalEnrollments),
-        revenueGrowth: this.calculateGrowthRate(previousMetrics.totalRevenue, currentMetrics.totalRevenue)
+        courseGrowth: this.calculateGrowthRate(
+          previousMetrics.totalCourses,
+          currentMetrics.totalCourses
+        ),
+        enrollmentGrowth: this.calculateGrowthRate(
+          previousMetrics.totalEnrollments,
+          currentMetrics.totalEnrollments
+        ),
+        revenueGrowth: this.calculateGrowthRate(
+          previousMetrics.totalRevenue,
+          currentMetrics.totalRevenue
+        ),
       };
 
       const platformMetrics = {
         ...currentMetrics,
-        growthMetrics
+        growthMetrics,
       };
 
       // Cache the results
@@ -800,19 +835,13 @@ export class AnalyticsService implements IAnalyticsService {
     const [activeResult] = await this.readDb
       .select({ count: count(enrollments.id) })
       .from(enrollments)
-      .where(and(
-        eq(enrollments.courseId, courseId),
-        eq(enrollments.status, 'active')
-      ));
+      .where(and(eq(enrollments.courseId, courseId), eq(enrollments.status, 'active')));
 
     // Get completed enrollments
     const [completedResult] = await this.readDb
       .select({ count: count(enrollments.id) })
       .from(enrollments)
-      .where(and(
-        eq(enrollments.courseId, courseId),
-        eq(enrollments.status, 'completed')
-      ));
+      .where(and(eq(enrollments.courseId, courseId), eq(enrollments.status, 'completed')));
 
     // Get average rating
     const [ratingResult] = await this.readDb
@@ -824,25 +853,20 @@ export class AnalyticsService implements IAnalyticsService {
       totalEnrollments: Number(totalResult?.count || 0),
       activeEnrollments: Number(activeResult?.count || 0),
       completionCount: Number(completedResult?.count || 0),
-      averageRating: ratingResult?.rating ? parseFloat(ratingResult.rating) : undefined
+      averageRating: ratingResult?.rating ? parseFloat(ratingResult.rating) : undefined,
     };
   }
 
   private async aggregateRevenueMetrics(courseId: string): Promise<{ totalRevenue: number }> {
     const [result] = await this.readDb
       .select({
-        totalRevenue: sum(payments.amount)
+        totalRevenue: sum(payments.amount),
       })
       .from(payments)
-      .where(
-        and(
-          eq(payments.courseId, courseId),
-          eq(payments.status, 'succeeded')
-        )
-      );
+      .where(and(eq(payments.courseId, courseId), eq(payments.status, 'succeeded')));
 
     return {
-      totalRevenue: result?.totalRevenue ? parseFloat(result.totalRevenue) : 0
+      totalRevenue: result?.totalRevenue ? parseFloat(result.totalRevenue) : 0,
     };
   }
 
@@ -866,7 +890,7 @@ export class AnalyticsService implements IAnalyticsService {
       quizAttemptRate: 0,
       averageQuizScore: 0,
       lessonCompletionVelocity: 0,
-      studentRetentionRate: 0
+      studentRetentionRate: 0,
     };
   }
 
@@ -895,51 +919,45 @@ export class AnalyticsService implements IAnalyticsService {
     const [completedResult] = await this.readDb
       .select({ count: count(enrollments.id) })
       .from(enrollments)
-      .where(and(
-        eq(enrollments.studentId, userId),
-        eq(enrollments.status, 'completed')
-      ));
+      .where(and(eq(enrollments.studentId, userId), eq(enrollments.status, 'completed')));
 
     // Get active enrollments
     const [activeResult] = await this.readDb
       .select({ count: count(enrollments.id) })
       .from(enrollments)
-      .where(and(
-        eq(enrollments.studentId, userId),
-        eq(enrollments.status, 'active')
-      ));
+      .where(and(eq(enrollments.studentId, userId), eq(enrollments.status, 'active')));
 
     return {
       totalEnrolled: Number(totalResult?.count || 0),
       completed: Number(completedResult?.count || 0),
-      inProgress: Number(activeResult?.count || 0)
+      inProgress: Number(activeResult?.count || 0),
     };
   }
 
   private async aggregateStudentQuizMetrics(userId: string): Promise<{ averageScore?: number }> {
     const [result] = await this.readDb
       .select({
-        averageScore: avg(quizSubmissions.scorePercentage)
+        averageScore: avg(quizSubmissions.scorePercentage),
       })
       .from(quizSubmissions)
       .where(eq(quizSubmissions.studentId, userId));
 
     return {
-      averageScore: result?.averageScore ? parseFloat(result.averageScore) : undefined
+      averageScore: result?.averageScore ? parseFloat(result.averageScore) : undefined,
     };
   }
 
   private async aggregateStudentTimeMetrics(userId: string): Promise<{ totalMinutes: number }> {
     const [result] = await this.readDb
       .select({
-        totalMinutes: sum(lessonProgress.timeSpentSeconds)
+        totalMinutes: sum(lessonProgress.timeSpentSeconds),
       })
       .from(lessonProgress)
       .innerJoin(enrollments, eq(lessonProgress.enrollmentId, enrollments.id))
       .where(eq(enrollments.studentId, userId));
 
     return {
-      totalMinutes: result?.totalMinutes ? Math.floor(Number(result.totalMinutes) / 60) : 0
+      totalMinutes: result?.totalMinutes ? Math.floor(Number(result.totalMinutes) / 60) : 0,
     };
   }
 
@@ -950,7 +968,7 @@ export class AnalyticsService implements IAnalyticsService {
     // Implementation would calculate learning streaks based on activity dates
     return {
       currentStreak: 0,
-      longestStreak: 0
+      longestStreak: 0,
     };
   }
 
@@ -989,8 +1007,8 @@ export class AnalyticsService implements IAnalyticsService {
         badgesEarned: 0,
         upcomingDeadlines: [],
         recentGrades: [],
-        recommendedCourses: []
-      }
+        recommendedCourses: [],
+      },
     };
   }
 
@@ -1009,8 +1027,8 @@ export class AnalyticsService implements IAnalyticsService {
         totalRevenue: 0,
         pendingGrading: 0,
         coursePerformance: [],
-        recentActivity: []
-      }
+        recentActivity: [],
+      },
     };
   }
 
@@ -1024,7 +1042,7 @@ export class AnalyticsService implements IAnalyticsService {
         totalUsers: 0,
         totalCourses: 0,
         totalEnrollments: 0,
-        totalRevenue: 0
+        totalRevenue: 0,
       },
       adminMetrics: {
         platformHealth: {
@@ -1035,26 +1053,26 @@ export class AnalyticsService implements IAnalyticsService {
           totalEnrollments: 0,
           completionRate: 0,
           averageRating: 0,
-          totalRevenue: 0
+          totalRevenue: 0,
         },
         growthMetrics: {
           userGrowthRate: 0,
           courseGrowthRate: 0,
           revenueGrowthRate: 0,
-          enrollmentGrowthRate: 0
+          enrollmentGrowthRate: 0,
         },
         systemMetrics: {
           errorRate: 0,
           averageResponseTime: 0,
           uptime: 0,
-          storageUsage: 0
+          storageUsage: 0,
         },
         topPerformers: {
           topCourses: [],
           topInstructors: [],
-          topStudents: []
-        }
-      }
+          topStudents: [],
+        },
+      },
     };
   }
 
@@ -1075,12 +1093,15 @@ export class AnalyticsService implements IAnalyticsService {
       totalEnrollments: 0,
       totalRevenue: 0,
       averageCompletionRate: 0,
-      averageRating: 0
+      averageRating: 0,
     };
   }
 
   // Additional helper methods for report generation would be implemented here...
-  private async generateEnrollmentTrends(_courseId: string, _dateRange: DateRange): Promise<{
+  private async generateEnrollmentTrends(
+    _courseId: string,
+    _dateRange: DateRange
+  ): Promise<{
     totalEnrollments: number;
     newEnrollments: number;
     activeEnrollments: number;
@@ -1094,11 +1115,14 @@ export class AnalyticsService implements IAnalyticsService {
       activeEnrollments: 0,
       completedEnrollments: 0,
       droppedEnrollments: 0,
-      enrollmentsByMonth: []
+      enrollmentsByMonth: [],
     };
   }
 
-  private async generatePerformanceMetrics(_courseId: string, _dateRange: DateRange): Promise<{
+  private async generatePerformanceMetrics(
+    _courseId: string,
+    _dateRange: DateRange
+  ): Promise<{
     completionRate: number;
     averageTimeToCompletion: number;
     dropoutRate: number;
@@ -1110,11 +1134,14 @@ export class AnalyticsService implements IAnalyticsService {
       averageTimeToCompletion: 0,
       dropoutRate: 0,
       averageQuizScore: 0,
-      assignmentSubmissionRate: 0
+      assignmentSubmissionRate: 0,
     };
   }
 
-  private async generateEngagementMetrics(_courseId: string, _dateRange: DateRange): Promise<{
+  private async generateEngagementMetrics(
+    _courseId: string,
+    _dateRange: DateRange
+  ): Promise<{
     averageSessionDuration: number;
     totalVideoWatchTime: number;
     discussionParticipationRate: number;
@@ -1126,11 +1153,14 @@ export class AnalyticsService implements IAnalyticsService {
       totalVideoWatchTime: 0,
       discussionParticipationRate: 0,
       lessonCompletionVelocity: 0,
-      studentRetentionRate: 0
+      studentRetentionRate: 0,
     };
   }
 
-  private async generateRevenueMetrics(_courseId: string, _dateRange: DateRange): Promise<{
+  private async generateRevenueMetrics(
+    _courseId: string,
+    _dateRange: DateRange
+  ): Promise<{
     totalRevenue: number;
     revenuePerEnrollment: number;
     refundRate: number;
@@ -1138,11 +1168,14 @@ export class AnalyticsService implements IAnalyticsService {
     return {
       totalRevenue: 0,
       revenuePerEnrollment: 0,
-      refundRate: 0
+      refundRate: 0,
     };
   }
 
-  private async generateDifficultContentAnalysis(_courseId: string, _dateRange: DateRange): Promise<{
+  private async generateDifficultContentAnalysis(
+    _courseId: string,
+    _dateRange: DateRange
+  ): Promise<{
     mostDifficultLessons: Array<{
       lessonId: string;
       lessonName: string;
@@ -1158,11 +1191,14 @@ export class AnalyticsService implements IAnalyticsService {
   }> {
     return {
       mostDifficultLessons: [],
-      strugglingStudents: []
+      strugglingStudents: [],
     };
   }
 
-  private async generateStudentLearningProgress(_userId: string, _dateRange: DateRange): Promise<{
+  private async generateStudentLearningProgress(
+    _userId: string,
+    _dateRange: DateRange
+  ): Promise<{
     totalCoursesEnrolled: number;
     coursesCompleted: number;
     coursesInProgress: number;
@@ -1176,11 +1212,14 @@ export class AnalyticsService implements IAnalyticsService {
       coursesInProgress: 0,
       completionRate: 0,
       totalTimeInvested: 0,
-      averageTimePerCourse: 0
+      averageTimePerCourse: 0,
     };
   }
 
-  private async generateStudentPerformanceMetrics(_userId: string, _dateRange: DateRange): Promise<{
+  private async generateStudentPerformanceMetrics(
+    _userId: string,
+    _dateRange: DateRange
+  ): Promise<{
     averageQuizScore: number;
     totalQuizzesTaken: number;
     assignmentsSubmitted: number;
@@ -1192,11 +1231,14 @@ export class AnalyticsService implements IAnalyticsService {
       totalQuizzesTaken: 0,
       assignmentsSubmitted: 0,
       averageAssignmentScore: 0,
-      improvementTrend: 'stable' as const
+      improvementTrend: 'stable' as const,
     };
   }
 
-  private async generateStudentEngagementMetrics(_userId: string, _dateRange: DateRange): Promise<{
+  private async generateStudentEngagementMetrics(
+    _userId: string,
+    _dateRange: DateRange
+  ): Promise<{
     currentStreak: number;
     longestStreak: number;
     averageSessionDuration: number;
@@ -1208,11 +1250,14 @@ export class AnalyticsService implements IAnalyticsService {
       longestStreak: 0,
       averageSessionDuration: 0,
       discussionParticipation: 0,
-      lastActivityDate: new Date()
+      lastActivityDate: new Date(),
     };
   }
 
-  private async generateStudentSkillDevelopment(_userId: string, _dateRange: DateRange): Promise<{
+  private async generateStudentSkillDevelopment(
+    _userId: string,
+    _dateRange: DateRange
+  ): Promise<{
     skillRatings: Record<string, number>;
     skillProgress: Array<{
       skillName: string;
@@ -1230,7 +1275,7 @@ export class AnalyticsService implements IAnalyticsService {
     return {
       skillRatings: {},
       skillProgress: [],
-      badgesEarned: []
+      badgesEarned: [],
     };
   }
 
@@ -1242,7 +1287,7 @@ export class AnalyticsService implements IAnalyticsService {
     return {
       nextCourses: [],
       skillsToImprove: [],
-      studyScheduleSuggestions: []
+      studyScheduleSuggestions: [],
     };
   }
 }

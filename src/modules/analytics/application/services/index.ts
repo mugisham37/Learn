@@ -1,6 +1,6 @@
 /**
  * Analytics Application Services
- * 
+ *
  * Exports all application services for the analytics module
  */
 

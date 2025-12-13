@@ -1,21 +1,18 @@
 /**
  * Certificate Queue Service
- * 
+ *
  * Provides a service layer for queuing certificate generation jobs.
  * Acts as a bridge between the enrollment service and the certificate generation queue.
- * 
+ *
  * Requirements: 14.3 - Certificate generation queue integration
  */
 
 import { logger } from '../../../../shared/utils/logger.js';
-import { 
+import {
   getCertificateGenerationQueue,
-  CertificateGenerationJobData 
+  CertificateGenerationJobData,
 } from '../../../../shared/services/CertificateGenerationQueue.js';
-import { 
-  ValidationError,
-  ExternalServiceError 
-} from '../../../../shared/errors/index.js';
+import { ValidationError, ExternalServiceError } from '../../../../shared/errors/index.js';
 import { Enrollment } from '../../domain/entities/Enrollment.js';
 
 /**
@@ -24,7 +21,7 @@ import { Enrollment } from '../../domain/entities/Enrollment.js';
 export interface ICertificateQueueService {
   /**
    * Queues a certificate generation job for a completed enrollment
-   * 
+   *
    * @param enrollment - The completed enrollment
    * @param instructorId - ID of the course instructor
    * @param grade - Optional grade for the certificate
@@ -40,7 +37,7 @@ export interface ICertificateQueueService {
 
   /**
    * Gets the status of a certificate generation job
-   * 
+   *
    * @param jobId - The job ID
    * @returns Promise resolving to job status or null if not found
    */
@@ -54,7 +51,7 @@ export interface ICertificateQueueService {
 
 /**
  * Certificate Queue Service Implementation
- * 
+ *
  * Handles queuing certificate generation jobs and provides status tracking.
  */
 export class CertificateQueueService implements ICertificateQueueService {
@@ -154,19 +151,19 @@ export class CertificateQueueService implements ICertificateQueueService {
   private validateEnrollmentEligibility(enrollment: Enrollment): void {
     if (enrollment.status !== 'completed') {
       throw new ValidationError('Enrollment must be completed to generate certificate', [
-        { field: 'enrollment.status', message: 'Enrollment status must be completed' }
+        { field: 'enrollment.status', message: 'Enrollment status must be completed' },
       ]);
     }
 
     if (enrollment.progressPercentage < 100) {
       throw new ValidationError('Enrollment must be 100% complete to generate certificate', [
-        { field: 'enrollment.progressPercentage', message: 'Progress must be 100%' }
+        { field: 'enrollment.progressPercentage', message: 'Progress must be 100%' },
       ]);
     }
 
     if (!enrollment.completedAt) {
       throw new ValidationError('Enrollment must have completion date to generate certificate', [
-        { field: 'enrollment.completedAt', message: 'Completion date is required' }
+        { field: 'enrollment.completedAt', message: 'Completion date is required' },
       ]);
     }
   }

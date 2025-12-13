@@ -1,11 +1,14 @@
 /**
  * Messaging Repository Interface
- * 
+ *
  * Defines data access methods for messaging functionality
  * Supports direct messages, conversations, and read status tracking
  */
 
-import type { Message, NewMessage } from '../../../../infrastructure/database/schema/communication.schema.js';
+import type {
+  Message,
+  NewMessage,
+} from '../../../../infrastructure/database/schema/communication.schema.js';
 
 /**
  * Conversation summary for listing user conversations
@@ -69,7 +72,7 @@ export interface UpdateMessageDTO {
 
 /**
  * Messaging Repository Interface
- * 
+ *
  * Requirements:
  * - 9.1: Direct messaging with real-time delivery and notifications
  */
@@ -90,8 +93,8 @@ export interface IMessagingRepository {
    * Supports pagination and excludes soft-deleted messages
    */
   findByConversation(
-    conversationId: string, 
-    userId: string, 
+    conversationId: string,
+    userId: string,
     pagination: MessagePagination
   ): Promise<PaginatedResult<Message>>;
 
@@ -100,7 +103,7 @@ export interface IMessagingRepository {
    * Returns conversation summaries with last message and unread count
    */
   getConversations(
-    userId: string, 
+    userId: string,
     pagination: MessagePagination
   ): Promise<PaginatedResult<ConversationSummary>>;
 

@@ -1,10 +1,10 @@
 /**
  * Certificate Repository Interface
- * 
+ *
  * Defines the contract for certificate data access operations.
  * Abstracts database operations behind a clean interface following
  * the Repository pattern for domain independence.
- * 
+ *
  * Requirements: 5.6, 5.7
  */
 
@@ -58,14 +58,14 @@ export interface CertificateFilterDTO {
 
 /**
  * Certificate Repository Interface
- * 
+ *
  * Provides methods for all certificate data access operations with caching support.
  * Implementations must handle database errors and map them to domain errors.
  */
 export interface ICertificateRepository {
   /**
    * Creates a new certificate in the database
-   * 
+   *
    * @param data - Certificate creation data
    * @returns The created certificate
    * @throws ConflictError if certificate already exists for the enrollment
@@ -75,7 +75,7 @@ export interface ICertificateRepository {
 
   /**
    * Finds a certificate by its unique ID
-   * 
+   *
    * @param id - Certificate ID
    * @returns The certificate if found, null otherwise
    * @throws DatabaseError if database operation fails
@@ -84,7 +84,7 @@ export interface ICertificateRepository {
 
   /**
    * Finds a certificate by its certificate ID (public identifier)
-   * 
+   *
    * @param certificateId - Certificate public ID
    * @returns The certificate if found, null otherwise
    * @throws DatabaseError if database operation fails
@@ -93,7 +93,7 @@ export interface ICertificateRepository {
 
   /**
    * Finds a certificate by enrollment ID
-   * 
+   *
    * @param enrollmentId - Enrollment ID
    * @returns The certificate if found, null otherwise
    * @throws DatabaseError if database operation fails
@@ -102,7 +102,7 @@ export interface ICertificateRepository {
 
   /**
    * Finds certificates issued within a date range
-   * 
+   *
    * @param filters - Filter options
    * @param pagination - Pagination parameters
    * @returns Paginated list of certificates
@@ -115,7 +115,7 @@ export interface ICertificateRepository {
 
   /**
    * Updates a certificate's data
-   * 
+   *
    * @param id - Certificate ID
    * @param data - Update data
    * @returns The updated certificate
@@ -127,7 +127,7 @@ export interface ICertificateRepository {
   /**
    * Deletes a certificate from the database
    * USE WITH CAUTION - This is irreversible
-   * 
+   *
    * @param id - Certificate ID
    * @returns void
    * @throws NotFoundError if certificate doesn't exist
@@ -137,7 +137,7 @@ export interface ICertificateRepository {
 
   /**
    * Checks if a certificate exists for an enrollment
-   * 
+   *
    * @param enrollmentId - Enrollment ID
    * @returns True if certificate exists, false otherwise
    * @throws DatabaseError if database operation fails
@@ -146,7 +146,7 @@ export interface ICertificateRepository {
 
   /**
    * Checks if a certificate ID is already in use
-   * 
+   *
    * @param certificateId - Certificate public ID
    * @returns True if certificate ID exists, false otherwise
    * @throws DatabaseError if database operation fails
@@ -155,7 +155,7 @@ export interface ICertificateRepository {
 
   /**
    * Gets the count of certificates issued within a date range
-   * 
+   *
    * @param startDate - Start date (inclusive)
    * @param endDate - End date (inclusive)
    * @returns Number of certificates issued
@@ -166,7 +166,7 @@ export interface ICertificateRepository {
   /**
    * Finds certificates that need to be regenerated
    * (e.g., due to template changes or corrections)
-   * 
+   *
    * @param limit - Maximum number of certificates to return
    * @returns List of certificates that need regeneration
    * @throws DatabaseError if database operation fails
@@ -176,7 +176,7 @@ export interface ICertificateRepository {
   /**
    * Verifies a certificate by its certificate ID
    * Returns certificate details for verification purposes
-   * 
+   *
    * @param certificateId - Certificate public ID
    * @returns Certificate with enrollment and course details, null if not found
    * @throws DatabaseError if database operation fails
@@ -192,7 +192,7 @@ export interface ICertificateRepository {
   /**
    * Invalidates cache for a specific certificate
    * Should be called after any update operation
-   * 
+   *
    * @param id - Certificate ID
    * @returns void
    */
@@ -201,7 +201,7 @@ export interface ICertificateRepository {
   /**
    * Invalidates cache for certificate by certificate ID
    * Should be called after operations that affect certificate lookups
-   * 
+   *
    * @param certificateId - Certificate public ID
    * @returns void
    */
@@ -210,7 +210,7 @@ export interface ICertificateRepository {
   /**
    * Invalidates cache for certificate by enrollment
    * Should be called after operations that affect enrollment certificates
-   * 
+   *
    * @param enrollmentId - Enrollment ID
    * @returns void
    */

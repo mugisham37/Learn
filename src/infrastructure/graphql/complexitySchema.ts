@@ -1,9 +1,9 @@
 /**
  * GraphQL Schema for Complexity Monitoring
- * 
+ *
  * This module defines GraphQL types and resolvers for monitoring
  * query complexity statistics and metrics.
- * 
+ *
  * Requirements: 15.6
  */
 
@@ -77,7 +77,7 @@ export const complexityMonitoringResolvers = {
       if (!context.user || context.user.role !== 'admin') {
         throw new Error('Admin access required');
       }
-      
+
       return complexityMonitor.getComplexityStats();
     },
 
@@ -86,7 +86,7 @@ export const complexityMonitoringResolvers = {
       if (!context.user || context.user.role !== 'admin') {
         throw new Error('Admin access required');
       }
-      
+
       return complexityMonitor.getTopComplexQueries(limit);
     },
 
@@ -95,7 +95,7 @@ export const complexityMonitoringResolvers = {
       if (!context.user || context.user.role !== 'admin') {
         throw new Error('Admin access required');
       }
-      
+
       return complexityMonitor.getQueriesByUser(userId);
     },
   },
@@ -106,7 +106,7 @@ export const complexityMonitoringResolvers = {
       if (!context.user || context.user.role !== 'admin') {
         throw new Error('Admin access required');
       }
-      
+
       complexityMonitor.clearMetrics();
       return true;
     },
@@ -125,12 +125,12 @@ export const complexityMonitoringResolvers = {
       if (!context.user || context.user.role !== 'admin') {
         throw new Error('Admin access required');
       }
-      
+
       // Filter out undefined values
       const config = Object.fromEntries(
         Object.entries(args).filter(([_, value]) => value !== undefined)
       );
-      
+
       complexityMonitor.updateConfig(config);
       return true;
     },

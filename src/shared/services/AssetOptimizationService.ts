@@ -1,9 +1,9 @@
 /**
  * Asset Optimization Service
- * 
+ *
  * Coordinates CloudFront CDN, compression, image optimization,
  * and lazy loading for comprehensive asset optimization.
- * 
+ *
  * Requirements: 15.5
  */
 
@@ -72,7 +72,7 @@ export class AssetOptimizationService {
 
   constructor(
     private readonly cloudFrontService: ICloudFrontService,
-    private readonly _imageProcessingService: ImageProcessingService,
+    private readonly imageProcessingService: ImageProcessingService,
     private readonly lazyLoadingService: LazyLoadingService,
     config: AssetOptimizationConfig = {}
   ) {
@@ -179,7 +179,7 @@ export class AssetOptimizationService {
     }>
   ): Promise<OptimizedAsset[]> {
     const results = await Promise.allSettled(
-      assets.map(asset => this.optimizeAsset(asset.s3Key, asset.type, asset.options))
+      assets.map((asset) => this.optimizeAsset(asset.s3Key, asset.type, asset.options))
     );
 
     const optimizedAssets: OptimizedAsset[] = [];
@@ -256,11 +256,12 @@ export class AssetOptimizationService {
       { width: 1280, suffix: 'xl' },
     ];
 
-    result.responsiveVariants = responsiveBreakpoints.map(breakpoint => {
+    result.responsiveVariants = responsiveBreakpoints.map((breakpoint) => {
       const variantKey = this.generateResponsiveKey(s3Key, breakpoint.suffix);
-      const variantUrl = this.config.enableCDN && this.cloudFrontService.isConfigured()
-        ? this.cloudFrontService.getCloudFrontUrl(variantKey)
-        : this.getS3Url(variantKey);
+      const variantUrl =
+        this.config.enableCDN && this.cloudFrontService.isConfigured()
+          ? this.cloudFrontService.getCloudFrontUrl(variantKey)
+          : this.getS3Url(variantKey);
 
       return {
         url: variantUrl,
@@ -305,7 +306,16 @@ export class AssetOptimizationService {
     s3Key: string,
     assetType: 'image' | 'video' | 'document' | 'static'
   ): Record<string, string> {
-    const cacheDuration = this.config.cacheDurations[assetType === 'video' ? 'videos' : assetType === 'image' ? 'images' : assetType === 'document' ? 'documents' : 'static'];
+    const cacheDuration =
+      this.config.cacheDurations[
+        assetType === 'video'
+          ? 'videos'
+          : assetType === 'image'
+            ? 'images'
+            : assetType === 'document'
+              ? 'documents'
+              : 'static'
+      ];
     const path = `/${assetType}s/${s3Key}`;
 
     return generateCDNCacheHeaders(path, {
@@ -349,19 +359,19 @@ export class AssetOptimizationService {
    */
   private getAssetTypeFromUrl(url: string): 'image' | 'video' | 'iframe' | 'script' {
     const extension = this.getFileExtension(url);
-    
+
     if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif', 'svg'].includes(extension)) {
       return 'image';
     }
-    
+
     if (['mp4', 'webm', 'ogg', 'avi', 'mov'].includes(extension)) {
       return 'video';
     }
-    
+
     if (['js', 'mjs'].includes(extension)) {
       return 'script';
     }
-    
+
     return 'image'; // Default fallback
   }
 
@@ -394,7 +404,7 @@ export function createAssetOptimizationService(
 ): AssetOptimizationService {
   const imageProcessingService = new ImageProcessingService();
   const lazyLoadingService = new LazyLoadingService();
-  
+
   return new AssetOptimizationService(
     cloudFrontService,
     imageProcessingService,

@@ -1,27 +1,29 @@
 /**
  * Student Analytics Repository Implementation
- * 
+ *
  * Implements student analytics data access operations with Drizzle ORM queries,
  * Redis caching with 5-minute TTL, and cache invalidation on updates.
  * Handles database errors and maps them to domain errors.
- * 
+ *
  * Requirements: 12.2, 12.7
  */
 
 import { eq, inArray, desc, count, sql } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
-import { cache, buildCacheKey, CachePrefix, CacheTTL } from '../../../../infrastructure/cache/index.js';
+import {
+  cache,
+  buildCacheKey,
+  CachePrefix,
+  CacheTTL,
+} from '../../../../infrastructure/cache/index.js';
 import { getWriteDb, getReadDb } from '../../../../infrastructure/database/index.js';
-import { 
+import {
   studentAnalytics,
   type StudentAnalytics,
-  type NewStudentAnalytics
+  type NewStudentAnalytics,
 } from '../../../../infrastructure/database/schema/analytics.schema.js';
-import {
-  DatabaseError,
-  NotFoundError,
-} from '../../../../shared/errors/index.js';
+import { DatabaseError, NotFoundError } from '../../../../shared/errors/index.js';
 
 import {
   IStudentAnalyticsRepository,
@@ -32,7 +34,7 @@ import {
 
 /**
  * Student Analytics Repository Implementation
- * 
+ *
  * Provides data access methods for student analytics entities with:
  * - Drizzle ORM for type-safe queries
  * - Redis caching with 5-minute TTL
@@ -72,10 +74,10 @@ export class StudentAnalyticsRepository implements IStudentAnalyticsRepository {
 
   /**
    * Creates or updates student analytics record
-   * 
+   *
    * Uses PostgreSQL UPSERT (ON CONFLICT) to handle both create and update cases.
    * Automatically updates the lastUpdated timestamp.
-   * 
+   *
    * @param userId - User ID
    * @param data - Analytics data
    * @returns The created/updated student analytics
@@ -118,10 +120,7 @@ export class StudentAnalyticsRepository implements IStudentAnalyticsRepository {
         .returning();
 
       if (!upsertedAnalytics) {
-        throw new DatabaseError(
-          'Failed to upsert student analytics',
-          'upsert'
-        );
+        throw new DatabaseError('Failed to upsert student analytics', 'upsert');
       }
 
       // Invalidate relevant caches
@@ -144,10 +143,10 @@ export class StudentAnalyticsRepository implements IStudentAnalyticsRepository {
 
   /**
    * Finds student analytics by user ID
-   * 
+   *
    * Uses Redis caching with 5-minute TTL for performance.
    * Falls back to database query if cache miss.
-   * 
+   *
    * @param userId - User ID
    * @returns The student analytics if found, null otherwise
    * @throws DatabaseError if database operation fails
@@ -185,10 +184,10 @@ export class StudentAnalyticsRepository implements IStudentAnalyticsRepository {
 
   /**
    * Finds student analytics for multiple users
-   * 
+   *
    * Efficiently queries multiple student analytics in a single database call.
    * Does not use caching due to variable nature of the query.
-   * 
+   *
    * @param userIds - Array of user IDs
    * @returns Array of student analytics
    * @throws DatabaseError if database operation fails
@@ -215,10 +214,10 @@ export class StudentAnalyticsRepository implements IStudentAnalyticsRepository {
 
   /**
    * Finds all student analytics with pagination
-   * 
+   *
    * Uses Redis caching for paginated results with 5-minute TTL.
    * Orders by last updated timestamp descending for most recent first.
-   * 
+   *
    * @param pagination - Pagination parameters
    * @returns Paginated student analytics results
    * @throws DatabaseError if database operation fails
@@ -243,9 +242,7 @@ export class StudentAnalyticsRepository implements IStudentAnalyticsRepository {
           .orderBy(desc(studentAnalytics.lastUpdated))
           .limit(limit)
           .offset(offset),
-        this.readDb
-          .select({ total: count() })
-          .from(studentAnalytics)
+        this.readDb.select({ total: count() }).from(studentAnalytics),
       ]);
 
       const result: PaginatedResult<StudentAnalytics> = {
@@ -270,10 +267,10 @@ export class StudentAnalyticsRepository implements IStudentAnalyticsRepository {
 
   /**
    * Finds top performing students by completion rate
-   * 
+   *
    * Orders by completion rate (coursesCompleted / totalCoursesEnrolled) descending.
    * Uses Redis caching with 5-minute TTL for performance.
-   * 
+   *
    * @param limit - Number of students to return
    * @returns Array of student analytics ordered by performance
    * @throws DatabaseError if database operation fails
@@ -319,7 +316,7 @@ export class StudentAnalyticsRepository implements IStudentAnalyticsRepository {
 
   /**
    * Updates student analytics last updated timestamp
-   * 
+   *
    * @param userId - User ID
    * @returns The updated student analytics
    * @throws NotFoundError if student analytics doesn't exist
@@ -334,11 +331,7 @@ export class StudentAnalyticsRepository implements IStudentAnalyticsRepository {
         .returning();
 
       if (!updatedAnalytics) {
-        throw new NotFoundError(
-          'Student analytics not found',
-          'StudentAnalytics',
-          userId
-        );
+        throw new NotFoundError('Student analytics not found', 'StudentAnalytics', userId);
       }
 
       // Invalidate cache
@@ -360,16 +353,14 @@ export class StudentAnalyticsRepository implements IStudentAnalyticsRepository {
 
   /**
    * Deletes student analytics record
-   * 
+   *
    * @param userId - User ID
    * @returns void
    * @throws DatabaseError if database operation fails
    */
   async delete(userId: string): Promise<void> {
     try {
-      await this.writeDb
-        .delete(studentAnalytics)
-        .where(eq(studentAnalytics.userId, userId));
+      await this.writeDb.delete(studentAnalytics).where(eq(studentAnalytics.userId, userId));
 
       // Invalidate cache
       await this.invalidateCache(userId);
@@ -383,7 +374,7 @@ export class StudentAnalyticsRepository implements IStudentAnalyticsRepository {
 
   /**
    * Invalidates cache for student analytics
-   * 
+   *
    * @param userId - User ID
    * @returns void
    */

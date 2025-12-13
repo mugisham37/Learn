@@ -1,9 +1,9 @@
 /**
  * Course Service Implementation
- * 
+ *
  * Implements business logic for course management operations.
  * Handles validation, authorization, caching, and domain event publishing.
- * 
+ *
  * Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7
  */
 
@@ -12,36 +12,41 @@ import { CourseModule } from '../../domain/entities/CourseModule.js';
 import { Lesson } from '../../domain/entities/Lesson.js';
 import { ICourseService, PublicationValidationResult } from './ICourseService.js';
 import { CourseMapper, CourseModuleMapper, LessonMapper } from '../mappers/CourseMapper.js';
-import { 
+import {
   ICourseRepository,
-  CreateCourseDTO, 
-  UpdateCourseDTO, 
-  PaginationParams, 
-  PaginatedResult, 
-  CourseFilters 
+  CreateCourseDTO,
+  UpdateCourseDTO,
+  PaginationParams,
+  PaginatedResult,
+  CourseFilters,
 } from '../../infrastructure/repositories/ICourseRepository.js';
-import { 
+import {
   ICourseModuleRepository,
-  CreateCourseModuleDTO, 
-  UpdateCourseModuleDTO 
+  CreateCourseModuleDTO,
+  UpdateCourseModuleDTO,
 } from '../../infrastructure/repositories/ICourseModuleRepository.js';
-import { 
+import {
   ILessonRepository,
-  CreateLessonDTO, 
-  UpdateLessonDTO 
+  CreateLessonDTO,
+  UpdateLessonDTO,
 } from '../../infrastructure/repositories/ILessonRepository.js';
-import { 
-  NotFoundError, 
-  AuthorizationError, 
-  ValidationError, 
-  ConflictError 
+import {
+  NotFoundError,
+  AuthorizationError,
+  ValidationError,
+  ConflictError,
 } from '../../../../shared/errors/index.js';
 import { sanitizeByContentType } from '../../../../shared/utils/sanitization.js';
-import { cache, CachePrefix, CacheTTL, buildCacheKey } from '../../../../infrastructure/cache/index.js';
+import {
+  cache,
+  CachePrefix,
+  CacheTTL,
+  buildCacheKey,
+} from '../../../../infrastructure/cache/index.js';
 
 /**
  * Course Service Implementation
- * 
+ *
  * Orchestrates course management operations with proper validation,
  * authorization, caching, and domain event handling.
  */
@@ -69,7 +74,7 @@ export class CourseService implements ICourseService {
     const courseData: CreateCourseDTO = {
       ...data,
       instructorId,
-      description: sanitizeByContentType(data.description, 'course.description')
+      description: sanitizeByContentType(data.description, 'course.description'),
     };
 
     // Create course with automatic slug generation
@@ -143,7 +148,7 @@ export class CourseService implements ICourseService {
    * Gets courses by instructor with pagination and filtering
    */
   async getCoursesByInstructor(
-    instructorId: string, 
+    instructorId: string,
     pagination: PaginationParams,
     filters?: CourseFilters
   ): Promise<PaginatedResult<Course>> {
@@ -154,10 +159,10 @@ export class CourseService implements ICourseService {
     this.validatePagination(pagination);
 
     const result = await this.courseRepository.findByInstructor(instructorId, pagination, filters);
-    
+
     return {
       ...result,
-      data: CourseMapper.toDomainArray(result.data)
+      data: CourseMapper.toDomainArray(result.data),
     };
   }
 
@@ -171,10 +176,10 @@ export class CourseService implements ICourseService {
     this.validatePagination(pagination);
 
     const result = await this.courseRepository.findPublished(pagination, filters);
-    
+
     return {
       ...result,
-      data: CourseMapper.toDomainArray(result.data)
+      data: CourseMapper.toDomainArray(result.data),
     };
   }
 
@@ -182,7 +187,11 @@ export class CourseService implements ICourseService {
    * Updates course metadata with cache invalidation
    * Requirements: 3.6
    */
-  async updateCourse(courseId: string, instructorId: string, data: UpdateCourseDTO): Promise<Course> {
+  async updateCourse(
+    courseId: string,
+    instructorId: string,
+    data: UpdateCourseDTO
+  ): Promise<Course> {
     if (!courseId || typeof courseId !== 'string') {
       throw new ValidationError('Course ID is required');
     }
@@ -199,7 +208,9 @@ export class CourseService implements ICourseService {
     // Update course with sanitized content
     const sanitizedData = {
       ...data,
-      ...(data.description && { description: sanitizeByContentType(data.description, 'course.description') })
+      ...(data.description && {
+        description: sanitizeByContentType(data.description, 'course.description'),
+      }),
     };
     const updatedCourseSchema = await this.courseRepository.update(courseId, sanitizedData);
     const updatedCourse = CourseMapper.toDomain(updatedCourseSchema);
@@ -216,8 +227,8 @@ export class CourseService implements ICourseService {
    * Requirements: 3.2
    */
   async addModule(
-    courseId: string, 
-    instructorId: string, 
+    courseId: string,
+    instructorId: string,
     data: Omit<CreateCourseModuleDTO, 'courseId'>
   ): Promise<CourseModule> {
     if (!courseId || typeof courseId !== 'string') {
@@ -244,7 +255,9 @@ export class CourseService implements ICourseService {
       ...data,
       courseId,
       orderNumber,
-      ...(data.description && { description: sanitizeByContentType(data.description, 'module.description') })
+      ...(data.description && {
+        description: sanitizeByContentType(data.description, 'module.description'),
+      }),
     };
 
     const moduleSchema = await this.moduleRepository.create(moduleData);
@@ -259,7 +272,11 @@ export class CourseService implements ICourseService {
   /**
    * Updates a module with cache invalidation
    */
-  async updateModule(moduleId: string, instructorId: string, data: UpdateCourseModuleDTO): Promise<CourseModule> {
+  async updateModule(
+    moduleId: string,
+    instructorId: string,
+    data: UpdateCourseModuleDTO
+  ): Promise<CourseModule> {
     if (!moduleId || typeof moduleId !== 'string') {
       throw new ValidationError('Module ID is required');
     }
@@ -294,8 +311,8 @@ export class CourseService implements ICourseService {
    * Requirements: 3.3
    */
   async addLesson(
-    moduleId: string, 
-    instructorId: string, 
+    moduleId: string,
+    instructorId: string,
     data: Omit<CreateLessonDTO, 'moduleId'>
   ): Promise<Lesson> {
     if (!moduleId || typeof moduleId !== 'string') {
@@ -329,7 +346,9 @@ export class CourseService implements ICourseService {
       ...data,
       moduleId,
       orderNumber,
-      ...(data.contentText && { contentText: sanitizeByContentType(data.contentText, 'lesson.contentText') })
+      ...(data.contentText && {
+        contentText: sanitizeByContentType(data.contentText, 'lesson.contentText'),
+      }),
     };
 
     const lessonSchema = await this.lessonRepository.create(lessonData);
@@ -347,7 +366,11 @@ export class CourseService implements ICourseService {
   /**
    * Updates a lesson with cache invalidation
    */
-  async updateLesson(lessonId: string, instructorId: string, data: UpdateLessonDTO): Promise<Lesson> {
+  async updateLesson(
+    lessonId: string,
+    instructorId: string,
+    data: UpdateLessonDTO
+  ): Promise<Lesson> {
     if (!lessonId || typeof lessonId !== 'string') {
       throw new ValidationError('Lesson ID is required');
     }
@@ -395,7 +418,11 @@ export class CourseService implements ICourseService {
    * Reorders modules within a course
    * Requirements: 3.4
    */
-  async reorderModules(courseId: string, instructorId: string, moduleIds: string[]): Promise<CourseModule[]> {
+  async reorderModules(
+    courseId: string,
+    instructorId: string,
+    moduleIds: string[]
+  ): Promise<CourseModule[]> {
     if (!courseId || typeof courseId !== 'string') {
       throw new ValidationError('Course ID is required');
     }
@@ -410,7 +437,7 @@ export class CourseService implements ICourseService {
     await this.verifyInstructorOwnership(courseId, instructorId);
 
     // Validate all module IDs are strings
-    if (!moduleIds.every(id => typeof id === 'string' && id.length > 0)) {
+    if (!moduleIds.every((id) => typeof id === 'string' && id.length > 0)) {
       throw new ValidationError('All module IDs must be non-empty strings');
     }
 
@@ -428,7 +455,11 @@ export class CourseService implements ICourseService {
    * Reorders lessons within a module
    * Requirements: 3.4
    */
-  async reorderLessons(moduleId: string, instructorId: string, lessonIds: string[]): Promise<Lesson[]> {
+  async reorderLessons(
+    moduleId: string,
+    instructorId: string,
+    lessonIds: string[]
+  ): Promise<Lesson[]> {
     if (!moduleId || typeof moduleId !== 'string') {
       throw new ValidationError('Module ID is required');
     }
@@ -449,7 +480,7 @@ export class CourseService implements ICourseService {
     await this.verifyInstructorOwnership(moduleSchema.courseId, instructorId);
 
     // Validate all lesson IDs are strings
-    if (!lessonIds.every(id => typeof id === 'string' && id.length > 0)) {
+    if (!lessonIds.every((id) => typeof id === 'string' && id.length > 0)) {
       throw new ValidationError('All lesson IDs must be non-empty strings');
     }
 
@@ -467,7 +498,10 @@ export class CourseService implements ICourseService {
    * Validates course publication requirements
    * Requirements: 3.5
    */
-  async validatePublishRequirements(courseId: string, instructorId: string): Promise<PublicationValidationResult> {
+  async validatePublishRequirements(
+    courseId: string,
+    instructorId: string
+  ): Promise<PublicationValidationResult> {
     if (!courseId || typeof courseId !== 'string') {
       throw new ValidationError('Course ID is required');
     }
@@ -493,17 +527,19 @@ export class CourseService implements ICourseService {
     for (const module of modules) {
       const lessonsSchema = await this.lessonRepository.findByModule(module.id);
       const lessons = LessonMapper.toDomainArray(lessonsSchema);
-      
+
       if (lessons.length === 0) {
         reasons.push(`Module "${module.title}" must have at least one lesson`);
       }
 
       // Check video lessons are processed
       const unprocessedVideos = lessons.filter(
-        lesson => lesson.type === 'video' && !lesson.contentUrl
+        (lesson) => lesson.type === 'video' && !lesson.contentUrl
       );
       if (unprocessedVideos.length > 0) {
-        reasons.push(`Module "${module.title}" has ${unprocessedVideos.length} unprocessed video(s)`);
+        reasons.push(
+          `Module "${module.title}" has ${unprocessedVideos.length} unprocessed video(s)`
+        );
       }
     }
 
@@ -518,7 +554,7 @@ export class CourseService implements ICourseService {
 
     return {
       canPublish: reasons.length === 0,
-      reasons
+      reasons,
     };
   }
 
@@ -539,7 +575,7 @@ export class CourseService implements ICourseService {
     if (!validation.canPublish) {
       throw new ValidationError(
         `Cannot publish course: ${validation.reasons.join(', ')}`,
-        validation.reasons.map(reason => ({ field: 'course', message: reason }))
+        validation.reasons.map((reason) => ({ field: 'course', message: reason }))
       );
     }
 
@@ -717,7 +753,7 @@ export class CourseService implements ICourseService {
    */
   private async invalidateInstructorCache(instructorId: string): Promise<void> {
     await this.courseRepository.invalidateCacheByInstructor(instructorId);
-    
+
     const pattern = buildCacheKey(CachePrefix.COURSE, 'instructor', instructorId, '*');
     await cache.deletePattern(pattern);
   }
@@ -732,7 +768,11 @@ export class CourseService implements ICourseService {
     if (data.title.length > 255) {
       throw new ValidationError('Course title cannot exceed 255 characters');
     }
-    if (!data.description || typeof data.description !== 'string' || data.description.trim().length === 0) {
+    if (
+      !data.description ||
+      typeof data.description !== 'string' ||
+      data.description.trim().length === 0
+    ) {
       throw new ValidationError('Course description is required');
     }
     if (!data.category || typeof data.category !== 'string' || data.category.trim().length === 0) {
@@ -741,10 +781,18 @@ export class CourseService implements ICourseService {
     if (!['beginner', 'intermediate', 'advanced'].includes(data.difficulty)) {
       throw new ValidationError('Course difficulty must be beginner, intermediate, or advanced');
     }
-    if (data.price && (typeof data.price !== 'string' || isNaN(parseFloat(data.price)) || parseFloat(data.price) < 0)) {
+    if (
+      data.price &&
+      (typeof data.price !== 'string' ||
+        isNaN(parseFloat(data.price)) ||
+        parseFloat(data.price) < 0)
+    ) {
       throw new ValidationError('Course price must be a valid non-negative number');
     }
-    if (data.enrollmentLimit && (typeof data.enrollmentLimit !== 'number' || data.enrollmentLimit <= 0)) {
+    if (
+      data.enrollmentLimit &&
+      (typeof data.enrollmentLimit !== 'number' || data.enrollmentLimit <= 0)
+    ) {
       throw new ValidationError('Enrollment limit must be a positive number');
     }
   }
@@ -762,12 +810,20 @@ export class CourseService implements ICourseService {
       }
     }
     if (data.description !== undefined) {
-      if (!data.description || typeof data.description !== 'string' || data.description.trim().length === 0) {
+      if (
+        !data.description ||
+        typeof data.description !== 'string' ||
+        data.description.trim().length === 0
+      ) {
         throw new ValidationError('Course description cannot be empty');
       }
     }
     if (data.category !== undefined) {
-      if (!data.category || typeof data.category !== 'string' || data.category.trim().length === 0) {
+      if (
+        !data.category ||
+        typeof data.category !== 'string' ||
+        data.category.trim().length === 0
+      ) {
         throw new ValidationError('Course category cannot be empty');
       }
     }
@@ -777,7 +833,11 @@ export class CourseService implements ICourseService {
       }
     }
     if (data.price !== undefined) {
-      if (typeof data.price !== 'string' || isNaN(parseFloat(data.price)) || parseFloat(data.price) < 0) {
+      if (
+        typeof data.price !== 'string' ||
+        isNaN(parseFloat(data.price)) ||
+        parseFloat(data.price) < 0
+      ) {
         throw new ValidationError('Course price must be a valid non-negative number');
       }
     }
@@ -798,10 +858,16 @@ export class CourseService implements ICourseService {
     if (data.title.length > 255) {
       throw new ValidationError('Module title cannot exceed 255 characters');
     }
-    if (data.orderNumber !== undefined && (typeof data.orderNumber !== 'number' || data.orderNumber <= 0)) {
+    if (
+      data.orderNumber !== undefined &&
+      (typeof data.orderNumber !== 'number' || data.orderNumber <= 0)
+    ) {
       throw new ValidationError('Module order number must be a positive number');
     }
-    if (data.durationMinutes !== undefined && (typeof data.durationMinutes !== 'number' || data.durationMinutes < 0)) {
+    if (
+      data.durationMinutes !== undefined &&
+      (typeof data.durationMinutes !== 'number' || data.durationMinutes < 0)
+    ) {
       throw new ValidationError('Module duration must be a non-negative number');
     }
   }
@@ -818,10 +884,16 @@ export class CourseService implements ICourseService {
         throw new ValidationError('Module title cannot exceed 255 characters');
       }
     }
-    if (data.orderNumber !== undefined && (typeof data.orderNumber !== 'number' || data.orderNumber <= 0)) {
+    if (
+      data.orderNumber !== undefined &&
+      (typeof data.orderNumber !== 'number' || data.orderNumber <= 0)
+    ) {
       throw new ValidationError('Module order number must be a positive number');
     }
-    if (data.durationMinutes !== undefined && (typeof data.durationMinutes !== 'number' || data.durationMinutes < 0)) {
+    if (
+      data.durationMinutes !== undefined &&
+      (typeof data.durationMinutes !== 'number' || data.durationMinutes < 0)
+    ) {
       throw new ValidationError('Module duration must be a non-negative number');
     }
   }
@@ -839,10 +911,16 @@ export class CourseService implements ICourseService {
     if (!['video', 'text', 'quiz', 'assignment'].includes(data.lessonType)) {
       throw new ValidationError('Lesson type must be video, text, quiz, or assignment');
     }
-    if (data.orderNumber !== undefined && (typeof data.orderNumber !== 'number' || data.orderNumber <= 0)) {
+    if (
+      data.orderNumber !== undefined &&
+      (typeof data.orderNumber !== 'number' || data.orderNumber <= 0)
+    ) {
       throw new ValidationError('Lesson order number must be a positive number');
     }
-    if (data.durationMinutes !== undefined && (typeof data.durationMinutes !== 'number' || data.durationMinutes < 0)) {
+    if (
+      data.durationMinutes !== undefined &&
+      (typeof data.durationMinutes !== 'number' || data.durationMinutes < 0)
+    ) {
       throw new ValidationError('Lesson duration must be a non-negative number');
     }
     if (data.isPreview !== undefined && typeof data.isPreview !== 'boolean') {
@@ -862,13 +940,22 @@ export class CourseService implements ICourseService {
         throw new ValidationError('Lesson title cannot exceed 255 characters');
       }
     }
-    if (data.lessonType !== undefined && !['video', 'text', 'quiz', 'assignment'].includes(data.lessonType)) {
+    if (
+      data.lessonType !== undefined &&
+      !['video', 'text', 'quiz', 'assignment'].includes(data.lessonType)
+    ) {
       throw new ValidationError('Lesson type must be video, text, quiz, or assignment');
     }
-    if (data.orderNumber !== undefined && (typeof data.orderNumber !== 'number' || data.orderNumber <= 0)) {
+    if (
+      data.orderNumber !== undefined &&
+      (typeof data.orderNumber !== 'number' || data.orderNumber <= 0)
+    ) {
       throw new ValidationError('Lesson order number must be a positive number');
     }
-    if (data.durationMinutes !== undefined && (typeof data.durationMinutes !== 'number' || data.durationMinutes < 0)) {
+    if (
+      data.durationMinutes !== undefined &&
+      (typeof data.durationMinutes !== 'number' || data.durationMinutes < 0)
+    ) {
       throw new ValidationError('Lesson duration must be a non-negative number');
     }
     if (data.isPreview !== undefined && typeof data.isPreview !== 'boolean') {

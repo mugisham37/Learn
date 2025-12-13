@@ -1,6 +1,6 @@
 /**
  * Communication Application Layer
- * 
+ *
  * Use cases, application services, and DTOs
  */
 

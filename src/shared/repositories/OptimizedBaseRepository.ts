@@ -1,6 +1,6 @@
 /**
  * Optimized Base Repository
- * 
+ *
  * Provides optimized database operations with caching, pagination, and N+1 prevention
  * Requirements: 15.1 - Database query optimization
  */
@@ -65,12 +65,9 @@ export abstract class OptimizedBaseRepository<T extends Record<string, any>> {
   /**
    * Find by ID with caching
    */
-  async findById(
-    id: string,
-    options: QueryOptions = {}
-  ): Promise<T | null> {
+  async findById(id: string, options: QueryOptions = {}): Promise<T | null> {
     const cacheConfig = { ...this.defaultCacheConfig, ...options.cache };
-    
+
     // Check cache first if enabled
     if (cacheConfig.enabled && !options.skipCache) {
       const cached = await this.getFromCache(id, cacheConfig.keyPrefix);
@@ -89,13 +86,13 @@ export abstract class OptimizedBaseRepository<T extends Record<string, any>> {
       .limit(1);
 
     const executionTime = Date.now() - startTime;
-    
+
     // Log slow queries
     if (executionTime > 100) {
-      logger.warn('Slow query detected in findById', { 
-        id, 
-        table: this.table, 
-        executionTime 
+      logger.warn('Slow query detected in findById', {
+        id,
+        table: this.table,
+        executionTime,
       });
     }
 
@@ -112,14 +109,18 @@ export abstract class OptimizedBaseRepository<T extends Record<string, any>> {
    */
   async findWithCursorPagination(
     whereConditions: SQL[] = [],
-    options: CursorPaginationOptions & QueryOptions = { limit: 20, orderBy: 'created_at', direction: 'desc' }
+    options: CursorPaginationOptions & QueryOptions = {
+      limit: 20,
+      orderBy: 'created_at',
+      direction: 'desc',
+    }
   ): Promise<PaginationResult<T>> {
     const { cursor, limit, orderBy, direction, cache, skipCache } = options;
     const cacheConfig = { ...this.defaultCacheConfig, ...cache };
 
     // Generate cache key for paginated results
     const cacheKey = this.generatePaginationCacheKey(whereConditions, options);
-    
+
     // Check cache if enabled
     if (cacheConfig.enabled && !skipCache && !cursor) {
       const cached = await this.getFromCache(cacheKey, cacheConfig.keyPrefix);
@@ -131,20 +132,21 @@ export abstract class OptimizedBaseRepository<T extends Record<string, any>> {
 
     // Build query conditions
     const conditions = [...whereConditions];
-    
+
     // Add cursor condition if provided
     if (cursor) {
       const cursorValue = this.parseCursor(cursor);
-      const cursorCondition = direction === 'asc' 
-        ? gt(this.table[orderBy], cursorValue)
-        : lt(this.table[orderBy], cursorValue);
+      const cursorCondition =
+        direction === 'asc'
+          ? gt(this.table[orderBy], cursorValue)
+          : lt(this.table[orderBy], cursorValue);
       conditions.push(cursorCondition);
     }
 
     // Execute query
     const startTime = Date.now();
     const orderDirection = direction === 'asc' ? asc : desc;
-    
+
     const items = await this.db
       .select()
       .from(this.table)
@@ -156,11 +158,11 @@ export abstract class OptimizedBaseRepository<T extends Record<string, any>> {
 
     // Log slow queries
     if (executionTime > 100) {
-      logger.warn('Slow pagination query detected', { 
-        table: this.table, 
+      logger.warn('Slow pagination query detected', {
+        table: this.table,
         executionTime,
         conditions: conditions.length,
-        limit 
+        limit,
       });
     }
 
@@ -169,9 +171,10 @@ export abstract class OptimizedBaseRepository<T extends Record<string, any>> {
     const resultItems = hasMore ? items.slice(0, limit) : items;
 
     // Generate next cursor
-    const nextCursor = hasMore && resultItems.length > 0
-      ? this.generateCursor(resultItems[resultItems.length - 1], orderBy)
-      : undefined;
+    const nextCursor =
+      hasMore && resultItems.length > 0
+        ? this.generateCursor(resultItems[resultItems.length - 1], orderBy)
+        : undefined;
 
     const result: PaginationResult<T> = {
       items: resultItems,
@@ -190,10 +193,7 @@ export abstract class OptimizedBaseRepository<T extends Record<string, any>> {
   /**
    * Find multiple records by IDs (batch loading)
    */
-  async findByIds(
-    ids: string[],
-    options: QueryOptions = {}
-  ): Promise<T[]> {
+  async findByIds(ids: string[], options: QueryOptions = {}): Promise<T[]> {
     if (ids.length === 0) return [];
 
     const cacheConfig = { ...this.defaultCacheConfig, ...options.cache };
@@ -217,7 +217,7 @@ export abstract class OptimizedBaseRepository<T extends Record<string, any>> {
     // Query uncached IDs
     if (uncachedIds.length > 0) {
       const startTime = Date.now();
-      
+
       const dbResults = await this.db
         .select()
         .from(this.table)
@@ -227,10 +227,10 @@ export abstract class OptimizedBaseRepository<T extends Record<string, any>> {
 
       // Log slow queries
       if (executionTime > 100) {
-        logger.warn('Slow batch query detected', { 
-          table: this.table, 
+        logger.warn('Slow batch query detected', {
+          table: this.table,
           executionTime,
-          idsCount: uncachedIds.length 
+          idsCount: uncachedIds.length,
         });
       }
 
@@ -245,7 +245,9 @@ export abstract class OptimizedBaseRepository<T extends Record<string, any>> {
     }
 
     // Return results in the same order as requested IDs
-    return ids.map(id => results.find(result => result[this.primaryKey] === id)).filter(Boolean);
+    return ids
+      .map((id) => results.find((result) => result[this.primaryKey] === id))
+      .filter(Boolean);
   }
 
   /**
@@ -256,19 +258,16 @@ export abstract class OptimizedBaseRepository<T extends Record<string, any>> {
     options: QueryOptions = {}
   ): Promise<T> {
     const startTime = Date.now();
-    
-    const [result] = await this.db
-      .insert(this.table)
-      .values(data)
-      .returning();
+
+    const [result] = await this.db.insert(this.table).values(data).returning();
 
     const executionTime = Date.now() - startTime;
 
     // Log slow queries
     if (executionTime > 100) {
-      logger.warn('Slow create query detected', { 
-        table: this.table, 
-        executionTime 
+      logger.warn('Slow create query detected', {
+        table: this.table,
+        executionTime,
       });
     }
 
@@ -287,7 +286,7 @@ export abstract class OptimizedBaseRepository<T extends Record<string, any>> {
     options: QueryOptions = {}
   ): Promise<T | null> {
     const startTime = Date.now();
-    
+
     const [result] = await this.db
       .update(this.table)
       .set({ ...data, updated_at: new Date() })
@@ -298,10 +297,10 @@ export abstract class OptimizedBaseRepository<T extends Record<string, any>> {
 
     // Log slow queries
     if (executionTime > 100) {
-      logger.warn('Slow update query detected', { 
-        table: this.table, 
+      logger.warn('Slow update query detected', {
+        table: this.table,
         executionTime,
-        id 
+        id,
       });
     }
 
@@ -317,12 +316,9 @@ export abstract class OptimizedBaseRepository<T extends Record<string, any>> {
   /**
    * Delete record with cache invalidation
    */
-  async delete(
-    id: string,
-    options: QueryOptions = {}
-  ): Promise<boolean> {
+  async delete(id: string, options: QueryOptions = {}): Promise<boolean> {
     const startTime = Date.now();
-    
+
     const [result] = await this.db
       .delete(this.table)
       .where(eq(this.table[this.primaryKey], id))
@@ -332,10 +328,10 @@ export abstract class OptimizedBaseRepository<T extends Record<string, any>> {
 
     // Log slow queries
     if (executionTime > 100) {
-      logger.warn('Slow delete query detected', { 
-        table: this.table, 
+      logger.warn('Slow delete query detected', {
+        table: this.table,
         executionTime,
-        id 
+        id,
       });
     }
 
@@ -422,7 +418,7 @@ export abstract class OptimizedBaseRepository<T extends Record<string, any>> {
     conditions: SQL[],
     options: CursorPaginationOptions
   ): string {
-    const conditionsStr = conditions.map(c => c.toString()).join('|');
+    const conditionsStr = conditions.map((c) => c.toString()).join('|');
     const optionsStr = `${options.limit}:${options.orderBy}:${options.direction}`;
     return `pagination:${Buffer.from(`${conditionsStr}:${optionsStr}`).toString('base64')}`;
   }

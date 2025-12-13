@@ -1,33 +1,33 @@
 /**
  * Messaging Repository Implementation
- * 
+ *
  * Implements messaging data access using Drizzle ORM
  * Handles conversation grouping, read status tracking, and pagination
  */
 
 import { eq, and, or, desc, count, isNull, sql } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { 
-  messages, 
-  Message, 
-  NewMessage 
+import {
+  messages,
+  Message,
+  NewMessage,
 } from '../../../../infrastructure/database/schema/communication.schema.js';
 import { users } from '../../../../infrastructure/database/schema/users.schema.js';
-import { 
-  IMessagingRepository, 
-  ConversationSummary, 
-  MessagePagination, 
-  PaginatedResult, 
-  CreateMessageDTO, 
-  UpdateMessageDTO 
+import {
+  IMessagingRepository,
+  ConversationSummary,
+  MessagePagination,
+  PaginatedResult,
+  CreateMessageDTO,
+  UpdateMessageDTO,
 } from './IMessagingRepository.js';
 
 /**
  * MessagingRepository
- * 
+ *
  * Provides data access methods for messaging functionality
  * Implements conversation grouping logic and read status tracking
- * 
+ *
  * Requirements:
  * - 9.1: Direct messaging with real-time delivery and notifications
  */
@@ -40,7 +40,7 @@ export class MessagingRepository implements IMessagingRepository {
    */
   async create(data: CreateMessageDTO): Promise<Message> {
     const conversationId = this.getOrCreateConversationId(data.senderId, data.recipientId);
-    
+
     const messageData: NewMessage = {
       senderId: data.senderId,
       recipientId: data.recipientId,
@@ -54,10 +54,7 @@ export class MessagingRepository implements IMessagingRepository {
       updatedAt: new Date(),
     };
 
-    const [message] = await this.db
-      .insert(messages)
-      .values(messageData)
-      .returning();
+    const [message] = await this.db.insert(messages).values(messageData).returning();
 
     return message;
   }
@@ -66,11 +63,7 @@ export class MessagingRepository implements IMessagingRepository {
    * Find message by ID
    */
   async findById(id: string): Promise<Message | null> {
-    const [message] = await this.db
-      .select()
-      .from(messages)
-      .where(eq(messages.id, id))
-      .limit(1);
+    const [message] = await this.db.select().from(messages).where(eq(messages.id, id)).limit(1);
 
     return message || null;
   }
@@ -80,8 +73,8 @@ export class MessagingRepository implements IMessagingRepository {
    * Excludes messages that have been soft-deleted by the requesting user
    */
   async findByConversation(
-    conversationId: string, 
-    userId: string, 
+    conversationId: string,
+    userId: string,
     pagination: MessagePagination
   ): Promise<PaginatedResult<Message>> {
     // Build the where condition to exclude soft-deleted messages for this user
@@ -89,20 +82,11 @@ export class MessagingRepository implements IMessagingRepository {
       eq(messages.conversationId, conversationId),
       or(
         // Message not deleted by sender (if user is sender)
-        and(
-          eq(messages.senderId, userId),
-          isNull(messages.deletedBySender)
-        ),
+        and(eq(messages.senderId, userId), isNull(messages.deletedBySender)),
         // Message not deleted by recipient (if user is recipient)
-        and(
-          eq(messages.recipientId, userId),
-          isNull(messages.deletedByRecipient)
-        ),
+        and(eq(messages.recipientId, userId), isNull(messages.deletedByRecipient)),
         // User is neither sender nor recipient (shouldn't happen, but safe fallback)
-        and(
-          eq(messages.senderId, userId),
-          eq(messages.recipientId, userId)
-        )
+        and(eq(messages.senderId, userId), eq(messages.recipientId, userId))
       )
     );
 
@@ -125,9 +109,7 @@ export class MessagingRepository implements IMessagingRepository {
       items: messageList,
       totalCount: Number(totalCount),
       hasMore: pagination.offset + messageList.length < Number(totalCount),
-      nextCursor: messageList.length > 0 
-        ? messageList[messageList.length - 1].id 
-        : undefined
+      nextCursor: messageList.length > 0 ? messageList[messageList.length - 1].id : undefined,
     };
   }
 
@@ -136,32 +118,23 @@ export class MessagingRepository implements IMessagingRepository {
    * Returns conversation summaries with last message and unread count
    */
   async getConversations(
-    userId: string, 
+    userId: string,
     pagination: MessagePagination
   ): Promise<PaginatedResult<ConversationSummary>> {
     // This is a complex query that groups messages by conversation
     // and gets the latest message for each conversation along with unread count
-    
+
     // First, get all conversation IDs for the user
     const conversationQuery = this.db
       .selectDistinct({ conversationId: messages.conversationId })
       .from(messages)
       .where(
         and(
-          or(
-            eq(messages.senderId, userId),
-            eq(messages.recipientId, userId)
-          ),
+          or(eq(messages.senderId, userId), eq(messages.recipientId, userId)),
           // Exclude conversations where all messages are soft-deleted by this user
           or(
-            and(
-              eq(messages.senderId, userId),
-              isNull(messages.deletedBySender)
-            ),
-            and(
-              eq(messages.recipientId, userId),
-              isNull(messages.deletedByRecipient)
-            )
+            and(eq(messages.senderId, userId), isNull(messages.deletedBySender)),
+            and(eq(messages.recipientId, userId), isNull(messages.deletedByRecipient))
           )
         )
       );
@@ -187,14 +160,8 @@ export class MessagingRepository implements IMessagingRepository {
           and(
             eq(messages.conversationId, conversationId),
             or(
-              and(
-                eq(messages.senderId, userId),
-                isNull(messages.deletedBySender)
-              ),
-              and(
-                eq(messages.recipientId, userId),
-                isNull(messages.deletedByRecipient)
-              )
+              and(eq(messages.senderId, userId), isNull(messages.deletedBySender)),
+              and(eq(messages.recipientId, userId), isNull(messages.deletedByRecipient))
             )
           )
         )
@@ -204,9 +171,8 @@ export class MessagingRepository implements IMessagingRepository {
       if (!latestMessage) continue;
 
       // Determine the other user in the conversation
-      const otherUserId = latestMessage.senderId === userId 
-        ? latestMessage.recipientId 
-        : latestMessage.senderId;
+      const otherUserId =
+        latestMessage.senderId === userId ? latestMessage.recipientId : latestMessage.senderId;
 
       // Get other user's profile information
       const [otherUser] = await this.db
@@ -214,7 +180,9 @@ export class MessagingRepository implements IMessagingRepository {
           id: users.id,
           email: users.email,
           fullName: sql<string>`COALESCE((SELECT full_name FROM user_profiles WHERE user_id = users.id), users.email)`,
-          avatarUrl: sql<string | null>`(SELECT avatar_url FROM user_profiles WHERE user_id = users.id)`,
+          avatarUrl: sql<
+            string | null
+          >`(SELECT avatar_url FROM user_profiles WHERE user_id = users.id)`,
         })
         .from(users)
         .where(eq(users.id, otherUserId))
@@ -243,14 +211,8 @@ export class MessagingRepository implements IMessagingRepository {
           and(
             eq(messages.conversationId, conversationId),
             or(
-              and(
-                eq(messages.senderId, userId),
-                isNull(messages.deletedBySender)
-              ),
-              and(
-                eq(messages.recipientId, userId),
-                isNull(messages.deletedByRecipient)
-              )
+              and(eq(messages.senderId, userId), isNull(messages.deletedBySender)),
+              and(eq(messages.recipientId, userId), isNull(messages.deletedByRecipient))
             )
           )
         );
@@ -273,13 +235,13 @@ export class MessagingRepository implements IMessagingRepository {
     }
 
     // Sort by last message timestamp (newest first)
-    conversationSummaries.sort((a, b) => 
-      b.lastMessage.createdAt.getTime() - a.lastMessage.createdAt.getTime()
+    conversationSummaries.sort(
+      (a, b) => b.lastMessage.createdAt.getTime() - a.lastMessage.createdAt.getTime()
     );
 
     // Apply pagination
     const paginatedSummaries = conversationSummaries.slice(
-      pagination.offset, 
+      pagination.offset,
       pagination.offset + pagination.limit
     );
 
@@ -287,9 +249,10 @@ export class MessagingRepository implements IMessagingRepository {
       items: paginatedSummaries,
       totalCount: conversationSummaries.length,
       hasMore: pagination.offset + paginatedSummaries.length < conversationSummaries.length,
-      nextCursor: paginatedSummaries.length > 0 
-        ? paginatedSummaries[paginatedSummaries.length - 1].conversationId 
-        : undefined
+      nextCursor:
+        paginatedSummaries.length > 0
+          ? paginatedSummaries[paginatedSummaries.length - 1].conversationId
+          : undefined,
     };
   }
 
@@ -322,12 +285,7 @@ export class MessagingRepository implements IMessagingRepository {
         readAt: new Date(),
         updatedAt: new Date(),
       })
-      .where(
-        and(
-          eq(messages.id, messageId),
-          eq(messages.recipientId, userId)
-        )
-      );
+      .where(and(eq(messages.id, messageId), eq(messages.recipientId, userId)));
   }
 
   /**
@@ -384,10 +342,7 @@ export class MessagingRepository implements IMessagingRepository {
       updateData.deletedByRecipient = now;
     }
 
-    await this.db
-      .update(messages)
-      .set(updateData)
-      .where(eq(messages.id, messageId));
+    await this.db.update(messages).set(updateData).where(eq(messages.id, messageId));
   }
 
   /**

@@ -1,6 +1,6 @@
 /**
  * Module Registration
- * 
+ *
  * Registers all application modules with the Fastify server.
  * This includes routes, GraphQL schemas, and other module-specific configurations.
  */

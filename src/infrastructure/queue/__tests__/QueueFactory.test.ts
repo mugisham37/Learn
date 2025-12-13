@@ -1,6 +1,6 @@
 /**
  * Queue Factory Tests
- * 
+ *
  * Unit tests for the QueueFactory implementation
  */
 
@@ -65,13 +65,13 @@ describe('QueueFactory', () => {
     it('should create singleton instance', () => {
       const instance1 = QueueFactory.getInstance(mockOptions);
       const instance2 = QueueFactory.getInstance();
-      
+
       expect(instance1).toBe(instance2);
     });
 
     it('should throw error if no options provided on first call', () => {
       (QueueFactory as any).instance = undefined;
-      
+
       expect(() => QueueFactory.getInstance()).toThrow(
         'QueueFactory options required for first initialization'
       );
@@ -86,7 +86,7 @@ describe('QueueFactory', () => {
       }
 
       const queue = queueFactory.createQueue<TestJobData>('videoProcessing');
-      
+
       expect(queue).toBeDefined();
       expect(typeof queue.add).toBe('function');
       expect(typeof queue.getStats).toBe('function');
@@ -95,7 +95,7 @@ describe('QueueFactory', () => {
     it('should return existing queue if already created', () => {
       const queue1 = queueFactory.createQueue('videoProcessing');
       const queue2 = queueFactory.createQueue('videoProcessing');
-      
+
       expect(queue1).toBe(queue2);
     });
   });
@@ -108,20 +108,17 @@ describe('QueueFactory', () => {
       }
 
       const processor = vi.fn().mockResolvedValue({ success: true });
-      const worker = queueFactory.createWorker<TestJobData>(
-        'emailSending',
-        processor
-      );
-      
+      const worker = queueFactory.createWorker<TestJobData>('emailSending', processor);
+
       expect(worker).toBeDefined();
       expect(typeof worker.close).toBe('function');
     });
 
     it('should throw error if worker already exists', () => {
       const processor = vi.fn().mockResolvedValue({ success: true });
-      
+
       queueFactory.createWorker('emailSending', processor);
-      
+
       expect(() => {
         queueFactory.createWorker('emailSending', processor);
       }).toThrow('Worker for queue email-sending already exists');
@@ -132,9 +129,9 @@ describe('QueueFactory', () => {
     it('should return stats for all queues', async () => {
       queueFactory.createQueue('videoProcessing');
       queueFactory.createQueue('emailSending');
-      
+
       const stats = await queueFactory.getAllQueueStats();
-      
+
       expect(stats).toHaveLength(2);
       expect(stats[0]).toHaveProperty('name');
       expect(stats[0]).toHaveProperty('waiting');
@@ -145,10 +142,10 @@ describe('QueueFactory', () => {
   describe('shutdown', () => {
     it('should shutdown all queues and workers', async () => {
       const processor = vi.fn().mockResolvedValue({ success: true });
-      
+
       queueFactory.createQueue('videoProcessing');
       queueFactory.createWorker('emailSending', processor);
-      
+
       await expect(queueFactory.shutdown()).resolves.not.toThrow();
     });
   });

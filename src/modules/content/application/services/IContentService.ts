@@ -1,9 +1,9 @@
 /**
  * Content Service Interface
- * 
+ *
  * Defines the contract for content management operations in the application layer.
  * Handles video uploads, processing, streaming URLs, and file management.
- * 
+ *
  * Requirements:
  * - 4.1: Video upload with presigned URLs and S3 integration
  * - 4.4: Video processing status tracking and completion handling
@@ -33,7 +33,7 @@ export interface PresignedUploadUrl {
   s3Bucket: string;
   expiresAt: Date;
   videoAssetId?: string; // For video uploads
-  fileAssetId?: string;  // For file uploads
+  fileAssetId?: string; // For file uploads
 }
 
 /**
@@ -112,14 +112,14 @@ export interface DeleteContentParams {
 
 /**
  * Content Service Interface
- * 
+ *
  * Provides application-level content management operations including
  * video processing, file uploads, and streaming URL generation.
  */
 export interface IContentService {
   /**
    * Generates a presigned URL for content upload
-   * 
+   *
    * @param params - Upload URL generation parameters
    * @returns Promise resolving to presigned upload URL and metadata
    * @throws ValidationError if parameters are invalid
@@ -129,7 +129,7 @@ export interface IContentService {
 
   /**
    * Handles video upload completion and initiates processing
-   * 
+   *
    * @param params - Video upload parameters
    * @returns Promise resolving to processing job
    * @throws ValidationError if video metadata is invalid
@@ -139,7 +139,7 @@ export interface IContentService {
 
   /**
    * Handles transcoding completion webhook
-   * 
+   *
    * @param params - Transcoding completion parameters
    * @returns Promise resolving to updated video asset
    * @throws NotFoundError if processing job not found
@@ -149,7 +149,7 @@ export interface IContentService {
 
   /**
    * Generates a streaming URL for video content
-   * 
+   *
    * @param params - Streaming URL generation parameters
    * @returns Promise resolving to signed streaming URL
    * @throws NotFoundError if lesson or video not found
@@ -160,7 +160,7 @@ export interface IContentService {
 
   /**
    * Uploads a course resource file
-   * 
+   *
    * @param params - Course resource upload parameters
    * @returns Promise resolving to created file asset
    * @throws ValidationError if file validation fails
@@ -170,7 +170,7 @@ export interface IContentService {
 
   /**
    * Deletes content from storage and database
-   * 
+   *
    * @param params - Content deletion parameters
    * @returns Promise resolving when deletion is complete
    * @throws NotFoundError if content not found

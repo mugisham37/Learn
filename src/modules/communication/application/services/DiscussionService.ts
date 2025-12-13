@@ -1,10 +1,10 @@
 /**
  * Discussion Service Implementation
- * 
+ *
  * Implements discussion-related business operations with proper validation,
  * authorization, and notification integration. Handles thread creation,
  * replies, voting, and solution marking.
- * 
+ *
  * Requirements:
  * - 9.2: Discussion thread creation with enrollment validation
  * - 9.3: Reply threading with nested structure
@@ -12,23 +12,30 @@
  * - 9.5: Solution marking by educators
  */
 
-import { 
-  ValidationError, 
-  AuthorizationError, 
+import {
+  ValidationError,
+  AuthorizationError,
   NotFoundError,
-  ConflictError 
+  ConflictError,
 } from '../../../../shared/errors/index.js';
 import { sanitizeByContentType } from '../../../../shared/utils/sanitization.js';
-import { DiscussionThread, CreateDiscussionThreadDTO } from '../../domain/entities/DiscussionThread.js';
-import { DiscussionPost, CreateDiscussionPostDTO, VoteType } from '../../domain/entities/DiscussionPost.js';
-import type { 
+import {
+  DiscussionThread,
+  CreateDiscussionThreadDTO,
+} from '../../domain/entities/DiscussionThread.js';
+import {
+  DiscussionPost,
+  CreateDiscussionPostDTO,
+  VoteType,
+} from '../../domain/entities/DiscussionPost.js';
+import type {
   IDiscussionRepository,
   ThreadWithDetails,
   PostWithReplies,
   PaginatedResult,
   DiscussionPagination,
   ThreadFilter,
-  ThreadSortBy
+  ThreadSortBy,
 } from '../../infrastructure/repositories/IDiscussionRepository.js';
 import type { IEnrollmentRepository } from '../../../enrollments/infrastructure/repositories/IEnrollmentRepository.js';
 import type { ICourseRepository } from '../../../courses/infrastructure/repositories/ICourseRepository.js';
@@ -41,7 +48,7 @@ import type {
   ThreadCreationResult,
   ReplyCreationResult,
   VoteResult,
-  SolutionResult
+  SolutionResult,
 } from './IDiscussionService.js';
 
 /**
@@ -54,18 +61,21 @@ interface IRealtimeService {
 }
 
 interface INotificationService {
-  createNotification(recipientId: string, data: {
-    type: string;
-    title: string;
-    content: string;
-    actionUrl?: string;
-    metadata?: Record<string, unknown>;
-  }): Promise<void>;
+  createNotification(
+    recipientId: string,
+    data: {
+      type: string;
+      title: string;
+      content: string;
+      actionUrl?: string;
+      metadata?: Record<string, unknown>;
+    }
+  ): Promise<void>;
 }
 
 /**
  * DiscussionService
- * 
+ *
  * Handles discussion functionality with proper business logic validation,
  * enrollment checks, authorization, and notification integration
  */
@@ -96,7 +106,7 @@ export class DiscussionService implements IDiscussionService {
       data.authorId,
       data.courseId
     );
-    
+
     if (!enrollment || enrollment.status !== 'active') {
       throw new AuthorizationError(
         'User must be enrolled in the course to create discussion threads',
@@ -111,7 +121,7 @@ export class DiscussionService implements IDiscussionService {
       authorId: data.authorId,
       category: data.category,
       title: data.title,
-      content: sanitizeByContentType(data.content, 'discussion.content')
+      content: sanitizeByContentType(data.content, 'discussion.content'),
     };
 
     const createdThread = await this.discussionRepository.createThread(threadData);
@@ -135,21 +145,17 @@ export class DiscussionService implements IDiscussionService {
 
     // Emit real-time event to course participants
     if (this.realtimeService) {
-      await this.realtimeService.emitToRoom(
-        `course_${data.courseId}`,
-        'thread_created',
-        {
-          threadId: thread.id,
-          title: thread.title,
-          authorId: thread.authorId,
-          category: thread.category
-        }
-      );
+      await this.realtimeService.emitToRoom(`course_${data.courseId}`, 'thread_created', {
+        threadId: thread.id,
+        title: thread.title,
+        authorId: thread.authorId,
+        category: thread.category,
+      });
     }
 
     return {
       thread,
-      enrollmentValidated: true
+      enrollmentValidated: true,
     };
   }
 
@@ -168,11 +174,7 @@ export class DiscussionService implements IDiscussionService {
 
     // Check if thread is locked
     if (thread.isLocked) {
-      throw new AuthorizationError(
-        'Cannot reply to locked thread',
-        'student',
-        data.authorId
-      );
+      throw new AuthorizationError('Cannot reply to locked thread', 'student', data.authorId);
     }
 
     // Validate user enrollment in the course
@@ -180,7 +182,7 @@ export class DiscussionService implements IDiscussionService {
       data.authorId,
       thread.courseId
     );
-    
+
     if (!enrollment || enrollment.status !== 'active') {
       throw new AuthorizationError(
         'User must be enrolled in the course to reply to discussions',
@@ -195,7 +197,7 @@ export class DiscussionService implements IDiscussionService {
       if (!parentPost) {
         throw new NotFoundError('post', data.parentPostId);
       }
-      
+
       // Ensure parent post belongs to the same thread
       if (parentPost.threadId !== data.threadId) {
         throw new ValidationError('Parent post does not belong to the specified thread');
@@ -207,7 +209,7 @@ export class DiscussionService implements IDiscussionService {
       threadId: data.threadId,
       authorId: data.authorId,
       parentPostId: data.parentPostId,
-      content: sanitizeByContentType(data.content, 'post.content')
+      content: sanitizeByContentType(data.content, 'post.content'),
     };
 
     const createdPost = await this.discussionRepository.createPost(postData);
@@ -231,7 +233,7 @@ export class DiscussionService implements IDiscussionService {
     // Update thread activity and reply count
     await Promise.all([
       this.discussionRepository.updateThreadLastActivity(data.threadId),
-      this.discussionRepository.incrementThreadReplyCount(data.threadId)
+      this.discussionRepository.incrementThreadReplyCount(data.threadId),
     ]);
 
     // Collect notification recipients
@@ -266,22 +268,18 @@ export class DiscussionService implements IDiscussionService {
 
     // Emit real-time event
     if (this.realtimeService) {
-      await this.realtimeService.emitToRoom(
-        `thread_${data.threadId}`,
-        'post_created',
-        {
-          postId: post.id,
-          threadId: data.threadId,
-          authorId: post.authorId,
-          content: post.content,
-          parentPostId: post.parentPostId
-        }
-      );
+      await this.realtimeService.emitToRoom(`thread_${data.threadId}`, 'post_created', {
+        postId: post.id,
+        threadId: data.threadId,
+        authorId: post.authorId,
+        content: post.content,
+        parentPostId: post.parentPostId,
+      });
     }
 
     return {
       post,
-      notificationsSent
+      notificationsSent,
     };
   }
 
@@ -308,7 +306,7 @@ export class DiscussionService implements IDiscussionService {
       data.userId,
       thread.courseId
     );
-    
+
     if (!enrollment || enrollment.status !== 'active') {
       throw new AuthorizationError(
         'User must be enrolled in the course to vote on posts',
@@ -330,14 +328,14 @@ export class DiscussionService implements IDiscussionService {
       if (hasVoted) {
         throw new ConflictError('User has already voted on this post', 'vote');
       }
-      
+
       // Add the vote
       await this.discussionRepository.voteOnPost(data.postId, data.userId, VoteType.UPVOTE);
     } else if (data.voteType === VoteType.REMOVE_VOTE) {
       if (!hasVoted) {
         throw new ValidationError('Cannot remove vote that does not exist');
       }
-      
+
       // Remove the vote
       await this.discussionRepository.voteOnPost(data.postId, data.userId, VoteType.REMOVE_VOTE);
       previousVoteRemoved = true;
@@ -348,21 +346,17 @@ export class DiscussionService implements IDiscussionService {
 
     // Emit real-time event
     if (this.realtimeService) {
-      await this.realtimeService.emitToRoom(
-        `thread_${post.threadId}`,
-        'post_voted',
-        {
-          postId: data.postId,
-          voteCount: newVoteCount,
-          voteType: data.voteType
-        }
-      );
+      await this.realtimeService.emitToRoom(`thread_${post.threadId}`, 'post_voted', {
+        postId: data.postId,
+        voteCount: newVoteCount,
+        voteType: data.voteType,
+      });
     }
 
     return {
       success: true,
       previousVoteRemoved,
-      newVoteCount
+      newVoteCount,
     };
   }
 
@@ -392,7 +386,7 @@ export class DiscussionService implements IDiscussionService {
 
     // Check if user is authorized to mark solutions (course instructor or admin)
     const isInstructor = course.instructorId === data.educatorId;
-    
+
     // For now, we'll assume the user role is passed or we need to get it from user service
     // This would typically involve checking user role from the user repository
     if (!isInstructor) {
@@ -430,30 +424,22 @@ export class DiscussionService implements IDiscussionService {
 
     // Notify post author if marking as solution (not when unmarking)
     if (data.isSolution && post.authorId !== data.educatorId) {
-      await this.sendSolutionNotification(
-        post.authorId,
-        thread.title,
-        post.content
-      );
+      await this.sendSolutionNotification(post.authorId, thread.title, post.content);
       authorNotified = true;
     }
 
     // Emit real-time event
     if (this.realtimeService) {
-      await this.realtimeService.emitToRoom(
-        `thread_${post.threadId}`,
-        'solution_marked',
-        {
-          postId: data.postId,
-          isSolution: data.isSolution,
-          markedBy: data.educatorId
-        }
-      );
+      await this.realtimeService.emitToRoom(`thread_${post.threadId}`, 'solution_marked', {
+        postId: data.postId,
+        isSolution: data.isSolution,
+        markedBy: data.educatorId,
+      });
     }
 
     return {
       post: updatedPost,
-      authorNotified
+      authorNotified,
     };
   }
 
@@ -470,7 +456,7 @@ export class DiscussionService implements IDiscussionService {
   ): Promise<PaginatedResult<ThreadWithDetails>> {
     // Validate user enrollment in the course
     const enrollment = await this.enrollmentRepository.findByStudentAndCourse(userId, courseId);
-    
+
     if (!enrollment || enrollment.status !== 'active') {
       throw new AuthorizationError(
         'User must be enrolled in the course to view discussions',
@@ -507,7 +493,7 @@ export class DiscussionService implements IDiscussionService {
       userId,
       thread.courseId
     );
-    
+
     if (!enrollment || enrollment.status !== 'active') {
       throw new AuthorizationError(
         'User must be enrolled in the course to view discussion posts',
@@ -596,9 +582,8 @@ export class DiscussionService implements IDiscussionService {
   ): Promise<void> {
     if (!this.notificationService) return;
 
-    const title = replyType === 'thread' 
-      ? 'New reply to your discussion thread'
-      : 'New reply to your post';
+    const title =
+      replyType === 'thread' ? 'New reply to your discussion thread' : 'New reply to your post';
 
     const content = `Someone replied to your ${replyType} in "${threadTitle}": ${replyContent.substring(0, 100)}${replyContent.length > 100 ? '...' : ''}`;
 
@@ -609,8 +594,8 @@ export class DiscussionService implements IDiscussionService {
       actionUrl: `/discussions/threads/${threadId}`,
       metadata: {
         threadId,
-        replyType
-      }
+        replyType,
+      },
     });
   }
 
@@ -629,8 +614,8 @@ export class DiscussionService implements IDiscussionService {
       title,
       content,
       metadata: {
-        threadTitle
-      }
+        threadTitle,
+      },
     });
   }
 }

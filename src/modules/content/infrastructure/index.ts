@@ -1,6 +1,6 @@
 /**
  * Content Infrastructure Exports
- * 
+ *
  * Central export point for content infrastructure components
  */
 

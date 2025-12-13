@@ -1,10 +1,10 @@
 /**
  * Enrollment Repository Implementation
- * 
+ *
  * Implements enrollment data access operations with Drizzle ORM queries,
  * Redis caching with 5-minute TTL, and cache invalidation on updates.
  * Handles database errors and maps them to domain errors.
- * 
+ *
  * Requirements: 5.1, 5.3, 5.6
  */
 
@@ -12,17 +12,18 @@ import { eq, and, desc, asc, count, sql } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
 import { getWriteDb, getReadDb } from '../../../../infrastructure/database/index.js';
-import { 
-  enrollments, 
-  Enrollment, 
-  NewEnrollment 
-} from '../../../../infrastructure/database/schema/enrollments.schema.js';
-import { cache, buildCacheKey, CachePrefix, CacheTTL } from '../../../../infrastructure/cache/index.js';
 import {
-  DatabaseError,
-  ConflictError,
-  NotFoundError,
-} from '../../../../shared/errors/index.js';
+  enrollments,
+  Enrollment,
+  NewEnrollment,
+} from '../../../../infrastructure/database/schema/enrollments.schema.js';
+import {
+  cache,
+  buildCacheKey,
+  CachePrefix,
+  CacheTTL,
+} from '../../../../infrastructure/cache/index.js';
+import { DatabaseError, ConflictError, NotFoundError } from '../../../../shared/errors/index.js';
 import {
   IEnrollmentRepository,
   CreateEnrollmentDTO,
@@ -34,7 +35,7 @@ import {
 
 /**
  * Enrollment Repository Implementation
- * 
+ *
  * Provides data access methods for enrollment entities with:
  * - Drizzle ORM for type-safe queries
  * - Redis caching with 5-minute TTL
@@ -92,14 +93,14 @@ export class EnrollmentRepository implements IEnrollmentRepository {
    */
   private serializeFilters(filters?: EnrollmentFilterDTO): string {
     if (!filters) return 'all';
-    
+
     const parts: string[] = [];
     if (filters.status) parts.push(`status:${filters.status}`);
     if (filters.courseId) parts.push(`course:${filters.courseId}`);
     if (filters.studentId) parts.push(`student:${filters.studentId}`);
     if (filters.completedAfter) parts.push(`after:${filters.completedAfter.toISOString()}`);
     if (filters.completedBefore) parts.push(`before:${filters.completedBefore.toISOString()}`);
-    
+
     return parts.length > 0 ? parts.join('|') : 'all';
   }
 
@@ -108,36 +109,36 @@ export class EnrollmentRepository implements IEnrollmentRepository {
    */
   private buildWhereConditions(filters?: EnrollmentFilterDTO) {
     const conditions = [];
-    
+
     if (filters?.status) {
       conditions.push(eq(enrollments.status, filters.status));
     }
-    
+
     if (filters?.courseId) {
       conditions.push(eq(enrollments.courseId, filters.courseId));
     }
-    
+
     if (filters?.studentId) {
       conditions.push(eq(enrollments.studentId, filters.studentId));
     }
-    
+
     if (filters?.completedAfter) {
       conditions.push(sql`${enrollments.completedAt} >= ${filters.completedAfter}`);
     }
-    
+
     if (filters?.completedBefore) {
       conditions.push(sql`${enrollments.completedAt} <= ${filters.completedBefore}`);
     }
-    
+
     return conditions;
   }
 
   /**
    * Creates a new enrollment in the database
-   * 
+   *
    * Validates student-course uniqueness before insertion.
    * Does not cache on creation as the enrollment will be fetched immediately after.
-   * 
+   *
    * @param data - Enrollment creation data
    * @returns The created enrollment
    * @throws ConflictError if student is already enrolled in the course
@@ -148,10 +149,7 @@ export class EnrollmentRepository implements IEnrollmentRepository {
       // Check for existing enrollment
       const existingEnrollment = await this.findByStudentAndCourse(data.studentId, data.courseId);
       if (existingEnrollment) {
-        throw new ConflictError(
-          'Student is already enrolled in this course',
-          'studentId_courseId'
-        );
+        throw new ConflictError('Student is already enrolled in this course', 'studentId_courseId');
       }
 
       // Prepare enrollment data for insertion
@@ -170,10 +168,7 @@ export class EnrollmentRepository implements IEnrollmentRepository {
         .returning();
 
       if (!createdEnrollment) {
-        throw new DatabaseError(
-          'Failed to create enrollment',
-          'insert'
-        );
+        throw new DatabaseError('Failed to create enrollment', 'insert');
       }
 
       return createdEnrollment;
@@ -204,10 +199,10 @@ export class EnrollmentRepository implements IEnrollmentRepository {
 
   /**
    * Finds an enrollment by its unique ID
-   * 
+   *
    * Implements caching with 5-minute TTL.
    * Uses read database for query optimization.
-   * 
+   *
    * @param id - Enrollment ID
    * @returns The enrollment if found, null otherwise
    * @throws DatabaseError if database operation fails
@@ -217,7 +212,7 @@ export class EnrollmentRepository implements IEnrollmentRepository {
       // Check cache first
       const cacheKey = this.getEnrollmentCacheKey(id);
       const cachedEnrollment = await cache.get<Enrollment>(cacheKey);
-      
+
       if (cachedEnrollment) {
         return cachedEnrollment;
       }
@@ -248,9 +243,9 @@ export class EnrollmentRepository implements IEnrollmentRepository {
 
   /**
    * Finds an enrollment by student and course IDs
-   * 
+   *
    * Implements caching with 5-minute TTL.
-   * 
+   *
    * @param studentId - Student ID
    * @param courseId - Course ID
    * @returns The enrollment if found, null otherwise
@@ -261,7 +256,7 @@ export class EnrollmentRepository implements IEnrollmentRepository {
       // Check cache first
       const cacheKey = this.getEnrollmentStudentCourseCacheKey(studentId, courseId);
       const cachedEnrollment = await cache.get<Enrollment>(cacheKey);
-      
+
       if (cachedEnrollment) {
         return cachedEnrollment;
       }
@@ -270,12 +265,7 @@ export class EnrollmentRepository implements IEnrollmentRepository {
       const [enrollment] = await this.readDb
         .select()
         .from(enrollments)
-        .where(
-          and(
-            eq(enrollments.studentId, studentId),
-            eq(enrollments.courseId, courseId)
-          )
-        )
+        .where(and(eq(enrollments.studentId, studentId), eq(enrollments.courseId, courseId)))
         .limit(1);
 
       if (!enrollment) {
@@ -301,9 +291,9 @@ export class EnrollmentRepository implements IEnrollmentRepository {
 
   /**
    * Finds all enrollments for a specific student
-   * 
+   *
    * Implements caching with 5-minute TTL for first page results.
-   * 
+   *
    * @param studentId - Student ID
    * @param filters - Optional filters
    * @param pagination - Pagination parameters
@@ -311,22 +301,22 @@ export class EnrollmentRepository implements IEnrollmentRepository {
    * @throws DatabaseError if database operation fails
    */
   async findByStudent(
-    studentId: string, 
+    studentId: string,
     filters?: EnrollmentFilterDTO,
     pagination?: EnrollmentPaginationDTO
   ): Promise<PaginatedEnrollmentResult> {
     try {
       const limit = pagination?.limit || 20;
       const offset = pagination?.offset || 0;
-      
+
       // Only cache first page results
       const shouldCache = offset === 0 && limit <= 20;
       let cacheKey: string | null = null;
-      
+
       if (shouldCache) {
         const filterKey = this.serializeFilters(filters);
         cacheKey = this.getStudentEnrollmentsCacheKey(studentId, filterKey);
-        
+
         const cachedResult = await cache.get<PaginatedEnrollmentResult>(cacheKey);
         if (cachedResult) {
           return cachedResult;
@@ -336,7 +326,7 @@ export class EnrollmentRepository implements IEnrollmentRepository {
       // Build WHERE conditions
       const conditions = [
         eq(enrollments.studentId, studentId),
-        ...this.buildWhereConditions(filters)
+        ...this.buildWhereConditions(filters),
       ];
 
       // Get total count
@@ -377,9 +367,9 @@ export class EnrollmentRepository implements IEnrollmentRepository {
 
   /**
    * Finds all enrollments for a specific course
-   * 
+   *
    * Implements caching with 5-minute TTL for first page results.
-   * 
+   *
    * @param courseId - Course ID
    * @param filters - Optional filters
    * @param pagination - Pagination parameters
@@ -394,15 +384,15 @@ export class EnrollmentRepository implements IEnrollmentRepository {
     try {
       const limit = pagination?.limit || 20;
       const offset = pagination?.offset || 0;
-      
+
       // Only cache first page results
       const shouldCache = offset === 0 && limit <= 20;
       let cacheKey: string | null = null;
-      
+
       if (shouldCache) {
         const filterKey = this.serializeFilters(filters);
         cacheKey = this.getCourseEnrollmentsCacheKey(courseId, filterKey);
-        
+
         const cachedResult = await cache.get<PaginatedEnrollmentResult>(cacheKey);
         if (cachedResult) {
           return cachedResult;
@@ -412,7 +402,7 @@ export class EnrollmentRepository implements IEnrollmentRepository {
       // Build WHERE conditions
       const conditions = [
         eq(enrollments.courseId, courseId),
-        ...this.buildWhereConditions(filters)
+        ...this.buildWhereConditions(filters),
       ];
 
       // Get total count
@@ -453,9 +443,9 @@ export class EnrollmentRepository implements IEnrollmentRepository {
 
   /**
    * Updates an enrollment's data
-   * 
+   *
    * Invalidates all related cache entries after successful update.
-   * 
+   *
    * @param id - Enrollment ID
    * @param data - Update data
    * @returns The updated enrollment
@@ -484,10 +474,7 @@ export class EnrollmentRepository implements IEnrollmentRepository {
         .returning();
 
       if (!updatedEnrollment) {
-        throw new DatabaseError(
-          'Failed to update enrollment',
-          'update'
-        );
+        throw new DatabaseError('Failed to update enrollment', 'update');
       }
 
       // Invalidate all cache entries for this enrollment
@@ -498,10 +485,7 @@ export class EnrollmentRepository implements IEnrollmentRepository {
       return updatedEnrollment;
     } catch (error) {
       // Re-throw known errors
-      if (
-        error instanceof NotFoundError ||
-        error instanceof DatabaseError
-      ) {
+      if (error instanceof NotFoundError || error instanceof DatabaseError) {
         throw error;
       }
 
@@ -516,9 +500,9 @@ export class EnrollmentRepository implements IEnrollmentRepository {
 
   /**
    * Soft deletes an enrollment (sets status to 'dropped')
-   * 
+   *
    * Invalidates all cache entries after successful deletion.
-   * 
+   *
    * @param id - Enrollment ID
    * @returns void
    * @throws NotFoundError if enrollment doesn't exist
@@ -543,10 +527,7 @@ export class EnrollmentRepository implements IEnrollmentRepository {
         .returning();
 
       if (!deletedEnrollment) {
-        throw new DatabaseError(
-          'Failed to soft delete enrollment',
-          'update'
-        );
+        throw new DatabaseError('Failed to soft delete enrollment', 'update');
       }
 
       // Invalidate all cache entries
@@ -571,9 +552,9 @@ export class EnrollmentRepository implements IEnrollmentRepository {
   /**
    * Permanently deletes an enrollment from the database
    * USE WITH CAUTION - This is irreversible
-   * 
+   *
    * Invalidates all cache entries after successful deletion.
-   * 
+   *
    * @param id - Enrollment ID
    * @returns void
    * @throws NotFoundError if enrollment doesn't exist
@@ -594,10 +575,7 @@ export class EnrollmentRepository implements IEnrollmentRepository {
         .returning();
 
       if (!result || result.length === 0) {
-        throw new DatabaseError(
-          'Failed to hard delete enrollment',
-          'delete'
-        );
+        throw new DatabaseError('Failed to hard delete enrollment', 'delete');
       }
 
       // Invalidate all cache entries
@@ -621,9 +599,9 @@ export class EnrollmentRepository implements IEnrollmentRepository {
 
   /**
    * Checks if a student is already enrolled in a course
-   * 
+   *
    * More efficient than findByStudentAndCourse when only existence check is needed.
-   * 
+   *
    * @param studentId - Student ID
    * @param courseId - Course ID
    * @returns True if enrollment exists, false otherwise
@@ -633,7 +611,7 @@ export class EnrollmentRepository implements IEnrollmentRepository {
     try {
       // Try to find enrollment by student and course
       const enrollment = await this.findByStudentAndCourse(studentId, courseId);
-      
+
       return enrollment !== null;
     } catch (error) {
       throw new DatabaseError(
@@ -646,9 +624,9 @@ export class EnrollmentRepository implements IEnrollmentRepository {
 
   /**
    * Gets the count of active enrollments for a course
-   * 
+   *
    * Implements caching with 5-minute TTL.
-   * 
+   *
    * @param courseId - Course ID
    * @returns Number of active enrollments
    * @throws DatabaseError if database operation fails
@@ -658,7 +636,7 @@ export class EnrollmentRepository implements IEnrollmentRepository {
       // Check cache first
       const cacheKey = this.getEnrollmentCountCacheKey(courseId, 'active');
       const cachedCount = await cache.get<number>(cacheKey);
-      
+
       if (cachedCount !== null) {
         return cachedCount;
       }
@@ -667,12 +645,7 @@ export class EnrollmentRepository implements IEnrollmentRepository {
       const [{ activeCount }] = await this.readDb
         .select({ activeCount: count() })
         .from(enrollments)
-        .where(
-          and(
-            eq(enrollments.courseId, courseId),
-            eq(enrollments.status, 'active')
-          )
-        );
+        .where(and(eq(enrollments.courseId, courseId), eq(enrollments.status, 'active')));
 
       // Cache the result with 5-minute TTL
       await cache.set(cacheKey, activeCount, CacheTTL.MEDIUM);
@@ -689,9 +662,9 @@ export class EnrollmentRepository implements IEnrollmentRepository {
 
   /**
    * Gets the count of completed enrollments for a course
-   * 
+   *
    * Implements caching with 5-minute TTL.
-   * 
+   *
    * @param courseId - Course ID
    * @returns Number of completed enrollments
    * @throws DatabaseError if database operation fails
@@ -701,7 +674,7 @@ export class EnrollmentRepository implements IEnrollmentRepository {
       // Check cache first
       const cacheKey = this.getEnrollmentCountCacheKey(courseId, 'completed');
       const cachedCount = await cache.get<number>(cacheKey);
-      
+
       if (cachedCount !== null) {
         return cachedCount;
       }
@@ -710,12 +683,7 @@ export class EnrollmentRepository implements IEnrollmentRepository {
       const [{ completedCount }] = await this.readDb
         .select({ completedCount: count() })
         .from(enrollments)
-        .where(
-          and(
-            eq(enrollments.courseId, courseId),
-            eq(enrollments.status, 'completed')
-          )
-        );
+        .where(and(eq(enrollments.courseId, courseId), eq(enrollments.status, 'completed')));
 
       // Cache the result with 5-minute TTL
       await cache.set(cacheKey, completedCount, CacheTTL.MEDIUM);
@@ -733,10 +701,10 @@ export class EnrollmentRepository implements IEnrollmentRepository {
   /**
    * Finds enrollments that are eligible for completion
    * (all lessons completed but enrollment not marked as completed)
-   * 
+   *
    * This is a complex query that would typically involve joining with lesson progress.
    * For now, returns enrollments with 100% progress that aren't completed.
-   * 
+   *
    * @param limit - Maximum number of enrollments to return
    * @returns List of enrollments eligible for completion
    * @throws DatabaseError if database operation fails
@@ -747,12 +715,7 @@ export class EnrollmentRepository implements IEnrollmentRepository {
       const eligibleEnrollments = await this.readDb
         .select()
         .from(enrollments)
-        .where(
-          and(
-            eq(enrollments.progressPercentage, '100.00'),
-            eq(enrollments.status, 'active')
-          )
-        )
+        .where(and(eq(enrollments.progressPercentage, '100.00'), eq(enrollments.status, 'active')))
         .orderBy(asc(enrollments.updatedAt))
         .limit(limit);
 
@@ -768,10 +731,10 @@ export class EnrollmentRepository implements IEnrollmentRepository {
 
   /**
    * Invalidates cache for a specific enrollment
-   * 
+   *
    * Removes all cache entries related to the enrollment by ID.
    * Should be called after any update operation.
-   * 
+   *
    * @param id - Enrollment ID
    * @returns void
    */
@@ -787,10 +750,10 @@ export class EnrollmentRepository implements IEnrollmentRepository {
 
   /**
    * Invalidates cache for enrollments by student
-   * 
+   *
    * Removes all cache entries related to the student's enrollments.
    * Should be called after operations that affect student's enrollments.
-   * 
+   *
    * @param studentId - Student ID
    * @returns void
    */
@@ -806,10 +769,10 @@ export class EnrollmentRepository implements IEnrollmentRepository {
 
   /**
    * Invalidates cache for enrollments by course
-   * 
+   *
    * Removes all cache entries related to the course's enrollments.
    * Should be called after operations that affect course enrollments.
-   * 
+   *
    * @param courseId - Course ID
    * @returns void
    */
@@ -819,8 +782,8 @@ export class EnrollmentRepository implements IEnrollmentRepository {
         buildCacheKey(CachePrefix.ENROLLMENT, 'course', courseId, '*'),
         buildCacheKey(CachePrefix.ENROLLMENT, 'count', courseId, '*'),
       ];
-      
-      await Promise.all(patterns.map(pattern => cache.deletePattern(pattern)));
+
+      await Promise.all(patterns.map((pattern) => cache.deletePattern(pattern)));
     } catch (error) {
       // Log error but don't throw - cache invalidation failure shouldn't break the operation
       console.error(`Failed to invalidate cache for course enrollments ${courseId}:`, error);

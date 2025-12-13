@@ -1,13 +1,19 @@
 /**
  * Communication Application Services
- * 
+ *
  * Exports all application services for the communication module
  */
 
-export type { IMessagingService, MessageContent, MessageAttachment, MessageResult, ConversationResult } from './IMessagingService.js';
+export type {
+  IMessagingService,
+  MessageContent,
+  MessageAttachment,
+  MessageResult,
+  ConversationResult,
+} from './IMessagingService.js';
 export { MessagingService } from './MessagingService.js';
 
-export type { 
+export type {
   IDiscussionService,
   CreateThreadDTO,
   CreateReplyDTO,
@@ -16,7 +22,7 @@ export type {
   ThreadCreationResult,
   ReplyCreationResult,
   VoteResult,
-  SolutionResult
+  SolutionResult,
 } from './IDiscussionService.js';
 export { DiscussionService } from './DiscussionService.js';
 
@@ -25,6 +31,6 @@ export type {
   AnnouncementCreationResult,
   AnnouncementUpdateResult,
   AnnouncementDeletionResult,
-  PublishScheduledResult
+  PublishScheduledResult,
 } from './IAnnouncementService.js';
 export { AnnouncementService } from './AnnouncementService.js';

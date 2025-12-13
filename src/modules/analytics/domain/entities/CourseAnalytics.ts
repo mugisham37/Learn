@@ -1,9 +1,9 @@
 /**
  * CourseAnalytics Domain Entity
- * 
+ *
  * Represents aggregated analytics data for a course including enrollment metrics,
  * completion rates, revenue, and engagement data.
- * 
+ *
  * Requirements:
  * - 12.1: Course analytics aggregation with enrollment, completion, and revenue metrics
  */
@@ -131,7 +131,8 @@ export class CourseAnalytics {
     if (this._totalEnrollments === 0) {
       return 0;
     }
-    const droppedEnrollments = this._totalEnrollments - this._activeEnrollments - this._completionCount;
+    const droppedEnrollments =
+      this._totalEnrollments - this._activeEnrollments - this._completionCount;
     return Math.round((droppedEnrollments / this._totalEnrollments) * 100 * 100) / 100;
   }
 
@@ -173,7 +174,7 @@ export class CourseAnalytics {
   public updateEngagementMetrics(metrics: Partial<EngagementMetrics>): void {
     this._engagementMetrics = {
       ...this._engagementMetrics,
-      ...metrics
+      ...metrics,
     };
     this._lastUpdated = new Date();
   }
@@ -206,15 +207,14 @@ export class CourseAnalytics {
     const enrollmentHealth = this.getEnrollmentHealth();
     const completionHealth = this.getCompletionHealth();
     const engagementHealth = this.getEngagementHealth();
-    const revenuePerEnrollment = this._totalEnrollments > 0 
-      ? this._totalRevenue / this._totalEnrollments 
-      : 0;
+    const revenuePerEnrollment =
+      this._totalEnrollments > 0 ? this._totalRevenue / this._totalEnrollments : 0;
 
     return {
       enrollmentHealth,
       completionHealth,
       engagementHealth,
-      revenuePerEnrollment
+      revenuePerEnrollment,
     };
   }
 
@@ -234,7 +234,7 @@ export class CourseAnalytics {
       dropoutRate: this._dropoutRate,
       mostDifficultLessonId: this._mostDifficultLessonId,
       engagementMetrics: this._engagementMetrics,
-      lastUpdated: this._lastUpdated
+      lastUpdated: this._lastUpdated,
     };
   }
 
@@ -281,7 +281,7 @@ export class CourseAnalytics {
       quizAttemptRate: metrics.quizAttemptRate || 0,
       averageQuizScore: metrics.averageQuizScore || 0,
       lessonCompletionVelocity: metrics.lessonCompletionVelocity || 0,
-      studentRetentionRate: metrics.studentRetentionRate || 0
+      studentRetentionRate: metrics.studentRetentionRate || 0,
     };
   }
 
@@ -300,12 +300,12 @@ export class CourseAnalytics {
   }
 
   private getEngagementHealth(): 'excellent' | 'good' | 'needs_improvement' | 'poor' {
-    const avgEngagement = (
-      this._engagementMetrics.discussionParticipationRate +
-      this._engagementMetrics.assignmentSubmissionRate +
-      this._engagementMetrics.quizAttemptRate +
-      this._engagementMetrics.studentRetentionRate
-    ) / 4;
+    const avgEngagement =
+      (this._engagementMetrics.discussionParticipationRate +
+        this._engagementMetrics.assignmentSubmissionRate +
+        this._engagementMetrics.quizAttemptRate +
+        this._engagementMetrics.studentRetentionRate) /
+      4;
 
     if (avgEngagement >= 80) return 'excellent';
     if (avgEngagement >= 60) return 'good';

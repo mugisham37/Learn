@@ -1,9 +1,9 @@
 /**
  * GraphQL Pagination Utilities
- * 
+ *
  * Implements cursor-based pagination for GraphQL with field selection
  * optimization to reduce payload sizes.
- * 
+ *
  * Requirements: 15.6
  */
 
@@ -74,7 +74,7 @@ export function createCursor(record: any, cursorField: string = 'id'): string {
   if (value === null || value === undefined) {
     throw new Error(`Cursor field '${cursorField}' is null or undefined`);
   }
-  
+
   // Handle different data types for cursor values
   let cursorValue: string;
   if (value instanceof Date) {
@@ -84,7 +84,7 @@ export function createCursor(record: any, cursorField: string = 'id'): string {
   } else {
     cursorValue = String(value);
   }
-  
+
   return Buffer.from(cursorValue, 'utf8').toString('base64');
 }
 
@@ -104,17 +104,17 @@ export function parseCursor(cursor: string): string {
  */
 export function validatePaginationInput(input: PaginationInput, config: PaginationConfig): void {
   const { first, last, after, before } = input;
-  
+
   // Cannot specify both first and last
   if (first !== undefined && last !== undefined) {
     throw new Error('Cannot specify both "first" and "last" arguments');
   }
-  
+
   // Cannot specify both after and before
   if (after !== undefined && before !== undefined) {
     throw new Error('Cannot specify both "after" and "before" arguments');
   }
-  
+
   // Validate limits
   if (first !== undefined) {
     if (first < 0) {
@@ -124,7 +124,7 @@ export function validatePaginationInput(input: PaginationInput, config: Paginati
       throw new Error(`"first" argument cannot exceed ${config.maxLimit}`);
     }
   }
-  
+
   if (last !== undefined) {
     if (last < 0) {
       throw new Error('"last" argument must be non-negative');
@@ -146,37 +146,37 @@ export function createConnection<T>(
   config: PaginationConfig = DEFAULT_PAGINATION_CONFIG
 ): Connection<T> {
   validatePaginationInput(input, config);
-  
+
   const { first, last, after, before } = input;
   const limit = first || last || config.defaultLimit;
-  
+
   // Create edges with cursors
-  const edges: Edge<T>[] = records.map(record => ({
+  const edges: Edge<T>[] = records.map((record) => ({
     node: record,
     cursor: createCursor(record, cursorField),
   }));
-  
+
   // Determine pagination info
   const hasNextPage = first !== undefined && records.length === limit;
   const hasPreviousPage = last !== undefined && records.length === limit;
-  
+
   const pageInfo: PageInfo = {
     hasNextPage,
     hasPreviousPage,
     startCursor: edges.length > 0 ? edges[0].cursor : undefined,
     endCursor: edges.length > 0 ? edges[edges.length - 1].cursor : undefined,
   };
-  
+
   const connection: Connection<T> = {
     edges,
     pageInfo,
   };
-  
+
   // Include total count if configured
   if (config.includeTotalCount && totalCount !== undefined) {
     connection.totalCount = totalCount;
   }
-  
+
   return connection;
 }
 
@@ -193,28 +193,28 @@ export function createOptimizedConnection<T>(
 ): Connection<T> {
   // Create the basic connection
   const connection = createConnection(records, input, totalCount, cursorField, config);
-  
+
   try {
     // Apply field selection optimization
     const selection = createFieldSelection(info);
-    
+
     // Check if we need to optimize the nodes
     const nodeSelection = selection.getNestedSelection('edges')?.getNestedSelection('node');
-    
+
     if (nodeSelection) {
       // Optimize each node in the edges
-      connection.edges = connection.edges.map(edge => ({
+      connection.edges = connection.edges.map((edge) => ({
         ...edge,
         node: removeNullValues(filterObjectFields(edge.node as any, nodeSelection)) as T,
       }));
     } else {
       // Just remove null values if no specific field selection
-      connection.edges = connection.edges.map(edge => ({
+      connection.edges = connection.edges.map((edge) => ({
         ...edge,
         node: removeNullValues(edge.node),
       }));
     }
-    
+
     // Log optimization metrics
     if (process.env.LOG_PAGINATION_OPTIMIZATION === 'true') {
       logger.debug('Pagination response optimized', {
@@ -223,14 +223,13 @@ export function createOptimizedConnection<T>(
         operationName: info.operation.name?.value,
       });
     }
-    
   } catch (error) {
     logger.error('Failed to optimize pagination response', {
       error: error instanceof Error ? error.message : String(error),
       operationName: info.operation.name?.value,
     });
   }
-  
+
   return connection;
 }
 
@@ -265,11 +264,11 @@ export function createOffsetPagination<T>(
 ): OffsetPaginationResult<T> {
   const page = Math.max(1, input.page || 1);
   const limit = Math.min(input.limit || config.defaultLimit, config.maxLimit);
-  
+
   const totalPages = Math.ceil(totalCount / limit);
   const hasNextPage = page < totalPages;
   const hasPreviousPage = page > 1;
-  
+
   return {
     items: records,
     totalCount,
@@ -291,27 +290,26 @@ export function createOptimizedOffsetPagination<T>(
   config: PaginationConfig = DEFAULT_PAGINATION_CONFIG
 ): OffsetPaginationResult<T> {
   const result = createOffsetPagination(records, input, totalCount, config);
-  
+
   try {
     // Apply field selection optimization
     const selection = createFieldSelection(info);
     const itemsSelection = selection.getNestedSelection('items');
-    
+
     if (itemsSelection) {
-      result.items = result.items.map(item => 
-        removeNullValues(filterObjectFields(item as any, itemsSelection)) as T
+      result.items = result.items.map(
+        (item) => removeNullValues(filterObjectFields(item as any, itemsSelection)) as T
       );
     } else {
-      result.items = result.items.map(item => removeNullValues(item));
+      result.items = result.items.map((item) => removeNullValues(item));
     }
-    
   } catch (error) {
     logger.error('Failed to optimize offset pagination response', {
       error: error instanceof Error ? error.message : String(error),
       operationName: info.operation.name?.value,
     });
   }
-  
+
   return result;
 }
 

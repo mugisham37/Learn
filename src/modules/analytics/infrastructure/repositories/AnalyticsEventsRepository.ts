@@ -1,10 +1,10 @@
 /**
  * Analytics Events Repository Implementation
- * 
+ *
  * Implements analytics events data access operations with Drizzle ORM queries,
  * efficient aggregation queries with indexes, and batch operations.
  * Handles database errors and maps them to domain errors.
- * 
+ *
  * Requirements: 12.7
  */
 
@@ -12,14 +12,12 @@ import { eq, and, gte, lte, desc, count, sql } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
 import { getWriteDb, getReadDb } from '../../../../infrastructure/database/index.js';
-import { 
+import {
   analyticsEvents,
   type AnalyticsEvent,
-  type NewAnalyticsEvent
+  type NewAnalyticsEvent,
 } from '../../../../infrastructure/database/schema/analytics.schema.js';
-import {
-  DatabaseError,
-} from '../../../../shared/errors/index.js';
+import { DatabaseError } from '../../../../shared/errors/index.js';
 
 import {
   IAnalyticsEventsRepository,
@@ -31,7 +29,7 @@ import {
 
 /**
  * Analytics Events Repository Implementation
- * 
+ *
  * Provides data access methods for analytics events with:
  * - Drizzle ORM for type-safe queries
  * - Efficient aggregation queries with indexes
@@ -74,7 +72,7 @@ export class AnalyticsEventsRepository implements IAnalyticsEventsRepository {
 
   /**
    * Creates a new analytics event
-   * 
+   *
    * @param data - Event data
    * @returns The created analytics event
    * @throws DatabaseError if database operation fails
@@ -90,10 +88,7 @@ export class AnalyticsEventsRepository implements IAnalyticsEventsRepository {
         .returning();
 
       if (!createdEvent) {
-        throw new DatabaseError(
-          'Failed to create analytics event',
-          'insert'
-        );
+        throw new DatabaseError('Failed to create analytics event', 'insert');
       }
 
       return createdEvent;
@@ -113,10 +108,10 @@ export class AnalyticsEventsRepository implements IAnalyticsEventsRepository {
 
   /**
    * Creates multiple analytics events in batch
-   * 
+   *
    * Efficiently inserts multiple events in a single database operation.
    * Optimized for high-throughput event logging scenarios.
-   * 
+   *
    * @param events - Array of event data
    * @returns Array of created analytics events
    * @throws DatabaseError if database operation fails
@@ -127,7 +122,7 @@ export class AnalyticsEventsRepository implements IAnalyticsEventsRepository {
     }
 
     try {
-      const eventsWithTimestamp = events.map(event => ({
+      const eventsWithTimestamp = events.map((event) => ({
         ...event,
         timestamp: event.timestamp || new Date(),
       }));
@@ -148,7 +143,7 @@ export class AnalyticsEventsRepository implements IAnalyticsEventsRepository {
 
   /**
    * Finds analytics events by user ID with pagination
-   * 
+   *
    * @param userId - User ID
    * @param pagination - Pagination parameters
    * @param filters - Optional filters
@@ -179,10 +174,7 @@ export class AnalyticsEventsRepository implements IAnalyticsEventsRepository {
           .orderBy(desc(analyticsEvents.timestamp))
           .limit(limit)
           .offset(offset),
-        this.readDb
-          .select({ total: count() })
-          .from(analyticsEvents)
-          .where(filterConditions)
+        this.readDb.select({ total: count() }).from(analyticsEvents).where(filterConditions),
       ]);
 
       return {
@@ -202,7 +194,7 @@ export class AnalyticsEventsRepository implements IAnalyticsEventsRepository {
 
   /**
    * Finds analytics events by event type with pagination
-   * 
+   *
    * @param eventType - Event type
    * @param pagination - Pagination parameters
    * @param filters - Optional filters
@@ -233,10 +225,7 @@ export class AnalyticsEventsRepository implements IAnalyticsEventsRepository {
           .orderBy(desc(analyticsEvents.timestamp))
           .limit(limit)
           .offset(offset),
-        this.readDb
-          .select({ total: count() })
-          .from(analyticsEvents)
-          .where(filterConditions)
+        this.readDb.select({ total: count() }).from(analyticsEvents).where(filterConditions),
       ]);
 
       return {
@@ -256,7 +245,7 @@ export class AnalyticsEventsRepository implements IAnalyticsEventsRepository {
 
   /**
    * Finds analytics events within date range
-   * 
+   *
    * @param dateRange - Date range filter
    * @param pagination - Pagination parameters
    * @param filters - Optional filters
@@ -287,10 +276,7 @@ export class AnalyticsEventsRepository implements IAnalyticsEventsRepository {
           .orderBy(desc(analyticsEvents.timestamp))
           .limit(limit)
           .offset(offset),
-        this.readDb
-          .select({ total: count() })
-          .from(analyticsEvents)
-          .where(filterConditions)
+        this.readDb.select({ total: count() }).from(analyticsEvents).where(filterConditions),
       ]);
 
       return {
@@ -310,7 +296,7 @@ export class AnalyticsEventsRepository implements IAnalyticsEventsRepository {
 
   /**
    * Counts events by event type within date range
-   * 
+   *
    * @param eventType - Event type
    * @param dateRange - Date range filter
    * @returns Event count
@@ -343,7 +329,7 @@ export class AnalyticsEventsRepository implements IAnalyticsEventsRepository {
 
   /**
    * Counts events by user within date range
-   * 
+   *
    * @param userId - User ID
    * @param dateRange - Date range filter
    * @returns Event count
@@ -376,10 +362,10 @@ export class AnalyticsEventsRepository implements IAnalyticsEventsRepository {
 
   /**
    * Gets event type distribution within date range
-   * 
+   *
    * Returns aggregated counts grouped by event type.
    * Useful for understanding event patterns and system usage.
-   * 
+   *
    * @param dateRange - Date range filter
    * @returns Object with event types as keys and counts as values
    * @throws DatabaseError if database operation fails
@@ -402,9 +388,7 @@ export class AnalyticsEventsRepository implements IAnalyticsEventsRepository {
         );
       }
 
-      const results = await query
-        .groupBy(analyticsEvents.eventType)
-        .orderBy(desc(count()));
+      const results = await query.groupBy(analyticsEvents.eventType).orderBy(desc(count()));
 
       // Convert to object format
       const distribution: Record<string, number> = {};
@@ -423,26 +407,29 @@ export class AnalyticsEventsRepository implements IAnalyticsEventsRepository {
 
   /**
    * Gets hourly event counts for a specific date
-   * 
+   *
    * Returns event counts grouped by hour of the day.
    * Useful for understanding usage patterns and peak hours.
-   * 
+   *
    * @param date - Date to analyze
    * @param eventType - Optional event type filter
    * @returns Array of hourly counts
    * @throws DatabaseError if database operation fails
    */
-  async getHourlyEventCounts(date: Date, eventType?: string): Promise<Array<{ hour: number; count: number }>> {
+  async getHourlyEventCounts(
+    date: Date,
+    eventType?: string
+  ): Promise<Array<{ hour: number; count: number }>> {
     try {
       const startOfDay = new Date(date);
       startOfDay.setHours(0, 0, 0, 0);
-      
+
       const endOfDay = new Date(date);
       endOfDay.setHours(23, 59, 59, 999);
 
       const conditions = [
         gte(analyticsEvents.timestamp, startOfDay),
-        lte(analyticsEvents.timestamp, endOfDay)
+        lte(analyticsEvents.timestamp, endOfDay),
       ];
 
       if (eventType) {
@@ -450,7 +437,7 @@ export class AnalyticsEventsRepository implements IAnalyticsEventsRepository {
       }
 
       const hourExtract = sql<number>`EXTRACT(HOUR FROM ${analyticsEvents.timestamp})`;
-      
+
       const results = await this.readDb
         .select({
           hour: hourExtract,
@@ -464,7 +451,7 @@ export class AnalyticsEventsRepository implements IAnalyticsEventsRepository {
       // Fill in missing hours with 0 counts
       const hourlyCounts: Array<{ hour: number; count: number }> = [];
       for (let hour = 0; hour < 24; hour++) {
-        const result = results.find(r => r.hour === hour);
+        const result = results.find((r) => r.hour === hour);
         hourlyCounts.push({
           hour,
           count: result ? Number(result.count) : 0,
@@ -482,10 +469,10 @@ export class AnalyticsEventsRepository implements IAnalyticsEventsRepository {
 
   /**
    * Deletes old analytics events beyond retention period
-   * 
+   *
    * Removes events older than the specified retention period.
    * Should be run periodically to manage database size.
-   * 
+   *
    * @param retentionDays - Number of days to retain
    * @returns Number of deleted events
    * @throws DatabaseError if database operation fails

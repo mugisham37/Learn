@@ -1,6 +1,6 @@
 /**
  * Stripe Client Factory
- * 
+ *
  * Provides a singleton instance of the Stripe client.
  * This ensures consistent configuration across the application.
  */

@@ -1,6 +1,6 @@
 /**
  * Courses Domain Layer
- * 
+ *
  * Exports all domain entities, value objects, and events
  */
 
@@ -24,6 +24,6 @@ export {
   ModulesReorderedEvent,
   LessonAddedEvent,
   LessonRemovedEvent,
-  LessonsReorderedEvent
+  LessonsReorderedEvent,
 } from './events/CourseEvents';
 export type { CourseEvent } from './events/CourseEvents';

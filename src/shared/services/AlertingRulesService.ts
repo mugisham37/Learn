@@ -1,10 +1,10 @@
 /**
  * Alerting Rules Service
- * 
+ *
  * Implements comprehensive alerting rules for critical system events including
  * database failures, high error rates, API latency, disk space, and performance
  * degradation. Supports multiple alert channels and severity levels.
- * 
+ *
  * Requirements: 17.7
  */
 
@@ -34,7 +34,7 @@ interface AlertRule {
 /**
  * Alert condition types
  */
-type AlertCondition = 
+type AlertCondition =
   | 'database_failure'
   | 'high_error_rate'
   | 'api_latency'
@@ -174,7 +174,7 @@ export class AlertingRulesService extends EventEmitter implements IAlertingRules
    */
   disableRule(ruleId: string): void {
     this.updateRule(ruleId, { enabled: false });
-    
+
     // Reset alert state when disabling
     const state = this.alertStates.get(ruleId);
     if (state) {
@@ -189,7 +189,7 @@ export class AlertingRulesService extends EventEmitter implements IAlertingRules
   async checkRules(): Promise<void> {
     try {
       const metrics = await Promise.resolve(this.collectSystemMetrics());
-      
+
       for (const [ruleId, rule] of this.rules.entries()) {
         if (!rule.enabled) {
           continue;
@@ -197,7 +197,7 @@ export class AlertingRulesService extends EventEmitter implements IAlertingRules
 
         const state = this.alertStates.get(ruleId)!;
         const isTriggered = this.evaluateRule(rule, metrics);
-        
+
         this.processRuleState(rule, state, isTriggered);
       }
     } catch (error) {
@@ -209,7 +209,7 @@ export class AlertingRulesService extends EventEmitter implements IAlertingRules
    * Get currently active alerts
    */
   getActiveAlerts(): AlertState[] {
-    return Array.from(this.alertStates.values()).filter(state => state.triggered);
+    return Array.from(this.alertStates.values()).filter((state) => state.triggered);
   }
 
   /**
@@ -228,9 +228,9 @@ export class AlertingRulesService extends EventEmitter implements IAlertingRules
     }
 
     this.monitoringInterval = setInterval(() => {
-      this.checkRules().catch(error => {
-        logger.error('Error in alerting rules monitoring', { 
-          error: error instanceof Error ? error.message : 'Unknown error' 
+      this.checkRules().catch((error) => {
+        logger.error('Error in alerting rules monitoring', {
+          error: error instanceof Error ? error.message : 'Unknown error',
         });
       });
     }, this.checkInterval);
@@ -379,7 +379,7 @@ export class AlertingRulesService extends EventEmitter implements IAlertingRules
       },
     ];
 
-    defaultRules.forEach(rule => this.addRule(rule));
+    defaultRules.forEach((rule) => this.addRule(rule));
     logger.info(`Initialized ${defaultRules.length} default alert rules`);
   }
 
@@ -394,9 +394,10 @@ export class AlertingRulesService extends EventEmitter implements IAlertingRules
     const cacheMetrics = applicationMetricsService.getCacheMetrics();
 
     // Calculate memory usage percentage
-    const memoryUsagePercent = resourceMetrics.memoryUsage.heapTotal > 0 
-      ? (resourceMetrics.memoryUsage.heapUsed / resourceMetrics.memoryUsage.heapTotal) * 100 
-      : 0;
+    const memoryUsagePercent =
+      resourceMetrics.memoryUsage.heapTotal > 0
+        ? (resourceMetrics.memoryUsage.heapUsed / resourceMetrics.memoryUsage.heapTotal) * 100
+        : 0;
 
     // Estimate CPU usage (simplified)
     const cpuUsagePercent = 0; // Would need more sophisticated CPU monitoring
@@ -406,9 +407,8 @@ export class AlertingRulesService extends EventEmitter implements IAlertingRules
 
     // Cache miss rate
     const totalCacheOperations = cacheMetrics.hitCount + cacheMetrics.missCount;
-    const cacheMissRate = totalCacheOperations > 0 
-      ? (cacheMetrics.missCount / totalCacheOperations) * 100 
-      : 0;
+    const cacheMissRate =
+      totalCacheOperations > 0 ? (cacheMetrics.missCount / totalCacheOperations) * 100 : 0;
 
     return {
       errorRate: errorMetrics.errorRate,
@@ -481,16 +481,16 @@ export class AlertingRulesService extends EventEmitter implements IAlertingRules
 
     if (isTriggered) {
       state.consecutiveFailures++;
-      
+
       if (!state.triggered) {
         state.firstTriggered = now;
       }
-      
+
       state.lastTriggered = now;
 
       // Check if we should trigger the alert
-      const durationMet = (now - state.firstTriggered) >= (rule.duration * 1000);
-      const cooldownPassed = (now - state.lastNotified) >= (rule.cooldown * 1000);
+      const durationMet = now - state.firstTriggered >= rule.duration * 1000;
+      const cooldownPassed = now - state.lastNotified >= rule.cooldown * 1000;
 
       if (durationMet && (cooldownPassed || !state.triggered)) {
         this.triggerAlert(rule, state);
@@ -503,7 +503,7 @@ export class AlertingRulesService extends EventEmitter implements IAlertingRules
         this.resolveAlert(rule, state);
         state.triggered = false;
       }
-      
+
       state.consecutiveFailures = 0;
       state.firstTriggered = 0;
     }
@@ -538,7 +538,7 @@ export class AlertingRulesService extends EventEmitter implements IAlertingRules
         alert.source,
         alert.metadata
       );
-      
+
       logger.warn(`Alert triggered: ${rule.name}`, {
         ruleId: rule.id,
         severity: rule.severity,
@@ -579,7 +579,7 @@ export class AlertingRulesService extends EventEmitter implements IAlertingRules
         alert.source,
         alert.metadata
       );
-      
+
       logger.info(`Alert resolved: ${rule.name}`, {
         ruleId: rule.id,
         duration: Date.now() - state.firstTriggered,

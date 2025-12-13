@@ -1,9 +1,9 @@
 /**
  * DataLoader implementations for Enrollments Module
- * 
+ *
  * Provides efficient batching and caching for GraphQL field resolvers
  * to prevent N+1 query problems.
- * 
+ *
  * Requirements: 21.5
  */
 
@@ -35,12 +35,12 @@ export class EnrollmentDataLoaders {
     this.enrollmentById = new DataLoader<string, Enrollment | null>(
       async (enrollmentIds: readonly string[]) => {
         const enrollments = await this.batchLoadEnrollmentsByIds([...enrollmentIds]);
-        return enrollmentIds.map(id => enrollments.get(id) || null);
+        return enrollmentIds.map((id) => enrollments.get(id) || null);
       },
       {
         cache: true,
         maxBatchSize: 100,
-        batchScheduleFn: (callback: () => void) => setTimeout(callback, 10)
+        batchScheduleFn: (callback: () => void) => setTimeout(callback, 10),
       }
     );
 
@@ -48,12 +48,12 @@ export class EnrollmentDataLoaders {
     this.enrollmentsByStudentId = new DataLoader<string, Enrollment[]>(
       async (studentIds: readonly string[]) => {
         const enrollmentsMap = await this.batchLoadEnrollmentsByStudentIds([...studentIds]);
-        return studentIds.map(id => enrollmentsMap.get(id) || []);
+        return studentIds.map((id) => enrollmentsMap.get(id) || []);
       },
       {
         cache: true,
         maxBatchSize: 50,
-        batchScheduleFn: (callback: () => void) => setTimeout(callback, 10)
+        batchScheduleFn: (callback: () => void) => setTimeout(callback, 10),
       }
     );
 
@@ -61,12 +61,12 @@ export class EnrollmentDataLoaders {
     this.enrollmentsByCourseId = new DataLoader<string, Enrollment[]>(
       async (courseIds: readonly string[]) => {
         const enrollmentsMap = await this.batchLoadEnrollmentsByCourseIds([...courseIds]);
-        return courseIds.map(id => enrollmentsMap.get(id) || []);
+        return courseIds.map((id) => enrollmentsMap.get(id) || []);
       },
       {
         cache: true,
         maxBatchSize: 50,
-        batchScheduleFn: (callback: () => void) => setTimeout(callback, 10)
+        batchScheduleFn: (callback: () => void) => setTimeout(callback, 10),
       }
     );
 
@@ -74,12 +74,12 @@ export class EnrollmentDataLoaders {
     this.enrollmentProgressById = new DataLoader<string, EnrollmentProgressSummary | null>(
       async (enrollmentIds: readonly string[]) => {
         const progressMap = await this.batchLoadEnrollmentProgress([...enrollmentIds]);
-        return enrollmentIds.map(id => progressMap.get(id) || null);
+        return enrollmentIds.map((id) => progressMap.get(id) || null);
       },
       {
         cache: true,
         maxBatchSize: 100,
-        batchScheduleFn: (callback: () => void) => setTimeout(callback, 10)
+        batchScheduleFn: (callback: () => void) => setTimeout(callback, 10),
       }
     );
   }
@@ -87,11 +87,13 @@ export class EnrollmentDataLoaders {
   /**
    * Batch load enrollments by IDs
    */
-  private async batchLoadEnrollmentsByIds(enrollmentIds: string[]): Promise<Map<string, Enrollment>> {
+  private async batchLoadEnrollmentsByIds(
+    enrollmentIds: string[]
+  ): Promise<Map<string, Enrollment>> {
     const enrollmentsMap = new Map<string, Enrollment>();
-    
+
     // Load enrollments individually (can be optimized later with batch repository method)
-    const enrollmentPromises = enrollmentIds.map(async id => {
+    const enrollmentPromises = enrollmentIds.map(async (id) => {
       try {
         const enrollment = await this.context.enrollmentRepository.findById(id);
         return { id, enrollment };
@@ -101,31 +103,33 @@ export class EnrollmentDataLoaders {
         return { id, enrollment: null };
       }
     });
-    
+
     const results = await Promise.all(enrollmentPromises);
-    
+
     for (const { id, enrollment } of results) {
       if (enrollment) {
         enrollmentsMap.set(id, enrollment);
       }
     }
-    
+
     return enrollmentsMap;
   }
 
   /**
    * Batch load enrollments by student IDs
    */
-  private async batchLoadEnrollmentsByStudentIds(studentIds: string[]): Promise<Map<string, Enrollment[]>> {
+  private async batchLoadEnrollmentsByStudentIds(
+    studentIds: string[]
+  ): Promise<Map<string, Enrollment[]>> {
     const enrollmentsMap = new Map<string, Enrollment[]>();
-    
+
     // Initialize empty arrays for all student IDs
     for (const studentId of studentIds) {
       enrollmentsMap.set(studentId, []);
     }
-    
+
     // Load enrollments for each student individually
-    const enrollmentPromises = studentIds.map(async studentId => {
+    const enrollmentPromises = studentIds.map(async (studentId) => {
       try {
         const result = await this.context.enrollmentRepository.findByStudent(
           studentId,
@@ -139,29 +143,31 @@ export class EnrollmentDataLoaders {
         return { studentId, enrollments: [] };
       }
     });
-    
+
     const results = await Promise.all(enrollmentPromises);
-    
+
     for (const { studentId, enrollments } of results) {
       enrollmentsMap.set(studentId, enrollments);
     }
-    
+
     return enrollmentsMap;
   }
 
   /**
    * Batch load enrollments by course IDs
    */
-  private async batchLoadEnrollmentsByCourseIds(courseIds: string[]): Promise<Map<string, Enrollment[]>> {
+  private async batchLoadEnrollmentsByCourseIds(
+    courseIds: string[]
+  ): Promise<Map<string, Enrollment[]>> {
     const enrollmentsMap = new Map<string, Enrollment[]>();
-    
+
     // Initialize empty arrays for all course IDs
     for (const courseId of courseIds) {
       enrollmentsMap.set(courseId, []);
     }
-    
+
     // Load enrollments for each course individually
-    const enrollmentPromises = courseIds.map(async courseId => {
+    const enrollmentPromises = courseIds.map(async (courseId) => {
       try {
         const result = await this.context.enrollmentRepository.findByCourse(
           courseId,
@@ -175,24 +181,26 @@ export class EnrollmentDataLoaders {
         return { courseId, enrollments: [] };
       }
     });
-    
+
     const results = await Promise.all(enrollmentPromises);
-    
+
     for (const { courseId, enrollments } of results) {
       enrollmentsMap.set(courseId, enrollments);
     }
-    
+
     return enrollmentsMap;
   }
 
   /**
    * Batch load enrollment progress by enrollment IDs
    */
-  private async batchLoadEnrollmentProgress(enrollmentIds: string[]): Promise<Map<string, EnrollmentProgressSummary>> {
+  private async batchLoadEnrollmentProgress(
+    enrollmentIds: string[]
+  ): Promise<Map<string, EnrollmentProgressSummary>> {
     const progressMap = new Map<string, EnrollmentProgressSummary>();
-    
+
     // Load progress for each enrollment individually using the service
-    const progressPromises = enrollmentIds.map(async enrollmentId => {
+    const progressPromises = enrollmentIds.map(async (enrollmentId) => {
       try {
         const progress = await this.context.enrollmentService.getEnrollmentProgress(enrollmentId);
         return { enrollmentId, progress };
@@ -202,15 +210,15 @@ export class EnrollmentDataLoaders {
         return { enrollmentId, progress: null };
       }
     });
-    
+
     const results = await Promise.all(progressPromises);
-    
+
     for (const { enrollmentId, progress } of results) {
       if (progress) {
         progressMap.set(enrollmentId, progress);
       }
     }
-    
+
     return progressMap;
   }
 
@@ -242,6 +250,8 @@ export class EnrollmentDataLoaders {
 /**
  * Factory function to create Enrollment DataLoaders
  */
-export function createEnrollmentDataLoaders(context: EnrollmentDataLoaderContext): EnrollmentDataLoaders {
+export function createEnrollmentDataLoaders(
+  context: EnrollmentDataLoaderContext
+): EnrollmentDataLoaders {
   return new EnrollmentDataLoaders(context);
 }

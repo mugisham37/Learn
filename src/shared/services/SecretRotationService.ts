@@ -1,9 +1,9 @@
 /**
  * Secret Rotation Service
- * 
+ *
  * Handles automatic rotation of secrets in production environments.
  * Supports scheduled rotation and manual rotation triggers.
- * 
+ *
  * Requirements: 13.7
  */
 
@@ -64,19 +64,19 @@ export class SecretRotationService {
     // Authentication secrets - rotate every 90 days
     jwt_secret: 90,
     session_secret: 90,
-    
+
     // API keys - rotate every 60 days
     stripe_secret_key: 60,
     sendgrid_api_key: 60,
-    
+
     // Database passwords - rotate every 180 days
     redis_password: 180,
     elasticsearch_password: 180,
-    
+
     // AWS credentials - rotate every 30 days
     aws_access_key_id: 30,
     aws_secret_access_key: 30,
-    
+
     // Certificate keys - rotate every 365 days
     certificate_signing_key: 365,
     firebase_private_key: 365,
@@ -103,10 +103,10 @@ export class SecretRotationService {
    */
   private initializeSchedules(): void {
     const rotatableSecrets = secretsManager.getRotatableSecrets();
-    
+
     for (const secretName of rotatableSecrets) {
       const intervalDays = this.defaultSchedules[secretName] || 90; // Default to 90 days
-      
+
       this.rotationSchedules.set(secretName, {
         secretName,
         intervalDays,
@@ -137,7 +137,7 @@ export class SecretRotationService {
    */
   private generateNewSecret(secretName: string): string {
     // Using imported randomBytes function
-    
+
     // Different generation strategies based on secret type
     if (secretName.includes('jwt') || secretName.includes('session')) {
       // Generate a strong random string for JWT/session secrets
@@ -164,7 +164,7 @@ export class SecretRotationService {
    */
   public async rotateSecret(secretName: string, newValue?: string): Promise<RotationResult> {
     const timestamp = new Date();
-    
+
     logger.info(`Starting secret rotation: ${secretName}`);
 
     try {
@@ -265,7 +265,7 @@ export class SecretRotationService {
         logger.error(`Failed to rotate secret: ${secretName}`, {
           error: error instanceof Error ? error.message : 'Unknown error',
         });
-        
+
         results.push({
           secretName,
           success: false,
@@ -275,8 +275,8 @@ export class SecretRotationService {
       }
     }
 
-    const successCount = results.filter(r => r.success).length;
-    const failureCount = results.filter(r => !r.success).length;
+    const successCount = results.filter((r) => r.success).length;
+    const failureCount = results.filter((r) => !r.success).length;
 
     logger.info('Secret rotation batch completed', {
       total: results.length,
@@ -311,7 +311,10 @@ export class SecretRotationService {
     // Recalculate next rotation if interval changed
     if (schedule.intervalDays && schedule.intervalDays !== currentSchedule.intervalDays) {
       const lastRotation = updatedSchedule.lastRotation || new Date();
-      updatedSchedule.nextRotation = this.calculateNextRotation(lastRotation, schedule.intervalDays);
+      updatedSchedule.nextRotation = this.calculateNextRotation(
+        lastRotation,
+        schedule.intervalDays
+      );
     }
 
     this.rotationSchedules.set(secretName, updatedSchedule);
@@ -346,9 +349,7 @@ export class SecretRotationService {
     cutoffDate.setDate(cutoffDate.getDate() + withinDays);
 
     return Array.from(this.rotationSchedules.values()).filter(
-      schedule => schedule.enabled && 
-                 schedule.nextRotation && 
-                 schedule.nextRotation <= cutoffDate
+      (schedule) => schedule.enabled && schedule.nextRotation && schedule.nextRotation <= cutoffDate
     );
   }
 
@@ -357,7 +358,7 @@ export class SecretRotationService {
    */
   public setRotationEnabled(enabled: boolean): void {
     this.isEnabled = enabled;
-    
+
     // Update all schedules
     for (const [secretName, schedule] of this.rotationSchedules) {
       schedule.enabled = enabled;
@@ -370,14 +371,14 @@ export class SecretRotationService {
   /**
    * Health check for rotation service
    */
-  public async healthCheck(): Promise<boolean> {
+  public healthCheck(): boolean {
     try {
       // Check if we can access secrets manager
       const secretNames = secretsManager.getSecretNames();
-      
+
       // Check if rotation schedules are properly initialized
       const scheduleCount = this.rotationSchedules.size;
-      
+
       if (scheduleCount === 0 && secretNames.length > 0) {
         logger.error('Rotation schedules not initialized properly');
         return false;

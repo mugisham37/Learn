@@ -1,6 +1,6 @@
 /**
  * Stripe Client Interface
- * 
+ *
  * Defines the contract for Stripe API operations.
  * This abstraction allows for easier testing and potential future
  * payment provider changes.
@@ -60,7 +60,11 @@ export interface IStripeClient {
   /**
    * Creates or updates a customer
    */
-  createOrUpdateCustomer(email: string, name?: string, metadata?: Record<string, string>): Promise<Stripe.Customer>;
+  createOrUpdateCustomer(
+    email: string,
+    name?: string,
+    metadata?: Record<string, string>
+  ): Promise<Stripe.Customer>;
 
   /**
    * Verifies webhook signature for security

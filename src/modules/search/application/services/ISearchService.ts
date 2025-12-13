@@ -1,10 +1,10 @@
 /**
  * Search Service Interface
- * 
+ *
  * Defines the contract for search operations in the application layer.
  * Provides methods for indexing content and performing searches with
  * filters, facets, autocomplete, and trending functionality.
- * 
+ *
  * Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 8.7
  */
 
@@ -127,17 +127,17 @@ export interface LessonSearchResult {
 
 /**
  * Search Service Interface
- * 
+ *
  * Provides methods for indexing content and performing searches.
  * Implementations should handle search operations with proper error
  * handling and performance optimization.
  */
 export interface ISearchService {
   // Content indexing operations
-  
+
   /**
    * Index a course for full-text search
-   * 
+   *
    * @param course - Course entity to index
    * @returns Promise resolving when indexing is complete
    * @throws ExternalServiceError if indexing fails
@@ -146,7 +146,7 @@ export interface ISearchService {
 
   /**
    * Index a lesson for full-text search
-   * 
+   *
    * @param lesson - Lesson entity to index
    * @returns Promise resolving when indexing is complete
    * @throws ExternalServiceError if indexing fails
@@ -157,7 +157,7 @@ export interface ISearchService {
 
   /**
    * Search courses with filters and facets
-   * 
+   *
    * @param query - Search query string
    * @param filters - Optional filters to apply
    * @param pagination - Optional pagination parameters
@@ -176,7 +176,7 @@ export interface ISearchService {
 
   /**
    * Search lessons within a specific course or across all courses
-   * 
+   *
    * @param query - Search query string
    * @param courseId - Optional course ID to limit search scope
    * @param pagination - Optional pagination parameters
@@ -191,7 +191,7 @@ export interface ISearchService {
 
   /**
    * Get autocomplete suggestions for search queries
-   * 
+   *
    * @param query - Partial search query
    * @param limit - Maximum number of suggestions (default: 10)
    * @returns Promise resolving to array of suggestion strings
@@ -201,7 +201,7 @@ export interface ISearchService {
 
   /**
    * Get trending search terms based on recent search activity
-   * 
+   *
    * @param limit - Maximum number of trending searches (default: 10)
    * @returns Promise resolving to array of trending search terms
    * @throws ExternalServiceError if trending search retrieval fails
@@ -212,7 +212,7 @@ export interface ISearchService {
 
   /**
    * Remove a course from the search index
-   * 
+   *
    * @param courseId - Course ID to remove
    * @returns Promise resolving when removal is complete
    * @throws ExternalServiceError if removal fails
@@ -221,7 +221,7 @@ export interface ISearchService {
 
   /**
    * Remove a lesson from the search index
-   * 
+   *
    * @param lessonId - Lesson ID to remove
    * @returns Promise resolving when removal is complete
    * @throws ExternalServiceError if removal fails
@@ -230,7 +230,7 @@ export interface ISearchService {
 
   /**
    * Remove all lessons for a specific course from the search index
-   * 
+   *
    * @param courseId - Course ID
    * @returns Promise resolving to number of removed lessons
    * @throws ExternalServiceError if removal fails
@@ -239,7 +239,7 @@ export interface ISearchService {
 
   /**
    * Refresh search indices to make recent changes searchable
-   * 
+   *
    * @returns Promise resolving when refresh is complete
    * @throws ExternalServiceError if refresh fails
    */
@@ -247,7 +247,7 @@ export interface ISearchService {
 
   /**
    * Get search index health and statistics
-   * 
+   *
    * @returns Promise resolving to health status and statistics
    * @throws ExternalServiceError if health check fails
    */

@@ -1,6 +1,6 @@
 /**
  * Admin GraphQL Schema
- * 
+ *
  * GraphQL type definitions for admin-only functionality including
  * job monitoring, queue management, and system administration.
  */

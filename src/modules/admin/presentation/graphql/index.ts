@@ -1,6 +1,6 @@
 /**
  * Admin GraphQL Module
- * 
+ *
  * Exports admin-specific GraphQL schema and resolvers for
  * job monitoring and system administration.
  */

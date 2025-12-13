@@ -1,17 +1,17 @@
 /**
  * Monitoring Dashboard Service
- * 
+ *
  * Creates and manages CloudWatch dashboards for application health, API performance,
  * database performance, background jobs, and business metrics. Provides comprehensive
  * monitoring visualization for operational insights.
- * 
+ *
  * Requirements: 17.6
  */
 
 import {
   CloudWatchClient,
   PutDashboardCommand,
-  DeleteDashboardCommand,
+  DeleteDashboardsCommand as DeleteDashboardCommand,
   ListDashboardsCommand,
   ListDashboardsCommandOutput,
   DashboardEntry,
@@ -95,7 +95,7 @@ export class MonitoringDashboardService implements IMonitoringDashboardService {
   private initializeClient(): boolean {
     try {
       const awsConfig = secrets.getAwsConfig();
-      
+
       if (!awsConfig.accessKeyId || !awsConfig.secretAccessKey) {
         logger.warn('Monitoring dashboard service disabled: Missing AWS credentials');
         return false;
@@ -133,9 +133,7 @@ export class MonitoringDashboardService implements IMonitoringDashboardService {
           height: 6,
           properties: {
             title: 'Error Rate (%)',
-            metrics: [
-              [this.namespace, 'ErrorRate'],
-            ],
+            metrics: [[this.namespace, 'ErrorRate']],
             period: 300,
             stat: 'Average',
             region: this.region,
@@ -182,9 +180,7 @@ export class MonitoringDashboardService implements IMonitoringDashboardService {
           height: 6,
           properties: {
             title: 'Requests per Second',
-            metrics: [
-              [this.namespace, 'RequestsPerSecond'],
-            ],
+            metrics: [[this.namespace, 'RequestsPerSecond']],
             period: 300,
             stat: 'Average',
             region: this.region,
@@ -218,9 +214,7 @@ export class MonitoringDashboardService implements IMonitoringDashboardService {
           height: 6,
           properties: {
             title: 'Process Uptime (seconds)',
-            metrics: [
-              [this.namespace, 'ProcessUptime'],
-            ],
+            metrics: [[this.namespace, 'ProcessUptime']],
             period: 300,
             stat: 'Maximum',
             region: this.region,
@@ -331,9 +325,7 @@ export class MonitoringDashboardService implements IMonitoringDashboardService {
             stat: 'Average',
             region: this.region,
             annotations: {
-              horizontal: [
-                { label: 'Slow Query Threshold', value: 1000, fill: 'above' },
-              ],
+              horizontal: [{ label: 'Slow Query Threshold', value: 1000, fill: 'above' }],
             },
           },
         },
@@ -346,9 +338,7 @@ export class MonitoringDashboardService implements IMonitoringDashboardService {
           height: 6,
           properties: {
             title: 'Database Query Count',
-            metrics: [
-              [this.namespace, 'DatabaseQueryCount'],
-            ],
+            metrics: [[this.namespace, 'DatabaseQueryCount']],
             period: 300,
             stat: 'Sum',
             region: this.region,
@@ -486,9 +476,7 @@ export class MonitoringDashboardService implements IMonitoringDashboardService {
           height: 6,
           properties: {
             title: 'User Registrations',
-            metrics: [
-              [this.namespace, 'UserRegistrations'],
-            ],
+            metrics: [[this.namespace, 'UserRegistrations']],
             period: 3600,
             stat: 'Sum',
             region: this.region,
@@ -504,9 +492,7 @@ export class MonitoringDashboardService implements IMonitoringDashboardService {
           height: 6,
           properties: {
             title: 'Course Enrollments',
-            metrics: [
-              [this.namespace, 'CourseEnrollments'],
-            ],
+            metrics: [[this.namespace, 'CourseEnrollments']],
             period: 3600,
             stat: 'Sum',
             region: this.region,
@@ -522,9 +508,7 @@ export class MonitoringDashboardService implements IMonitoringDashboardService {
           height: 6,
           properties: {
             title: 'Course Completions',
-            metrics: [
-              [this.namespace, 'CourseCompletions'],
-            ],
+            metrics: [[this.namespace, 'CourseCompletions']],
             period: 3600,
             stat: 'Sum',
             region: this.region,
@@ -540,9 +524,7 @@ export class MonitoringDashboardService implements IMonitoringDashboardService {
           height: 6,
           properties: {
             title: 'Revenue ($)',
-            metrics: [
-              [this.namespace, 'Revenue'],
-            ],
+            metrics: [[this.namespace, 'Revenue']],
             period: 3600,
             stat: 'Sum',
             region: this.region,
@@ -558,9 +540,7 @@ export class MonitoringDashboardService implements IMonitoringDashboardService {
           height: 6,
           properties: {
             title: 'Active Users (Daily)',
-            metrics: [
-              [this.namespace, 'ActiveUsers'],
-            ],
+            metrics: [[this.namespace, 'ActiveUsers']],
             period: 86400,
             stat: 'Maximum',
             region: this.region,
@@ -575,9 +555,7 @@ export class MonitoringDashboardService implements IMonitoringDashboardService {
           height: 6,
           properties: {
             title: 'Video Watch Time (minutes)',
-            metrics: [
-              [this.namespace, 'VideoWatchTime'],
-            ],
+            metrics: [[this.namespace, 'VideoWatchTime']],
             period: 3600,
             stat: 'Sum',
             region: this.region,
@@ -609,7 +587,7 @@ export class MonitoringDashboardService implements IMonitoringDashboardService {
       });
 
       await this.cloudWatchClient.send(command);
-      
+
       logger.info(`Created CloudWatch dashboard: ${config.name}`);
     } catch (error) {
       logger.error(`Failed to create dashboard: ${config.name}`, { error });
@@ -631,7 +609,7 @@ export class MonitoringDashboardService implements IMonitoringDashboardService {
       });
 
       await this.cloudWatchClient.send(command);
-      
+
       logger.info(`Deleted CloudWatch dashboard: ${name}`);
     } catch (error) {
       logger.error(`Failed to delete dashboard: ${name}`, { error });
@@ -650,8 +628,10 @@ export class MonitoringDashboardService implements IMonitoringDashboardService {
     try {
       const command = new ListDashboardsCommand({});
       const response: ListDashboardsCommandOutput = await this.cloudWatchClient.send(command);
-      
-      return response.DashboardEntries?.map((entry: DashboardEntry) => entry.DashboardName || '') || [];
+
+      return (
+        response.DashboardEntries?.map((entry: DashboardEntry) => entry.DashboardName || '') || []
+      );
     } catch (error) {
       logger.error('Failed to list dashboards', { error });
       return [];

@@ -1,9 +1,9 @@
 /**
  * GraphQL Complexity Monitoring
- * 
+ *
  * This module provides utilities for monitoring and logging GraphQL query complexity
  * to help identify performance bottlenecks and optimize query patterns.
- * 
+ *
  * Requirements: 15.6
  */
 
@@ -37,8 +37,8 @@ export interface ComplexityMonitoringConfig {
  * Default monitoring configuration
  */
 const DEFAULT_MONITORING_CONFIG: ComplexityMonitoringConfig = {
-  logThreshold: 500,        // Log queries with complexity > 500
-  alertThreshold: 800,      // Alert on queries with complexity > 800
+  logThreshold: 500, // Log queries with complexity > 500
+  alertThreshold: 800, // Alert on queries with complexity > 800
   enableDetailedLogging: process.env.NODE_ENV !== 'production',
   enablePerformanceTracking: true,
 };
@@ -129,7 +129,7 @@ export class ComplexityMonitor {
       };
     }
 
-    const complexities = this.metrics.map(m => m.complexity);
+    const complexities = this.metrics.map((m) => m.complexity);
     const totalComplexity = complexities.reduce((sum, c) => sum + c, 0);
 
     return {
@@ -137,8 +137,9 @@ export class ComplexityMonitor {
       averageComplexity: Math.round(totalComplexity / this.metrics.length),
       maxComplexity: Math.max(...complexities),
       minComplexity: Math.min(...complexities),
-      highComplexityQueries: this.metrics.filter(m => m.complexity >= this.config.logThreshold).length,
-      alertQueries: this.metrics.filter(m => m.complexity >= this.config.alertThreshold).length,
+      highComplexityQueries: this.metrics.filter((m) => m.complexity >= this.config.logThreshold)
+        .length,
+      alertQueries: this.metrics.filter((m) => m.complexity >= this.config.alertThreshold).length,
     };
   }
 
@@ -146,16 +147,14 @@ export class ComplexityMonitor {
    * Get top complex queries
    */
   getTopComplexQueries(limit = 10): ComplexityMetrics[] {
-    return [...this.metrics]
-      .sort((a, b) => b.complexity - a.complexity)
-      .slice(0, limit);
+    return [...this.metrics].sort((a, b) => b.complexity - a.complexity).slice(0, limit);
   }
 
   /**
    * Get queries by user
    */
   getQueriesByUser(userId: string): ComplexityMetrics[] {
-    return this.metrics.filter(m => m.userId === userId);
+    return this.metrics.filter((m) => m.userId === userId);
   }
 
   /**
@@ -182,7 +181,7 @@ export class ComplexityMonitor {
    */
   updateConfig(config: Partial<ComplexityMonitoringConfig>): void {
     this.config = { ...this.config, ...config };
-    
+
     logger.info('Complexity monitoring configuration updated', {
       logThreshold: this.config.logThreshold,
       alertThreshold: this.config.alertThreshold,
@@ -235,18 +234,18 @@ export function createExecutionTimeTracker() {
         willSendResponse(requestContext: any) {
           const requestId = requestContext.request.http?.requestId || 'unknown';
           const startTime = startTimes.get(requestId);
-          
+
           if (startTime) {
             const executionTime = Date.now() - startTime;
             startTimes.delete(requestId);
-            
+
             // Add execution time to context for complexity monitoring
             if (requestContext.contextValue) {
               requestContext.contextValue.executionTime = executionTime;
             }
           }
         },
-        
+
         didResolveOperation(requestContext: any) {
           const requestId = requestContext.request.http?.requestId || 'unknown';
           startTimes.set(requestId, Date.now());

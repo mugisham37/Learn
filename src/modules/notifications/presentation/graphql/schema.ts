@@ -1,9 +1,9 @@
 /**
  * GraphQL Schema for Notifications Module
- * 
+ *
  * Defines GraphQL types, inputs, and schema for notification delivery,
  * preference management, and real-time notification subscriptions.
- * 
+ *
  * Requirements: 21.1, 21.2, 21.4
  */
 
@@ -159,10 +159,12 @@ export const notificationTypeDefs = gql`
     # Mark notifications as read
     markNotificationRead(input: MarkNotificationReadInput!): Notification!
     markAllNotificationsRead(input: MarkAllNotificationsReadInput): Boolean!
-    
+
     # Update notification preferences
-    updateNotificationPreferences(input: UpdateNotificationPreferencesInput!): NotificationPreferences!
-    
+    updateNotificationPreferences(
+      input: UpdateNotificationPreferencesInput!
+    ): NotificationPreferences!
+
     # Delete expired notifications (admin only)
     deleteExpiredNotifications: Int!
   }
@@ -174,13 +176,13 @@ export const notificationTypeDefs = gql`
       filter: NotificationFilter
       pagination: PaginationInput
     ): NotificationConnection!
-    
+
     # Get notification preferences for current user
     getNotificationPreferences: NotificationPreferences!
-    
+
     # Get single notification by ID
     getNotification(id: ID!): Notification
-    
+
     # Get unread notification count
     getUnreadNotificationCount(notificationType: NotificationType): Int!
   }
@@ -189,10 +191,10 @@ export const notificationTypeDefs = gql`
   type Subscription {
     # Real-time notification delivery
     notificationReceived(userId: ID!): Notification!
-    
+
     # Real-time notification read status updates
     notificationRead(userId: ID!): Notification!
-    
+
     # Real-time unread count updates
     unreadCountChanged(userId: ID!): Int!
   }

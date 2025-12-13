@@ -1,9 +1,9 @@
 /**
  * Database Connection Monitor
- * 
+ *
  * Monitors database connection pools for usage patterns, leaks, and performance.
  * Provides metrics and alerts for connection pool optimization.
- * 
+ *
  * Requirements: 15.7
  */
 
@@ -32,7 +32,7 @@ export interface MonitoringConfig {
   longWaitTimeThreshold: number; // Milliseconds (default: 5000ms)
   leakDetectionWindow: number; // Minutes (default: 10 minutes)
   metricsCollectionInterval: number; // Milliseconds (default: 30 seconds)
-  
+
   // Alert settings
   enableAlerts: boolean;
   alertCooldown: number; // Milliseconds between same alert types
@@ -49,7 +49,7 @@ export class ConnectionMonitor extends EventEmitter {
 
   constructor(config: Partial<MonitoringConfig> = {}) {
     super();
-    
+
     this.config = {
       highUtilizationThreshold: 80,
       longWaitTimeThreshold: 5000,
@@ -67,11 +67,11 @@ export class ConnectionMonitor extends EventEmitter {
   public initialize(writePool: Pool, readPool: Pool): void {
     this.writePool = writePool;
     this.readPool = readPool;
-    
+
     // Initialize metrics history
     this.metricsHistory.set('write', []);
     this.metricsHistory.set('read', []);
-    
+
     console.log('Connection monitor initialized');
   }
 
@@ -89,12 +89,14 @@ export class ConnectionMonitor extends EventEmitter {
     }
 
     this.isMonitoring = true;
-    
+
     this.monitoringInterval = setInterval(() => {
       this.collectMetrics();
     }, this.config.metricsCollectionInterval);
 
-    console.log(`Connection monitoring started with ${this.config.metricsCollectionInterval}ms interval`);
+    console.log(
+      `Connection monitoring started with ${this.config.metricsCollectionInterval}ms interval`
+    );
   }
 
   /**
@@ -105,7 +107,7 @@ export class ConnectionMonitor extends EventEmitter {
       clearInterval(this.monitoringInterval);
       this.monitoringInterval = null;
     }
-    
+
     this.isMonitoring = false;
     console.log('Connection monitoring stopped');
   }
@@ -162,8 +164,8 @@ export class ConnectionMonitor extends EventEmitter {
 
     // Keep only metrics within the leak detection window
     const cutoffTime = new Date(Date.now() - this.config.leakDetectionWindow * 60 * 1000);
-    const filteredHistory = history.filter(m => m.timestamp > cutoffTime);
-    
+    const filteredHistory = history.filter((m) => m.timestamp > cutoffTime);
+
     this.metricsHistory.set(poolName, filteredHistory);
   }
 
@@ -210,16 +212,23 @@ export class ConnectionMonitor extends EventEmitter {
    */
   private checkForConnectionLeaks(poolName: string, currentMetrics: ConnectionMetrics): void {
     const history = this.metricsHistory.get(poolName) || [];
-    
+
     if (history.length < 5) return; // Need enough data points
 
     // Check if connections are consistently high with low idle count
     const recentMetrics = history.slice(-5);
-    const avgUtilization = recentMetrics.reduce((sum, m) => sum + m.utilizationPercentage, 0) / recentMetrics.length;
-    const avgIdleRatio = recentMetrics.reduce((sum, m) => sum + (m.idleConnections / m.totalConnections), 0) / recentMetrics.length;
+    const avgUtilization =
+      recentMetrics.reduce((sum, m) => sum + m.utilizationPercentage, 0) / recentMetrics.length;
+    const avgIdleRatio =
+      recentMetrics.reduce((sum, m) => sum + m.idleConnections / m.totalConnections, 0) /
+      recentMetrics.length;
 
     // Potential leak: high utilization with very few idle connections over time
-    if (avgUtilization > 70 && avgIdleRatio < 0.2 && currentMetrics.totalConnections > currentMetrics.poolSize * 0.8) {
+    if (
+      avgUtilization > 70 &&
+      avgIdleRatio < 0.2 &&
+      currentMetrics.totalConnections > currentMetrics.poolSize * 0.8
+    ) {
       this.emitAlert('CONNECTION_LEAK', {
         type: 'CONNECTION_LEAK',
         message: `Potential connection leak detected in ${poolName} pool (avg utilization: ${avgUtilization.toFixed(1)}%, avg idle ratio: ${(avgIdleRatio * 100).toFixed(1)}%)`,
@@ -237,13 +246,13 @@ export class ConnectionMonitor extends EventEmitter {
     const now = new Date();
 
     // Check cooldown
-    if (lastAlert && (now.getTime() - lastAlert.getTime()) < this.config.alertCooldown) {
+    if (lastAlert && now.getTime() - lastAlert.getTime() < this.config.alertCooldown) {
       return; // Still in cooldown period
     }
 
     this.lastAlerts.set(alertType, now);
     this.emit('alert', alert);
-    
+
     // Log alert
     console.warn(`[Connection Monitor Alert] ${alert.message}`);
   }
@@ -268,8 +277,8 @@ export class ConnectionMonitor extends EventEmitter {
   public getMetricsHistory(poolName: 'write' | 'read', minutes: number = 60): ConnectionMetrics[] {
     const history = this.metricsHistory.get(poolName) || [];
     const cutoffTime = new Date(Date.now() - minutes * 60 * 1000);
-    
-    return history.filter(m => m.timestamp > cutoffTime);
+
+    return history.filter((m) => m.timestamp > cutoffTime);
   }
 
   /**
@@ -282,30 +291,36 @@ export class ConnectionMonitor extends EventEmitter {
     totalAlerts: number;
     lastAlert: Date | null;
   } {
-    const current = poolName === 'write' 
-      ? (this.writePool ? this.getPoolMetrics(this.writePool, 'write') : null)
-      : (this.readPool ? this.getPoolMetrics(this.readPool, 'read') : null);
+    const current =
+      poolName === 'write'
+        ? this.writePool
+          ? this.getPoolMetrics(this.writePool, 'write')
+          : null
+        : this.readPool
+          ? this.getPoolMetrics(this.readPool, 'read')
+          : null;
 
     const history = this.metricsHistory.get(poolName) || [];
-    
-    const averageUtilization = history.length > 0
-      ? history.reduce((sum, m) => sum + m.utilizationPercentage, 0) / history.length
-      : 0;
 
-    const peakUtilization = history.length > 0
-      ? Math.max(...history.map(m => m.utilizationPercentage))
-      : 0;
+    const averageUtilization =
+      history.length > 0
+        ? history.reduce((sum, m) => sum + m.utilizationPercentage, 0) / history.length
+        : 0;
+
+    const peakUtilization =
+      history.length > 0 ? Math.max(...history.map((m) => m.utilizationPercentage)) : 0;
 
     // Count alerts in the last hour (simplified)
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-    const recentAlerts = Array.from(this.lastAlerts.values()).filter(date => date > oneHourAgo);
+    const recentAlerts = Array.from(this.lastAlerts.values()).filter((date) => date > oneHourAgo);
 
     return {
       current,
       averageUtilization,
       peakUtilization,
       totalAlerts: recentAlerts.length,
-      lastAlert: recentAlerts.length > 0 ? Math.max(...recentAlerts.map(d => d.getTime())) as any : null,
+      lastAlert:
+        recentAlerts.length > 0 ? (Math.max(...recentAlerts.map((d) => d.getTime())) as any) : null,
     };
   }
 
@@ -323,27 +338,39 @@ export class ConnectionMonitor extends EventEmitter {
 
     // Generate recommendations based on statistics
     if (writeStats.averageUtilization > 80) {
-      recommendations.push('Consider increasing write pool size - high average utilization detected');
+      recommendations.push(
+        'Consider increasing write pool size - high average utilization detected'
+      );
     }
 
     if (readStats.averageUtilization > 80) {
-      recommendations.push('Consider increasing read pool size - high average utilization detected');
+      recommendations.push(
+        'Consider increasing read pool size - high average utilization detected'
+      );
     }
 
     if (writeStats.peakUtilization > 95) {
-      recommendations.push('Write pool frequently reaches capacity - consider increasing max connections');
+      recommendations.push(
+        'Write pool frequently reaches capacity - consider increasing max connections'
+      );
     }
 
     if (readStats.peakUtilization > 95) {
-      recommendations.push('Read pool frequently reaches capacity - consider increasing max connections');
+      recommendations.push(
+        'Read pool frequently reaches capacity - consider increasing max connections'
+      );
     }
 
     if (writeStats.totalAlerts > 10) {
-      recommendations.push('High number of write pool alerts - investigate connection usage patterns');
+      recommendations.push(
+        'High number of write pool alerts - investigate connection usage patterns'
+      );
     }
 
     if (readStats.totalAlerts > 10) {
-      recommendations.push('High number of read pool alerts - investigate connection usage patterns');
+      recommendations.push(
+        'High number of read pool alerts - investigate connection usage patterns'
+      );
     }
 
     if (recommendations.length === 0) {

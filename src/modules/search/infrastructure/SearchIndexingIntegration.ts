@@ -1,9 +1,9 @@
 /**
  * Search Indexing Integration
- * 
+ *
  * Provides integration utilities for setting up search indexing
  * in the main application startup process.
- * 
+ *
  * Requirements: 8.7 - Search indexing strategy integration
  */
 

@@ -1,6 +1,6 @@
 /**
  * Database Schema Type Definitions
- * 
+ *
  * Type definitions for database entities and query results
  */
 

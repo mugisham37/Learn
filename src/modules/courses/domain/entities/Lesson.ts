@@ -25,24 +25,50 @@ export class Lesson {
   }
 
   // Getters
-  get id(): string { return this._props.id; }
-  get moduleId(): string { return this._props.moduleId; }
-  get title(): string { return this._props.title; }
-  get description(): string | undefined { return this._props.description; }
-  get type(): LessonType { return this._props.type; }
-  get contentUrl(): string | undefined { return this._props.contentUrl; }
-  get contentText(): string | undefined { return this._props.contentText; }
-  get durationMinutes(): number | undefined { return this._props.durationMinutes; }
-  get orderNumber(): number { return this._props.orderNumber; }
-  get isPreview(): boolean { return this._props.isPreview; }
-  get metadata(): Record<string, any> { return { ...this._props.metadata }; }
-  get createdAt(): Date { return this._props.createdAt; }
-  get updatedAt(): Date { return this._props.updatedAt; }
+  get id(): string {
+    return this._props.id;
+  }
+  get moduleId(): string {
+    return this._props.moduleId;
+  }
+  get title(): string {
+    return this._props.title;
+  }
+  get description(): string | undefined {
+    return this._props.description;
+  }
+  get type(): LessonType {
+    return this._props.type;
+  }
+  get contentUrl(): string | undefined {
+    return this._props.contentUrl;
+  }
+  get contentText(): string | undefined {
+    return this._props.contentText;
+  }
+  get durationMinutes(): number | undefined {
+    return this._props.durationMinutes;
+  }
+  get orderNumber(): number {
+    return this._props.orderNumber;
+  }
+  get isPreview(): boolean {
+    return this._props.isPreview;
+  }
+  get metadata(): Record<string, any> {
+    return { ...this._props.metadata };
+  }
+  get createdAt(): Date {
+    return this._props.createdAt;
+  }
+  get updatedAt(): Date {
+    return this._props.updatedAt;
+  }
 
   // Static factory method for creating new lessons
   static create(props: Omit<LessonProps, 'id' | 'metadata' | 'createdAt' | 'updatedAt'>): Lesson {
     const now = new Date();
-    
+
     const lessonProps: LessonProps = {
       ...props,
       id: crypto.randomUUID(),
@@ -55,7 +81,14 @@ export class Lesson {
   }
 
   // Update lesson properties
-  update(updates: Partial<Pick<LessonProps, 'title' | 'description' | 'contentUrl' | 'contentText' | 'durationMinutes' | 'isPreview'>>): void {
+  update(
+    updates: Partial<
+      Pick<
+        LessonProps,
+        'title' | 'description' | 'contentUrl' | 'contentText' | 'durationMinutes' | 'isPreview'
+      >
+    >
+  ): void {
     Object.assign(this._props, updates, { updatedAt: new Date() });
     this.validateProps(this._props);
   }
@@ -65,7 +98,7 @@ export class Lesson {
     if (orderNumber <= 0) {
       throw new Error('Order number must be positive');
     }
-    
+
     this._props.orderNumber = orderNumber;
     this._props.updatedAt = new Date();
   }
@@ -75,7 +108,7 @@ export class Lesson {
     if (!contentUrl || contentUrl.trim().length === 0) {
       throw new Error('Content URL cannot be empty');
     }
-    
+
     this._props.contentUrl = contentUrl;
     this._props.updatedAt = new Date();
   }
@@ -171,22 +204,22 @@ export class Lesson {
           console.warn('Video lesson should have a positive duration');
         }
         break;
-      
+
       case 'text':
         // Text lessons should have content text
         if (!props.contentText || props.contentText.trim().length === 0) {
           throw new Error('Text lesson must have content text');
         }
         break;
-      
+
       case 'quiz':
         // Quiz lessons will be validated by Quiz entity
         break;
-      
+
       case 'assignment':
         // Assignment lessons will be validated by Assignment entity
         break;
-      
+
       default:
         throw new Error(`Invalid lesson type: ${props.type}`);
     }

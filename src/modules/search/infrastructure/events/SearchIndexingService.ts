@@ -1,9 +1,9 @@
 /**
  * Search Indexing Service
- * 
+ *
  * Initializes and manages the search indexing system, including
  * event handlers, queue management, and bulk reindexing operations.
- * 
+ *
  * Requirements: 8.7 - Search indexing strategy implementation
  */
 
@@ -26,7 +26,7 @@ export interface SearchIndexingServiceConfig {
 
 /**
  * Search Indexing Service
- * 
+ *
  * Coordinates search indexing operations by managing the indexing queue,
  * event handlers, and providing utilities for bulk operations.
  */
@@ -91,7 +91,7 @@ export class SearchIndexingService {
       // Subscribe to all course-related events
       const courseEventTypes = [
         'CourseCreated',
-        'CourseUpdated', 
+        'CourseUpdated',
         'CoursePublished',
         'CourseArchived',
         'ModuleAdded',
@@ -103,13 +103,13 @@ export class SearchIndexingService {
       ];
 
       // Subscribe to each event type
-      courseEventTypes.forEach(eventType => {
+      courseEventTypes.forEach((eventType) => {
         const unsubscribe = eventBus.subscribe<CourseEvent>(
           eventType,
           this.eventHandlers.handleCourseEvent.bind(this.eventHandlers),
           `SearchIndexing-${eventType}`
         );
-        
+
         this.unsubscribeFunctions.push(unsubscribe);
       });
 
@@ -362,7 +362,7 @@ export class SearchIndexingService {
   }> {
     try {
       // Get queue stats
-      const queueStats = this.isInitialized 
+      const queueStats = this.isInitialized
         ? await this.searchIndexingQueue.getQueueStats()
         : { waiting: 0, active: 0, completed: 0, failed: 0, delayed: 0 };
 
@@ -372,9 +372,7 @@ export class SearchIndexingService {
       // Get event bus stats
       const eventBusStats = eventBus.getStats();
 
-      const healthy = this.isInitialized && 
-                     searchHealth.healthy && 
-                     queueStats.failed < 10; // Arbitrary threshold
+      const healthy = this.isInitialized && searchHealth.healthy && queueStats.failed < 10; // Arbitrary threshold
 
       return {
         healthy,
@@ -419,9 +417,9 @@ export class SearchIndexingService {
 
     try {
       logger.info('Refreshing search indices...');
-      
+
       await this.searchService.refreshIndices();
-      
+
       logger.info('Search indices refreshed successfully');
     } catch (error) {
       logger.error('Failed to refresh search indices', {
@@ -439,7 +437,7 @@ export class SearchIndexingService {
       logger.info('Shutting down search indexing service...');
 
       // Unsubscribe from all events
-      this.unsubscribeFunctions.forEach(unsubscribe => {
+      this.unsubscribeFunctions.forEach((unsubscribe) => {
         try {
           unsubscribe();
         } catch (error) {

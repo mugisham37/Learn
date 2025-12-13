@@ -1,6 +1,6 @@
 /**
  * Stripe Webhook Handler Tests
- * 
+ *
  * Tests the webhook handler integration with payment service
  */
 
@@ -47,17 +47,17 @@ describe('StripeWebhookHandler', () => {
             customer_email: 'test@example.com',
             metadata: {
               courseId: 'course_123',
-              studentId: 'student_123'
-            }
-          } as Stripe.Checkout.Session
+              studentId: 'student_123',
+            },
+          } as Stripe.Checkout.Session,
         },
         livemode: false,
         pending_webhooks: 1,
         request: {
           id: 'req_test_123',
-          idempotency_key: null
+          idempotency_key: null,
         },
-        type: 'checkout.session.completed'
+        type: 'checkout.session.completed',
       };
 
       // Act
@@ -84,17 +84,17 @@ describe('StripeWebhookHandler', () => {
             status: 'succeeded',
             metadata: {
               courseId: 'course_123',
-              studentId: 'student_123'
-            }
-          } as Stripe.PaymentIntent
+              studentId: 'student_123',
+            },
+          } as Stripe.PaymentIntent,
         },
         livemode: false,
         pending_webhooks: 1,
         request: {
           id: 'req_test_456',
-          idempotency_key: null
+          idempotency_key: null,
         },
-        type: 'payment_intent.succeeded'
+        type: 'payment_intent.succeeded',
       };
 
       // Act
@@ -121,21 +121,21 @@ describe('StripeWebhookHandler', () => {
             status: 'requires_payment_method',
             last_payment_error: {
               message: 'Your card was declined.',
-              type: 'card_error'
+              type: 'card_error',
             },
             metadata: {
               courseId: 'course_123',
-              studentId: 'student_123'
-            }
-          } as Stripe.PaymentIntent
+              studentId: 'student_123',
+            },
+          } as Stripe.PaymentIntent,
         },
         livemode: false,
         pending_webhooks: 1,
         request: {
           id: 'req_test_789',
-          idempotency_key: null
+          idempotency_key: null,
         },
-        type: 'payment_intent.payment_failed'
+        type: 'payment_intent.payment_failed',
       };
 
       // Act
@@ -160,16 +160,16 @@ describe('StripeWebhookHandler', () => {
             subscription: 'sub_test_123',
             amount_paid: 0,
             attempt_count: 1,
-            status: 'open'
-          } as Stripe.Invoice
+            status: 'open',
+          } as Stripe.Invoice,
         },
         livemode: false,
         pending_webhooks: 1,
         request: {
           id: 'req_test_101',
-          idempotency_key: null
+          idempotency_key: null,
         },
-        type: 'invoice.payment_failed'
+        type: 'invoice.payment_failed',
       };
 
       // Act
@@ -193,16 +193,16 @@ describe('StripeWebhookHandler', () => {
             object: 'subscription',
             customer: 'cus_test_123',
             status: 'canceled',
-            cancel_at_period_end: false
-          } as Stripe.Subscription
+            cancel_at_period_end: false,
+          } as Stripe.Subscription,
         },
         livemode: false,
         pending_webhooks: 1,
         request: {
           id: 'req_test_202',
-          idempotency_key: null
+          idempotency_key: null,
         },
-        type: 'customer.subscription.deleted'
+        type: 'customer.subscription.deleted',
       };
 
       // Act
@@ -221,22 +221,24 @@ describe('StripeWebhookHandler', () => {
         api_version: '2023-10-16',
         created: Date.now(),
         data: {
-          object: {} as any
+          object: {} as any,
         },
         livemode: false,
         pending_webhooks: 1,
         request: {
           id: 'req_test_error',
-          idempotency_key: null
+          idempotency_key: null,
         },
-        type: 'checkout.session.completed'
+        type: 'checkout.session.completed',
       };
 
       const error = new Error('Payment service error');
       vi.mocked(mockPaymentService.handleWebhook).mockRejectedValue(error);
 
       // Act & Assert
-      await expect(webhookHandler.handleWebhook(mockEvent)).rejects.toThrow('Payment service error');
+      await expect(webhookHandler.handleWebhook(mockEvent)).rejects.toThrow(
+        'Payment service error'
+      );
       expect(mockPaymentService.handleWebhook).toHaveBeenCalledTimes(1);
     });
   });

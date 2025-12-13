@@ -1,12 +1,12 @@
 /**
  * CSRF Protection Middleware
- * 
+ *
  * Implements Cross-Site Request Forgery protection through multiple mechanisms:
  * - SameSite cookie attributes
  * - CSRF token generation and validation
  * - Custom header requirements for state-changing requests
  * - Origin and referer header verification
- * 
+ *
  * Requirements: 13.8
  */
 
@@ -38,7 +38,7 @@ const ALLOWED_ORIGINS = config.cors.origin;
 
 /**
  * Generates a cryptographically secure CSRF token
- * 
+ *
  * @returns Base64-encoded CSRF token
  */
 export function generateCSRFToken(): string {
@@ -47,7 +47,7 @@ export function generateCSRFToken(): string {
 
 /**
  * Validates CSRF token by comparing with the token stored in cookie
- * 
+ *
  * @param providedToken - Token provided in request header
  * @param cookieToken - Token stored in cookie
  * @returns True if tokens match, false otherwise
@@ -66,7 +66,7 @@ function validateCSRFToken(providedToken: string, cookieToken: string): boolean 
 
 /**
  * Validates origin header against allowed origins
- * 
+ *
  * @param origin - Origin header value
  * @returns True if origin is allowed, false otherwise
  */
@@ -81,7 +81,7 @@ function validateOrigin(origin: string | undefined): boolean {
 
 /**
  * Validates referer header against allowed origins
- * 
+ *
  * @param referer - Referer header value
  * @returns True if referer is from allowed origin, false otherwise
  */
@@ -93,7 +93,7 @@ function validateReferer(referer: string | undefined): boolean {
   try {
     const refererUrl = new URL(referer);
     const refererOrigin = `${refererUrl.protocol}//${refererUrl.host}`;
-    
+
     return ALLOWED_ORIGINS.includes(refererOrigin) || ALLOWED_ORIGINS.includes('*');
   } catch {
     return false;
@@ -102,20 +102,17 @@ function validateReferer(referer: string | undefined): boolean {
 
 /**
  * CSRF protection middleware
- * 
+ *
  * Validates CSRF tokens and headers for state-changing requests.
  * Sets secure cookie attributes and validates origin/referer headers.
- * 
+ *
  * @param request - Fastify request object
  * @param reply - Fastify reply object
  * @throws ValidationError if CSRF validation fails
- * 
+ *
  * Requirements: 13.8
  */
-export async function csrfProtection(
-  request: FastifyRequest,
-  reply: FastifyReply
-): Promise<void> {
+export async function csrfProtection(request: FastifyRequest, reply: FastifyReply): Promise<void> {
   const requestId = request.id;
   const method = request.method;
   const origin = request.headers.origin;
@@ -124,10 +121,7 @@ export async function csrfProtection(
   try {
     // Skip CSRF protection for safe methods (GET, HEAD, OPTIONS)
     if (!STATE_CHANGING_METHODS.includes(method)) {
-      logger.debug(
-        { requestId, method },
-        'CSRF protection skipped for safe HTTP method'
-      );
+      logger.debug({ requestId, method }, 'CSRF protection skipped for safe HTTP method');
       return;
     }
 
@@ -181,17 +175,11 @@ export async function csrfProtection(
 
     // Validate CSRF token
     if (!validateCSRFToken(providedToken, cookieToken)) {
-      logger.warn(
-        { requestId, method },
-        'CSRF protection failed: Invalid CSRF token'
-      );
+      logger.warn({ requestId, method }, 'CSRF protection failed: Invalid CSRF token');
       throw new ValidationError('Invalid CSRF token');
     }
 
-    logger.debug(
-      { requestId, method, origin, referer },
-      'CSRF protection validation successful'
-    );
+    logger.debug({ requestId, method, origin, referer }, 'CSRF protection validation successful');
   } catch (error) {
     // If it's already a ValidationError, rethrow it
     if (error instanceof ValidationError) {
@@ -218,7 +206,7 @@ export async function csrfProtection(
 
 /**
  * Sets CSRF token cookie with secure attributes
- * 
+ *
  * @param reply - Fastify reply object
  * @param token - CSRF token to set in cookie
  */
@@ -237,7 +225,7 @@ export function setCSRFTokenCookie(reply: FastifyReply, token: string): void {
 /**
  * Endpoint to get CSRF token
  * This should be called by the frontend to obtain a CSRF token
- * 
+ *
  * @param request - Fastify request object
  * @param reply - Fastify reply object
  * @returns CSRF token
@@ -247,14 +235,11 @@ export async function getCSRFToken(
   reply: FastifyReply
 ): Promise<{ csrfToken: string }> {
   const token = generateCSRFToken();
-  
+
   // Set the token in a secure cookie
   setCSRFTokenCookie(reply, token);
-  
-  logger.debug(
-    { requestId: request.id },
-    'CSRF token generated and set in cookie'
-  );
+
+  logger.debug({ requestId: request.id }, 'CSRF token generated and set in cookie');
 
   // Return the token so frontend can include it in headers
   return { csrfToken: token };
@@ -262,7 +247,7 @@ export async function getCSRFToken(
 
 /**
  * Registers CSRF protection plugin with Fastify
- * 
+ *
  * @param fastify - Fastify instance
  */
 export async function registerCSRFProtection(fastify: FastifyInstance): Promise<void> {
@@ -296,7 +281,7 @@ export async function registerCSRFProtection(fastify: FastifyInstance): Promise<
 
 /**
  * Middleware factory for applying CSRF protection to specific routes
- * 
+ *
  * @returns Fastify preHandler middleware function
  */
 export function requireCSRFProtection() {

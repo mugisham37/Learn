@@ -1,9 +1,9 @@
 /**
  * AnalyticsEvent Domain Entity
- * 
+ *
  * Represents a single analytics event capturing user actions and system events
  * for tracking and analysis purposes.
- * 
+ *
  * Requirements:
  * - 12.7: Analytics event logging with timestamp, user, event type, and contextual data
  */
@@ -50,7 +50,7 @@ export interface SystemEventData extends EventContext {
   metadata?: Record<string, any>;
 }
 
-export type EventType = 
+export type EventType =
   // Learning Events
   | 'lesson_started'
   | 'lesson_completed'
@@ -128,10 +128,19 @@ export class AnalyticsEvent {
    */
   public isLearningEvent(): boolean {
     const learningEvents: EventType[] = [
-      'lesson_started', 'lesson_completed', 'lesson_paused', 'lesson_resumed',
-      'video_watched', 'quiz_started', 'quiz_completed', 'quiz_submitted',
-      'assignment_started', 'assignment_submitted', 'course_enrolled',
-      'course_completed', 'module_completed'
+      'lesson_started',
+      'lesson_completed',
+      'lesson_paused',
+      'lesson_resumed',
+      'video_watched',
+      'quiz_started',
+      'quiz_completed',
+      'quiz_submitted',
+      'assignment_started',
+      'assignment_submitted',
+      'course_enrolled',
+      'course_completed',
+      'module_completed',
     ];
     return learningEvents.includes(this._eventType);
   }
@@ -141,9 +150,15 @@ export class AnalyticsEvent {
    */
   public isEngagementEvent(): boolean {
     const engagementEvents: EventType[] = [
-      'page_view', 'button_click', 'link_click', 'search_performed',
-      'filter_applied', 'discussion_post_created', 'discussion_post_replied',
-      'message_sent', 'notification_clicked'
+      'page_view',
+      'button_click',
+      'link_click',
+      'search_performed',
+      'filter_applied',
+      'discussion_post_created',
+      'discussion_post_replied',
+      'message_sent',
+      'notification_clicked',
     ];
     return engagementEvents.includes(this._eventType);
   }
@@ -153,8 +168,14 @@ export class AnalyticsEvent {
    */
   public isSystemEvent(): boolean {
     const systemEvents: EventType[] = [
-      'user_login', 'user_logout', 'user_registered', 'payment_completed',
-      'error_occurred', 'api_request', 'cache_hit', 'cache_miss'
+      'user_login',
+      'user_logout',
+      'user_registered',
+      'payment_completed',
+      'error_occurred',
+      'api_request',
+      'cache_hit',
+      'cache_miss',
     ];
     return systemEvents.includes(this._eventType);
   }
@@ -195,7 +216,7 @@ export class AnalyticsEvent {
       courseId: this._eventData.courseId,
       moduleId: this._eventData.moduleId,
       lessonId: this._eventData.lessonId,
-      enrollmentId: this._eventData.enrollmentId
+      enrollmentId: this._eventData.enrollmentId,
     };
   }
 
@@ -212,7 +233,7 @@ export class AnalyticsEvent {
       sessionId: this._eventData.sessionId,
       userAgent: this._eventData.userAgent,
       ipAddress: this._eventData.ipAddress,
-      referrer: this._eventData.referrer
+      referrer: this._eventData.referrer,
     };
   }
 
@@ -242,8 +263,11 @@ export class AnalyticsEvent {
    */
   public isCompletionEvent(): boolean {
     const completionEvents: EventType[] = [
-      'lesson_completed', 'quiz_completed', 'assignment_submitted',
-      'course_completed', 'module_completed'
+      'lesson_completed',
+      'quiz_completed',
+      'assignment_submitted',
+      'course_completed',
+      'module_completed',
     ];
     return completionEvents.includes(this._eventType);
   }
@@ -253,7 +277,10 @@ export class AnalyticsEvent {
    */
   public isStartEvent(): boolean {
     const startEvents: EventType[] = [
-      'lesson_started', 'quiz_started', 'assignment_started', 'course_enrolled'
+      'lesson_started',
+      'quiz_started',
+      'assignment_started',
+      'course_enrolled',
     ];
     return startEvents.includes(this._eventType);
   }
@@ -279,7 +306,7 @@ export class AnalyticsEvent {
    */
   public toSanitizedData(): AnalyticsEventData {
     const sanitizedEventData = { ...this._eventData };
-    
+
     // Remove sensitive fields
     delete sanitizedEventData.password;
     delete sanitizedEventData.token;
@@ -301,7 +328,7 @@ export class AnalyticsEvent {
       userId: this._userId,
       eventType: this._eventType,
       eventData: sanitizedEventData,
-      timestamp: this._timestamp
+      timestamp: this._timestamp,
     };
   }
 
@@ -314,7 +341,7 @@ export class AnalyticsEvent {
       userId: this._userId,
       eventType: this._eventType,
       eventData: this._eventData,
-      timestamp: this._timestamp
+      timestamp: this._timestamp,
     };
   }
 
@@ -330,7 +357,7 @@ export class AnalyticsEvent {
       userId,
       eventType,
       eventData: data,
-      timestamp: new Date()
+      timestamp: new Date(),
     });
   }
 
@@ -346,7 +373,7 @@ export class AnalyticsEvent {
       userId,
       eventType,
       eventData: data,
-      timestamp: new Date()
+      timestamp: new Date(),
     });
   }
 
@@ -362,7 +389,7 @@ export class AnalyticsEvent {
       userId,
       eventType,
       eventData: data,
-      timestamp: new Date()
+      timestamp: new Date(),
     });
   }
 
@@ -385,14 +412,36 @@ export class AnalyticsEvent {
 
     // Validate event type is supported
     const validEventTypes: EventType[] = [
-      'lesson_started', 'lesson_completed', 'lesson_paused', 'lesson_resumed',
-      'video_watched', 'quiz_started', 'quiz_completed', 'quiz_submitted',
-      'assignment_started', 'assignment_submitted', 'course_enrolled',
-      'course_completed', 'module_completed', 'page_view', 'button_click',
-      'link_click', 'search_performed', 'filter_applied', 'discussion_post_created',
-      'discussion_post_replied', 'message_sent', 'notification_clicked',
-      'user_login', 'user_logout', 'user_registered', 'payment_completed',
-      'error_occurred', 'api_request', 'cache_hit', 'cache_miss'
+      'lesson_started',
+      'lesson_completed',
+      'lesson_paused',
+      'lesson_resumed',
+      'video_watched',
+      'quiz_started',
+      'quiz_completed',
+      'quiz_submitted',
+      'assignment_started',
+      'assignment_submitted',
+      'course_enrolled',
+      'course_completed',
+      'module_completed',
+      'page_view',
+      'button_click',
+      'link_click',
+      'search_performed',
+      'filter_applied',
+      'discussion_post_created',
+      'discussion_post_replied',
+      'message_sent',
+      'notification_clicked',
+      'user_login',
+      'user_logout',
+      'user_registered',
+      'payment_completed',
+      'error_occurred',
+      'api_request',
+      'cache_hit',
+      'cache_miss',
     ];
 
     if (!validEventTypes.includes(this._eventType)) {
@@ -409,8 +458,10 @@ export class AnalyticsEvent {
       throw new Error('AnalyticsEvent: duration cannot be negative');
     }
 
-    if (this._eventData.progress !== undefined && 
-        (this._eventData.progress < 0 || this._eventData.progress > 100)) {
+    if (
+      this._eventData.progress !== undefined &&
+      (this._eventData.progress < 0 || this._eventData.progress > 100)
+    ) {
       throw new Error('AnalyticsEvent: progress must be between 0 and 100');
     }
 

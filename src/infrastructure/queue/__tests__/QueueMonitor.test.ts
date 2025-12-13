@@ -1,6 +1,6 @@
 /**
  * Queue Monitor Tests
- * 
+ *
  * Tests for the enhanced queue monitoring and alerting functionality.
  */
 
@@ -15,16 +15,16 @@ vi.mock('../../../shared/utils/logger.js', () => ({
     info: vi.fn(),
     warn: vi.fn(),
     error: vi.fn(),
-    debug: vi.fn()
-  }
+    debug: vi.fn(),
+  },
 }));
 
 vi.mock('../../../shared/services/AlertingService.js', () => ({
   AlertingService: {
     getInstance: vi.fn(() => ({
-      createAlert: vi.fn()
-    }))
-  }
+      createAlert: vi.fn(),
+    })),
+  },
 }));
 
 vi.mock('../../../shared/services/JobEventLogger.js', () => ({
@@ -33,9 +33,9 @@ vi.mock('../../../shared/services/JobEventLogger.js', () => ({
       logJobCompleted: vi.fn(),
       logJobFailed: vi.fn(),
       logJobStalled: vi.fn(),
-      logJobProgress: vi.fn()
-    }))
-  }
+      logJobProgress: vi.fn(),
+    })),
+  },
 }));
 
 describe('QueueMonitor', () => {
@@ -44,7 +44,7 @@ describe('QueueMonitor', () => {
 
   beforeEach(() => {
     mockQueueFactory = {
-      getAllQueueStats: vi.fn()
+      getAllQueueStats: vi.fn(),
     };
 
     queueMonitor = new QueueMonitor(mockQueueFactory, {
@@ -52,7 +52,7 @@ describe('QueueMonitor', () => {
       maxFailedJobs: 10,
       maxStalledJobs: 5,
       maxProcessingTimeMs: 60000,
-      minSuccessRate: 0.95
+      minSuccessRate: 0.95,
     });
   });
 
@@ -63,23 +63,25 @@ describe('QueueMonitor', () => {
 
   describe('Health Monitoring', () => {
     it('should detect high queue depth', async () => {
-      const mockStats: QueueStats[] = [{
-        name: 'test-queue',
-        waiting: 150, // Above threshold of 100
-        active: 5,
-        completed: 100,
-        failed: 2,
-        delayed: 0,
-        paused: false
-      }];
+      const mockStats: QueueStats[] = [
+        {
+          name: 'test-queue',
+          waiting: 150, // Above threshold of 100
+          active: 5,
+          completed: 100,
+          failed: 2,
+          delayed: 0,
+          paused: false,
+        },
+      ];
 
       mockQueueFactory.getAllQueueStats.mockResolvedValue(mockStats);
 
       // Start monitoring to trigger health check
       queueMonitor.startMonitoring(100);
-      
+
       // Wait for health check to complete
-      await new Promise(resolve => setTimeout(resolve, 150));
+      await new Promise((resolve) => setTimeout(resolve, 150));
 
       // Verify alert was created (we can't easily test the internal alert creation,
       // but we can verify the monitoring is working)
@@ -87,35 +89,39 @@ describe('QueueMonitor', () => {
     });
 
     it('should track completion rates', async () => {
-      const mockStats: QueueStats[] = [{
-        name: 'test-queue',
-        waiting: 10,
-        active: 2,
-        completed: 80,
-        failed: 20, // 20% failure rate
-        delayed: 0,
-        paused: false
-      }];
+      const mockStats: QueueStats[] = [
+        {
+          name: 'test-queue',
+          waiting: 10,
+          active: 2,
+          completed: 80,
+          failed: 20, // 20% failure rate
+          delayed: 0,
+          paused: false,
+        },
+      ];
 
       mockQueueFactory.getAllQueueStats.mockResolvedValue(mockStats);
 
       queueMonitor.startMonitoring(100);
-      await new Promise(resolve => setTimeout(resolve, 150));
+      await new Promise((resolve) => setTimeout(resolve, 150));
 
       const completionRates = queueMonitor.getCompletionRates();
       expect(completionRates.has('test-queue')).toBe(true);
     });
 
     it('should get queue depths', async () => {
-      const mockStats: QueueStats[] = [{
-        name: 'test-queue',
-        waiting: 25,
-        active: 5,
-        completed: 100,
-        failed: 2,
-        delayed: 0,
-        paused: false
-      }];
+      const mockStats: QueueStats[] = [
+        {
+          name: 'test-queue',
+          waiting: 25,
+          active: 5,
+          completed: 100,
+          failed: 2,
+          delayed: 0,
+          paused: false,
+        },
+      ];
 
       mockQueueFactory.getAllQueueStats.mockResolvedValue(mockStats);
 
@@ -123,7 +129,7 @@ describe('QueueMonitor', () => {
       expect(depths.get('test-queue')).toEqual({
         waiting: 25,
         active: 5,
-        total: 30
+        total: 30,
       });
     });
   });
@@ -134,7 +140,7 @@ describe('QueueMonitor', () => {
         jobId: 'test-job-1',
         queueName: 'test-queue',
         timestamp: new Date(),
-        result: { success: true }
+        result: { success: true },
       };
 
       queueMonitor.onJobCompleted(jobData);
@@ -148,7 +154,7 @@ describe('QueueMonitor', () => {
         jobId: 'test-job-2',
         queueName: 'test-queue',
         timestamp: new Date(),
-        error: new Error('Test error')
+        error: new Error('Test error'),
       };
 
       queueMonitor.onJobFailed(jobData);
@@ -161,7 +167,7 @@ describe('QueueMonitor', () => {
       const jobData = {
         jobId: 'test-job-3',
         queueName: 'test-queue',
-        timestamp: new Date()
+        timestamp: new Date(),
       };
 
       queueMonitor.onJobStalled(jobData);
@@ -175,7 +181,7 @@ describe('QueueMonitor', () => {
         jobId: 'test-job-4',
         queueName: 'test-queue',
         timestamp: new Date(),
-        progress: 50
+        progress: 50,
       };
 
       queueMonitor.onJobProgress(jobData);
@@ -205,10 +211,10 @@ describe('QueueMonitor', () => {
   describe('Monitoring Lifecycle', () => {
     it('should start and stop monitoring', () => {
       expect(queueMonitor['isMonitoring']).toBe(false);
-      
+
       queueMonitor.startMonitoring(1000);
       expect(queueMonitor['isMonitoring']).toBe(true);
-      
+
       queueMonitor.stopMonitoring();
       expect(queueMonitor['isMonitoring']).toBe(false);
     });
@@ -216,7 +222,7 @@ describe('QueueMonitor', () => {
     it('should not start monitoring twice', () => {
       queueMonitor.startMonitoring(1000);
       queueMonitor.startMonitoring(1000); // Should not throw or cause issues
-      
+
       expect(queueMonitor['isMonitoring']).toBe(true);
     });
   });

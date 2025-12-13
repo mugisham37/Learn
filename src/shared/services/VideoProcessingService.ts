@@ -1,9 +1,9 @@
 /**
  * Video Processing Service
- * 
+ *
  * High-level service that orchestrates video processing workflows,
  * integrating the queue, MediaConvert service, and content repository.
- * 
+ *
  * Requirements:
  * - 4.2: MediaConvert transcoding with multiple resolutions
  * - 4.3: Transcoding job status and retry logic
@@ -12,11 +12,7 @@
  */
 
 import { logger } from '../utils/logger.js';
-import { 
-  ValidationError, 
-  NotFoundError, 
-  ExternalServiceError 
-} from '../errors/index.js';
+import { ValidationError, NotFoundError, ExternalServiceError } from '../errors/index.js';
 import { VideoProcessingQueue, VideoProcessingJobData } from './VideoProcessingQueue.js';
 import { IContentRepository } from '../../modules/content/infrastructure/repositories/IContentRepository.js';
 import { IMediaConvertService } from './IMediaConvertService.js';
@@ -56,7 +52,7 @@ export interface ProcessingStatusInfo {
 
 /**
  * Video Processing Service
- * 
+ *
  * Provides high-level video processing operations with comprehensive
  * error handling, status tracking, and notification integration.
  */
@@ -68,10 +64,7 @@ export class VideoProcessingService {
     private readonly contentRepository: IContentRepository,
     private readonly mediaConvertService: IMediaConvertService
   ) {
-    this.videoQueue = new VideoProcessingQueue(
-      this.mediaConvertService,
-      this.contentRepository
-    );
+    this.videoQueue = new VideoProcessingQueue(this.mediaConvertService, this.contentRepository);
   }
 
   /**
@@ -84,7 +77,7 @@ export class VideoProcessingService {
 
     try {
       await this.videoQueue.initialize();
-      
+
       logger.info('Video processing service initialized successfully');
       this.isInitialized = true;
     } catch (error) {
@@ -150,7 +143,7 @@ export class VideoProcessingService {
         processingJobId: processingJob.id,
         processingStatus: 'pending',
         metadata: {
-          ...(videoAsset.metadata as Record<string, any> || {}),
+          ...((videoAsset.metadata as Record<string, any>) || {}),
           outputS3KeyPrefix,
           jobName,
           processingJobId: processingJob.id,
@@ -263,8 +256,8 @@ export class VideoProcessingService {
 
       // Add outputs if processing is completed
       if (videoAsset.processingStatus === 'completed' && videoAsset.availableResolutions) {
-        statusInfo.outputs = Array.isArray(videoAsset.availableResolutions) 
-          ? videoAsset.availableResolutions as any[]
+        statusInfo.outputs = Array.isArray(videoAsset.availableResolutions)
+          ? (videoAsset.availableResolutions as any[])
           : [];
       }
 
@@ -341,20 +334,13 @@ export class VideoProcessingService {
       }
 
       // Update video asset status
-      await this.contentRepository.updateVideoAssetProcessingStatus(
-        videoAssetId,
-        'cancelled',
-        {
-          processingCompletedAt: new Date().toISOString(),
-        }
-      );
+      await this.contentRepository.updateVideoAssetProcessingStatus(videoAssetId, 'cancelled', {
+        processingCompletedAt: new Date().toISOString(),
+      });
 
       // Update processing job status
       if (processingJob) {
-        await this.contentRepository.updateProcessingJobStatus(
-          processingJob.id,
-          'cancelled'
-        );
+        await this.contentRepository.updateProcessingJobStatus(processingJob.id, 'cancelled');
       }
 
       logger.info('Video processing cancelled successfully', { videoAssetId });
@@ -398,7 +384,7 @@ export class VideoProcessingService {
       }
 
       // Extract original parameters from metadata
-      const metadata = videoAsset.metadata as any || {};
+      const metadata = (videoAsset.metadata as any) || {};
       const params: VideoUploadCompletionParams = {
         videoAssetId,
         s3Bucket: videoAsset.s3Bucket,
@@ -410,15 +396,11 @@ export class VideoProcessingService {
       };
 
       // Reset video asset status
-      await this.contentRepository.updateVideoAssetProcessingStatus(
-        videoAssetId,
-        'pending',
-        {
-          processingErrorMessage: null,
-          processingStartedAt: null,
-          processingCompletedAt: null,
-        }
-      );
+      await this.contentRepository.updateVideoAssetProcessingStatus(videoAssetId, 'pending', {
+        processingErrorMessage: null,
+        processingStartedAt: null,
+        processingCompletedAt: null,
+      });
 
       // Initiate processing again
       const result = await this.processVideoUpload(params);
@@ -520,7 +502,10 @@ export class VideoProcessingService {
 
   private generateJobName(inputS3Key: string, videoAssetId: string): string {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const fileName = inputS3Key.substring(inputS3Key.lastIndexOf('/') + 1, inputS3Key.lastIndexOf('.'));
+    const fileName = inputS3Key.substring(
+      inputS3Key.lastIndexOf('/') + 1,
+      inputS3Key.lastIndexOf('.')
+    );
     return `video-transcode-${fileName}-${videoAssetId}-${timestamp}`;
   }
 }

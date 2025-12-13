@@ -1,6 +1,6 @@
 /**
  * Payment Domain Events
- * 
+ *
  * Exports all payment domain events for use throughout the application.
  * These events represent significant state changes in the payment domain.
  */
@@ -17,5 +17,5 @@ export {
   RefundCreatedEvent,
   RefundProcessedEvent,
   RefundFailedEvent,
-  type PaymentDomainEvents
+  type PaymentDomainEvents,
 } from './PaymentEvents';

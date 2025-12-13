@@ -1,9 +1,9 @@
 /**
  * Video Processing Lambda Function
- * 
+ *
  * AWS Lambda function handler for S3 upload triggers that initiates
  * MediaConvert transcoding jobs when videos are uploaded.
- * 
+ *
  * Requirements:
  * - 4.2: MediaConvert transcoding initiation on S3 upload
  * - 4.3: Transcoding job creation with retry logic
@@ -38,7 +38,7 @@ interface ProcessingResult {
 
 /**
  * Lambda function handler for video processing
- * 
+ *
  * This function is triggered by S3 upload events and initiates
  * MediaConvert transcoding jobs for video files.
  */
@@ -73,7 +73,7 @@ export const handler: S3Handler = async (event: S3Event, context: Context) => {
   }
 
   // Log summary
-  const successCount = results.filter(r => r.success).length;
+  const successCount = results.filter((r) => r.success).length;
   const failureCount = results.length - successCount;
 
   logger.info('Video processing Lambda completed', {
@@ -310,11 +310,7 @@ export const lambdaConfig = {
     },
     {
       service: 'logs',
-      actions: [
-        'logs:CreateLogGroup',
-        'logs:CreateLogStream',
-        'logs:PutLogEvents',
-      ],
+      actions: ['logs:CreateLogGroup', 'logs:CreateLogStream', 'logs:PutLogEvents'],
       resources: ['arn:aws:logs:*:*:*'],
     },
   ],

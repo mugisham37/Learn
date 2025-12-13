@@ -1,9 +1,9 @@
 /**
  * GraphQL Schema for Analytics Module
- * 
+ *
  * Defines GraphQL types, inputs, and schema for analytics data,
  * dashboard metrics, and report generation.
- * 
+ *
  * Requirements: 21.1, 21.2
  */
 
@@ -129,7 +129,7 @@ export const analyticsTypeDefs = gql`
     badgesEarned: [String!]!
     skillRatings: JSON!
     lastUpdated: DateTime!
-    
+
     # Computed fields
     completionRate: Float!
     averageTimePerCourse: Int!
@@ -455,11 +455,11 @@ export const analyticsTypeDefs = gql`
     courseAnalytics(courseId: ID!): CourseAnalytics
     studentAnalytics(userId: ID!): StudentAnalytics
     dashboardMetrics: DashboardMetrics!
-    
+
     # Report generation queries
     generateCourseReport(input: CourseReportInput!): CourseReport!
     generateStudentReport(input: StudentReportInput!): StudentReport!
-    
+
     # Platform-wide analytics (admin only)
     platformMetrics(input: PlatformMetricsInput!): PlatformHealth!
     trendingCourses(limit: Int = 10, dateRange: DateRangeInput!): [CourseAnalytics!]!

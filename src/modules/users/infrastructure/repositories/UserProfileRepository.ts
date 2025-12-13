@@ -1,10 +1,10 @@
 /**
  * User Profile Repository Implementation
- * 
+ *
  * Implements user profile data access operations with Drizzle ORM queries,
  * Redis caching with 5-minute TTL, and cache invalidation on updates.
  * Handles database errors and maps them to domain errors.
- * 
+ *
  * Requirements: 10.7
  */
 
@@ -12,13 +12,18 @@ import { eq } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
 import { getWriteDb, getReadDb } from '../../../../infrastructure/database/index.js';
-import { userProfiles, UserProfile, NewUserProfile } from '../../../../infrastructure/database/schema/users.schema.js';
-import { cache, buildCacheKey, CachePrefix, CacheTTL } from '../../../../infrastructure/cache/index.js';
 import {
-  DatabaseError,
-  ConflictError,
-  NotFoundError,
-} from '../../../../shared/errors/index.js';
+  userProfiles,
+  UserProfile,
+  NewUserProfile,
+} from '../../../../infrastructure/database/schema/users.schema.js';
+import {
+  cache,
+  buildCacheKey,
+  CachePrefix,
+  CacheTTL,
+} from '../../../../infrastructure/cache/index.js';
+import { DatabaseError, ConflictError, NotFoundError } from '../../../../shared/errors/index.js';
 import {
   IUserProfileRepository,
   CreateUserProfileDTO,
@@ -27,7 +32,7 @@ import {
 
 /**
  * User Profile Repository Implementation
- * 
+ *
  * Provides data access methods for user profile entities with:
  * - Drizzle ORM for type-safe queries
  * - Redis caching with 5-minute TTL
@@ -52,7 +57,7 @@ export class UserProfileRepository implements IUserProfileRepository {
 
   /**
    * Creates a new user profile in the database
-   * 
+   *
    * @param data - User profile creation data
    * @returns The created user profile
    * @throws ConflictError if profile already exists for user
@@ -63,10 +68,7 @@ export class UserProfileRepository implements IUserProfileRepository {
       // Check for existing profile
       const existingProfile = await this.findByUserId(data.userId);
       if (existingProfile) {
-        throw new ConflictError(
-          'A profile already exists for this user',
-          'userId'
-        );
+        throw new ConflictError('A profile already exists for this user', 'userId');
       }
 
       // Prepare profile data for insertion
@@ -88,10 +90,7 @@ export class UserProfileRepository implements IUserProfileRepository {
         .returning();
 
       if (!createdProfile) {
-        throw new DatabaseError(
-          'Failed to create user profile',
-          'insert'
-        );
+        throw new DatabaseError('Failed to create user profile', 'insert');
       }
 
       return createdProfile;
@@ -104,16 +103,10 @@ export class UserProfileRepository implements IUserProfileRepository {
       // Handle database constraint violations
       if (error instanceof Error) {
         if (error.message.includes('unique') || error.message.includes('duplicate')) {
-          throw new ConflictError(
-            'A profile already exists for this user',
-            'userId'
-          );
+          throw new ConflictError('A profile already exists for this user', 'userId');
         }
         if (error.message.includes('foreign key')) {
-          throw new ConflictError(
-            'User does not exist',
-            'userId'
-          );
+          throw new ConflictError('User does not exist', 'userId');
         }
       }
 
@@ -128,10 +121,10 @@ export class UserProfileRepository implements IUserProfileRepository {
 
   /**
    * Finds a user profile by user ID
-   * 
+   *
    * Implements caching with 5-minute TTL.
    * Uses read database for query optimization.
-   * 
+   *
    * @param userId - User ID
    * @returns The user profile if found, null otherwise
    * @throws DatabaseError if database operation fails
@@ -141,7 +134,7 @@ export class UserProfileRepository implements IUserProfileRepository {
       // Check cache first
       const cacheKey = this.getUserProfileCacheKey(userId);
       const cachedProfile = await cache.get<UserProfile>(cacheKey);
-      
+
       if (cachedProfile) {
         return cachedProfile;
       }
@@ -172,9 +165,9 @@ export class UserProfileRepository implements IUserProfileRepository {
 
   /**
    * Updates a user profile's data
-   * 
+   *
    * Invalidates cache after successful update.
-   * 
+   *
    * @param userId - User ID
    * @param data - Update data
    * @returns The updated user profile
@@ -203,10 +196,7 @@ export class UserProfileRepository implements IUserProfileRepository {
         .returning();
 
       if (!updatedProfile) {
-        throw new DatabaseError(
-          'Failed to update user profile',
-          'update'
-        );
+        throw new DatabaseError('Failed to update user profile', 'update');
       }
 
       // Invalidate cache
@@ -215,10 +205,7 @@ export class UserProfileRepository implements IUserProfileRepository {
       return updatedProfile;
     } catch (error) {
       // Re-throw known errors
-      if (
-        error instanceof NotFoundError ||
-        error instanceof DatabaseError
-      ) {
+      if (error instanceof NotFoundError || error instanceof DatabaseError) {
         throw error;
       }
 
@@ -233,9 +220,9 @@ export class UserProfileRepository implements IUserProfileRepository {
 
   /**
    * Deletes a user profile
-   * 
+   *
    * Invalidates cache after successful deletion.
-   * 
+   *
    * @param userId - User ID
    * @returns void
    * @throws NotFoundError if profile doesn't exist
@@ -256,10 +243,7 @@ export class UserProfileRepository implements IUserProfileRepository {
         .returning();
 
       if (!result || result.length === 0) {
-        throw new DatabaseError(
-          'Failed to delete user profile',
-          'delete'
-        );
+        throw new DatabaseError('Failed to delete user profile', 'delete');
       }
 
       // Invalidate cache
@@ -281,7 +265,7 @@ export class UserProfileRepository implements IUserProfileRepository {
 
   /**
    * Checks if a user profile exists
-   * 
+   *
    * @param userId - User ID
    * @returns True if profile exists, false otherwise
    * @throws DatabaseError if database operation fails
@@ -301,7 +285,7 @@ export class UserProfileRepository implements IUserProfileRepository {
 
   /**
    * Invalidates cache for a specific user profile
-   * 
+   *
    * @param userId - User ID
    * @returns void
    */

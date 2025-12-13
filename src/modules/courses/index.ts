@@ -1,6 +1,6 @@
 /**
  * Courses Module
- * 
+ *
  * Public API for the courses module
  */
 

@@ -1,9 +1,9 @@
 /**
  * Analytics Cache Invalidation Service
- * 
+ *
  * Handles cache invalidation when data changes to ensure cache consistency.
  * Implements event-driven cache invalidation patterns.
- * 
+ *
  * Requirements: 12.6, 15.2
  */
 
@@ -19,29 +19,29 @@ export enum CacheInvalidationEvent {
   COURSE_UPDATED = 'course.updated',
   COURSE_PUBLISHED = 'course.published',
   COURSE_DELETED = 'course.deleted',
-  
+
   // Enrollment events
   STUDENT_ENROLLED = 'enrollment.created',
   ENROLLMENT_COMPLETED = 'enrollment.completed',
   ENROLLMENT_WITHDRAWN = 'enrollment.withdrawn',
   LESSON_PROGRESS_UPDATED = 'lesson.progress.updated',
-  
+
   // Assessment events
   QUIZ_SUBMITTED = 'quiz.submitted',
   QUIZ_GRADED = 'quiz.graded',
   ASSIGNMENT_SUBMITTED = 'assignment.submitted',
   ASSIGNMENT_GRADED = 'assignment.graded',
-  
+
   // Payment events
   PAYMENT_COMPLETED = 'payment.completed',
   PAYMENT_FAILED = 'payment.failed',
   REFUND_PROCESSED = 'refund.processed',
-  
+
   // User events
   USER_CREATED = 'user.created',
   USER_UPDATED = 'user.updated',
   USER_DELETED = 'user.deleted',
-  
+
   // Communication events
   DISCUSSION_POST_CREATED = 'discussion.post.created',
   MESSAGE_SENT = 'message.sent',
@@ -66,14 +66,14 @@ export interface CacheInvalidationEventData {
 
 /**
  * Analytics Cache Invalidation Service
- * 
+ *
  * Provides intelligent cache invalidation based on data change events.
  * Ensures cache consistency while minimizing unnecessary invalidations.
  */
 export class AnalyticsCacheInvalidationService {
   /**
    * Handles cache invalidation for a specific event
-   * 
+   *
    * @param eventData - Event data containing information about what changed
    */
   async handleCacheInvalidation(eventData: CacheInvalidationEventData): Promise<void> {
@@ -87,7 +87,7 @@ export class AnalyticsCacheInvalidationService {
         case CacheInvalidationEvent.COURSE_PUBLISHED:
           await this.handleCourseEvent(eventData);
           break;
-        
+
         case CacheInvalidationEvent.COURSE_DELETED:
           await this.handleCourseDeletedEvent(eventData);
           break;
@@ -98,7 +98,7 @@ export class AnalyticsCacheInvalidationService {
         case CacheInvalidationEvent.ENROLLMENT_WITHDRAWN:
           await this.handleEnrollmentEvent(eventData);
           break;
-        
+
         case CacheInvalidationEvent.LESSON_PROGRESS_UPDATED:
           await this.handleLessonProgressEvent(eventData);
           break;
@@ -123,7 +123,7 @@ export class AnalyticsCacheInvalidationService {
         case CacheInvalidationEvent.USER_UPDATED:
           await this.handleUserEvent(eventData);
           break;
-        
+
         case CacheInvalidationEvent.USER_DELETED:
           await this.handleUserDeletedEvent(eventData);
           break;
@@ -158,10 +158,10 @@ export class AnalyticsCacheInvalidationService {
     await Promise.all([
       // Invalidate course-specific caches
       analyticsCacheService.invalidateCourseCache(eventData.courseId),
-      
+
       // Invalidate platform-wide caches that include course data
       this.invalidatePlatformCaches(),
-      
+
       // Invalidate trending courses (course changes might affect trending)
       this.invalidateTrendingCaches(),
     ]);
@@ -179,7 +179,7 @@ export class AnalyticsCacheInvalidationService {
     await Promise.all([
       // Invalidate all course-related caches
       analyticsCacheService.invalidateCourseCache(eventData.courseId),
-      
+
       // Invalidate all dashboard caches (course deletion affects all dashboards)
       analyticsCacheService.invalidateAllAnalyticsCache(),
     ]);
@@ -200,14 +200,13 @@ export class AnalyticsCacheInvalidationService {
     }
 
     if (eventData.courseId && eventData.userId) {
-      promises.push(analyticsCacheService.invalidateEnrollmentCache(eventData.courseId, eventData.userId));
+      promises.push(
+        analyticsCacheService.invalidateEnrollmentCache(eventData.courseId, eventData.userId)
+      );
     }
 
     // Enrollment changes affect platform metrics and trending data
-    promises.push(
-      this.invalidatePlatformCaches(),
-      this.invalidateTrendingCaches()
-    );
+    promises.push(this.invalidatePlatformCaches(), this.invalidateTrendingCaches());
 
     await Promise.all(promises);
   }
@@ -239,7 +238,9 @@ export class AnalyticsCacheInvalidationService {
     const promises = [];
 
     if (eventData.courseId && eventData.userId) {
-      promises.push(analyticsCacheService.invalidateAssessmentCache(eventData.courseId, eventData.userId));
+      promises.push(
+        analyticsCacheService.invalidateAssessmentCache(eventData.courseId, eventData.userId)
+      );
     }
 
     // Assessment changes affect performance metrics
@@ -278,7 +279,7 @@ export class AnalyticsCacheInvalidationService {
     await Promise.all([
       // Invalidate user-specific caches
       analyticsCacheService.invalidateStudentCache(eventData.userId),
-      
+
       // User changes might affect platform metrics
       this.invalidatePlatformCaches(),
     ]);
@@ -296,7 +297,7 @@ export class AnalyticsCacheInvalidationService {
     await Promise.all([
       // Invalidate all user-related caches
       analyticsCacheService.invalidateStudentCache(eventData.userId),
-      
+
       // User deletion affects platform-wide metrics
       analyticsCacheService.invalidateAllAnalyticsCache(),
     ]);
@@ -338,9 +339,7 @@ export class AnalyticsCacheInvalidationService {
       AnalyticsCacheKeys.allDashboardPattern(),
     ];
 
-    await Promise.all(
-      patterns.map(pattern => analyticsCacheService.deletePattern(pattern))
-    );
+    await Promise.all(patterns.map((pattern) => analyticsCacheService.deletePattern(pattern)));
   }
 
   /**
@@ -352,14 +351,12 @@ export class AnalyticsCacheInvalidationService {
       buildCacheKey(CachePrefix.ANALYTICS, 'top-performers', '*'),
     ];
 
-    await Promise.all(
-      patterns.map(pattern => analyticsCacheService.deletePattern(pattern))
-    );
+    await Promise.all(patterns.map((pattern) => analyticsCacheService.deletePattern(pattern)));
   }
 
   /**
    * Batch processes multiple cache invalidation events
-   * 
+   *
    * @param events - Array of cache invalidation events
    */
   async handleBatchCacheInvalidation(events: CacheInvalidationEventData[]): Promise<void> {
@@ -384,15 +381,20 @@ export class AnalyticsCacheInvalidationService {
   /**
    * Groups events by type for batch processing
    */
-  private groupEventsByType(events: CacheInvalidationEventData[]): Record<string, CacheInvalidationEventData[]> {
-    return events.reduce((groups, event) => {
-      const key = event.eventType;
-      if (!groups[key]) {
-        groups[key] = [];
-      }
-      groups[key].push(event);
-      return groups;
-    }, {} as Record<string, CacheInvalidationEventData[]>);
+  private groupEventsByType(
+    events: CacheInvalidationEventData[]
+  ): Record<string, CacheInvalidationEventData[]> {
+    return events.reduce(
+      (groups, event) => {
+        const key = event.eventType;
+        if (!groups[key]) {
+          groups[key] = [];
+        }
+        groups[key].push(event);
+        return groups;
+      },
+      {} as Record<string, CacheInvalidationEventData[]>
+    );
   }
 
   /**

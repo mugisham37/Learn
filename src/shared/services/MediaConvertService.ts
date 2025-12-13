@@ -1,9 +1,9 @@
 /**
  * MediaConvert Service Implementation
- * 
+ *
  * Implements AWS MediaConvert operations for video transcoding
  * with support for multiple resolutions and HLS streaming.
- * 
+ *
  * Requirements:
  * - 4.2: MediaConvert transcoding with multiple resolutions
  * - 4.3: Transcoding job status and retry logic
@@ -30,11 +30,7 @@ import {
 } from '@aws-sdk/client-mediaconvert';
 
 import { config } from '../../config/index.js';
-import {
-  ExternalServiceError,
-  NotFoundError,
-  ValidationError,
-} from '../errors/index.js';
+import { ExternalServiceError, NotFoundError, ValidationError } from '../errors/index.js';
 import { logger } from '../utils/logger.js';
 import { secrets } from '../utils/secureConfig.js';
 
@@ -51,7 +47,7 @@ import {
 
 /**
  * MediaConvert Service Implementation
- * 
+ *
  * Provides AWS MediaConvert operations with comprehensive error handling,
  * logging, and support for adaptive bitrate streaming.
  */
@@ -65,10 +61,13 @@ export class MediaConvertService implements IMediaConvertService {
     const awsConfig = secrets.getAwsConfig();
     this.client = new MediaConvertClient({
       region: awsConfig.region,
-      credentials: awsConfig.accessKeyId && awsConfig.secretAccessKey ? {
-        accessKeyId: awsConfig.accessKeyId,
-        secretAccessKey: awsConfig.secretAccessKey,
-      } : undefined,
+      credentials:
+        awsConfig.accessKeyId && awsConfig.secretAccessKey
+          ? {
+              accessKeyId: awsConfig.accessKeyId,
+              secretAccessKey: awsConfig.secretAccessKey,
+            }
+          : undefined,
     });
   }
 
@@ -232,7 +231,10 @@ export class MediaConvertService implements IMediaConvertService {
   /**
    * Lists recent transcoding jobs
    */
-  async listJobs(maxResults = 20, nextToken?: string): Promise<{
+  async listJobs(
+    maxResults = 20,
+    nextToken?: string
+  ): Promise<{
     jobs: JobStatus[];
     nextToken?: string;
   }> {
@@ -250,7 +252,7 @@ export class MediaConvertService implements IMediaConvertService {
 
       const response = await this.client.send(command);
 
-      const jobs = (response.Jobs || []).map(job => this.mapJobStatus(job));
+      const jobs = (response.Jobs || []).map((job) => this.mapJobStatus(job));
 
       logger.debug('MediaConvert jobs listed successfully', {
         jobCount: jobs.length,
@@ -303,10 +305,13 @@ export class MediaConvertService implements IMediaConvertService {
       this.client = new MediaConvertClient({
         region: awsConfig.region,
         endpoint: this.endpoint,
-        credentials: awsConfig.accessKeyId && awsConfig.secretAccessKey ? {
-          accessKeyId: awsConfig.accessKeyId,
-          secretAccessKey: awsConfig.secretAccessKey,
-        } : undefined,
+        credentials:
+          awsConfig.accessKeyId && awsConfig.secretAccessKey
+            ? {
+                accessKeyId: awsConfig.accessKeyId,
+                secretAccessKey: awsConfig.secretAccessKey,
+              }
+            : undefined,
       });
 
       logger.info('MediaConvert endpoint discovered', { endpoint: this.endpoint });
@@ -353,7 +358,9 @@ export class MediaConvertService implements IMediaConvertService {
         try {
           await this.getServiceEndpoint();
         } catch (error) {
-          errors.push(`Failed to discover MediaConvert endpoint: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          errors.push(
+            `Failed to discover MediaConvert endpoint: ${error instanceof Error ? error.message : 'Unknown error'}`
+          );
         }
       }
 
@@ -370,7 +377,9 @@ export class MediaConvertService implements IMediaConvertService {
         error: error instanceof Error ? error.message : 'Unknown error',
       });
 
-      errors.push(`Configuration validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      errors.push(
+        `Configuration validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
       return { isValid: false, errors };
     }
   }
@@ -411,13 +420,16 @@ export class MediaConvertService implements IMediaConvertService {
     // Validate each resolution
     for (const resolution of input.resolutions) {
       if (!resolution.name || !resolution.width || !resolution.height || !resolution.bitrate) {
-        throw new ValidationError(`Invalid resolution configuration: ${JSON.stringify(resolution)}`);
+        throw new ValidationError(
+          `Invalid resolution configuration: ${JSON.stringify(resolution)}`
+        );
       }
     }
   }
 
   private buildJobSettings(input: TranscodingJobInput): JobSettings {
-    const resolutions = input.resolutions.length > 0 ? input.resolutions : DEFAULT_TRANSCODING_RESOLUTIONS;
+    const resolutions =
+      input.resolutions.length > 0 ? input.resolutions : DEFAULT_TRANSCODING_RESOLUTIONS;
 
     // Build HLS output group
     const hlsOutputGroup: OutputGroup = {
@@ -452,39 +464,43 @@ export class MediaConvertService implements IMediaConvertService {
             Destination: `s3://${input.outputS3Bucket}/${input.outputS3KeyPrefix}/thumbnails/`,
           },
         },
-        Outputs: [{
-          NameModifier: '_thumbnail',
-          VideoDescription: {
-            CodecSettings: {
-              Codec: 'FRAME_CAPTURE',
-              FrameCaptureSettings: {
-                FramerateNumerator: 1,
-                FramerateDenominator: 10, // 1 frame every 10 seconds
-                MaxCaptures: 10,
-                Quality: 80,
+        Outputs: [
+          {
+            NameModifier: '_thumbnail',
+            VideoDescription: {
+              CodecSettings: {
+                Codec: 'FRAME_CAPTURE',
+                FrameCaptureSettings: {
+                  FramerateNumerator: 1,
+                  FramerateDenominator: 10, // 1 frame every 10 seconds
+                  MaxCaptures: 10,
+                  Quality: 80,
+                },
               },
+              Width: 1280,
+              Height: 720,
             },
-            Width: 1280,
-            Height: 720,
+            ContainerSettings: {
+              Container: 'RAW',
+            },
           },
-          ContainerSettings: {
-            Container: 'RAW',
-          },
-        }],
+        ],
       };
       outputGroups.push(thumbnailOutputGroup);
     }
 
     const jobSettings: JobSettings = {
-      Inputs: [{
-        FileInput: `s3://${input.inputS3Bucket}/${input.inputS3Key}`,
-        AudioSelectors: {
-          'Audio Selector 1': {
-            DefaultSelection: 'DEFAULT',
+      Inputs: [
+        {
+          FileInput: `s3://${input.inputS3Bucket}/${input.inputS3Key}`,
+          AudioSelectors: {
+            'Audio Selector 1': {
+              DefaultSelection: 'DEFAULT',
+            },
           },
+          VideoSelector: {},
         },
-        VideoSelector: {},
-      }],
+      ],
       OutputGroups: outputGroups,
     };
 
@@ -500,7 +516,9 @@ export class MediaConvertService implements IMediaConvertService {
           H264Settings: {
             RateControlMode: 'CBR',
             Bitrate: Math.floor(resolution.bitrate / 1000), // Convert to Kbps
-            MaxBitrate: resolution.maxBitrate ? Math.floor(resolution.maxBitrate / 1000) : undefined,
+            MaxBitrate: resolution.maxBitrate
+              ? Math.floor(resolution.maxBitrate / 1000)
+              : undefined,
             FramerateControl: 'INITIALIZE_FROM_SOURCE',
             GopSize: 2.0,
             GopSizeUnits: 'SECONDS',
@@ -530,22 +548,24 @@ export class MediaConvertService implements IMediaConvertService {
         DropFrameTimecode: 'ENABLED',
         ColorMetadata: 'INSERT',
       },
-      AudioDescriptions: [{
-        AudioSourceName: 'Audio Selector 1',
-        CodecSettings: {
-          Codec: 'AAC',
-          AacSettings: {
-            Bitrate: 128000,
-            CodingMode: 'CODING_MODE_2_0',
-            SampleRate: 48000,
-            Specification: 'MPEG4',
-            AudioDescriptionBroadcasterMix: 'NORMAL',
-            RateControlMode: 'CBR',
-            RawFormat: 'NONE',
-          },
-        } as AudioCodecSettings,
-        LanguageCodeControl: 'FOLLOW_INPUT',
-      }],
+      AudioDescriptions: [
+        {
+          AudioSourceName: 'Audio Selector 1',
+          CodecSettings: {
+            Codec: 'AAC',
+            AacSettings: {
+              Bitrate: 128000,
+              CodingMode: 'CODING_MODE_2_0',
+              SampleRate: 48000,
+              Specification: 'MPEG4',
+              AudioDescriptionBroadcasterMix: 'NORMAL',
+              RateControlMode: 'CBR',
+              RawFormat: 'NONE',
+            },
+          } as AudioCodecSettings,
+          LanguageCodeControl: 'FOLLOW_INPUT',
+        },
+      ],
       ContainerSettings: {
         Container: 'M3U8',
         M3u8Settings: {
@@ -577,7 +597,7 @@ export class MediaConvertService implements IMediaConvertService {
             if (output.NameModifier && output.VideoDescription) {
               const resolution = output.NameModifier.replace('_', '');
               const outputS3Key = `${outputGroup.OutputGroupSettings?.HlsGroupSettings?.Destination || ''}${output.NameModifier}.m3u8`;
-              
+
               outputs.push({
                 resolution,
                 outputS3Key,

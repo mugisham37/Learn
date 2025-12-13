@@ -1,16 +1,14 @@
 /**
  * Assignment Repository Interface
- * 
+ *
  * Defines the contract for assignment data access operations.
  * Abstracts database operations behind a clean interface following
  * the Repository pattern for domain independence.
- * 
+ *
  * Requirements: 7.1, 7.2
  */
 
-import { 
-  Assignment
-} from '../../../../infrastructure/database/schema/assessments.schema.js';
+import { Assignment } from '../../../../infrastructure/database/schema/assessments.schema.js';
 
 /**
  * Pagination parameters for list queries
@@ -78,14 +76,14 @@ export interface UpdateAssignmentDTO {
 
 /**
  * Assignment Repository Interface
- * 
+ *
  * Provides methods for all assignment data access operations with caching support.
  * Implementations must handle database errors and map them to domain errors.
  */
 export interface IAssignmentRepository {
   /**
    * Creates a new assignment in the database
-   * 
+   *
    * @param data - Assignment creation data
    * @returns The created assignment
    * @throws ValidationError if lesson doesn't exist
@@ -95,7 +93,7 @@ export interface IAssignmentRepository {
 
   /**
    * Finds an assignment by its unique ID
-   * 
+   *
    * @param id - Assignment ID
    * @returns The assignment if found, null otherwise
    * @throws DatabaseError if database operation fails
@@ -104,7 +102,7 @@ export interface IAssignmentRepository {
 
   /**
    * Finds assignments by lesson with pagination
-   * 
+   *
    * @param lessonId - Lesson ID
    * @param pagination - Pagination parameters
    * @param filters - Optional filters
@@ -119,7 +117,7 @@ export interface IAssignmentRepository {
 
   /**
    * Finds all assignments with pagination and filtering
-   * 
+   *
    * @param pagination - Pagination parameters
    * @param filters - Optional filters
    * @returns Paginated assignment results
@@ -132,7 +130,7 @@ export interface IAssignmentRepository {
 
   /**
    * Updates an assignment's data
-   * 
+   *
    * @param id - Assignment ID
    * @param data - Update data
    * @returns The updated assignment
@@ -144,7 +142,7 @@ export interface IAssignmentRepository {
   /**
    * Deletes an assignment from the database
    * This cascades to delete all submissions
-   * 
+   *
    * @param id - Assignment ID
    * @returns void
    * @throws NotFoundError if assignment doesn't exist
@@ -154,7 +152,7 @@ export interface IAssignmentRepository {
 
   /**
    * Checks if an assignment exists
-   * 
+   *
    * @param id - Assignment ID
    * @returns True if assignment exists, false otherwise
    * @throws DatabaseError if database operation fails
@@ -163,7 +161,7 @@ export interface IAssignmentRepository {
 
   /**
    * Checks if an assignment is past due
-   * 
+   *
    * @param id - Assignment ID
    * @returns True if assignment is past due, false otherwise
    * @throws NotFoundError if assignment doesn't exist
@@ -174,7 +172,7 @@ export interface IAssignmentRepository {
   /**
    * Invalidates cache for a specific assignment
    * Should be called after any update operation
-   * 
+   *
    * @param id - Assignment ID
    * @returns void
    */
@@ -183,7 +181,7 @@ export interface IAssignmentRepository {
   /**
    * Invalidates cache for assignments by lesson
    * Should be called after operations that affect lesson assignment lists
-   * 
+   *
    * @param lessonId - Lesson ID
    * @returns void
    */

@@ -1,22 +1,27 @@
 /**
  * Course Repository Implementation
- * 
+ *
  * Implements course data access operations with Drizzle ORM queries,
  * Redis caching with 5-minute TTL, and cache invalidation on updates.
  * Handles database errors and maps them to domain errors.
- * 
+ *
  * Requirements: 3.1, 3.6
  */
 
 import { eq, and, desc, count, sql } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
-import { cache, buildCacheKey, CachePrefix, CacheTTL } from '../../../../infrastructure/cache/index.js';
+import {
+  cache,
+  buildCacheKey,
+  CachePrefix,
+  CacheTTL,
+} from '../../../../infrastructure/cache/index.js';
 import { getWriteDb, getReadDb } from '../../../../infrastructure/database/index.js';
-import { 
-  courses, 
-  Course, 
-  NewCourse 
+import {
+  courses,
+  Course,
+  NewCourse,
 } from '../../../../infrastructure/database/schema/courses.schema.js';
 import {
   DatabaseError,
@@ -52,15 +57,15 @@ function generateSlug(title: string): string {
  * Appends number suffix if slug already exists
  */
 async function ensureUniqueSlug(
-  db: NodePgDatabase, 
-  baseSlug: string, 
+  db: NodePgDatabase,
+  baseSlug: string,
   excludeId?: string
 ): Promise<string> {
   let slug = baseSlug;
   let counter = 1;
 
   while (true) {
-    const whereConditions = excludeId 
+    const whereConditions = excludeId
       ? and(eq(courses.slug, slug), sql`${courses.id} != ${excludeId}`)
       : eq(courses.slug, slug);
 
@@ -81,7 +86,7 @@ async function ensureUniqueSlug(
 
 /**
  * Course Repository Implementation
- * 
+ *
  * Provides data access methods for course entities with:
  * - Drizzle ORM for type-safe queries
  * - Redis caching with 5-minute TTL
@@ -116,8 +121,8 @@ export class CourseRepository implements ICourseRepository {
    * Builds cache key for instructor courses list
    */
   private getInstructorCoursesCacheKey(
-    instructorId: string, 
-    page: number, 
+    instructorId: string,
+    page: number,
     limit: number,
     filters?: CourseFilters
   ): string {
@@ -129,7 +134,7 @@ export class CourseRepository implements ICourseRepository {
    * Builds cache key for published courses list
    */
   private getPublishedCoursesCacheKey(
-    page: number, 
+    page: number,
     limit: number,
     filters?: CourseFilters
   ): string {
@@ -139,10 +144,10 @@ export class CourseRepository implements ICourseRepository {
 
   /**
    * Creates a new course in the database
-   * 
+   *
    * Generates unique slug from title and validates instructor exists.
    * Does not cache on creation as the course will be fetched immediately after.
-   * 
+   *
    * @param data - Course creation data
    * @returns The created course
    * @throws ConflictError if slug generation fails
@@ -170,16 +175,10 @@ export class CourseRepository implements ICourseRepository {
       };
 
       // Insert course into database
-      const [createdCourse] = await this.writeDb
-        .insert(courses)
-        .values(newCourse)
-        .returning();
+      const [createdCourse] = await this.writeDb.insert(courses).values(newCourse).returning();
 
       if (!createdCourse) {
-        throw new DatabaseError(
-          'Failed to create course',
-          'insert'
-        );
+        throw new DatabaseError('Failed to create course', 'insert');
       }
 
       // Invalidate instructor courses cache
@@ -195,16 +194,12 @@ export class CourseRepository implements ICourseRepository {
       // Handle database constraint violations
       if (error instanceof Error) {
         if (error.message.includes('unique') || error.message.includes('duplicate')) {
-          throw new ConflictError(
-            'A course with this slug already exists',
-            'slug'
-          );
+          throw new ConflictError('A course with this slug already exists', 'slug');
         }
         if (error.message.includes('foreign key') || error.message.includes('instructor')) {
-          throw new ValidationError(
-            'Invalid instructor ID',
-            [{ field: 'instructorId', message: 'Instructor does not exist' }]
-          );
+          throw new ValidationError('Invalid instructor ID', [
+            { field: 'instructorId', message: 'Instructor does not exist' },
+          ]);
         }
       }
 
@@ -219,10 +214,10 @@ export class CourseRepository implements ICourseRepository {
 
   /**
    * Finds a course by its unique ID
-   * 
+   *
    * Implements caching with 5-minute TTL.
    * Uses read database for query optimization.
-   * 
+   *
    * @param id - Course ID
    * @returns The course if found, null otherwise
    * @throws DatabaseError if database operation fails
@@ -232,17 +227,13 @@ export class CourseRepository implements ICourseRepository {
       // Check cache first
       const cacheKey = this.getCourseCacheKey(id);
       const cachedCourse = await cache.get<Course>(cacheKey);
-      
+
       if (cachedCourse) {
         return cachedCourse;
       }
 
       // Query database if not in cache
-      const [course] = await this.readDb
-        .select()
-        .from(courses)
-        .where(eq(courses.id, id))
-        .limit(1);
+      const [course] = await this.readDb.select().from(courses).where(eq(courses.id, id)).limit(1);
 
       if (!course) {
         return null;
@@ -263,9 +254,9 @@ export class CourseRepository implements ICourseRepository {
 
   /**
    * Finds a course by its URL slug
-   * 
+   *
    * Implements caching with 5-minute TTL.
-   * 
+   *
    * @param slug - Course slug
    * @returns The course if found, null otherwise
    * @throws DatabaseError if database operation fails
@@ -275,7 +266,7 @@ export class CourseRepository implements ICourseRepository {
       // Check cache first
       const cacheKey = this.getCourseSlugCacheKey(slug);
       const cachedCourse = await cache.get<Course>(cacheKey);
-      
+
       if (cachedCourse) {
         return cachedCourse;
       }
@@ -310,10 +301,10 @@ export class CourseRepository implements ICourseRepository {
 
   /**
    * Finds courses by instructor with pagination
-   * 
+   *
    * Implements caching with 5-minute TTL for paginated results.
    * Supports filtering by status, category, and difficulty.
-   * 
+   *
    * @param instructorId - Instructor user ID
    * @param pagination - Pagination parameters
    * @param filters - Optional filters
@@ -321,27 +312,27 @@ export class CourseRepository implements ICourseRepository {
    * @throws DatabaseError if database operation fails
    */
   async findByInstructor(
-    instructorId: string, 
+    instructorId: string,
     pagination: PaginationParams,
     filters?: CourseFilters
   ): Promise<PaginatedResult<Course>> {
     try {
       // Check cache first
       const cacheKey = this.getInstructorCoursesCacheKey(
-        instructorId, 
-        pagination.page, 
-        pagination.limit, 
+        instructorId,
+        pagination.page,
+        pagination.limit,
         filters
       );
       const cachedResult = await cache.get<PaginatedResult<Course>>(cacheKey);
-      
+
       if (cachedResult) {
         return cachedResult;
       }
 
       // Build where conditions
       const whereConditions = [eq(courses.instructorId, instructorId)];
-      
+
       if (filters?.status) {
         whereConditions.push(eq(courses.status, filters.status));
       }
@@ -352,16 +343,14 @@ export class CourseRepository implements ICourseRepository {
         whereConditions.push(eq(courses.difficulty, filters.difficulty));
       }
 
-      const whereClause = whereConditions.length > 1 
-        ? and(...whereConditions) 
-        : whereConditions[0];
+      const whereClause = whereConditions.length > 1 ? and(...whereConditions) : whereConditions[0];
 
       // Get total count
       const [totalResult] = await this.readDb
         .select({ total: count() })
         .from(courses)
         .where(whereClause);
-      
+
       const total = totalResult?.total || 0;
 
       // Get paginated results
@@ -397,10 +386,10 @@ export class CourseRepository implements ICourseRepository {
 
   /**
    * Finds published courses with pagination and filtering
-   * 
+   *
    * Implements caching with 5-minute TTL for paginated results.
    * Only returns courses with 'published' status.
-   * 
+   *
    * @param pagination - Pagination parameters
    * @param filters - Optional filters
    * @returns Paginated course results
@@ -412,20 +401,16 @@ export class CourseRepository implements ICourseRepository {
   ): Promise<PaginatedResult<Course>> {
     try {
       // Check cache first
-      const cacheKey = this.getPublishedCoursesCacheKey(
-        pagination.page, 
-        pagination.limit, 
-        filters
-      );
+      const cacheKey = this.getPublishedCoursesCacheKey(pagination.page, pagination.limit, filters);
       const cachedResult = await cache.get<PaginatedResult<Course>>(cacheKey);
-      
+
       if (cachedResult) {
         return cachedResult;
       }
 
       // Build where conditions (always include published status)
       const whereConditions = [eq(courses.status, 'published')];
-      
+
       if (filters?.category) {
         whereConditions.push(eq(courses.category, filters.category));
       }
@@ -436,16 +421,14 @@ export class CourseRepository implements ICourseRepository {
         whereConditions.push(eq(courses.instructorId, filters.instructorId));
       }
 
-      const whereClause = whereConditions.length > 1 
-        ? and(...whereConditions) 
-        : whereConditions[0];
+      const whereClause = whereConditions.length > 1 ? and(...whereConditions) : whereConditions[0];
 
       // Get total count
       const [totalResult] = await this.readDb
         .select({ total: count() })
         .from(courses)
         .where(whereClause);
-      
+
       const total = totalResult?.total || 0;
 
       // Get paginated results ordered by rating and enrollment
@@ -485,10 +468,10 @@ export class CourseRepository implements ICourseRepository {
 
   /**
    * Updates a course's data
-   * 
+   *
    * Invalidates all related cache entries after successful update.
    * Regenerates slug if title is changed.
-   * 
+   *
    * @param id - Course ID
    * @param data - Update data
    * @returns The updated course
@@ -524,10 +507,7 @@ export class CourseRepository implements ICourseRepository {
         .returning();
 
       if (!updatedCourse) {
-        throw new DatabaseError(
-          'Failed to update course',
-          'update'
-        );
+        throw new DatabaseError('Failed to update course', 'update');
       }
 
       // Invalidate all cache entries for this course
@@ -554,10 +534,7 @@ export class CourseRepository implements ICourseRepository {
       // Handle database constraint violations
       if (error instanceof Error) {
         if (error.message.includes('unique') || error.message.includes('duplicate')) {
-          throw new ConflictError(
-            'A course with this slug already exists',
-            'slug'
-          );
+          throw new ConflictError('A course with this slug already exists', 'slug');
         }
       }
 
@@ -572,7 +549,7 @@ export class CourseRepository implements ICourseRepository {
 
   /**
    * Publishes a course by updating status and setting publishedAt
-   * 
+   *
    * @param id - Course ID
    * @returns The published course
    * @throws NotFoundError if course doesn't exist
@@ -606,10 +583,7 @@ export class CourseRepository implements ICourseRepository {
         .returning();
 
       if (!publishedCourse) {
-        throw new DatabaseError(
-          'Failed to publish course',
-          'update'
-        );
+        throw new DatabaseError('Failed to publish course', 'update');
       }
 
       // Invalidate all cache entries
@@ -641,7 +615,7 @@ export class CourseRepository implements ICourseRepository {
 
   /**
    * Soft deletes a course by setting status to archived
-   * 
+   *
    * @param id - Course ID
    * @returns void
    * @throws NotFoundError if course doesn't exist
@@ -666,10 +640,7 @@ export class CourseRepository implements ICourseRepository {
         .returning();
 
       if (!archivedCourse) {
-        throw new DatabaseError(
-          'Failed to archive course',
-          'update'
-        );
+        throw new DatabaseError('Failed to archive course', 'update');
       }
 
       // Invalidate all cache entries
@@ -696,7 +667,7 @@ export class CourseRepository implements ICourseRepository {
   /**
    * Permanently deletes a course from the database
    * USE WITH CAUTION - This is irreversible and cascades to modules/lessons
-   * 
+   *
    * @param id - Course ID
    * @returns void
    * @throws NotFoundError if course doesn't exist
@@ -711,16 +682,10 @@ export class CourseRepository implements ICourseRepository {
       }
 
       // Permanently delete course (cascades to modules and lessons)
-      const result = await this.writeDb
-        .delete(courses)
-        .where(eq(courses.id, id))
-        .returning();
+      const result = await this.writeDb.delete(courses).where(eq(courses.id, id)).returning();
 
       if (!result || result.length === 0) {
-        throw new DatabaseError(
-          'Failed to hard delete course',
-          'delete'
-        );
+        throw new DatabaseError('Failed to hard delete course', 'delete');
       }
 
       // Invalidate all cache entries
@@ -746,7 +711,7 @@ export class CourseRepository implements ICourseRepository {
 
   /**
    * Checks if a course with the given slug exists
-   * 
+   *
    * @param slug - Course slug
    * @returns True if course exists, false otherwise
    * @throws DatabaseError if database operation fails
@@ -766,7 +731,7 @@ export class CourseRepository implements ICourseRepository {
 
   /**
    * Increments the enrollment count for a course
-   * 
+   *
    * @param id - Course ID
    * @returns The updated course
    * @throws NotFoundError if course doesn't exist
@@ -809,7 +774,7 @@ export class CourseRepository implements ICourseRepository {
 
   /**
    * Decrements the enrollment count for a course
-   * 
+   *
    * @param id - Course ID
    * @returns The updated course
    * @throws NotFoundError if course doesn't exist
@@ -852,7 +817,7 @@ export class CourseRepository implements ICourseRepository {
 
   /**
    * Updates course rating statistics
-   * 
+   *
    * @param id - Course ID
    * @param averageRating - New average rating
    * @param totalReviews - Total number of reviews
@@ -899,7 +864,7 @@ export class CourseRepository implements ICourseRepository {
   /**
    * Invalidates cache for a specific course
    * Should be called after any update operation
-   * 
+   *
    * @param id - Course ID
    * @returns void
    */
@@ -916,7 +881,7 @@ export class CourseRepository implements ICourseRepository {
   /**
    * Invalidates cache for a course by slug
    * Should be called after operations that affect slug lookups
-   * 
+   *
    * @param slug - Course slug
    * @returns void
    */
@@ -933,7 +898,7 @@ export class CourseRepository implements ICourseRepository {
   /**
    * Invalidates cache for courses by instructor
    * Should be called after operations that affect instructor course lists
-   * 
+   *
    * @param instructorId - Instructor user ID
    * @returns void
    */
@@ -942,7 +907,7 @@ export class CourseRepository implements ICourseRepository {
       // Invalidate all instructor course list cache entries
       const pattern = buildCacheKey(CachePrefix.COURSE, 'instructor', instructorId, '*');
       await cache.deletePattern(pattern);
-      
+
       // Also invalidate published courses cache as it might be affected
       const publishedPattern = buildCacheKey(CachePrefix.COURSE, 'published', '*');
       await cache.deletePattern(publishedPattern);

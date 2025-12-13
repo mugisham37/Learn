@@ -1,9 +1,9 @@
 /**
  * Common Validation Schemas
- * 
+ *
  * Reusable Zod schemas for common validation patterns across the application.
  * These schemas ensure consistency and reduce duplication.
- * 
+ *
  * Requirements: 13.1
  */
 
@@ -247,7 +247,10 @@ export const metadataSchema = z.record(z.string(), z.any()).optional();
 /**
  * Timezone schema
  */
-export const timezoneSchema = z.string().min(1, 'Timezone is required').max(50, 'Timezone too long');
+export const timezoneSchema = z
+  .string()
+  .min(1, 'Timezone is required')
+  .max(50, 'Timezone too long');
 
 /**
  * Language code schema (ISO 639-1)
@@ -326,7 +329,10 @@ export const durationSchema = z.number().int().min(0, 'Duration must be non-nega
 /**
  * Rating schema (1-5 stars)
  */
-export const ratingSchema = z.number().min(1, 'Rating must be at least 1').max(5, 'Rating must be at most 5');
+export const ratingSchema = z
+  .number()
+  .min(1, 'Rating must be at least 1')
+  .max(5, 'Rating must be at most 5');
 
 /**
  * Tag schema

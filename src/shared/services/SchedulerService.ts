@@ -1,31 +1,30 @@
 /**
  * Unified Scheduler Service
- * 
+ *
  * Coordinates all scheduled tasks including analytics, session cleanup,
  * log pruning, and secret rotation. Provides a centralized interface
  * for managing all cron jobs in the application.
- * 
+ *
  * Requirements: 14.7 - Scheduled tasks execution
  */
 
 import { config } from '../../config/index.js';
 import { logger } from '../utils/logger.js';
 
-import { 
-  getAnalyticsScheduler, 
-  initializeAnalyticsScheduler,
-  type SchedulerConfig as AnalyticsSchedulerConfig 
+import {
+  getAnalyticsScheduler,
+  type SchedulerConfig as AnalyticsSchedulerConfig,
 } from './AnalyticsScheduler.js';
 import { cronJobService, type CronJobConfig } from './CronJobService.js';
-import { 
-  getLogPruningService, 
+import {
+  getLogPruningService,
   initializeLogPruningService,
-  type LogPruningConfig 
+  type LogPruningConfig,
 } from './LogPruningService.js';
-import { 
-  getSessionCleanupService, 
+import {
+  getSessionCleanupService,
   initializeSessionCleanupService,
-  type SessionCleanupConfig 
+  type SessionCleanupConfig,
 } from './SessionCleanupService.js';
 
 /**
@@ -108,7 +107,7 @@ export class SchedulerService {
   /**
    * Initialize the unified scheduler
    */
-  async initialize(): Promise<void> {
+  initialize(): void {
     if (this.isInitialized) {
       logger.warn('Scheduler service already initialized');
       return;
@@ -141,17 +140,10 @@ export class SchedulerService {
 
       // Initialize analytics scheduler (requires analytics services)
       try {
-        const { AnalyticsService } = await import('../../modules/analytics/application/services/AnalyticsService.js');
-        const { MetricsCalculator } = await import('../../modules/analytics/application/services/MetricsCalculator.js');
-        
-        // Create analytics service instances (these should be properly injected in production)
-        // Note: In production, this should be properly injected with dependencies
-        // For now, we'll skip analytics service initialization if dependencies are missing
+        // Skip analytics service initialization due to missing dependencies
         logger.warn('Analytics service initialization skipped - missing repository dependency');
         return;
-        const metricsCalculator = new MetricsCalculator();
-        
-        await initializeAnalyticsScheduler(analyticsService, metricsCalculator, this.config.analytics);
+
         logger.info('Analytics scheduler initialized');
       } catch (error) {
         logger.warn('Analytics scheduler initialization skipped', {
@@ -395,7 +387,7 @@ export class SchedulerService {
   async healthCheck(): Promise<boolean> {
     try {
       const status = await this.getStatus();
-      
+
       // Check if all critical services are healthy
       const criticalServices = [
         status.services.cronJobService,
@@ -403,8 +395,8 @@ export class SchedulerService {
         status.services.logPruning,
       ];
 
-      const allCriticalHealthy = criticalServices.every(service => service);
-      
+      const allCriticalHealthy = criticalServices.every((service) => service);
+
       if (!allCriticalHealthy) {
         logger.warn('Some scheduler services are unhealthy', {
           services: status.services,
@@ -472,7 +464,9 @@ export function getSchedulerService(): SchedulerService {
 /**
  * Initialize scheduler service with custom config
  */
-export function initializeSchedulerService(config?: Partial<UnifiedSchedulerConfig>): SchedulerService {
+export function initializeSchedulerService(
+  config?: Partial<UnifiedSchedulerConfig>
+): SchedulerService {
   schedulerServiceInstance = new SchedulerService(config);
   return schedulerServiceInstance;
 }

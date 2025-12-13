@@ -1,31 +1,32 @@
 /**
  * Certificate Repository Implementation
- * 
+ *
  * Implements certificate data access operations with Drizzle ORM queries,
  * Redis caching with 5-minute TTL, and cache invalidation on updates.
  * Handles database errors and maps them to domain errors.
- * 
+ *
  * Requirements: 5.6, 5.7
  */
 
 import { eq, and, desc, count, sql, gte, lte } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
-import { cache, buildCacheKey, CachePrefix, CacheTTL } from '../../../../infrastructure/cache/index.js';
+import {
+  cache,
+  buildCacheKey,
+  CachePrefix,
+  CacheTTL,
+} from '../../../../infrastructure/cache/index.js';
 import { getWriteDb, getReadDb } from '../../../../infrastructure/database/index.js';
 import { courses } from '../../../../infrastructure/database/schema/courses.schema.js';
-import { 
-  certificates, 
-  Certificate, 
+import {
+  certificates,
+  Certificate,
   NewCertificate,
-  enrollments
+  enrollments,
 } from '../../../../infrastructure/database/schema/enrollments.schema.js';
 import { users, userProfiles } from '../../../../infrastructure/database/schema/users.schema.js';
-import {
-  DatabaseError,
-  ConflictError,
-  NotFoundError,
-} from '../../../../shared/errors/index.js';
+import { DatabaseError, ConflictError, NotFoundError } from '../../../../shared/errors/index.js';
 import {
   ICertificateRepository,
   CreateCertificateDTO,
@@ -37,7 +38,7 @@ import {
 
 /**
  * Certificate Repository Implementation
- * 
+ *
  * Provides data access methods for certificate entities with:
  * - Drizzle ORM for type-safe queries
  * - Redis caching with 5-minute TTL
@@ -86,27 +87,27 @@ export class CertificateRepository implements ICertificateRepository {
    */
   private buildWhereConditions(filters?: CertificateFilterDTO) {
     const conditions = [];
-    
+
     if (filters?.enrollmentId) {
       conditions.push(eq(certificates.enrollmentId, filters.enrollmentId));
     }
-    
+
     if (filters?.issuedAfter) {
       conditions.push(gte(certificates.issuedAt, filters.issuedAfter));
     }
-    
+
     if (filters?.issuedBefore) {
       conditions.push(lte(certificates.issuedAt, filters.issuedBefore));
     }
-    
+
     return conditions;
   }
 
   /**
    * Creates a new certificate in the database
-   * 
+   *
    * Validates enrollment uniqueness before insertion.
-   * 
+   *
    * @param data - Certificate creation data
    * @returns The created certificate
    * @throws ConflictError if certificate already exists for the enrollment
@@ -117,19 +118,13 @@ export class CertificateRepository implements ICertificateRepository {
       // Check for existing certificate for this enrollment
       const existingCertificate = await this.findByEnrollment(data.enrollmentId);
       if (existingCertificate) {
-        throw new ConflictError(
-          'Certificate already exists for this enrollment',
-          'enrollmentId'
-        );
+        throw new ConflictError('Certificate already exists for this enrollment', 'enrollmentId');
       }
 
       // Check for existing certificate with same certificate ID
       const existingCertificateId = await this.findByCertificateId(data.certificateId);
       if (existingCertificateId) {
-        throw new ConflictError(
-          'Certificate ID already exists',
-          'certificateId'
-        );
+        throw new ConflictError('Certificate ID already exists', 'certificateId');
       }
 
       // Prepare certificate data for insertion
@@ -148,10 +143,7 @@ export class CertificateRepository implements ICertificateRepository {
         .returning();
 
       if (!createdCertificate) {
-        throw new DatabaseError(
-          'Failed to create certificate',
-          'insert'
-        );
+        throw new DatabaseError('Failed to create certificate', 'insert');
       }
 
       return createdCertificate;
@@ -164,10 +156,7 @@ export class CertificateRepository implements ICertificateRepository {
       // Handle database constraint violations
       if (error instanceof Error) {
         if (error.message.includes('unique') || error.message.includes('duplicate')) {
-          throw new ConflictError(
-            'Certificate already exists',
-            'enrollmentId_or_certificateId'
-          );
+          throw new ConflictError('Certificate already exists', 'enrollmentId_or_certificateId');
         }
       }
 
@@ -182,9 +171,9 @@ export class CertificateRepository implements ICertificateRepository {
 
   /**
    * Finds a certificate by its unique ID
-   * 
+   *
    * Implements caching with 5-minute TTL.
-   * 
+   *
    * @param id - Certificate ID
    * @returns The certificate if found, null otherwise
    * @throws DatabaseError if database operation fails
@@ -194,7 +183,7 @@ export class CertificateRepository implements ICertificateRepository {
       // Check cache first
       const cacheKey = this.getCertificateCacheKey(id);
       const cachedCertificate = await cache.get<Certificate>(cacheKey);
-      
+
       if (cachedCertificate) {
         return cachedCertificate;
       }
@@ -225,9 +214,9 @@ export class CertificateRepository implements ICertificateRepository {
 
   /**
    * Finds a certificate by its certificate ID (public identifier)
-   * 
+   *
    * Implements caching with 5-minute TTL.
-   * 
+   *
    * @param certificateId - Certificate public ID
    * @returns The certificate if found, null otherwise
    * @throws DatabaseError if database operation fails
@@ -237,7 +226,7 @@ export class CertificateRepository implements ICertificateRepository {
       // Check cache first
       const cacheKey = this.getCertificateByCertificateIdCacheKey(certificateId);
       const cachedCertificate = await cache.get<Certificate>(cacheKey);
-      
+
       if (cachedCertificate) {
         return cachedCertificate;
       }
@@ -272,9 +261,9 @@ export class CertificateRepository implements ICertificateRepository {
 
   /**
    * Finds a certificate by enrollment ID
-   * 
+   *
    * Implements caching with 5-minute TTL.
-   * 
+   *
    * @param enrollmentId - Enrollment ID
    * @returns The certificate if found, null otherwise
    * @throws DatabaseError if database operation fails
@@ -284,7 +273,7 @@ export class CertificateRepository implements ICertificateRepository {
       // Check cache first
       const cacheKey = this.getCertificateByEnrollmentCacheKey(enrollmentId);
       const cachedCertificate = await cache.get<Certificate>(cacheKey);
-      
+
       if (cachedCertificate) {
         return cachedCertificate;
       }
@@ -319,7 +308,7 @@ export class CertificateRepository implements ICertificateRepository {
 
   /**
    * Finds certificates issued within a date range
-   * 
+   *
    * @param filters - Filter options
    * @param pagination - Pagination parameters
    * @returns Paginated list of certificates
@@ -337,7 +326,8 @@ export class CertificateRepository implements ICertificateRepository {
       const conditions = this.buildWhereConditions(filters);
 
       // Build WHERE clause once
-      const whereClause = conditions.length > 0 ? and(...(conditions as Parameters<typeof and>)) : undefined;
+      const whereClause =
+        conditions.length > 0 ? and(...(conditions as Parameters<typeof and>)) : undefined;
 
       // Get total count
       const countResult = await this.readDb
@@ -374,9 +364,9 @@ export class CertificateRepository implements ICertificateRepository {
 
   /**
    * Updates a certificate's data
-   * 
+   *
    * Invalidates all related cache entries after successful update.
-   * 
+   *
    * @param id - Certificate ID
    * @param data - Update data
    * @returns The updated certificate
@@ -404,10 +394,7 @@ export class CertificateRepository implements ICertificateRepository {
         .returning();
 
       if (!updatedCertificate) {
-        throw new DatabaseError(
-          'Failed to update certificate',
-          'update'
-        );
+        throw new DatabaseError('Failed to update certificate', 'update');
       }
 
       // Invalidate all cache entries for this certificate
@@ -418,10 +405,7 @@ export class CertificateRepository implements ICertificateRepository {
       return updatedCertificate;
     } catch (error) {
       // Re-throw known errors
-      if (
-        error instanceof NotFoundError ||
-        error instanceof DatabaseError
-      ) {
+      if (error instanceof NotFoundError || error instanceof DatabaseError) {
         throw error;
       }
 
@@ -437,9 +421,9 @@ export class CertificateRepository implements ICertificateRepository {
   /**
    * Deletes a certificate from the database
    * USE WITH CAUTION - This is irreversible
-   * 
+   *
    * Invalidates all cache entries after successful deletion.
-   * 
+   *
    * @param id - Certificate ID
    * @returns void
    * @throws NotFoundError if certificate doesn't exist
@@ -460,10 +444,7 @@ export class CertificateRepository implements ICertificateRepository {
         .returning();
 
       if (!result || result.length === 0) {
-        throw new DatabaseError(
-          'Failed to delete certificate',
-          'delete'
-        );
+        throw new DatabaseError('Failed to delete certificate', 'delete');
       }
 
       // Invalidate all cache entries
@@ -487,7 +468,7 @@ export class CertificateRepository implements ICertificateRepository {
 
   /**
    * Checks if a certificate exists for an enrollment
-   * 
+   *
    * @param enrollmentId - Enrollment ID
    * @returns True if certificate exists, false otherwise
    * @throws DatabaseError if database operation fails
@@ -507,7 +488,7 @@ export class CertificateRepository implements ICertificateRepository {
 
   /**
    * Checks if a certificate ID is already in use
-   * 
+   *
    * @param certificateId - Certificate public ID
    * @returns True if certificate ID exists, false otherwise
    * @throws DatabaseError if database operation fails
@@ -527,7 +508,7 @@ export class CertificateRepository implements ICertificateRepository {
 
   /**
    * Gets the count of certificates issued within a date range
-   * 
+   *
    * @param startDate - Start date (inclusive)
    * @param endDate - End date (inclusive)
    * @returns Number of certificates issued
@@ -538,12 +519,7 @@ export class CertificateRepository implements ICertificateRepository {
       const countResult = await this.readDb
         .select({ issuedCount: count() })
         .from(certificates)
-        .where(
-          and(
-            gte(certificates.issuedAt, startDate),
-            lte(certificates.issuedAt, endDate)
-          )
-        );
+        .where(and(gte(certificates.issuedAt, startDate), lte(certificates.issuedAt, endDate)));
 
       return countResult[0]?.issuedCount || 0;
     } catch (error) {
@@ -558,10 +534,10 @@ export class CertificateRepository implements ICertificateRepository {
   /**
    * Finds certificates that need to be regenerated
    * (e.g., due to template changes or corrections)
-   * 
+   *
    * This is a placeholder implementation. In a real system, you might have
    * a flag or metadata field indicating regeneration is needed.
-   * 
+   *
    * @param limit - Maximum number of certificates to return
    * @returns List of certificates that need regeneration
    * @throws DatabaseError if database operation fails
@@ -583,7 +559,7 @@ export class CertificateRepository implements ICertificateRepository {
   /**
    * Verifies a certificate by its certificate ID
    * Returns certificate details for verification purposes
-   * 
+   *
    * @param certificateId - Certificate public ID
    * @returns Certificate with enrollment and course details, null if not found
    * @throws DatabaseError if database operation fails
@@ -605,7 +581,7 @@ export class CertificateRepository implements ICertificateRepository {
         completionDate: Date;
         instructorName: string;
       }>(cacheKey);
-      
+
       if (cachedVerification) {
         return cachedVerification;
       }
@@ -624,12 +600,9 @@ export class CertificateRepository implements ICertificateRepository {
         .innerJoin(courses, eq(enrollments.courseId, courses.id))
         .innerJoin(users, eq(enrollments.studentId, users.id))
         .innerJoin(userProfiles, eq(users.id, userProfiles.userId))
+        .innerJoin(sql`users AS instructor`, eq(courses.instructorId, sql`instructor.id`))
         .innerJoin(
-          sql`users AS instructor`, 
-          eq(courses.instructorId, sql`instructor.id`)
-        )
-        .innerJoin(
-          sql`user_profiles AS instructor_profile`, 
+          sql`user_profiles AS instructor_profile`,
           eq(sql`instructor.id`, sql`instructor_profile.user_id`)
         )
         .where(eq(certificates.certificateId, certificateId))
@@ -662,10 +635,10 @@ export class CertificateRepository implements ICertificateRepository {
 
   /**
    * Invalidates cache for a specific certificate
-   * 
+   *
    * Removes all cache entries related to the certificate by ID.
    * Should be called after any update operation.
-   * 
+   *
    * @param id - Certificate ID
    * @returns void
    */
@@ -681,10 +654,10 @@ export class CertificateRepository implements ICertificateRepository {
 
   /**
    * Invalidates cache for certificate by certificate ID
-   * 
+   *
    * Removes all cache entries related to the certificate by certificate ID.
    * Should be called after operations that affect certificate lookups.
-   * 
+   *
    * @param certificateId - Certificate public ID
    * @returns void
    */
@@ -694,8 +667,8 @@ export class CertificateRepository implements ICertificateRepository {
         this.getCertificateByCertificateIdCacheKey(certificateId),
         this.getCertificateVerificationCacheKey(certificateId),
       ];
-      
-      await Promise.all(patterns.map(pattern => cache.delete(pattern)));
+
+      await Promise.all(patterns.map((pattern) => cache.delete(pattern)));
     } catch (error) {
       // Log error but don't throw - cache invalidation failure shouldn't break the operation
       console.error(`Failed to invalidate cache for certificate ID ${certificateId}:`, error);
@@ -704,10 +677,10 @@ export class CertificateRepository implements ICertificateRepository {
 
   /**
    * Invalidates cache for certificate by enrollment
-   * 
+   *
    * Removes all cache entries related to the enrollment's certificate.
    * Should be called after operations that affect enrollment certificates.
-   * 
+   *
    * @param enrollmentId - Enrollment ID
    * @returns void
    */
@@ -717,7 +690,10 @@ export class CertificateRepository implements ICertificateRepository {
       await cache.delete(cacheKey);
     } catch (error) {
       // Log error but don't throw - cache invalidation failure shouldn't break the operation
-      console.error(`Failed to invalidate cache for enrollment certificate ${enrollmentId}:`, error);
+      console.error(
+        `Failed to invalidate cache for enrollment certificate ${enrollmentId}:`,
+        error
+      );
     }
   }
 }

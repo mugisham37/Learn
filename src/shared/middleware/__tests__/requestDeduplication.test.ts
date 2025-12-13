@@ -1,9 +1,9 @@
 /**
  * Request Deduplication Middleware Tests
- * 
+ *
  * Tests for request deduplication functionality including fingerprint generation,
  * response caching, and duplicate request handling.
- * 
+ *
  * Requirements: 15.6
  */
 
@@ -27,7 +27,7 @@ describe('Request Deduplication Middleware', () => {
 
   beforeEach(async () => {
     app = fastify({ logger: false });
-    
+
     // Clear cache before each test
     await clearDeduplicationCache();
   });
@@ -56,12 +56,12 @@ describe('Request Deduplication Middleware', () => {
   describe('Request Fingerprinting', () => {
     it('should generate same fingerprint for identical GET requests', async () => {
       const middleware = createRequestDeduplicationMiddleware();
-      
+
       app.addHook('preHandler', middleware);
-      
+
       let fingerprint1: string;
       let fingerprint2: string;
-      
+
       app.get('/test', async (request, reply) => {
         // Access the fingerprint from the middleware (would need to expose it for testing)
         return { message: 'test' };
@@ -80,16 +80,16 @@ describe('Request Deduplication Middleware', () => {
 
       expect(response1.statusCode).toBe(200);
       expect(response2.statusCode).toBe(200);
-      
+
       // Second response should be cached
       expect(response2.headers['x-cache']).toBe('HIT');
     });
 
     it('should generate different fingerprints for different requests', async () => {
       const middleware = createRequestDeduplicationMiddleware();
-      
+
       app.addHook('preHandler', middleware);
-      
+
       app.get('/test1', async () => ({ message: 'test1' }));
       app.get('/test2', async () => ({ message: 'test2' }));
 
@@ -105,7 +105,7 @@ describe('Request Deduplication Middleware', () => {
 
       expect(response1.statusCode).toBe(200);
       expect(response2.statusCode).toBe(200);
-      
+
       // Both should be cache misses since they're different requests
       expect(response1.headers['x-cache']).toBe('MISS');
       expect(response2.headers['x-cache']).toBe('MISS');
@@ -115,9 +115,9 @@ describe('Request Deduplication Middleware', () => {
       const middleware = createRequestDeduplicationMiddleware({
         enabled: () => true, // Enable for all methods
       });
-      
+
       app.addHook('preHandler', middleware);
-      
+
       app.post('/test', async (request) => {
         return { received: request.body };
       });
@@ -143,10 +143,10 @@ describe('Request Deduplication Middleware', () => {
       expect(response1.statusCode).toBe(200);
       expect(response2.statusCode).toBe(200);
       expect(response3.statusCode).toBe(200);
-      
+
       // Second request should be cached (same payload)
       expect(response2.headers['x-cache']).toBe('HIT');
-      
+
       // Third request should be a miss (different payload)
       expect(response3.headers['x-cache']).toBe('MISS');
     });
@@ -157,9 +157,9 @@ describe('Request Deduplication Middleware', () => {
       const middleware = createRequestDeduplicationMiddleware({
         cacheTtlSeconds: 60,
       });
-      
+
       app.addHook('preHandler', middleware);
-      
+
       let callCount = 0;
       app.get('/test', async () => {
         callCount++;
@@ -180,15 +180,15 @@ describe('Request Deduplication Middleware', () => {
 
       expect(response1.statusCode).toBe(200);
       expect(response2.statusCode).toBe(200);
-      
+
       const body1 = JSON.parse(response1.body);
       const body2 = JSON.parse(response2.body);
-      
+
       // Handler should only be called once
       expect(callCount).toBe(1);
       expect(body1.callCount).toBe(1);
       expect(body2.callCount).toBe(1); // Same as first response
-      
+
       // Headers should indicate cache status
       expect(response1.headers['x-cache']).toBe('MISS');
       expect(response2.headers['x-cache']).toBe('HIT');
@@ -197,9 +197,9 @@ describe('Request Deduplication Middleware', () => {
 
     it('should not cache error responses', async () => {
       const middleware = createRequestDeduplicationMiddleware();
-      
+
       app.addHook('preHandler', middleware);
-      
+
       let callCount = 0;
       app.get('/test', async () => {
         callCount++;
@@ -220,10 +220,10 @@ describe('Request Deduplication Middleware', () => {
 
       expect(response1.statusCode).toBe(500);
       expect(response2.statusCode).toBe(500);
-      
+
       // Handler should be called twice (errors not cached)
       expect(callCount).toBe(2);
-      
+
       // No cache headers on error responses
       expect(response1.headers['x-cache']).toBeUndefined();
       expect(response2.headers['x-cache']).toBeUndefined();
@@ -233,17 +233,17 @@ describe('Request Deduplication Middleware', () => {
   describe('Method Filtering', () => {
     it('should only deduplicate safe methods by default', async () => {
       const middleware = createRequestDeduplicationMiddleware();
-      
+
       app.addHook('preHandler', middleware);
-      
+
       let getCallCount = 0;
       let postCallCount = 0;
-      
+
       app.get('/test', async () => {
         getCallCount++;
         return { method: 'GET', callCount: getCallCount };
       });
-      
+
       app.post('/test', async () => {
         postCallCount++;
         return { method: 'POST', callCount: postCallCount };
@@ -252,14 +252,14 @@ describe('Request Deduplication Middleware', () => {
       // GET requests should be deduplicated
       await app.inject({ method: 'GET', url: '/test' });
       const getResponse2 = await app.inject({ method: 'GET', url: '/test' });
-      
+
       // POST requests should not be deduplicated
       await app.inject({ method: 'POST', url: '/test' });
       const postResponse2 = await app.inject({ method: 'POST', url: '/test' });
 
       expect(getCallCount).toBe(1); // GET deduplicated
       expect(postCallCount).toBe(2); // POST not deduplicated
-      
+
       expect(getResponse2.headers['x-cache']).toBe('HIT');
       expect(postResponse2.headers['x-cache']).toBeUndefined();
     });
@@ -268,17 +268,17 @@ describe('Request Deduplication Middleware', () => {
       const middleware = createRequestDeduplicationMiddleware({
         enabled: (request) => request.url.includes('cacheable'),
       });
-      
+
       app.addHook('preHandler', middleware);
-      
+
       let cacheableCallCount = 0;
       let nonCacheableCallCount = 0;
-      
+
       app.get('/cacheable', async () => {
         cacheableCallCount++;
         return { callCount: cacheableCallCount };
       });
-      
+
       app.get('/non-cacheable', async () => {
         nonCacheableCallCount++;
         return { callCount: nonCacheableCallCount };
@@ -287,14 +287,14 @@ describe('Request Deduplication Middleware', () => {
       // Cacheable endpoint
       await app.inject({ method: 'GET', url: '/cacheable' });
       const cacheableResponse2 = await app.inject({ method: 'GET', url: '/cacheable' });
-      
+
       // Non-cacheable endpoint
       await app.inject({ method: 'GET', url: '/non-cacheable' });
       await app.inject({ method: 'GET', url: '/non-cacheable' });
 
       expect(cacheableCallCount).toBe(1); // Deduplicated
       expect(nonCacheableCallCount).toBe(2); // Not deduplicated
-      
+
       expect(cacheableResponse2.headers['x-cache']).toBe('HIT');
     });
   });
@@ -305,9 +305,9 @@ describe('Request Deduplication Middleware', () => {
         includeHeaders: true,
         headersToInclude: ['authorization'],
       });
-      
+
       app.addHook('preHandler', middleware);
-      
+
       let callCount = 0;
       app.get('/test', async () => {
         callCount++;
@@ -320,7 +320,7 @@ describe('Request Deduplication Middleware', () => {
         url: '/test',
         headers: { authorization: 'Bearer token1' },
       });
-      
+
       const response2 = await app.inject({
         method: 'GET',
         url: '/test',
@@ -350,7 +350,7 @@ describe('Request Deduplication Middleware', () => {
   describe('Statistics and Management', () => {
     it('should provide deduplication statistics', async () => {
       const stats = await getDeduplicationStats();
-      
+
       expect(stats).toHaveProperty('totalCachedResponses');
       expect(stats).toHaveProperty('activeLocks');
       expect(typeof stats.totalCachedResponses).toBe('number');
@@ -360,11 +360,11 @@ describe('Request Deduplication Middleware', () => {
     it('should clear deduplication cache', async () => {
       // Add some cached data first
       await cache.set('req_dedup:response:test', { test: 'data' }, 60);
-      
+
       const deletedCount = await clearDeduplicationCache();
-      
+
       expect(typeof deletedCount).toBe('number');
-      
+
       // Verify cache is cleared
       const cachedData = await cache.get('req_dedup:response:test');
       expect(cachedData).toBeNull();
@@ -374,11 +374,11 @@ describe('Request Deduplication Middleware', () => {
   describe('Global Registration', () => {
     it('should register middleware globally', async () => {
       const testApp = fastify({ logger: false });
-      
+
       registerRequestDeduplication(testApp, {
         cacheTtlSeconds: 30,
       });
-      
+
       let callCount = 0;
       testApp.get('/test', async () => {
         callCount++;
@@ -393,7 +393,7 @@ describe('Request Deduplication Middleware', () => {
 
       expect(callCount).toBe(1);
       expect(response2.headers['x-cache']).toBe('HIT');
-      
+
       await testApp.close();
     });
   });
@@ -401,36 +401,34 @@ describe('Request Deduplication Middleware', () => {
   describe('Concurrent Request Handling', () => {
     it('should handle concurrent duplicate requests correctly', async () => {
       const middleware = createRequestDeduplicationMiddleware();
-      
+
       app.addHook('preHandler', middleware);
-      
+
       let callCount = 0;
       app.get('/slow', async () => {
         callCount++;
         // Simulate slow operation
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 100));
         return { callCount };
       });
 
       // Make multiple concurrent requests
-      const promises = Array.from({ length: 5 }, () =>
-        app.inject({ method: 'GET', url: '/slow' })
-      );
+      const promises = Array.from({ length: 5 }, () => app.inject({ method: 'GET', url: '/slow' }));
 
       const responses = await Promise.all(promises);
 
       // Handler should only be called once
       expect(callCount).toBe(1);
-      
+
       // All responses should have the same body
-      const bodies = responses.map(r => JSON.parse(r.body));
-      bodies.forEach(body => {
+      const bodies = responses.map((r) => JSON.parse(r.body));
+      bodies.forEach((body) => {
         expect(body.callCount).toBe(1);
       });
-      
+
       // First response should be a miss, others should be hits or coordinated
-      const cacheStatuses = responses.map(r => r.headers['x-cache']);
-      expect(cacheStatuses.filter(status => status === 'MISS')).toHaveLength(1);
+      const cacheStatuses = responses.map((r) => r.headers['x-cache']);
+      expect(cacheStatuses.filter((status) => status === 'MISS')).toHaveLength(1);
     });
   });
 });

@@ -1,9 +1,9 @@
 /**
  * Assessments Infrastructure Repositories
- * 
+ *
  * Exports all repository interfaces and implementations for the assessments module.
  * Provides data access layer for quizzes, questions, quiz submissions, assignments, and assignment submissions.
- * 
+ *
  * Requirements: 6.1, 6.2, 6.3, 7.1, 7.2
  */
 
@@ -58,7 +58,4 @@ export type {
 } from './IAssignmentSubmissionRepository.js';
 
 // Common types
-export type {
-  PaginationParams,
-  PaginatedResult,
-} from './IQuizRepository.js';
+export type { PaginationParams, PaginatedResult } from './IQuizRepository.js';

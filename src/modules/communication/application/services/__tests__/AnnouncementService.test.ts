@@ -1,13 +1,16 @@
 /**
  * AnnouncementService Tests
- * 
+ *
  * Tests for announcement creation, scheduling, and notification delivery
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { AnnouncementService } from '../AnnouncementService.js';
 import type { IAnnouncementRepository } from '../../../infrastructure/repositories/IAnnouncementRepository.js';
-import type { Announcement, CreateAnnouncementData } from '../../../domain/entities/Announcement.js';
+import type {
+  Announcement,
+  CreateAnnouncementData,
+} from '../../../domain/entities/Announcement.js';
 
 // Mock repository
 const mockAnnouncementRepository: IAnnouncementRepository = {
@@ -52,7 +55,11 @@ describe('AnnouncementService', () => {
 
       vi.mocked(mockAnnouncementRepository.create).mockResolvedValue(mockAnnouncement);
 
-      const result = await announcementService.createAnnouncement(courseId, educatorId, announcementData);
+      const result = await announcementService.createAnnouncement(
+        courseId,
+        educatorId,
+        announcementData
+      );
 
       expect(result.success).toBe(true);
       expect(result.announcement).toEqual(mockAnnouncement);
@@ -73,7 +80,11 @@ describe('AnnouncementService', () => {
         content: 'Valid content',
       };
 
-      const result = await announcementService.createAnnouncement(courseId, educatorId, invalidData);
+      const result = await announcementService.createAnnouncement(
+        courseId,
+        educatorId,
+        invalidData
+      );
 
       expect(result.success).toBe(false);
       expect(result.error).toContain('Title is required');
@@ -104,7 +115,11 @@ describe('AnnouncementService', () => {
 
       vi.mocked(mockAnnouncementRepository.create).mockResolvedValue(mockAnnouncement);
 
-      const result = await announcementService.scheduleAnnouncement(courseId, educatorId, announcementData);
+      const result = await announcementService.scheduleAnnouncement(
+        courseId,
+        educatorId,
+        announcementData
+      );
 
       expect(result.success).toBe(true);
       expect(result.announcement).toEqual(mockAnnouncement);
@@ -127,7 +142,11 @@ describe('AnnouncementService', () => {
         scheduledFor: pastDate,
       };
 
-      const result = await announcementService.scheduleAnnouncement(courseId, educatorId, announcementData);
+      const result = await announcementService.scheduleAnnouncement(
+        courseId,
+        educatorId,
+        announcementData
+      );
 
       expect(result.success).toBe(false);
       expect(result.error).toBe('Scheduled date must be in the future');
@@ -188,8 +207,12 @@ describe('AnnouncementService', () => {
         publishedAt: new Date(),
       };
 
-      vi.mocked(mockAnnouncementRepository.findScheduledReadyToPublish).mockResolvedValue([readyAnnouncement]);
-      vi.mocked(mockAnnouncementRepository.markAsPublished).mockResolvedValue(publishedAnnouncement);
+      vi.mocked(mockAnnouncementRepository.findScheduledReadyToPublish).mockResolvedValue([
+        readyAnnouncement,
+      ]);
+      vi.mocked(mockAnnouncementRepository.markAsPublished).mockResolvedValue(
+        publishedAnnouncement
+      );
 
       const result = await announcementService.publishScheduledAnnouncements();
 

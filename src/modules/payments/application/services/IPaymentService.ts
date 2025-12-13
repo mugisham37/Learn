@@ -1,9 +1,9 @@
 /**
  * Payment Service Interface
- * 
+ *
  * Defines the contract for payment application services.
  * Handles payment processing, webhook events, refunds, and subscriptions.
- * 
+ *
  * Requirements:
  * - 11.1: Stripe checkout session creation and payment processing
  * - 11.2: Webhook handling for payment events
@@ -64,14 +64,14 @@ export interface CancelSubscriptionParams {
 
 /**
  * Payment Service Interface
- * 
+ *
  * Provides high-level payment operations including Stripe integration,
  * webhook handling, refund processing, and subscription management.
  */
 export interface IPaymentService {
   /**
    * Creates a Stripe checkout session for course purchase
-   * 
+   *
    * @param params - Checkout session parameters
    * @returns Checkout session details
    * @throws ValidationError if course or student data is invalid
@@ -82,7 +82,7 @@ export interface IPaymentService {
 
   /**
    * Handles Stripe webhook events
-   * 
+   *
    * @param event - Stripe webhook event
    * @returns void
    * @throws ValidationError if event signature is invalid
@@ -92,7 +92,7 @@ export interface IPaymentService {
 
   /**
    * Processes a refund for an enrollment
-   * 
+   *
    * @param params - Refund processing parameters
    * @returns Created refund entity
    * @throws ValidationError if refund policy validation fails
@@ -104,7 +104,7 @@ export interface IPaymentService {
 
   /**
    * Creates a subscription for a user
-   * 
+   *
    * @param params - Subscription creation parameters
    * @returns Created subscription entity
    * @throws ValidationError if plan or user data is invalid
@@ -114,7 +114,7 @@ export interface IPaymentService {
 
   /**
    * Cancels a subscription
-   * 
+   *
    * @param params - Subscription cancellation parameters
    * @returns Updated subscription entity
    * @throws NotFoundError if subscription not found
@@ -124,14 +124,18 @@ export interface IPaymentService {
 
   /**
    * Gets payment history for a user
-   * 
+   *
    * @param userId - User ID
    * @param page - Page number (1-based)
    * @param limit - Items per page
    * @returns Paginated payment history
    * @throws ValidationError if pagination parameters are invalid
    */
-  getPaymentHistory(userId: string, page: number, limit: number): Promise<{
+  getPaymentHistory(
+    userId: string,
+    page: number,
+    limit: number
+  ): Promise<{
     payments: Payment[];
     total: number;
     page: number;
@@ -141,7 +145,7 @@ export interface IPaymentService {
 
   /**
    * Gets subscription details for a user
-   * 
+   *
    * @param userId - User ID
    * @returns Array of user's subscriptions
    * @throws ValidationError if user ID is invalid
@@ -150,7 +154,7 @@ export interface IPaymentService {
 
   /**
    * Validates refund eligibility for an enrollment
-   * 
+   *
    * @param enrollmentId - Enrollment ID
    * @returns Refund eligibility details
    * @throws NotFoundError if enrollment not found
@@ -169,7 +173,7 @@ export interface IPaymentService {
 
   /**
    * Retries failed payment processing
-   * 
+   *
    * @param paymentId - Payment ID to retry
    * @returns Updated payment entity
    * @throws NotFoundError if payment not found

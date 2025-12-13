@@ -1,9 +1,9 @@
 /**
  * MediaConvert Webhook Handler
- * 
+ *
  * Handles MediaConvert job completion webhooks and updates
  * video processing status in the database.
- * 
+ *
  * Requirements:
  * - 4.4: Processing completion handling
  * - 4.2: Video status updates after transcoding
@@ -12,16 +12,14 @@
 
 import { FastifyRequest, FastifyReply } from 'fastify';
 
-import { 
-  ValidationError
-} from '../errors/index.js';
+import { ValidationError } from '../errors/index.js';
 import { MediaConvertWebhookPayload } from '../types/aws.js';
 import { logger } from '../utils/logger.js';
 
 /**
  * MediaConvert webhook event types
  */
-export type MediaConvertEventType = 
+export type MediaConvertEventType =
   | 'JOB_COMPLETE'
   | 'JOB_ERROR'
   | 'JOB_PROGRESSING'
@@ -64,7 +62,7 @@ export interface IWebhookHandler {
 
 /**
  * MediaConvert Webhook Handler
- * 
+ *
  * Processes MediaConvert CloudWatch Events and updates video processing status.
  */
 export class MediaConvertWebhookHandler {
@@ -252,7 +250,9 @@ export class MediaConvertWebhookHandler {
   /**
    * Extracts output information from MediaConvert job details
    */
-  private extractOutputs(outputGroupDetails: MediaConvertWebhookPayload['detail']['outputGroupDetails']): ProcessedWebhookData['outputs'] {
+  private extractOutputs(
+    outputGroupDetails: MediaConvertWebhookPayload['detail']['outputGroupDetails']
+  ): ProcessedWebhookData['outputs'] {
     const outputs: ProcessedWebhookData['outputs'] = [];
 
     if (!outputGroupDetails) {
@@ -296,7 +296,7 @@ export class MediaConvertWebhookHandler {
       case '480p':
         return 1500000; // 1.5 Mbps
       case '360p':
-        return 800000;  // 800 Kbps
+        return 800000; // 800 Kbps
       default:
         return 2000000; // 2 Mbps default
     }
@@ -349,7 +349,9 @@ export class MediaConvertWebhookHandler {
 /**
  * Creates a Fastify route handler for MediaConvert webhooks
  */
-export function createWebhookRoute(webhookHandler: IWebhookHandler): (request: FastifyRequest, reply: FastifyReply) => Promise<void> {
+export function createWebhookRoute(
+  webhookHandler: IWebhookHandler
+): (request: FastifyRequest, reply: FastifyReply) => Promise<void> {
   const handler = new MediaConvertWebhookHandler(webhookHandler);
 
   return async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {

@@ -1,6 +1,6 @@
 /**
  * Enrollments Presentation Layer
- * 
+ *
  * Exports all presentation components for the enrollments module.
  * Includes GraphQL resolvers, REST controllers, and validation schemas.
  */

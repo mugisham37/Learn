@@ -1,9 +1,9 @@
 /**
  * Video Asset Domain Entity
- * 
+ *
  * Represents a video file with processing status, metadata, and streaming information.
  * Encapsulates business logic for video asset management.
- * 
+ *
  * Requirements:
  * - 4.1: Video upload and processing with S3 integration
  * - 4.4: Video processing status tracking and completion handling
@@ -41,7 +41,7 @@ export interface VideoMetadata {
 
 /**
  * Video Asset Domain Entity
- * 
+ *
  * Encapsulates video asset business logic and validation rules
  */
 export class VideoAsset {
@@ -131,7 +131,9 @@ export class VideoAsset {
    * Check if video is ready for streaming
    */
   isReadyForStreaming(): boolean {
-    return this.isProcessed() && (this.hlsManifestUrl || Object.keys(this.streamingUrls).length > 0);
+    return (
+      this.isProcessed() && (this.hlsManifestUrl || Object.keys(this.streamingUrls).length > 0)
+    );
   }
 
   /**
@@ -173,15 +175,14 @@ export class VideoAsset {
     if (this.availableResolutions.length === 0) return null;
 
     // Sort by resolution height (descending) and return the highest
-    return this.availableResolutions
-      .sort((a, b) => b.height - a.height)[0];
+    return this.availableResolutions.sort((a, b) => b.height - a.height)[0];
   }
 
   /**
    * Get resolution by quality preference
    */
   getResolutionByQuality(preferredQuality: string): VideoResolution | null {
-    return this.availableResolutions.find(res => res.resolution === preferredQuality) || null;
+    return this.availableResolutions.find((res) => res.resolution === preferredQuality) || null;
   }
 
   /**
@@ -205,7 +206,7 @@ export class VideoAsset {
     if (this.processingStatus === 'completed') return 100;
     if (this.processingStatus === 'failed' || this.processingStatus === 'cancelled') return 0;
     if (this.processingStatus === 'pending') return 0;
-    
+
     // For in_progress, we'd need to get this from the processing job
     // This is a placeholder - actual progress would come from external service
     return 50;
@@ -230,12 +231,12 @@ export class VideoAsset {
    */
   getEstimatedProcessingTime(): number | null {
     if (!this.durationSeconds) return null;
-    
+
     // Rough estimate: 1 minute of video takes 2-5 minutes to process
     // depending on resolution and complexity
     const baseTime = this.durationSeconds * 3; // 3x real-time as baseline
     const sizeMultiplier = Math.log10(this.originalFileSize / (1024 * 1024)) / 2; // Size factor
-    
+
     return Math.max(60, baseTime * (1 + sizeMultiplier)); // Minimum 1 minute
   }
 

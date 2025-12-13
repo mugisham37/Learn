@@ -1,9 +1,9 @@
 /**
  * GraphQL Field Selection Utilities
- * 
+ *
  * Implements field selection optimization to reduce payload sizes by
  * returning only the fields requested in GraphQL queries.
- * 
+ *
  * Requirements: 15.6
  */
 
@@ -64,7 +64,7 @@ function parseSelectionSet(
         if (selection.selectionSet) {
           const nestedFieldSet = new Set<string>();
           const nestedNestedFields = new Map<string, FieldSelection>();
-          
+
           parseSelectionSet(
             selection.selectionSet.selections,
             nestedFieldSet,
@@ -129,11 +129,11 @@ export function filterObjectFields<T extends Record<string, any>>(
   for (const [key, value] of Object.entries(obj)) {
     if (selection.hasField(key)) {
       const nestedSelection = selection.getNestedSelection(key);
-      
+
       if (nestedSelection && value && typeof value === 'object') {
         if (Array.isArray(value)) {
           // Handle arrays of objects
-          filtered[key as keyof T] = value.map(item => 
+          filtered[key as keyof T] = value.map((item) =>
             typeof item === 'object' ? filterObjectFields(item, nestedSelection) : item
           ) as T[keyof T];
         } else {
@@ -159,19 +159,19 @@ export function removeNullValues<T>(obj: T): T {
 
   if (Array.isArray(obj)) {
     return obj
-      .filter(item => item !== null && item !== undefined)
-      .map(item => removeNullValues(item)) as T;
+      .filter((item) => item !== null && item !== undefined)
+      .map((item) => removeNullValues(item)) as T;
   }
 
   if (typeof obj === 'object') {
     const cleaned: any = {};
-    
+
     for (const [key, value] of Object.entries(obj)) {
       if (value !== null && value !== undefined) {
         cleaned[key] = removeNullValues(value);
       }
     }
-    
+
     return cleaned;
   }
 
@@ -194,10 +194,10 @@ export function optimizeGraphQLResponse<T>(
   try {
     // Create field selection from GraphQL info
     const selection = createFieldSelection(info);
-    
+
     // Apply field filtering
     let optimized = filterObjectFields(data as any, selection) as T;
-    
+
     // Remove null values if requested
     if (removeNulls) {
       optimized = removeNullValues(optimized);
@@ -224,7 +224,7 @@ export function optimizeGraphQLResponse<T>(
       error: error instanceof Error ? error.message : String(error),
       operationName: info.operation.name?.value,
     });
-    
+
     // Return original data if optimization fails
     return removeNulls ? removeNullValues(data) : data;
   }
@@ -242,10 +242,10 @@ export function createResponseOptimizationPlugin() {
             // Only optimize successful responses with data
             if (response.body.kind === 'single' && response.body.singleResult.data) {
               const originalData = response.body.singleResult.data;
-              
+
               // Apply null value removal (field selection is handled at resolver level)
               const optimizedData = removeNullValues(originalData);
-              
+
               // Update response with optimized data
               response.body.singleResult.data = optimizedData;
 

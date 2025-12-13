@@ -1,6 +1,6 @@
 /**
  * Discussion Service Unit Tests
- * 
+ *
  * Tests the discussion service implementation with proper mocking
  * and validation of business logic
  */
@@ -9,7 +9,12 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { DiscussionService } from '../DiscussionService.js';
 import { DiscussionThread } from '../../../domain/entities/DiscussionThread.js';
 import { DiscussionPost, VoteType } from '../../../domain/entities/DiscussionPost.js';
-import { ValidationError, AuthorizationError, NotFoundError, ConflictError } from '../../../../../shared/errors/index.js';
+import {
+  ValidationError,
+  AuthorizationError,
+  NotFoundError,
+  ConflictError,
+} from '../../../../../shared/errors/index.js';
 import type { IDiscussionRepository } from '../../../infrastructure/repositories/IDiscussionRepository.js';
 import type { IEnrollmentRepository } from '../../../../enrollments/infrastructure/repositories/IEnrollmentRepository.js';
 import type { ICourseRepository } from '../../../../courses/infrastructure/repositories/ICourseRepository.js';
@@ -28,24 +33,24 @@ const mockDiscussionRepository: Partial<IDiscussionRepository> = {
   markPostAsSolution: vi.fn(),
   incrementThreadViewCount: vi.fn(),
   findThreadsByCourse: vi.fn(),
-  findPostsByThread: vi.fn()
+  findPostsByThread: vi.fn(),
 };
 
 const mockEnrollmentRepository: Partial<IEnrollmentRepository> = {
-  findByStudentAndCourse: vi.fn()
+  findByStudentAndCourse: vi.fn(),
 };
 
 const mockCourseRepository: Partial<ICourseRepository> = {
-  findById: vi.fn()
+  findById: vi.fn(),
 };
 
 const mockRealtimeService = {
   emitToUser: vi.fn(),
-  emitToRoom: vi.fn()
+  emitToRoom: vi.fn(),
 };
 
 const mockNotificationService = {
-  createNotification: vi.fn()
+  createNotification: vi.fn(),
 };
 
 describe('DiscussionService', () => {
@@ -68,13 +73,18 @@ describe('DiscussionService', () => {
       authorId: 'user-123',
       category: 'general',
       title: 'Test Thread',
-      content: 'This is a test thread'
+      content: 'This is a test thread',
     };
 
     it('should create a thread successfully when user is enrolled', async () => {
       // Arrange
       const mockCourse = { id: 'course-123', title: 'Test Course', instructorId: 'instructor-123' };
-      const mockEnrollment = { id: 'enrollment-123', studentId: 'user-123', courseId: 'course-123', status: 'active' };
+      const mockEnrollment = {
+        id: 'enrollment-123',
+        studentId: 'user-123',
+        courseId: 'course-123',
+        status: 'active',
+      };
       const mockCreatedThread = {
         id: 'thread-123',
         courseId: 'course-123',
@@ -88,7 +98,7 @@ describe('DiscussionService', () => {
         replyCount: 0,
         lastActivityAt: new Date(),
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
       };
 
       mockCourseRepository.findById = vi.fn().mockResolvedValue(mockCourse);
@@ -107,7 +117,7 @@ describe('DiscussionService', () => {
         authorId: 'user-123',
         category: 'general',
         title: 'Test Thread',
-        content: 'This is a test thread'
+        content: 'This is a test thread',
       });
     });
 
@@ -116,8 +126,7 @@ describe('DiscussionService', () => {
       mockCourseRepository.findById = vi.fn().mockResolvedValue(null);
 
       // Act & Assert
-      await expect(discussionService.createThread(validThreadData))
-        .rejects.toThrow(NotFoundError);
+      await expect(discussionService.createThread(validThreadData)).rejects.toThrow(NotFoundError);
     });
 
     it('should throw AuthorizationError when user is not enrolled', async () => {
@@ -127,8 +136,9 @@ describe('DiscussionService', () => {
       mockEnrollmentRepository.findByStudentAndCourse = vi.fn().mockResolvedValue(null);
 
       // Act & Assert
-      await expect(discussionService.createThread(validThreadData))
-        .rejects.toThrow(AuthorizationError);
+      await expect(discussionService.createThread(validThreadData)).rejects.toThrow(
+        AuthorizationError
+      );
     });
 
     it('should throw ValidationError for invalid input', async () => {
@@ -136,8 +146,7 @@ describe('DiscussionService', () => {
       const invalidData = { ...validThreadData, title: '' };
 
       // Act & Assert
-      await expect(discussionService.createThread(invalidData))
-        .rejects.toThrow(ValidationError);
+      await expect(discussionService.createThread(invalidData)).rejects.toThrow(ValidationError);
     });
   });
 
@@ -145,7 +154,7 @@ describe('DiscussionService', () => {
     const validReplyData = {
       threadId: 'thread-123',
       authorId: 'user-123',
-      content: 'This is a reply'
+      content: 'This is a reply',
     };
 
     it('should create a reply successfully when user is enrolled', async () => {
@@ -155,9 +164,14 @@ describe('DiscussionService', () => {
         courseId: 'course-123',
         authorId: 'author-123',
         title: 'Test Thread',
-        isLocked: false
+        isLocked: false,
       };
-      const mockEnrollment = { id: 'enrollment-123', studentId: 'user-123', courseId: 'course-123', status: 'active' };
+      const mockEnrollment = {
+        id: 'enrollment-123',
+        studentId: 'user-123',
+        courseId: 'course-123',
+        status: 'active',
+      };
       const mockCreatedPost = {
         id: 'post-123',
         threadId: 'thread-123',
@@ -170,7 +184,7 @@ describe('DiscussionService', () => {
         editHistory: [],
         isDeleted: false,
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
       };
 
       mockDiscussionRepository.findThreadById = vi.fn().mockResolvedValue(mockThread);
@@ -190,7 +204,7 @@ describe('DiscussionService', () => {
         threadId: 'thread-123',
         authorId: 'user-123',
         parentPostId: undefined,
-        content: 'This is a reply'
+        content: 'This is a reply',
       });
     });
 
@@ -200,8 +214,9 @@ describe('DiscussionService', () => {
       mockDiscussionRepository.findThreadById = vi.fn().mockResolvedValue(mockThread);
 
       // Act & Assert
-      await expect(discussionService.replyToThread(validReplyData))
-        .rejects.toThrow(AuthorizationError);
+      await expect(discussionService.replyToThread(validReplyData)).rejects.toThrow(
+        AuthorizationError
+      );
     });
   });
 
@@ -209,14 +224,19 @@ describe('DiscussionService', () => {
     const validVoteData = {
       postId: 'post-123',
       userId: 'user-123',
-      voteType: VoteType.UPVOTE
+      voteType: VoteType.UPVOTE,
     };
 
     it('should add vote successfully when user has not voted', async () => {
       // Arrange
       const mockPost = { id: 'post-123', threadId: 'thread-123', authorId: 'author-123' };
       const mockThread = { id: 'thread-123', courseId: 'course-123' };
-      const mockEnrollment = { id: 'enrollment-123', studentId: 'user-123', courseId: 'course-123', status: 'active' };
+      const mockEnrollment = {
+        id: 'enrollment-123',
+        studentId: 'user-123',
+        courseId: 'course-123',
+        status: 'active',
+      };
 
       mockDiscussionRepository.findPostById = vi.fn().mockResolvedValue(mockPost);
       mockDiscussionRepository.findThreadById = vi.fn().mockResolvedValue(mockThread);
@@ -232,14 +252,23 @@ describe('DiscussionService', () => {
       expect(result.success).toBe(true);
       expect(result.previousVoteRemoved).toBe(false);
       expect(result.newVoteCount).toBe(1);
-      expect(mockDiscussionRepository.voteOnPost).toHaveBeenCalledWith('post-123', 'user-123', VoteType.UPVOTE);
+      expect(mockDiscussionRepository.voteOnPost).toHaveBeenCalledWith(
+        'post-123',
+        'user-123',
+        VoteType.UPVOTE
+      );
     });
 
     it('should throw ConflictError when user has already voted', async () => {
       // Arrange
       const mockPost = { id: 'post-123', threadId: 'thread-123', authorId: 'author-123' };
       const mockThread = { id: 'thread-123', courseId: 'course-123' };
-      const mockEnrollment = { id: 'enrollment-123', studentId: 'user-123', courseId: 'course-123', status: 'active' };
+      const mockEnrollment = {
+        id: 'enrollment-123',
+        studentId: 'user-123',
+        courseId: 'course-123',
+        status: 'active',
+      };
 
       mockDiscussionRepository.findPostById = vi.fn().mockResolvedValue(mockPost);
       mockDiscussionRepository.findThreadById = vi.fn().mockResolvedValue(mockThread);
@@ -247,23 +276,26 @@ describe('DiscussionService', () => {
       mockDiscussionRepository.hasUserVotedOnPost = vi.fn().mockResolvedValue(true);
 
       // Act & Assert
-      await expect(discussionService.votePost(validVoteData))
-        .rejects.toThrow(ConflictError);
+      await expect(discussionService.votePost(validVoteData)).rejects.toThrow(ConflictError);
     });
 
     it('should throw ValidationError when user tries to vote on own post', async () => {
       // Arrange
       const mockPost = { id: 'post-123', threadId: 'thread-123', authorId: 'user-123' }; // Same as voter
       const mockThread = { id: 'thread-123', courseId: 'course-123' };
-      const mockEnrollment = { id: 'enrollment-123', studentId: 'user-123', courseId: 'course-123', status: 'active' };
+      const mockEnrollment = {
+        id: 'enrollment-123',
+        studentId: 'user-123',
+        courseId: 'course-123',
+        status: 'active',
+      };
 
       mockDiscussionRepository.findPostById = vi.fn().mockResolvedValue(mockPost);
       mockDiscussionRepository.findThreadById = vi.fn().mockResolvedValue(mockThread);
       mockEnrollmentRepository.findByStudentAndCourse = vi.fn().mockResolvedValue(mockEnrollment);
 
       // Act & Assert
-      await expect(discussionService.votePost(validVoteData))
-        .rejects.toThrow(ValidationError);
+      await expect(discussionService.votePost(validVoteData)).rejects.toThrow(ValidationError);
     });
   });
 
@@ -271,12 +303,17 @@ describe('DiscussionService', () => {
     const validSolutionData = {
       postId: 'post-123',
       educatorId: 'instructor-123',
-      isSolution: true
+      isSolution: true,
     };
 
     it('should mark post as solution when educator is course instructor', async () => {
       // Arrange
-      const mockPost = { id: 'post-123', threadId: 'thread-123', authorId: 'student-123', content: 'Great answer!' };
+      const mockPost = {
+        id: 'post-123',
+        threadId: 'thread-123',
+        authorId: 'student-123',
+        content: 'Great answer!',
+      };
       const mockThread = { id: 'thread-123', courseId: 'course-123', title: 'Test Thread' };
       const mockCourse = { id: 'course-123', instructorId: 'instructor-123' };
       const mockUpdatedPost = {
@@ -291,7 +328,7 @@ describe('DiscussionService', () => {
         editHistory: [],
         isDeleted: false,
         createdAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
       };
 
       mockDiscussionRepository.findPostById = vi.fn().mockResolvedValue(mockPost);
@@ -320,8 +357,9 @@ describe('DiscussionService', () => {
       mockCourseRepository.findById = vi.fn().mockResolvedValue(mockCourse);
 
       // Act & Assert
-      await expect(discussionService.markSolution(validSolutionData))
-        .rejects.toThrow(AuthorizationError);
+      await expect(discussionService.markSolution(validSolutionData)).rejects.toThrow(
+        AuthorizationError
+      );
     });
   });
 });

@@ -1,9 +1,9 @@
 /**
  * Video Processing Workflow Example
- * 
+ *
  * Example showing how to use the video processing workflow components.
  * This demonstrates the integration between the queue, service, and webhook processor.
- * 
+ *
  * Requirements:
  * - 4.2: MediaConvert transcoding with multiple resolutions
  * - 4.3: Transcoding job status and retry logic
@@ -22,14 +22,8 @@ import { IMediaConvertService } from './IMediaConvertService.js';
 export class VideoProcessingExample {
   private processingManager: VideoProcessingManager;
 
-  constructor(
-    contentRepository: IContentRepository,
-    mediaConvertService: IMediaConvertService
-  ) {
-    this.processingManager = new VideoProcessingManager(
-      contentRepository,
-      mediaConvertService
-    );
+  constructor(contentRepository: IContentRepository, mediaConvertService: IMediaConvertService) {
+    this.processingManager = new VideoProcessingManager(contentRepository, mediaConvertService);
   }
 
   /**
@@ -65,9 +59,7 @@ export class VideoProcessingExample {
       });
 
       // Use the processing service to initiate video processing
-      const result = await this.processingManager
-        .getProcessingService()
-        .processVideoUpload(params);
+      const result = await this.processingManager.getProcessingService().processVideoUpload(params);
 
       logger.info('Video processing initiated', {
         videoAssetId: params.videoAssetId,
@@ -219,9 +211,7 @@ export class VideoProcessingExample {
     try {
       logger.info('Cancelling video processing', { videoAssetId });
 
-      await this.processingManager
-        .getProcessingService()
-        .cancelProcessing(videoAssetId);
+      await this.processingManager.getProcessingService().cancelProcessing(videoAssetId);
 
       logger.info('Processing cancelled successfully', { videoAssetId });
     } catch (error) {

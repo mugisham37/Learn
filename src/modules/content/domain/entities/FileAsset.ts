@@ -1,15 +1,18 @@
 /**
  * File Asset Domain Entity
- * 
+ *
  * Represents a generic file upload with metadata, access control, and processing status.
  * Encapsulates business logic for file asset management.
- * 
+ *
  * Requirements:
  * - 4.1: File upload with validation and S3 storage
  * - 7.2: Assignment file submissions with type and size validation
  */
 
-import { AssetType, ProcessingStatus } from '../../../../infrastructure/database/schema/content.schema.js';
+import {
+  AssetType,
+  ProcessingStatus,
+} from '../../../../infrastructure/database/schema/content.schema.js';
 
 export interface FileVariants {
   thumbnail?: string;
@@ -36,7 +39,7 @@ export type AccessLevel = 'public' | 'course' | 'lesson' | 'private';
 
 /**
  * File Asset Domain Entity
- * 
+ *
  * Encapsulates file asset business logic and validation rules
  */
 export class FileAsset {
@@ -117,10 +120,12 @@ export class FileAsset {
    * Check if file is a document
    */
   isDocument(): boolean {
-    return this.assetType === 'document' || 
-           this.mimeType.includes('pdf') ||
-           this.mimeType.includes('document') ||
-           this.mimeType.includes('text/');
+    return (
+      this.assetType === 'document' ||
+      this.mimeType.includes('pdf') ||
+      this.mimeType.includes('document') ||
+      this.mimeType.includes('text/')
+    );
   }
 
   /**
@@ -134,10 +139,12 @@ export class FileAsset {
    * Check if file is an archive
    */
   isArchive(): boolean {
-    return this.assetType === 'archive' || 
-           this.mimeType.includes('zip') ||
-           this.mimeType.includes('rar') ||
-           this.mimeType.includes('tar');
+    return (
+      this.assetType === 'archive' ||
+      this.mimeType.includes('zip') ||
+      this.mimeType.includes('rar') ||
+      this.mimeType.includes('tar')
+    );
   }
 
   /**
@@ -268,7 +275,7 @@ export class FileAsset {
     if (this.isImage() && this.metadata.width && this.metadata.height) {
       return {
         width: this.metadata.width,
-        height: this.metadata.height
+        height: this.metadata.height,
       };
     }
     return null;
@@ -289,14 +296,13 @@ export class FileAsset {
       'application/x-executable',
       'application/x-msdownload',
       'application/x-msdos-program',
-      'application/x-winexe'
+      'application/x-winexe',
     ];
-    
+
     const unsafeExtensions = ['exe', 'bat', 'cmd', 'com', 'scr', 'vbs', 'js'];
     const extension = this.getFileExtension();
-    
-    return !unsafeTypes.includes(this.mimeType) && 
-           !unsafeExtensions.includes(extension);
+
+    return !unsafeTypes.includes(this.mimeType) && !unsafeExtensions.includes(extension);
   }
 
   /**
@@ -323,28 +329,31 @@ export class FileAsset {
     if (this.isDocument()) return 'file-text';
     if (this.isAudio()) return 'file-audio';
     if (this.isArchive()) return 'file-archive';
-    
+
     const extension = this.getFileExtension();
     switch (extension) {
-      case 'pdf': return 'file-pdf';
+      case 'pdf':
+        return 'file-pdf';
       case 'doc':
-      case 'docx': return 'file-word';
+      case 'docx':
+        return 'file-word';
       case 'xls':
-      case 'xlsx': return 'file-excel';
+      case 'xlsx':
+        return 'file-excel';
       case 'ppt':
-      case 'pptx': return 'file-powerpoint';
-      case 'csv': return 'file-csv';
-      default: return 'file';
+      case 'pptx':
+        return 'file-powerpoint';
+      case 'csv':
+        return 'file-csv';
+      default:
+        return 'file';
     }
   }
 
   /**
    * Create a copy with updated processing status
    */
-  withProcessingStatus(
-    status: ProcessingStatus,
-    errorMessage?: string
-  ): FileAsset {
+  withProcessingStatus(status: ProcessingStatus, errorMessage?: string): FileAsset {
     return new FileAsset(
       this.id,
       this.courseId,

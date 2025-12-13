@@ -1,14 +1,14 @@
 /**
  * Comprehensive Cache Service
- * 
+ *
  * Implements a comprehensive caching strategy across all modules with:
  * - User profiles with 5-minute TTL
- * - Course catalogs with 10-minute TTL  
+ * - Course catalogs with 10-minute TTL
  * - Search results with 5-minute TTL
  * - Analytics with appropriate TTL based on update frequency
  * - Cache warming on application startup
  * - Cache stampede prevention with locks
- * 
+ *
  * Requirements: 15.2, 15.3, 15.4
  */
 
@@ -22,21 +22,21 @@ import { analyticsCacheService } from '../../modules/analytics/infrastructure/ca
 export const ComprehensiveCacheTTL = {
   // User data - 5 minutes (frequently changing)
   USER_PROFILES: 300, // 5 minutes
-  
+
   // Course data - 10 minutes (moderately changing)
   COURSE_CATALOGS: 600, // 10 minutes
   COURSE_DETAILS: 600, // 10 minutes
-  
+
   // Search data - 5 minutes (frequently changing)
   SEARCH_RESULTS: 300, // 5 minutes
   SEARCH_AUTOCOMPLETE: 300, // 5 minutes
   SEARCH_TRENDING: 1800, // 30 minutes
-  
+
   // Analytics data - based on update frequency
   ANALYTICS_REALTIME: 60, // 1 minute (real-time metrics)
   ANALYTICS_HOURLY: 3600, // 1 hour (hourly aggregations)
   ANALYTICS_DAILY: 86400, // 24 hours (daily reports)
-  
+
   // Cache warming locks
   WARMING_LOCK: 60, // 1 minute
   STAMPEDE_LOCK: 30, // 30 seconds
@@ -47,38 +47,34 @@ export const ComprehensiveCacheTTL = {
  */
 export const ComprehensiveCacheKeys = {
   // User profile caching
-  userProfile: (userId: string): string => 
-    buildCacheKey(CachePrefix.USER, 'profile', userId),
-  
-  userPreferences: (userId: string): string => 
+  userProfile: (userId: string): string => buildCacheKey(CachePrefix.USER, 'profile', userId),
+
+  userPreferences: (userId: string): string =>
     buildCacheKey(CachePrefix.USER, 'preferences', userId),
-  
+
   // Course catalog caching
-  courseCatalog: (page: number, limit: number, filters?: string): string => 
+  courseCatalog: (page: number, limit: number, filters?: string): string =>
     buildCacheKey(CachePrefix.COURSE, 'catalog', page, limit, filters || 'all'),
-  
-  courseDetails: (courseId: string): string => 
+
+  courseDetails: (courseId: string): string =>
     buildCacheKey(CachePrefix.COURSE, 'details', courseId),
-  
-  coursesByInstructor: (instructorId: string, page: number, limit: number): string => 
+
+  coursesByInstructor: (instructorId: string, page: number, limit: number): string =>
     buildCacheKey(CachePrefix.COURSE, 'instructor', instructorId, page, limit),
-  
+
   // Search results caching
-  searchResults: (query: string, filters?: string, page?: number): string => 
+  searchResults: (query: string, filters?: string, page?: number): string =>
     buildCacheKey(CachePrefix.SEARCH, 'results', query, filters || 'all', page || 1),
-  
-  searchAutocomplete: (query: string): string => 
+
+  searchAutocomplete: (query: string): string =>
     buildCacheKey(CachePrefix.SEARCH, 'autocomplete', query),
-  
-  searchTrending: (): string => 
-    buildCacheKey(CachePrefix.SEARCH, 'trending'),
-  
+
+  searchTrending: (): string => buildCacheKey(CachePrefix.SEARCH, 'trending'),
+
   // Cache warming and stampede prevention locks
-  warmingLock: (key: string): string => 
-    buildCacheKey(CachePrefix.ANALYTICS, 'warming-lock', key),
-  
-  stampedeLock: (key: string): string => 
-    buildCacheKey(CachePrefix.ANALYTICS, 'stampede-lock', key),
+  warmingLock: (key: string): string => buildCacheKey(CachePrefix.ANALYTICS, 'warming-lock', key),
+
+  stampedeLock: (key: string): string => buildCacheKey(CachePrefix.ANALYTICS, 'stampede-lock', key),
 };
 
 /**
@@ -90,16 +86,16 @@ interface CacheWarmingConfig {
   warmCourseCatalogs: boolean;
   warmSearchData: boolean;
   warmAnalytics: boolean;
-  
+
   // Limits to prevent overwhelming the system
   maxUsersToWarm: number;
   maxCoursesToWarm: number;
   maxSearchQueries: number;
-  
+
   // Batch sizes for processing
   userBatchSize: number;
   courseBatchSize: number;
-  
+
   // Enable/disable warming
   enabled: boolean;
 }
@@ -122,7 +118,7 @@ const DEFAULT_WARMING_CONFIG: CacheWarmingConfig = {
 
 /**
  * Comprehensive Cache Service
- * 
+ *
  * Provides unified caching functionality across all modules with:
  * - Appropriate TTL for different data types
  * - Cache warming strategies
@@ -130,9 +126,7 @@ const DEFAULT_WARMING_CONFIG: CacheWarmingConfig = {
  * - Cache invalidation patterns
  */
 export class ComprehensiveCacheService {
-  constructor(
-    private config: CacheWarmingConfig = DEFAULT_WARMING_CONFIG
-  ) {}
+  constructor(private config: CacheWarmingConfig = DEFAULT_WARMING_CONFIG) {}
 
   // ==================== USER PROFILE CACHING ====================
 
@@ -166,9 +160,9 @@ export class ComprehensiveCacheService {
    * Cache course catalog with 10-minute TTL
    */
   async cacheCourseCatalog(
-    page: number, 
-    limit: number, 
-    filters: string | undefined, 
+    page: number,
+    limit: number,
+    filters: string | undefined,
     catalog: Record<string, unknown>
   ): Promise<void> {
     const cacheKey = ComprehensiveCacheKeys.courseCatalog(page, limit, filters);
@@ -179,8 +173,8 @@ export class ComprehensiveCacheService {
    * Get cached course catalog
    */
   async getCachedCourseCatalog<T>(
-    page: number, 
-    limit: number, 
+    page: number,
+    limit: number,
     filters?: string
   ): Promise<T | null> {
     const cacheKey = ComprehensiveCacheKeys.courseCatalog(page, limit, filters);
@@ -225,9 +219,9 @@ export class ComprehensiveCacheService {
    * Cache search results with 5-minute TTL
    */
   async cacheSearchResults(
-    query: string, 
-    filters: string | undefined, 
-    page: number, 
+    query: string,
+    filters: string | undefined,
+    page: number,
     results: Record<string, unknown>
   ): Promise<void> {
     const cacheKey = ComprehensiveCacheKeys.searchResults(query, filters, page);
@@ -238,8 +232,8 @@ export class ComprehensiveCacheService {
    * Get cached search results
    */
   async getCachedSearchResults<T>(
-    query: string, 
-    filters?: string, 
+    query: string,
+    filters?: string,
     page?: number
   ): Promise<T | null> {
     const cacheKey = ComprehensiveCacheKeys.searchResults(query, filters, page);
@@ -290,7 +284,7 @@ export class ComprehensiveCacheService {
 
   /**
    * Execute function with cache stampede prevention
-   * 
+   *
    * Uses distributed locks to prevent multiple processes from executing
    * the same expensive operation simultaneously.
    */
@@ -308,8 +302,8 @@ export class ComprehensiveCacheService {
     // Try to acquire stampede prevention lock
     const lockKey = ComprehensiveCacheKeys.stampedeLock(cacheKey);
     const lockAcquired = await cache.setIfNotExists(
-      lockKey, 
-      'processing', 
+      lockKey,
+      'processing',
       ComprehensiveCacheTTL.STAMPEDE_LOCK
     );
 
@@ -317,10 +311,10 @@ export class ComprehensiveCacheService {
       try {
         // We got the lock, execute the expensive function
         const result = await expensiveFunction();
-        
+
         // Cache the result
         await cache.set(cacheKey, result, ttl);
-        
+
         return result;
       } finally {
         // Always release the lock
@@ -328,13 +322,13 @@ export class ComprehensiveCacheService {
       }
     } else {
       // Another process is working on this, wait and check cache again
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
       const nowCached = await cache.get<T>(cacheKey);
       if (nowCached) {
         return nowCached;
       }
-      
+
       // If still not cached, execute anyway (fallback)
       return await expensiveFunction();
     }
@@ -344,7 +338,7 @@ export class ComprehensiveCacheService {
 
   /**
    * Warm all caches on application startup
-   * 
+   *
    * This is the main entry point for cache warming, called during
    * application initialization to ensure fast response times.
    */
@@ -420,22 +414,24 @@ export class ComprehensiveCacheService {
       // Process in batches
       for (let i = 0; i < activeUserIds.length; i += this.config.userBatchSize) {
         const batch = activeUserIds.slice(i, i + this.config.userBatchSize);
-        
-        await Promise.all(batch.map(async (userId) => {
-          try {
-            const cacheKey = ComprehensiveCacheKeys.userProfile(userId);
-            const cached = await cache.get(cacheKey);
-            
-            if (!cached) {
-              // This would call the user service to get profile data
-              // For now, we'll just mark the cache key as warmed
-              await cache.set(cacheKey, { warmed: true }, ComprehensiveCacheTTL.USER_PROFILES);
-              warmed++;
+
+        await Promise.all(
+          batch.map(async (userId) => {
+            try {
+              const cacheKey = ComprehensiveCacheKeys.userProfile(userId);
+              const cached = await cache.get(cacheKey);
+
+              if (!cached) {
+                // This would call the user service to get profile data
+                // For now, we'll just mark the cache key as warmed
+                await cache.set(cacheKey, { warmed: true }, ComprehensiveCacheTTL.USER_PROFILES);
+                warmed++;
+              }
+            } catch (error) {
+              failed++;
             }
-          } catch (error) {
-            failed++;
-          }
-        }));
+          })
+        );
       }
 
       return { warmed, failed };
@@ -463,7 +459,7 @@ export class ComprehensiveCacheService {
             try {
               const cacheKey = ComprehensiveCacheKeys.courseCatalog(page, limit, filter);
               const cached = await cache.get(cacheKey);
-              
+
               if (!cached) {
                 // This would call the course service to get catalog data
                 // For now, we'll just mark the cache key as warmed
@@ -500,7 +496,7 @@ export class ComprehensiveCacheService {
         'web development',
         'data science',
         'nodejs',
-        'typescript'
+        'typescript',
       ];
 
       for (const query of popularQueries.slice(0, this.config.maxSearchQueries)) {
@@ -508,7 +504,7 @@ export class ComprehensiveCacheService {
           // Warm search results
           const searchKey = ComprehensiveCacheKeys.searchResults(query);
           const searchCached = await cache.get(searchKey);
-          
+
           if (!searchCached) {
             // This would call the search service to get results
             // For now, we'll just mark the cache key as warmed
@@ -519,7 +515,7 @@ export class ComprehensiveCacheService {
           // Warm autocomplete
           const autocompleteKey = ComprehensiveCacheKeys.searchAutocomplete(query);
           const autocompleteCached = await cache.get(autocompleteKey);
-          
+
           if (!autocompleteCached) {
             // This would call the search service to get autocomplete
             // For now, we'll just mark the cache key as warmed
@@ -535,7 +531,7 @@ export class ComprehensiveCacheService {
       try {
         const trendingKey = ComprehensiveCacheKeys.searchTrending();
         const trendingCached = await cache.get(trendingKey);
-        
+
         if (!trendingCached) {
           await cache.set(trendingKey, popularQueries, ComprehensiveCacheTTL.SEARCH_TRENDING);
           warmed++;
@@ -562,10 +558,16 @@ export class ComprehensiveCacheService {
       );
 
       // Ensure we return the expected format
-      if (result !== undefined && result !== null && typeof result === 'object' && 'warmed' in result && 'failed' in result) {
+      if (
+        result !== undefined &&
+        result !== null &&
+        typeof result === 'object' &&
+        'warmed' in result &&
+        'failed' in result
+      ) {
         return result as { warmed: number; failed: number };
       }
-      
+
       return { warmed: 0, failed: 0 };
     } catch (error) {
       return { warmed: 0, failed: 1 };
@@ -583,7 +585,7 @@ export class ComprehensiveCacheService {
     // 1. Query the database for recently active users
     // 2. Limit to maxUsersToWarm
     // 3. Return their IDs
-    
+
     // For now, return empty array
     return Promise.resolve([]);
   }
@@ -605,7 +607,7 @@ export class ComprehensiveCacheService {
   }> {
     try {
       const stats = await cache.getStats();
-      
+
       // Count keys by module (this is approximate)
       const moduleBreakdown = {
         users: 0,
@@ -616,7 +618,7 @@ export class ComprehensiveCacheService {
 
       // In a real implementation, you would scan keys by prefix
       // For now, return the basic stats
-      
+
       return {
         totalKeys: stats.keys,
         memoryUsage: stats.memory,

@@ -1,9 +1,9 @@
 /**
  * Analytics Cache Warming Service
- * 
+ *
  * Implements proactive cache warming strategies for analytics data to ensure
  * fast response times for frequently accessed metrics and dashboards.
- * 
+ *
  * Requirements: 12.6, 15.2
  */
 
@@ -19,20 +19,20 @@ interface CacheWarmingConfig {
   // Dashboard warming
   warmDashboards: boolean;
   maxUsersToWarm: number;
-  
+
   // Analytics warming
   warmCourseAnalytics: boolean;
   warmStudentAnalytics: boolean;
   maxAnalyticsToWarm: number;
-  
+
   // Reports warming
   warmReports: boolean;
   reportDateRanges: DateRange[];
-  
+
   // Trending data warming
   warmTrendingData: boolean;
   trendingLimits: number[];
-  
+
   // Batch processing
   batchSize: number;
   delayBetweenBatches: number; // milliseconds
@@ -44,24 +44,24 @@ interface CacheWarmingConfig {
 const DEFAULT_WARMING_CONFIG: CacheWarmingConfig = {
   warmDashboards: true,
   maxUsersToWarm: 100,
-  
+
   warmCourseAnalytics: true,
   warmStudentAnalytics: true,
   maxAnalyticsToWarm: 50,
-  
+
   warmReports: false, // Reports are expensive, only warm on demand
   reportDateRanges: [],
-  
+
   warmTrendingData: true,
   trendingLimits: [10, 20, 50],
-  
+
   batchSize: 10,
   delayBetweenBatches: 100,
 };
 
 /**
  * Analytics Cache Warming Service
- * 
+ *
  * Provides intelligent cache warming strategies to ensure optimal performance
  * for frequently accessed analytics data.
  */
@@ -73,7 +73,7 @@ export class AnalyticsCacheWarmingService {
 
   /**
    * Warms all critical analytics caches
-   * 
+   *
    * This is the main entry point for cache warming, typically called:
    * - On application startup
    * - After major data updates
@@ -116,7 +116,7 @@ export class AnalyticsCacheWarmingService {
 
       // Execute warming tasks and collect results
       const results = await Promise.allSettled(warmingTasks);
-      
+
       for (const result of results) {
         if (result.status === 'fulfilled') {
           warmed += result.value.warmed;
@@ -155,9 +155,9 @@ export class AnalyticsCacheWarmingService {
       // Process in batches to avoid overwhelming the system
       for (let i = 0; i < activeUserIds.length; i += this.config.batchSize) {
         const batch = activeUserIds.slice(i, i + this.config.batchSize);
-        
-        const batchPromises = batch.flatMap(userId =>
-          roles.map(async role => {
+
+        const batchPromises = batch.flatMap((userId) =>
+          roles.map(async (role) => {
             try {
               // Check if already cached
               const cached = await analyticsCacheService.getDashboardMetrics(userId, role);
@@ -167,7 +167,10 @@ export class AnalyticsCacheWarmingService {
                 warmed++;
               }
             } catch (error) {
-              console.error(`Failed to warm dashboard cache for user ${userId}, role ${role}:`, error);
+              console.error(
+                `Failed to warm dashboard cache for user ${userId}, role ${role}:`,
+                error
+              );
               failed++;
             }
           })
@@ -205,8 +208,8 @@ export class AnalyticsCacheWarmingService {
       // Process in batches
       for (let i = 0; i < popularCourseIds.length; i += this.config.batchSize) {
         const batch = popularCourseIds.slice(i, i + this.config.batchSize);
-        
-        const batchPromises = batch.map(async courseId => {
+
+        const batchPromises = batch.map(async (courseId) => {
           try {
             // Check if already cached
             const cached = await analyticsCacheService.getCourseAnalytics(courseId);
@@ -252,8 +255,8 @@ export class AnalyticsCacheWarmingService {
       // Process in batches
       for (let i = 0; i < activeStudentIds.length; i += this.config.batchSize) {
         const batch = activeStudentIds.slice(i, i + this.config.batchSize);
-        
-        const batchPromises = batch.map(async studentId => {
+
+        const batchPromises = batch.map(async (studentId) => {
           try {
             // Check if already cached
             const cached = await analyticsCacheService.getStudentAnalytics(studentId);
@@ -263,7 +266,10 @@ export class AnalyticsCacheWarmingService {
               warmed++;
             }
           } catch (error) {
-            console.error(`Failed to warm student analytics cache for student ${studentId}:`, error);
+            console.error(
+              `Failed to warm student analytics cache for student ${studentId}:`,
+              error
+            );
             failed++;
           }
         });
@@ -297,18 +303,18 @@ export class AnalyticsCacheWarmingService {
         // Last 7 days
         {
           startDate: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000),
-          endDate: now
+          endDate: now,
         },
         // Last 30 days
         {
           startDate: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000),
-          endDate: now
+          endDate: now,
         },
         // Last 90 days
         {
           startDate: new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000),
-          endDate: now
-        }
+          endDate: now,
+        },
       ];
 
       console.log('Warming trending data caches...');
@@ -319,12 +325,14 @@ export class AnalyticsCacheWarmingService {
       for (const limit of this.config.trendingLimits) {
         for (const dateRange of dateRanges) {
           warmingPromises.push(
-            this.warmTrendingCourses(limit, dateRange).then(() => {
-              warmed++;
-            }).catch(error => {
-              console.error(`Failed to warm trending courses cache (limit: ${limit}):`, error);
-              failed++;
-            })
+            this.warmTrendingCourses(limit, dateRange)
+              .then(() => {
+                warmed++;
+              })
+              .catch((error) => {
+                console.error(`Failed to warm trending courses cache (limit: ${limit}):`, error);
+                failed++;
+              })
           );
         }
       }
@@ -332,12 +340,14 @@ export class AnalyticsCacheWarmingService {
       // Warm top performers for different limits
       for (const limit of this.config.trendingLimits) {
         warmingPromises.push(
-          this.warmTopPerformers(limit).then(() => {
-            warmed++;
-          }).catch(error => {
-            console.error(`Failed to warm top performers cache (limit: ${limit}):`, error);
-            failed++;
-          })
+          this.warmTopPerformers(limit)
+            .then(() => {
+              warmed++;
+            })
+            .catch((error) => {
+              console.error(`Failed to warm top performers cache (limit: ${limit}):`, error);
+              failed++;
+            })
         );
       }
 
@@ -362,7 +372,7 @@ export class AnalyticsCacheWarmingService {
       // Get popular course and student IDs for report warming
       const [popularCourseIds, activeStudentIds] = await Promise.all([
         this.getPopularCourseIds(10), // Limit to top 10 for reports
-        this.getActiveStudentIds(10)  // Limit to top 10 for reports
+        this.getActiveStudentIds(10), // Limit to top 10 for reports
       ]);
 
       console.log('Warming report caches...');
@@ -373,12 +383,14 @@ export class AnalyticsCacheWarmingService {
       for (const courseId of popularCourseIds) {
         for (const dateRange of this.config.reportDateRanges) {
           warmingPromises.push(
-            this.warmCourseReport(courseId, dateRange).then(() => {
-              warmed++;
-            }).catch(error => {
-              console.error(`Failed to warm course report cache for course ${courseId}:`, error);
-              failed++;
-            })
+            this.warmCourseReport(courseId, dateRange)
+              .then(() => {
+                warmed++;
+              })
+              .catch((error) => {
+                console.error(`Failed to warm course report cache for course ${courseId}:`, error);
+                failed++;
+              })
           );
         }
       }
@@ -387,12 +399,17 @@ export class AnalyticsCacheWarmingService {
       for (const studentId of activeStudentIds) {
         for (const dateRange of this.config.reportDateRanges) {
           warmingPromises.push(
-            this.warmStudentReport(studentId, dateRange).then(() => {
-              warmed++;
-            }).catch(error => {
-              console.error(`Failed to warm student report cache for student ${studentId}:`, error);
-              failed++;
-            })
+            this.warmStudentReport(studentId, dateRange)
+              .then(() => {
+                warmed++;
+              })
+              .catch((error) => {
+                console.error(
+                  `Failed to warm student report cache for student ${studentId}:`,
+                  error
+                );
+                failed++;
+              })
           );
         }
       }
@@ -481,7 +498,7 @@ export class AnalyticsCacheWarmingService {
    * Utility method to add delay between batches
    */
   private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   /**

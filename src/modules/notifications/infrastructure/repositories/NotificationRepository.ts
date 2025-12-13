@@ -1,29 +1,45 @@
 /**
  * Notification Repository Implementation
- * 
+ *
  * Implements notification data access operations with Drizzle ORM queries,
  * Redis caching with appropriate TTL, and cache invalidation on updates.
  * Handles database errors and maps them to domain errors.
- * 
+ *
  * Requirements: 10.1, 10.4
  */
 
-import { eq, and, or, desc, asc, count, inArray, isNull, isNotNull, lt, gte, lte, SQL } from 'drizzle-orm';
+import {
+  eq,
+  and,
+  or,
+  desc,
+  asc,
+  count,
+  inArray,
+  isNull,
+  isNotNull,
+  lt,
+  gte,
+  lte,
+  SQL,
+} from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
-import { cache, buildCacheKey, CachePrefix, CacheTTL } from '../../../../infrastructure/cache/index.js';
+import {
+  cache,
+  buildCacheKey,
+  CachePrefix,
+  CacheTTL,
+} from '../../../../infrastructure/cache/index.js';
 import { getWriteDb, getReadDb } from '../../../../infrastructure/database/index.js';
-import { 
-  notifications, 
-  Notification, 
+import {
+  notifications,
+  Notification,
   NewNotification,
   NotificationType,
-  Priority
+  Priority,
 } from '../../../../infrastructure/database/schema/notifications.schema.js';
-import {
-  DatabaseError,
-  NotFoundError,
-} from '../../../../shared/errors/index.js';
+import { DatabaseError, NotFoundError } from '../../../../shared/errors/index.js';
 
 import {
   INotificationRepository,
@@ -36,7 +52,7 @@ import {
 
 /**
  * Notification Repository Implementation
- * 
+ *
  * Provides data access methods for notification entities with:
  * - Drizzle ORM for type-safe queries
  * - Redis caching with appropriate TTL
@@ -80,32 +96,32 @@ export class NotificationRepository implements INotificationRepository {
    */
   private generateFilterKey(filters?: NotificationFilters, pagination?: PaginationOptions): string {
     const parts: string[] = [];
-    
+
     if (filters) {
       if (filters.notificationType) {
-        const types = Array.isArray(filters.notificationType) 
-          ? filters.notificationType.join(',') 
+        const types = Array.isArray(filters.notificationType)
+          ? filters.notificationType.join(',')
           : filters.notificationType;
         parts.push(`type:${types}`);
       }
       if (filters.isRead !== undefined) parts.push(`read:${filters.isRead}`);
       if (filters.priority) {
-        const priorities = Array.isArray(filters.priority) 
-          ? filters.priority.join(',') 
+        const priorities = Array.isArray(filters.priority)
+          ? filters.priority.join(',')
           : filters.priority;
         parts.push(`priority:${priorities}`);
       }
       if (filters.createdAfter) parts.push(`after:${filters.createdAfter.getTime()}`);
       if (filters.createdBefore) parts.push(`before:${filters.createdBefore.getTime()}`);
     }
-    
+
     if (pagination) {
       parts.push(`limit:${pagination.limit}`);
       parts.push(`offset:${pagination.offset}`);
       if (pagination.orderBy) parts.push(`order:${pagination.orderBy}`);
       if (pagination.orderDirection) parts.push(`dir:${pagination.orderDirection}`);
     }
-    
+
     return parts.join('|');
   }
 
@@ -114,11 +130,11 @@ export class NotificationRepository implements INotificationRepository {
    */
   private buildWhereConditions(filters?: NotificationFilters): SQL<unknown> | undefined {
     const conditions = [];
-    
+
     if (filters?.recipientId) {
       conditions.push(eq(notifications.recipientId, filters.recipientId));
     }
-    
+
     if (filters?.notificationType) {
       if (Array.isArray(filters.notificationType)) {
         conditions.push(inArray(notifications.notificationType, filters.notificationType));
@@ -126,11 +142,11 @@ export class NotificationRepository implements INotificationRepository {
         conditions.push(eq(notifications.notificationType, filters.notificationType));
       }
     }
-    
+
     if (filters?.isRead !== undefined) {
       conditions.push(eq(notifications.isRead, filters.isRead));
     }
-    
+
     if (filters?.priority) {
       if (Array.isArray(filters.priority)) {
         conditions.push(inArray(notifications.priority, filters.priority));
@@ -138,33 +154,30 @@ export class NotificationRepository implements INotificationRepository {
         conditions.push(eq(notifications.priority, filters.priority));
       }
     }
-    
+
     if (filters?.createdAfter) {
       conditions.push(gte(notifications.createdAt, filters.createdAfter));
     }
-    
+
     if (filters?.createdBefore) {
       conditions.push(lte(notifications.createdAt, filters.createdBefore));
     }
-    
+
     if (filters?.expiresAfter) {
       conditions.push(gte(notifications.expiresAt, filters.expiresAfter));
     }
-    
+
     if (filters?.expiresBefore) {
       conditions.push(lte(notifications.expiresAt, filters.expiresBefore));
     }
-    
+
     // Always exclude expired notifications unless specifically querying for them
     if (!filters?.expiresAfter && !filters?.expiresBefore) {
       conditions.push(
-        or(
-          isNull(notifications.expiresAt),
-          gte(notifications.expiresAt, new Date())
-        )
+        or(isNull(notifications.expiresAt), gte(notifications.expiresAt, new Date()))
       );
     }
-    
+
     return conditions.length > 0 ? and(...conditions) : undefined;
   }
 
@@ -175,14 +188,14 @@ export class NotificationRepository implements INotificationRepository {
     if (!pagination?.orderBy) {
       return desc(notifications.createdAt); // Default: newest first
     }
-    
+
     const column = notifications[pagination.orderBy];
     return pagination.orderDirection === 'asc' ? asc(column) : desc(column);
   }
 
   /**
    * Creates a new notification in the database
-   * 
+   *
    * @param data - Notification creation data
    * @returns The created notification
    * @throws DatabaseError if database operation fails
@@ -208,10 +221,7 @@ export class NotificationRepository implements INotificationRepository {
         .returning();
 
       if (!createdNotification) {
-        throw new DatabaseError(
-          'Failed to create notification',
-          'insert'
-        );
+        throw new DatabaseError('Failed to create notification', 'insert');
       }
 
       // Invalidate recipient's notification cache
@@ -235,10 +245,10 @@ export class NotificationRepository implements INotificationRepository {
 
   /**
    * Finds a notification by its unique ID
-   * 
+   *
    * Implements caching with medium TTL.
    * Uses read database for query optimization.
-   * 
+   *
    * @param id - Notification ID
    * @returns The notification if found, null otherwise
    * @throws DatabaseError if database operation fails
@@ -248,7 +258,7 @@ export class NotificationRepository implements INotificationRepository {
       // Check cache first
       const cacheKey = this.getNotificationCacheKey(id);
       const cachedNotification = await cache.get<Notification>(cacheKey);
-      
+
       if (cachedNotification) {
         return cachedNotification;
       }
@@ -279,7 +289,7 @@ export class NotificationRepository implements INotificationRepository {
 
   /**
    * Finds notifications for a specific recipient with filtering and pagination
-   * 
+   *
    * @param recipientId - User ID of the notification recipient
    * @param filters - Optional filters to apply
    * @param pagination - Pagination options
@@ -305,7 +315,7 @@ export class NotificationRepository implements INotificationRepository {
 
   /**
    * Finds notifications with advanced filtering and pagination
-   * 
+   *
    * @param filters - Filters to apply
    * @param pagination - Pagination options
    * @returns Paginated list of notifications
@@ -321,7 +331,7 @@ export class NotificationRepository implements INotificationRepository {
       if (filters?.recipientId) {
         const filterKey = this.generateFilterKey(filters, pagination);
         cacheKey = this.getRecipientNotificationsCacheKey(filters.recipientId, filterKey);
-        
+
         const cachedResult = await cache.get<PaginatedResult<Notification>>(cacheKey);
         if (cachedResult) {
           return cachedResult;
@@ -330,24 +340,21 @@ export class NotificationRepository implements INotificationRepository {
 
       const whereConditions = this.buildWhereConditions(filters);
       const orderBy = this.buildOrderBy(pagination);
-      
+
       // Set default pagination
       const limit = pagination?.limit || 20;
       const offset = pagination?.offset || 0;
 
       // Execute count and data queries in parallel
       const [countResult, notificationResults] = await Promise.all([
-        this.readDb
-          .select({ count: count() })
-          .from(notifications)
-          .where(whereConditions),
+        this.readDb.select({ count: count() }).from(notifications).where(whereConditions),
         this.readDb
           .select()
           .from(notifications)
           .where(whereConditions)
           .orderBy(orderBy)
           .limit(limit)
-          .offset(offset)
+          .offset(offset),
       ]);
 
       const total = countResult[0]?.count || 0;
@@ -378,7 +385,7 @@ export class NotificationRepository implements INotificationRepository {
 
   /**
    * Finds unread notifications for a specific recipient
-   * 
+   *
    * @param recipientId - User ID of the notification recipient
    * @param pagination - Pagination options
    * @returns Paginated list of unread notifications
@@ -393,7 +400,7 @@ export class NotificationRepository implements INotificationRepository {
         recipientId,
         isRead: false,
       };
-      
+
       return await this.findMany(filters, pagination);
     } catch (error) {
       throw new DatabaseError(
@@ -406,7 +413,7 @@ export class NotificationRepository implements INotificationRepository {
 
   /**
    * Counts unread notifications for a specific recipient
-   * 
+   *
    * @param recipientId - User ID of the notification recipient
    * @returns Number of unread notifications
    * @throws DatabaseError if database operation fails
@@ -416,7 +423,7 @@ export class NotificationRepository implements INotificationRepository {
       // Check cache first
       const cacheKey = this.getUnreadCountCacheKey(recipientId);
       const cachedCount = await cache.get<number>(cacheKey);
-      
+
       if (cachedCount !== null) {
         return cachedCount;
       }
@@ -449,7 +456,7 @@ export class NotificationRepository implements INotificationRepository {
 
   /**
    * Finds notifications by type with filtering and pagination
-   * 
+   *
    * @param notificationType - Type of notifications to find
    * @param filters - Optional additional filters
    * @param pagination - Pagination options
@@ -475,7 +482,7 @@ export class NotificationRepository implements INotificationRepository {
 
   /**
    * Finds notifications by priority with filtering and pagination
-   * 
+   *
    * @param priority - Priority level of notifications to find
    * @param filters - Optional additional filters
    * @param pagination - Pagination options
@@ -501,9 +508,9 @@ export class NotificationRepository implements INotificationRepository {
 
   /**
    * Updates a notification's data
-   * 
+   *
    * Invalidates related cache entries after successful update.
-   * 
+   *
    * @param id - Notification ID
    * @param data - Update data
    * @returns The updated notification
@@ -531,10 +538,7 @@ export class NotificationRepository implements INotificationRepository {
         .returning();
 
       if (!updatedNotification) {
-        throw new DatabaseError(
-          'Failed to update notification',
-          'update'
-        );
+        throw new DatabaseError('Failed to update notification', 'update');
       }
 
       // Invalidate cache entries
@@ -561,7 +565,7 @@ export class NotificationRepository implements INotificationRepository {
 
   /**
    * Marks a notification as read
-   * 
+   *
    * @param id - Notification ID
    * @returns The updated notification
    * @throws NotFoundError if notification doesn't exist
@@ -590,7 +594,7 @@ export class NotificationRepository implements INotificationRepository {
 
   /**
    * Marks multiple notifications as read
-   * 
+   *
    * @param ids - Array of notification IDs
    * @returns Array of updated notifications
    * @throws DatabaseError if database operation fails
@@ -612,10 +616,10 @@ export class NotificationRepository implements INotificationRepository {
         .returning();
 
       // Invalidate cache for all affected recipients
-      const recipientIds = Array.from(new Set(updatedNotifications.map(n => n.recipientId)));
+      const recipientIds = Array.from(new Set(updatedNotifications.map((n) => n.recipientId)));
       await Promise.all([
-        ...ids.map(id => this.invalidateCache(id)),
-        ...recipientIds.map(recipientId => this.invalidateCacheByRecipient(recipientId)),
+        ...ids.map((id) => this.invalidateCache(id)),
+        ...recipientIds.map((recipientId) => this.invalidateCacheByRecipient(recipientId)),
       ]);
 
       return updatedNotifications;
@@ -630,7 +634,7 @@ export class NotificationRepository implements INotificationRepository {
 
   /**
    * Marks all notifications for a recipient as read
-   * 
+   *
    * @param recipientId - User ID of the notification recipient
    * @returns Number of notifications marked as read
    * @throws DatabaseError if database operation fails
@@ -644,12 +648,7 @@ export class NotificationRepository implements INotificationRepository {
           isRead: true,
           readAt: new Date(),
         })
-        .where(
-          and(
-            eq(notifications.recipientId, recipientId),
-            eq(notifications.isRead, false)
-          )
-        )
+        .where(and(eq(notifications.recipientId, recipientId), eq(notifications.isRead, false)))
         .returning();
 
       // Invalidate cache
@@ -667,7 +666,7 @@ export class NotificationRepository implements INotificationRepository {
 
   /**
    * Deletes a notification from the database
-   * 
+   *
    * @param id - Notification ID
    * @returns void
    * @throws NotFoundError if notification doesn't exist
@@ -688,10 +687,7 @@ export class NotificationRepository implements INotificationRepository {
         .returning();
 
       if (!result || result.length === 0) {
-        throw new DatabaseError(
-          'Failed to delete notification',
-          'delete'
-        );
+        throw new DatabaseError('Failed to delete notification', 'delete');
       }
 
       // Invalidate cache entries
@@ -716,7 +712,7 @@ export class NotificationRepository implements INotificationRepository {
 
   /**
    * Deletes multiple notifications from the database
-   * 
+   *
    * @param ids - Array of notification IDs
    * @returns Number of notifications deleted
    * @throws DatabaseError if database operation fails
@@ -740,10 +736,10 @@ export class NotificationRepository implements INotificationRepository {
         .returning();
 
       // Invalidate cache for all affected recipients
-      const recipientIds = Array.from(new Set(existingNotifications.map(n => n.recipientId)));
+      const recipientIds = Array.from(new Set(existingNotifications.map((n) => n.recipientId)));
       await Promise.all([
-        ...ids.map(id => this.invalidateCache(id)),
-        ...recipientIds.map(recipientId => this.invalidateCacheByRecipient(recipientId)),
+        ...ids.map((id) => this.invalidateCache(id)),
+        ...recipientIds.map((recipientId) => this.invalidateCacheByRecipient(recipientId)),
       ]);
 
       return result.length;
@@ -758,7 +754,7 @@ export class NotificationRepository implements INotificationRepository {
 
   /**
    * Deletes expired notifications
-   * 
+   *
    * @returns Number of notifications deleted
    * @throws DatabaseError if database operation fails
    */
@@ -768,12 +764,7 @@ export class NotificationRepository implements INotificationRepository {
       const expiredNotifications = await this.readDb
         .select()
         .from(notifications)
-        .where(
-          and(
-            isNotNull(notifications.expiresAt),
-            lt(notifications.expiresAt, new Date())
-          )
-        );
+        .where(and(isNotNull(notifications.expiresAt), lt(notifications.expiresAt, new Date())));
 
       if (expiredNotifications.length === 0) {
         return 0;
@@ -782,19 +773,14 @@ export class NotificationRepository implements INotificationRepository {
       // Delete expired notifications
       const result = await this.writeDb
         .delete(notifications)
-        .where(
-          and(
-            isNotNull(notifications.expiresAt),
-            lt(notifications.expiresAt, new Date())
-          )
-        )
+        .where(and(isNotNull(notifications.expiresAt), lt(notifications.expiresAt, new Date())))
         .returning();
 
       // Invalidate cache for all affected recipients
-      const recipientIds = Array.from(new Set(expiredNotifications.map(n => n.recipientId)));
+      const recipientIds = Array.from(new Set(expiredNotifications.map((n) => n.recipientId)));
       await Promise.all([
-        ...expiredNotifications.map(n => this.invalidateCache(n.id)),
-        ...recipientIds.map(recipientId => this.invalidateCacheByRecipient(recipientId)),
+        ...expiredNotifications.map((n) => this.invalidateCache(n.id)),
+        ...recipientIds.map((recipientId) => this.invalidateCacheByRecipient(recipientId)),
       ]);
 
       return result.length;
@@ -809,7 +795,7 @@ export class NotificationRepository implements INotificationRepository {
 
   /**
    * Deletes all notifications for a recipient
-   * 
+   *
    * @param recipientId - User ID of the notification recipient
    * @returns Number of notifications deleted
    * @throws DatabaseError if database operation fails
@@ -837,7 +823,7 @@ export class NotificationRepository implements INotificationRepository {
 
   /**
    * Checks if a notification exists
-   * 
+   *
    * @param id - Notification ID
    * @returns True if notification exists, false otherwise
    * @throws DatabaseError if database operation fails
@@ -857,10 +843,10 @@ export class NotificationRepository implements INotificationRepository {
 
   /**
    * Invalidates cache for a specific notification
-   * 
+   *
    * Removes all cache entries related to the notification by ID.
    * Should be called after any update operation.
-   * 
+   *
    * @param id - Notification ID
    * @returns void
    */
@@ -876,10 +862,10 @@ export class NotificationRepository implements INotificationRepository {
 
   /**
    * Invalidates cache for notifications by recipient
-   * 
+   *
    * Removes all cache entries related to the recipient's notifications.
    * Should be called after operations that affect recipient's notifications.
-   * 
+   *
    * @param recipientId - User ID of the notification recipient
    * @returns void
    */
@@ -891,9 +877,7 @@ export class NotificationRepository implements INotificationRepository {
         this.getUnreadCountCacheKey(recipientId),
       ];
 
-      await Promise.all(
-        patterns.map(pattern => cache.deletePattern(pattern))
-      );
+      await Promise.all(patterns.map((pattern) => cache.deletePattern(pattern)));
     } catch (error) {
       // Log error but don't throw - cache invalidation failure shouldn't break the operation
       console.error(`Failed to invalidate cache for recipient ${recipientId}:`, error);

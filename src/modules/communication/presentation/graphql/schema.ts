@@ -1,9 +1,9 @@
 /**
  * GraphQL Schema for Communication Module
- * 
+ *
  * Defines GraphQL types, inputs, and schema for messaging, discussions,
  * announcements, and real-time communication operations.
- * 
+ *
  * Requirements: 21.1, 21.2, 21.4
  */
 
@@ -297,7 +297,7 @@ export const communicationTypeDefs = gql`
     markMessageAsRead(messageId: ID!): Boolean!
     markConversationAsRead(conversationId: String!): Boolean!
     deleteMessage(messageId: ID!): Boolean!
-    
+
     # Discussion mutations
     createDiscussionThread(courseId: ID!, input: CreateThreadInput!): DiscussionThread!
     updateDiscussionThread(threadId: ID!, input: UpdateThreadInput!): DiscussionThread!
@@ -307,13 +307,13 @@ export const communicationTypeDefs = gql`
     deletePost(postId: ID!): Boolean!
     votePost(postId: ID!, voteType: VoteType!): DiscussionPost!
     markSolution(postId: ID!): DiscussionPost!
-    
+
     # Announcement mutations
     createAnnouncement(courseId: ID!, input: AnnouncementInput!): Announcement!
     updateAnnouncement(announcementId: ID!, input: UpdateAnnouncementInput!): Announcement!
     deleteAnnouncement(announcementId: ID!): Boolean!
     publishAnnouncement(announcementId: ID!): Announcement!
-    
+
     # Real-time mutations
     updatePresence(status: PresenceStatus!, courseId: ID): Boolean!
     startTyping(conversationId: String, threadId: ID): Boolean!
@@ -323,40 +323,32 @@ export const communicationTypeDefs = gql`
   # Queries
   type Query {
     # Message queries
-    conversations(
-      pagination: PaginationInput
-    ): ConversationConnection!
-    
-    conversationMessages(
-      conversationId: String!
-      pagination: PaginationInput
-    ): MessageConnection!
-    
+    conversations(pagination: PaginationInput): ConversationConnection!
+
+    conversationMessages(conversationId: String!, pagination: PaginationInput): MessageConnection!
+
     unreadMessageCount: Int!
-    
+
     # Discussion queries
     discussionThreads(
       courseId: ID!
       filter: ThreadFilter
       pagination: PaginationInput
     ): DiscussionThreadConnection!
-    
+
     discussionThread(threadId: ID!): DiscussionThread
-    
-    threadPosts(
-      threadId: ID!
-      pagination: PaginationInput
-    ): DiscussionPostConnection!
-    
+
+    threadPosts(threadId: ID!, pagination: PaginationInput): DiscussionPostConnection!
+
     # Announcement queries
     announcements(
       courseId: ID!
       filter: AnnouncementFilter
       pagination: PaginationInput
     ): AnnouncementConnection!
-    
+
     announcement(announcementId: ID!): Announcement
-    
+
     # Real-time queries
     coursePresence(courseId: ID!): [PresenceUpdate!]!
   }
@@ -366,15 +358,15 @@ export const communicationTypeDefs = gql`
     # Message subscriptions
     messageReceived(userId: ID!): Message!
     conversationUpdated(userId: ID!): Conversation!
-    
+
     # Discussion subscriptions
     newDiscussionPost(threadId: ID!): DiscussionPost!
     threadUpdated(threadId: ID!): DiscussionThread!
     postVoted(postId: ID!): DiscussionPost!
-    
+
     # Announcement subscriptions
     announcementPublished(courseId: ID!): Announcement!
-    
+
     # Real-time subscriptions
     userPresence(courseId: ID!): PresenceUpdate!
     typingIndicator(conversationId: String, threadId: ID): TypingIndicator!

@@ -1,9 +1,9 @@
 /**
  * Application Configuration
- * 
+ *
  * Centralized configuration management loading from environment variables
  * with validation and type safety. Supports AWS Secrets Manager for production.
- * 
+ *
  * Note: This config loads basic environment variables. For secrets, use the
  * SecretsManager after it's initialized during startup.
  */
@@ -55,7 +55,10 @@ export const config = {
     queryTimeoutMs: parseInt(getEnv('DATABASE_QUERY_TIMEOUT_MS', '60000'), 10),
     // Connection monitoring
     enableConnectionMonitoring: getEnv('ENABLE_CONNECTION_MONITORING', 'true') === 'true',
-    connectionMonitoringInterval: parseInt(getEnv('CONNECTION_MONITORING_INTERVAL_MS', '30000'), 10),
+    connectionMonitoringInterval: parseInt(
+      getEnv('CONNECTION_MONITORING_INTERVAL_MS', '30000'),
+      10
+    ),
   },
 
   // Redis
@@ -187,9 +190,7 @@ export const config = {
  * Secret validation is done by SecretsManager during startup.
  */
 export function validateConfig(): void {
-  const requiredInProduction = [
-    'DATABASE_URL',
-  ];
+  const requiredInProduction = ['DATABASE_URL'];
 
   if (config.nodeEnv === 'production') {
     for (const key of requiredInProduction) {

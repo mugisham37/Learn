@@ -1,19 +1,19 @@
 /**
  * File Upload Security Middleware
- * 
+ *
  * Provides middleware for validating file uploads in Fastify routes.
  * Integrates with the FileUploadSecurityService for comprehensive validation.
- * 
+ *
  * Requirements: 13.4
  */
 
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { logger } from '../utils/logger.js';
 import { ValidationError } from '../errors/index.js';
-import { 
-  FileUploadSecurityService, 
-  FileUploadContext, 
-  FileValidationResult 
+import {
+  FileUploadSecurityService,
+  FileUploadContext,
+  FileValidationResult,
 } from '../services/FileUploadSecurityService.js';
 
 /**
@@ -54,7 +54,7 @@ export function createFileUploadSecurityMiddleware(
 
       // Check if file upload is required
       const hasFile = await checkForFile(request, options.fieldName || 'file');
-      
+
       if (!hasFile) {
         if (options.required) {
           throw new ValidationError('File upload is required', {
@@ -68,7 +68,7 @@ export function createFileUploadSecurityMiddleware(
 
       // Extract file data from request
       const fileData = await extractFileData(request, options.fieldName || 'file');
-      
+
       if (!fileData) {
         throw new ValidationError('Failed to extract file data from request', {
           field: options.fieldName || 'file',
@@ -97,15 +97,12 @@ export function createFileUploadSecurityMiddleware(
           userId: (request as any).user?.id,
         });
 
-        throw new ValidationError(
-          `File validation failed: ${validationResult.errors.join(', ')}`,
-          {
-            fileName: fileData.fileName,
-            errors: validationResult.errors,
-            warnings: validationResult.warnings,
-            context: options.context,
-          }
-        );
+        throw new ValidationError(`File validation failed: ${validationResult.errors.join(', ')}`, {
+          fileName: fileData.fileName,
+          errors: validationResult.errors,
+          warnings: validationResult.warnings,
+          context: options.context,
+        });
       }
 
       // Log warnings if any
@@ -125,7 +122,6 @@ export function createFileUploadSecurityMiddleware(
         warningCount: validationResult.warnings.length,
         userId: (request as any).user?.id,
       });
-
     } catch (error) {
       logger.error('File upload security validation failed', {
         context: options.context,
@@ -183,7 +179,10 @@ async function checkForFile(request: FastifyRequest, fieldName: string): Promise
 /**
  * Extracts file data from multipart request
  */
-async function extractFileData(request: FastifyRequest, fieldName: string): Promise<FileData | null> {
+async function extractFileData(
+  request: FastifyRequest,
+  fieldName: string
+): Promise<FileData | null> {
   try {
     if (!request.isMultipart()) {
       return null;
@@ -237,7 +236,9 @@ export function createCourseResourceUploadMiddleware(securityService: FileUpload
 /**
  * Helper function to create assignment submission upload middleware
  */
-export function createAssignmentSubmissionUploadMiddleware(securityService: FileUploadSecurityService) {
+export function createAssignmentSubmissionUploadMiddleware(
+  securityService: FileUploadSecurityService
+) {
   return createFileUploadSecurityMiddleware(securityService, {
     context: 'assignment_submission',
     required: true,

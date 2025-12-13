@@ -1,16 +1,16 @@
 /**
  * Notification Service Implementation
- * 
+ *
  * Implements multi-channel notification delivery with user preference checking,
  * email template selection, push notification support (stub), and batching
  * capabilities to prevent notification spam.
- * 
+ *
  * Requirements: 10.1, 10.2, 10.4, 10.5, 10.7
  */
 
-import { 
-  Notification, 
-  NotificationType 
+import {
+  Notification,
+  NotificationType,
 } from '../../../../infrastructure/database/schema/notifications.schema.js';
 import {
   ValidationError,
@@ -18,36 +18,20 @@ import {
   AuthorizationError,
   ExternalServiceError,
 } from '../../../../shared/errors/index.js';
-import { 
-  IEmailService,
-  EmailOptions,
-} from '../../../../shared/services/IEmailService.js';
-import { 
-  IRealtimeService 
-} from '../../../../shared/services/IRealtimeService.js';
+import { IEmailService, EmailOptions } from '../../../../shared/services/IEmailService.js';
+import { IRealtimeService } from '../../../../shared/services/IRealtimeService.js';
 import { logger } from '../../../../shared/utils/logger.js';
-import { 
-  SUBSCRIPTION_EVENTS, 
-  publishEvent 
-} from '../../../../infrastructure/graphql/pubsub.js';
-import { 
-  NotificationPreferences 
-} from '../../../users/domain/value-objects/UserProfile.js';
-import { 
-  IUserProfileService 
-} from '../../../users/application/services/IUserProfileService.js';
-import { 
-  INotificationPreferenceService 
-} from './INotificationPreferenceService.js';
-import { 
-  IUserRepository 
-} from '../../../users/infrastructure/repositories/IUserRepository.js';
-import { 
+import { SUBSCRIPTION_EVENTS, publishEvent } from '../../../../infrastructure/graphql/pubsub.js';
+import { NotificationPreferences } from '../../../users/domain/value-objects/UserProfile.js';
+import { IUserProfileService } from '../../../users/application/services/IUserProfileService.js';
+import { INotificationPreferenceService } from './INotificationPreferenceService.js';
+import { IUserRepository } from '../../../users/infrastructure/repositories/IUserRepository.js';
+import {
   INotificationRepository,
   CreateNotificationDTO,
 } from '../../infrastructure/repositories/INotificationRepository.js';
 
-import { 
+import {
   INotificationService,
   CreateNotificationData,
   BatchNotificationData,
@@ -59,7 +43,7 @@ import {
 
 /**
  * Notification Service Implementation
- * 
+ *
  * Provides comprehensive notification management with:
  * - Multi-channel delivery (email, push, real-time)
  * - User preference checking
@@ -79,7 +63,7 @@ export class NotificationService implements INotificationService {
 
   /**
    * Creates a notification and delivers it through appropriate channels
-   * 
+   *
    * Requirements: 10.1, 10.4
    */
   async createNotification(data: CreateNotificationData): Promise<NotificationDeliveryResult> {
@@ -110,7 +94,7 @@ export class NotificationService implements INotificationService {
       // Publish notification received event for GraphQL subscriptions
       await publishEvent(SUBSCRIPTION_EVENTS.NOTIFICATION_RECEIVED, {
         notificationReceived: notification,
-        userId: data.recipientId
+        userId: data.recipientId,
       });
 
       // Initialize delivery result
@@ -192,9 +176,11 @@ export class NotificationService implements INotificationService {
       });
 
       // Re-throw known errors
-      if (error instanceof ValidationError || 
-          error instanceof NotFoundError || 
-          error instanceof ExternalServiceError) {
+      if (
+        error instanceof ValidationError ||
+        error instanceof NotFoundError ||
+        error instanceof ExternalServiceError
+      ) {
         throw error;
       }
 
@@ -209,7 +195,7 @@ export class NotificationService implements INotificationService {
 
   /**
    * Sends email notification using appropriate template
-   * 
+   *
    * Requirements: 10.2
    */
   async sendEmail(notification: Notification): Promise<void> {
@@ -244,8 +230,12 @@ export class NotificationService implements INotificationService {
         to: user.email, // Use the actual email address from user entity
         templateId,
         templateData: emailData,
-        priority: notification.priority === 'urgent' ? 'urgent' : 
-                 notification.priority === 'high' ? 'high' : 'normal',
+        priority:
+          notification.priority === 'urgent'
+            ? 'urgent'
+            : notification.priority === 'high'
+              ? 'high'
+              : 'normal',
       };
 
       const result = await this.emailService.sendTransactional(emailOptions);
@@ -285,17 +275,17 @@ export class NotificationService implements INotificationService {
 
   /**
    * Sends push notification to user's registered devices
-   * 
+   *
    * Currently a stub for future mobile app integration.
    * Will use Firebase Cloud Messaging or Apple Push Notification Service.
-   * 
+   *
    * Requirements: 10.3 (future implementation)
    */
   async sendPush(notification: Notification): Promise<void> {
     try {
       // TODO: Implement push notification service integration
       // This is a stub for future mobile app support
-      
+
       logger.info('Push notification service not yet implemented', {
         notificationId: notification.id,
         recipientId: notification.recipientId,
@@ -304,7 +294,7 @@ export class NotificationService implements INotificationService {
 
       // For now, we'll just log that push would be sent
       const pushData = this.formatPushData(notification);
-      
+
       logger.debug('Push notification data prepared', {
         notificationId: notification.id,
         pushData,
@@ -319,7 +309,6 @@ export class NotificationService implements INotificationService {
       // 3. Send to Firebase Cloud Messaging or Apple Push Notification Service
       // 4. Handle delivery receipts and failures
       // 5. Update device token status if needed
-
     } catch (error) {
       logger.error('Failed to send push notification', {
         notificationId: notification.id,
@@ -336,7 +325,7 @@ export class NotificationService implements INotificationService {
 
   /**
    * Marks a notification as read and updates unread count
-   * 
+   *
    * Requirements: 10.4
    */
   async markAsRead(notificationId: string, userId: string): Promise<Notification> {
@@ -404,10 +393,12 @@ export class NotificationService implements INotificationService {
 
   /**
    * Batches similar notifications to prevent spam
-   * 
+   *
    * Requirements: 10.5
    */
-  async batchNotifications(notifications: BatchNotificationData[]): Promise<BatchNotificationResult> {
+  async batchNotifications(
+    notifications: BatchNotificationData[]
+  ): Promise<BatchNotificationResult> {
     try {
       if (notifications.length === 0) {
         return {
@@ -420,7 +411,7 @@ export class NotificationService implements INotificationService {
 
       // Group notifications by recipient and type for batching
       const groupedNotifications = this.groupNotificationsForBatching(notifications);
-      
+
       const createdNotifications: Notification[] = [];
       const deliveryResults: NotificationDeliveryResult[] = [];
       const errors: string[] = [];
@@ -433,7 +424,9 @@ export class NotificationService implements INotificationService {
             const singleNotification = group.notifications[0];
             if (singleNotification) {
               const result = await this.createNotification(singleNotification);
-              const notification = await this.notificationRepository.findById(result.notificationId);
+              const notification = await this.notificationRepository.findById(
+                result.notificationId
+              );
               if (notification) {
                 createdNotifications.push(notification);
                 deliveryResults.push(result);
@@ -462,7 +455,12 @@ export class NotificationService implements INotificationService {
       }
 
       const totalDelivered = deliveryResults.reduce((count, result) => {
-        return count + (result.emailSent ? 1 : 0) + (result.pushSent ? 1 : 0) + (result.realtimeSent ? 1 : 0);
+        return (
+          count +
+          (result.emailSent ? 1 : 0) +
+          (result.pushSent ? 1 : 0) +
+          (result.realtimeSent ? 1 : 0)
+        );
       }, 0);
 
       logger.info('Batch notifications processed', {
@@ -495,7 +493,7 @@ export class NotificationService implements INotificationService {
 
   /**
    * Gets user notification preferences for delivery decisions
-   * 
+   *
    * Requirements: 10.7
    */
   async getUserNotificationPreferences(userId: string): Promise<NotificationPreferences> {
@@ -523,16 +521,20 @@ export class NotificationService implements INotificationService {
 
   /**
    * Checks if user has enabled notifications for a specific type and channel
-   * 
+   *
    * Requirements: 10.7
    */
   async isNotificationEnabled(
-    userId: string, 
-    notificationType: NotificationType, 
+    userId: string,
+    notificationType: NotificationType,
     channel: 'email' | 'push' | 'inApp'
   ): Promise<boolean> {
     try {
-      return await this.notificationPreferenceService.isNotificationEnabled(userId, notificationType, channel);
+      return await this.notificationPreferenceService.isNotificationEnabled(
+        userId,
+        notificationType,
+        channel
+      );
     } catch (error) {
       logger.error('Failed to check notification preference', {
         userId,
@@ -551,16 +553,16 @@ export class NotificationService implements INotificationService {
    */
   getEmailTemplateId(notificationType: NotificationType): string {
     const templateMap: Record<NotificationType, string> = {
-      'new_message': 'new-message',
-      'assignment_due': 'assignment-due',
-      'grade_posted': 'grade-posted',
-      'course_update': 'course-update',
-      'announcement': 'announcement',
-      'discussion_reply': 'discussion-reply',
-      'enrollment_confirmed': 'enrollment-confirmed',
-      'certificate_issued': 'certificate-issued',
-      'payment_received': 'payment-received',
-      'refund_processed': 'refund-processed',
+      new_message: 'new-message',
+      assignment_due: 'assignment-due',
+      grade_posted: 'grade-posted',
+      course_update: 'course-update',
+      announcement: 'announcement',
+      discussion_reply: 'discussion-reply',
+      enrollment_confirmed: 'enrollment-confirmed',
+      certificate_issued: 'certificate-issued',
+      payment_received: 'payment-received',
+      refund_processed: 'refund-processed',
     };
 
     return templateMap[notificationType] || 'generic-notification';
@@ -586,9 +588,10 @@ export class NotificationService implements INotificationService {
   formatPushData(notification: Notification): PushNotificationData {
     return {
       title: notification.title,
-      body: notification.content.length > 100 
-        ? notification.content.substring(0, 97) + '...' 
-        : notification.content,
+      body:
+        notification.content.length > 100
+          ? notification.content.substring(0, 97) + '...'
+          : notification.content,
       icon: this.getPushIcon(notification.notificationType),
       badge: 1, // TODO: Get actual unread count
       data: {
@@ -694,12 +697,15 @@ export class NotificationService implements INotificationService {
       notificationType: type,
       title,
       content,
-      priority: group.notifications.some(n => n.priority === 'urgent') ? 'urgent' :
-               group.notifications.some(n => n.priority === 'high') ? 'high' : 'normal',
+      priority: group.notifications.some((n) => n.priority === 'urgent')
+        ? 'urgent'
+        : group.notifications.some((n) => n.priority === 'high')
+          ? 'high'
+          : 'normal',
       metadata: {
         isDigest: true,
         originalCount: count,
-        digestedNotifications: group.notifications.map(n => ({
+        digestedNotifications: group.notifications.map((n) => ({
           title: n.title,
           content: n.content,
           actionUrl: n.actionUrl,
@@ -713,16 +719,16 @@ export class NotificationService implements INotificationService {
    */
   private mapNotificationTypeToPreferenceKey(notificationType: NotificationType): string {
     const keyMap: Record<NotificationType, string> = {
-      'new_message': 'newMessage',
-      'assignment_due': 'assignmentDue',
-      'grade_posted': 'gradePosted',
-      'course_update': 'courseUpdate',
-      'announcement': 'announcement',
-      'discussion_reply': 'discussionReply',
-      'enrollment_confirmed': 'courseUpdate', // Map to courseUpdate as closest match
-      'certificate_issued': 'gradePosted', // Map to gradePosted as it's achievement-related
-      'payment_received': 'courseUpdate', // Map to courseUpdate as closest match
-      'refund_processed': 'courseUpdate', // Map to courseUpdate as closest match
+      new_message: 'newMessage',
+      assignment_due: 'assignmentDue',
+      grade_posted: 'gradePosted',
+      course_update: 'courseUpdate',
+      announcement: 'announcement',
+      discussion_reply: 'discussionReply',
+      enrollment_confirmed: 'courseUpdate', // Map to courseUpdate as closest match
+      certificate_issued: 'gradePosted', // Map to gradePosted as it's achievement-related
+      payment_received: 'courseUpdate', // Map to courseUpdate as closest match
+      refund_processed: 'courseUpdate', // Map to courseUpdate as closest match
     };
 
     return keyMap[notificationType] || 'courseUpdate';
@@ -733,16 +739,16 @@ export class NotificationService implements INotificationService {
    */
   private getActionButtonText(notificationType: NotificationType): string {
     const buttonTextMap: Record<NotificationType, string> = {
-      'new_message': 'View Message',
-      'assignment_due': 'View Assignment',
-      'grade_posted': 'View Grade',
-      'course_update': 'View Course',
-      'announcement': 'View Announcement',
-      'discussion_reply': 'View Discussion',
-      'enrollment_confirmed': 'View Course',
-      'certificate_issued': 'Download Certificate',
-      'payment_received': 'View Receipt',
-      'refund_processed': 'View Details',
+      new_message: 'View Message',
+      assignment_due: 'View Assignment',
+      grade_posted: 'View Grade',
+      course_update: 'View Course',
+      announcement: 'View Announcement',
+      discussion_reply: 'View Discussion',
+      enrollment_confirmed: 'View Course',
+      certificate_issued: 'Download Certificate',
+      payment_received: 'View Receipt',
+      refund_processed: 'View Details',
     };
 
     return buttonTextMap[notificationType] || 'View Details';
@@ -753,16 +759,16 @@ export class NotificationService implements INotificationService {
    */
   private getPushIcon(notificationType: NotificationType): string {
     const iconMap: Record<NotificationType, string> = {
-      'new_message': 'message',
-      'assignment_due': 'assignment',
-      'grade_posted': 'grade',
-      'course_update': 'course',
-      'announcement': 'announcement',
-      'discussion_reply': 'discussion',
-      'enrollment_confirmed': 'enrollment',
-      'certificate_issued': 'certificate',
-      'payment_received': 'payment',
-      'refund_processed': 'refund',
+      new_message: 'message',
+      assignment_due: 'assignment',
+      grade_posted: 'grade',
+      course_update: 'course',
+      announcement: 'announcement',
+      discussion_reply: 'discussion',
+      enrollment_confirmed: 'enrollment',
+      certificate_issued: 'certificate',
+      payment_received: 'payment',
+      refund_processed: 'refund',
     };
 
     return iconMap[notificationType] || 'notification';

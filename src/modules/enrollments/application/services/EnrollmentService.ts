@@ -1,17 +1,13 @@
 /**
  * Enrollment Service Implementation
- * 
+ *
  * Implements enrollment business operations including student enrollment,
  * progress tracking, course completion, and certificate generation.
- * 
+ *
  * Requirements: 5.1, 5.3, 5.4, 5.5, 5.7
  */
 
-import {
-  ConflictError,
-  NotFoundError,
-  ValidationError
-} from '../../../../shared/errors/index.js';
+import { ConflictError, NotFoundError, ValidationError } from '../../../../shared/errors/index.js';
 import { ICourseRepository } from '../../../courses/infrastructure/repositories/ICourseRepository.js';
 import { ILessonRepository } from '../../../courses/infrastructure/repositories/ILessonRepository.js';
 import { ICourseModuleRepository } from '../../../courses/infrastructure/repositories/ICourseModuleRepository.js';
@@ -21,17 +17,17 @@ import { Enrollment } from '../../domain/entities/Enrollment.js';
 import { LessonProgress } from '../../domain/entities/LessonProgress.js';
 import {
   ICertificateRepository,
-  CreateCertificateDTO
+  CreateCertificateDTO,
 } from '../../infrastructure/repositories/ICertificateRepository.js';
 import {
   IEnrollmentRepository,
   CreateEnrollmentDTO,
-  UpdateEnrollmentDTO
+  UpdateEnrollmentDTO,
 } from '../../infrastructure/repositories/IEnrollmentRepository.js';
 import {
   ILessonProgressRepository,
   CreateLessonProgressDTO,
-  UpdateLessonProgressDTO as UpdateProgressDTO
+  UpdateLessonProgressDTO as UpdateProgressDTO,
 } from '../../infrastructure/repositories/ILessonProgressRepository.js';
 
 import {
@@ -40,12 +36,12 @@ import {
   UpdateLessonProgressRequestDTO,
   CompleteCourseDTO,
   WithdrawEnrollmentDTO,
-  EnrollmentProgressSummary
+  EnrollmentProgressSummary,
 } from './IEnrollmentService.js';
 
 /**
  * Enrollment Service Implementation
- * 
+ *
  * Orchestrates enrollment operations between domain entities and infrastructure.
  * Handles business rules, validation, and cross-module interactions.
  */
@@ -62,7 +58,7 @@ export class EnrollmentService implements IEnrollmentService {
 
   /**
    * Enrolls a student in a course
-   * 
+   *
    * Requirements: 5.1 - Student enrollment with duplicate check and limit validation
    */
   async enrollStudent(data: EnrollStudentDTO): Promise<Enrollment> {
@@ -74,7 +70,7 @@ export class EnrollmentService implements IEnrollmentService {
 
     if (student.role !== 'student') {
       throw new ValidationError('User must have student role to enroll in courses', [
-        { field: 'studentId', message: 'User is not a student' }
+        { field: 'studentId', message: 'User is not a student' },
       ]);
     }
 
@@ -86,7 +82,7 @@ export class EnrollmentService implements IEnrollmentService {
 
     if (course.status !== 'published') {
       throw new ValidationError('Cannot enroll in unpublished course', [
-        { field: 'courseId', message: 'Course is not published' }
+        { field: 'courseId', message: 'Course is not published' },
       ]);
     }
 
@@ -102,11 +98,16 @@ export class EnrollmentService implements IEnrollmentService {
 
     // Check enrollment limit if set
     if (course.enrollmentLimit && course.enrollmentLimit > 0) {
-      const currentEnrollmentCount = await this.enrollmentRepository.getActiveEnrollmentCount(data.courseId);
-      
+      const currentEnrollmentCount = await this.enrollmentRepository.getActiveEnrollmentCount(
+        data.courseId
+      );
+
       if (currentEnrollmentCount >= course.enrollmentLimit) {
         throw new ValidationError('Course enrollment limit reached', [
-          { field: 'courseId', message: `Course is full (${course.enrollmentLimit} students maximum)` }
+          {
+            field: 'courseId',
+            message: `Course is full (${course.enrollmentLimit} students maximum)`,
+          },
         ]);
       }
     }
@@ -115,14 +116,17 @@ export class EnrollmentService implements IEnrollmentService {
     if (course.price && parseFloat(course.price) > 0) {
       if (!data.paymentInfo) {
         throw new ValidationError('Payment information required for paid course', [
-          { field: 'paymentInfo', message: 'Payment information is required' }
+          { field: 'paymentInfo', message: 'Payment information is required' },
         ]);
       }
 
       const expectedAmount = parseFloat(course.price);
       if (data.paymentInfo.amount !== expectedAmount) {
         throw new ValidationError('Payment amount does not match course price', [
-          { field: 'paymentInfo', message: `Expected ${expectedAmount}, received ${data.paymentInfo.amount}` }
+          {
+            field: 'paymentInfo',
+            message: `Expected ${expectedAmount}, received ${data.paymentInfo.amount}`,
+          },
         ]);
       }
     }
@@ -132,7 +136,7 @@ export class EnrollmentService implements IEnrollmentService {
       studentId: data.studentId,
       courseId: data.courseId,
       paymentId: data.paymentInfo?.paymentId,
-      status: 'active'
+      status: 'active',
     };
 
     const enrollmentRecord = await this.enrollmentRepository.create(enrollmentData);
@@ -150,7 +154,7 @@ export class EnrollmentService implements IEnrollmentService {
       certificateId: enrollmentRecord.certificateId || undefined,
       status: enrollmentRecord.status,
       createdAt: enrollmentRecord.createdAt,
-      updatedAt: enrollmentRecord.updatedAt
+      updatedAt: enrollmentRecord.updatedAt,
     });
 
     // Initialize lesson progress records
@@ -165,7 +169,7 @@ export class EnrollmentService implements IEnrollmentService {
 
   /**
    * Updates lesson progress for a student
-   * 
+   *
    * Requirements: 5.3, 5.4 - Progress tracking and calculation
    * Requirements: 5.8 - Prerequisite enforcement for lesson access
    */
@@ -178,7 +182,7 @@ export class EnrollmentService implements IEnrollmentService {
 
     if (enrollmentRecord.status !== 'active') {
       throw new ValidationError('Cannot update progress for inactive enrollment', [
-        { field: 'enrollmentId', message: 'Enrollment is not active' }
+        { field: 'enrollmentId', message: 'Enrollment is not active' },
       ]);
     }
 
@@ -190,11 +194,11 @@ export class EnrollmentService implements IEnrollmentService {
 
     // Verify lesson belongs to the enrolled course
     const courseLessons = await this.lessonRepository.findByCourse(enrollmentRecord.courseId);
-    const lessonBelongsToCourse = courseLessons.some(l => l.id === data.lessonId);
-    
+    const lessonBelongsToCourse = courseLessons.some((l) => l.id === data.lessonId);
+
     if (!lessonBelongsToCourse) {
       throw new ValidationError('Lesson does not belong to the enrolled course', [
-        { field: 'lessonId', message: 'Lesson is not part of this course' }
+        { field: 'lessonId', message: 'Lesson is not part of this course' },
       ]);
     }
 
@@ -202,7 +206,7 @@ export class EnrollmentService implements IEnrollmentService {
     const accessCheck = await this.checkLessonAccess(data.enrollmentId, data.lessonId);
     if (!accessCheck.canAccess) {
       throw new ValidationError('Cannot access lesson due to unmet prerequisites', [
-        { field: 'lessonId', message: accessCheck.reasons.join('; ') }
+        { field: 'lessonId', message: accessCheck.reasons.join('; ') },
       ]);
     }
 
@@ -227,7 +231,8 @@ export class EnrollmentService implements IEnrollmentService {
     }
 
     if (data.progressUpdate.timeSpentSeconds !== undefined) {
-      updateData.timeSpentSeconds = (existingProgressRecord.timeSpentSeconds || 0) + data.progressUpdate.timeSpentSeconds;
+      updateData.timeSpentSeconds =
+        (existingProgressRecord.timeSpentSeconds || 0) + data.progressUpdate.timeSpentSeconds;
     }
 
     if (data.progressUpdate.quizScore !== undefined) {
@@ -258,7 +263,7 @@ export class EnrollmentService implements IEnrollmentService {
       attemptsCount: updatedProgressRecord.attemptsCount,
       lastAccessedAt: updatedProgressRecord.lastAccessedAt || undefined,
       createdAt: updatedProgressRecord.createdAt,
-      updatedAt: updatedProgressRecord.updatedAt
+      updatedAt: updatedProgressRecord.updatedAt,
     });
 
     // Recalculate enrollment progress
@@ -273,7 +278,7 @@ export class EnrollmentService implements IEnrollmentService {
 
   /**
    * Completes a course and generates certificate
-   * 
+   *
    * Requirements: 5.5, 5.6 - Course completion and certificate generation
    */
   async completeCourse(data: CompleteCourseDTO): Promise<Certificate> {
@@ -289,21 +294,28 @@ export class EnrollmentService implements IEnrollmentService {
 
     if (enrollmentRecord.status !== 'active') {
       throw new ValidationError('Cannot complete inactive enrollment', [
-        { field: 'enrollmentId', message: 'Enrollment is not active' }
+        { field: 'enrollmentId', message: 'Enrollment is not active' },
       ]);
     }
 
     // Check if certificate already exists
-    const existingCertificate = await this.certificateRepository.findByEnrollment(data.enrollmentId);
+    const existingCertificate = await this.certificateRepository.findByEnrollment(
+      data.enrollmentId
+    );
     if (existingCertificate) {
       throw new ConflictError('Certificate already exists for this enrollment');
     }
 
     // Verify all lessons are completed
-    const allCompleted = await this.lessonProgressRepository.areAllLessonsCompleted(data.enrollmentId);
+    const allCompleted = await this.lessonProgressRepository.areAllLessonsCompleted(
+      data.enrollmentId
+    );
     if (!allCompleted) {
       throw new ValidationError('Cannot complete course: not all lessons are completed', [
-        { field: 'enrollmentId', message: 'All lessons must be completed before course completion' }
+        {
+          field: 'enrollmentId',
+          message: 'All lessons must be completed before course completion',
+        },
       ]);
     }
 
@@ -312,7 +324,7 @@ export class EnrollmentService implements IEnrollmentService {
     const enrollmentUpdate: UpdateEnrollmentDTO = {
       status: 'completed',
       completedAt: completionDate,
-      progressPercentage: '100.00'
+      progressPercentage: '100.00',
     };
 
     await this.enrollmentRepository.update(data.enrollmentId, enrollmentUpdate);
@@ -329,8 +341,8 @@ export class EnrollmentService implements IEnrollmentService {
         instructorName: data.certificateData.instructorName,
         completionDate,
         grade: data.certificateData.grade,
-        creditsEarned: data.certificateData.creditsEarned
-      }
+        creditsEarned: data.certificateData.creditsEarned,
+      },
     };
 
     const certificateRecord = await this.certificateRepository.create(certificateData);
@@ -352,12 +364,12 @@ export class EnrollmentService implements IEnrollmentService {
         creditsEarned?: number;
         [key: string]: unknown;
       },
-      createdAt: certificateRecord.createdAt
+      createdAt: certificateRecord.createdAt,
     });
 
     // Update enrollment with certificate ID
     await this.enrollmentRepository.update(data.enrollmentId, {
-      certificateId: certificateRecord.id
+      certificateId: certificateRecord.id,
     });
 
     // Invalidate caches
@@ -370,7 +382,7 @@ export class EnrollmentService implements IEnrollmentService {
 
   /**
    * Withdraws a student from a course
-   * 
+   *
    * Requirements: 5.7 - Enrollment withdrawal
    */
   async withdrawEnrollment(data: WithdrawEnrollmentDTO): Promise<void> {
@@ -386,13 +398,13 @@ export class EnrollmentService implements IEnrollmentService {
 
     if (enrollmentRecord.status === 'completed') {
       throw new ValidationError('Cannot withdraw from completed course', [
-        { field: 'enrollmentId', message: 'Course is already completed' }
+        { field: 'enrollmentId', message: 'Course is already completed' },
       ]);
     }
 
     // Update enrollment status to dropped
     const updateData: UpdateEnrollmentDTO = {
-      status: 'dropped'
+      status: 'dropped',
     };
 
     await this.enrollmentRepository.update(data.enrollmentId, updateData);
@@ -405,7 +417,7 @@ export class EnrollmentService implements IEnrollmentService {
 
   /**
    * Gets comprehensive progress summary for an enrollment
-   * 
+   *
    * Requirements: 5.4 - Progress tracking and reporting
    */
   async getEnrollmentProgress(enrollmentId: string): Promise<EnrollmentProgressSummary> {
@@ -428,7 +440,7 @@ export class EnrollmentService implements IEnrollmentService {
       certificateId: enrollmentRecord.certificateId || undefined,
       status: enrollmentRecord.status,
       createdAt: enrollmentRecord.createdAt,
-      updatedAt: enrollmentRecord.updatedAt
+      updatedAt: enrollmentRecord.updatedAt,
     });
 
     // Get progress summary from repository
@@ -446,7 +458,7 @@ export class EnrollmentService implements IEnrollmentService {
         nextRecommendedLesson = {
           lessonId: lesson.id,
           lessonTitle: lesson.title,
-          moduleTitle: 'Module' // Simplified for now
+          moduleTitle: 'Module', // Simplified for now
         };
       }
     }
@@ -468,38 +480,41 @@ export class EnrollmentService implements IEnrollmentService {
       averageQuizScore: progressSummary.averageQuizScore,
       nextRecommendedLesson,
       strugglingAreas,
-      estimatedTimeRemaining
+      estimatedTimeRemaining,
     };
   }
 
   /**
    * Initializes lesson progress records for all lessons in a course
-   * 
+   *
    * Requirements: 5.3 - Progress record initialization
    */
-  async initializeLessonProgress(enrollmentId: string, courseId: string): Promise<LessonProgress[]> {
+  async initializeLessonProgress(
+    enrollmentId: string,
+    courseId: string
+  ): Promise<LessonProgress[]> {
     // Get all lessons for the course
     const lessons = await this.lessonRepository.findByCourse(courseId);
 
     if (lessons.length === 0) {
       throw new ValidationError('Course has no lessons', [
-        { field: 'courseId', message: 'Course must have at least one lesson' }
+        { field: 'courseId', message: 'Course must have at least one lesson' },
       ]);
     }
 
     // Create progress records for all lessons
-    const progressRecords: CreateLessonProgressDTO[] = lessons.map(lesson => ({
+    const progressRecords: CreateLessonProgressDTO[] = lessons.map((lesson) => ({
       enrollmentId,
       lessonId: lesson.id,
       status: 'not_started',
       timeSpentSeconds: 0,
-      attemptsCount: 0
+      attemptsCount: 0,
     }));
 
     const createdProgressRecords = await this.lessonProgressRepository.createMany(progressRecords);
 
     // Convert to domain entities
-    const createdProgress = createdProgressRecords.map(record => 
+    const createdProgress = createdProgressRecords.map((record) =>
       LessonProgress.fromDatabase({
         id: record.id,
         enrollmentId: record.enrollmentId,
@@ -511,7 +526,7 @@ export class EnrollmentService implements IEnrollmentService {
         attemptsCount: record.attemptsCount,
         lastAccessedAt: record.lastAccessedAt || undefined,
         createdAt: record.createdAt,
-        updatedAt: record.updatedAt
+        updatedAt: record.updatedAt,
       })
     );
 
@@ -524,7 +539,10 @@ export class EnrollmentService implements IEnrollmentService {
   /**
    * Checks if a student can enroll in a course
    */
-  async checkEnrollmentEligibility(studentId: string, courseId: string): Promise<{
+  async checkEnrollmentEligibility(
+    studentId: string,
+    courseId: string
+  ): Promise<{
     eligible: boolean;
     reasons: string[];
     requiresPayment: boolean;
@@ -556,7 +574,10 @@ export class EnrollmentService implements IEnrollmentService {
     }
 
     // Check for existing enrollment
-    const existingEnrollment = await this.enrollmentRepository.findByStudentAndCourse(studentId, courseId);
+    const existingEnrollment = await this.enrollmentRepository.findByStudentAndCourse(
+      studentId,
+      courseId
+    );
     if (existingEnrollment) {
       eligible = false;
       reasons.push('Already enrolled in this course');
@@ -569,7 +590,7 @@ export class EnrollmentService implements IEnrollmentService {
     if (course && course.enrollmentLimit && course.enrollmentLimit > 0) {
       currentEnrollments = await this.enrollmentRepository.getActiveEnrollmentCount(courseId);
       enrollmentLimit = course.enrollmentLimit;
-      
+
       if (currentEnrollments >= course.enrollmentLimit) {
         eligible = false;
         reasons.push(`Course is full (${course.enrollmentLimit} students maximum)`);
@@ -586,7 +607,7 @@ export class EnrollmentService implements IEnrollmentService {
       requiresPayment,
       paymentAmount,
       enrollmentLimit,
-      currentEnrollments
+      currentEnrollments,
     };
   }
 
@@ -601,9 +622,9 @@ export class EnrollmentService implements IEnrollmentService {
     }
   ): Promise<Enrollment[]> {
     const result = await this.enrollmentRepository.findByStudent(studentId, filters);
-    
+
     // Convert to domain entities
-    return result.enrollments.map(record => 
+    return result.enrollments.map((record) =>
       Enrollment.fromDatabase({
         id: record.id,
         studentId: record.studentId,
@@ -616,7 +637,7 @@ export class EnrollmentService implements IEnrollmentService {
         certificateId: record.certificateId || undefined,
         status: record.status,
         createdAt: record.createdAt,
-        updatedAt: record.updatedAt
+        updatedAt: record.updatedAt,
       })
     );
   }
@@ -632,9 +653,9 @@ export class EnrollmentService implements IEnrollmentService {
     }
   ): Promise<Enrollment[]> {
     const result = await this.enrollmentRepository.findByCourse(courseId, filters);
-    
+
     // Convert to domain entities
-    return result.enrollments.map(record => 
+    return result.enrollments.map((record) =>
       Enrollment.fromDatabase({
         id: record.id,
         studentId: record.studentId,
@@ -647,7 +668,7 @@ export class EnrollmentService implements IEnrollmentService {
         certificateId: record.certificateId || undefined,
         status: record.status,
         createdAt: record.createdAt,
-        updatedAt: record.updatedAt
+        updatedAt: record.updatedAt,
       })
     );
   }
@@ -656,7 +677,8 @@ export class EnrollmentService implements IEnrollmentService {
    * Processes enrollment completion for eligible enrollments
    */
   async processEligibleCompletions(limit = 50): Promise<number> {
-    const eligibleEnrollmentRecords = await this.enrollmentRepository.findEligibleForCompletion(limit);
+    const eligibleEnrollmentRecords =
+      await this.enrollmentRepository.findEligibleForCompletion(limit);
     let processedCount = 0;
 
     for (const enrollmentRecord of eligibleEnrollmentRecords) {
@@ -672,7 +694,7 @@ export class EnrollmentService implements IEnrollmentService {
               studentName: student.email, // Simplified - would need user profile service
               courseTitle: course.title,
               instructorName: 'Instructor', // Simplified - would need instructor lookup
-            }
+            },
           });
           processedCount++;
         }
@@ -690,15 +712,16 @@ export class EnrollmentService implements IEnrollmentService {
    */
   async calculateEstimatedTimeRemaining(enrollmentId: string): Promise<number> {
     const progressSummary = await this.lessonProgressRepository.getProgressSummary(enrollmentId);
-    
+
     if (progressSummary.completedLessons === 0) {
       // No lessons completed, can't estimate
       return 0;
     }
 
-    const averageTimePerLesson = progressSummary.totalTimeSpentSeconds / progressSummary.completedLessons;
+    const averageTimePerLesson =
+      progressSummary.totalTimeSpentSeconds / progressSummary.completedLessons;
     const remainingLessons = progressSummary.totalLessons - progressSummary.completedLessons;
-    
+
     // Convert to minutes
     return Math.round((averageTimePerLesson * remainingLessons) / 60);
   }
@@ -712,8 +735,8 @@ export class EnrollmentService implements IEnrollmentService {
 
     // Analyze quiz performance
     const quizScores = progressRecords
-      .filter(p => p.quizScore !== undefined)
-      .map(p => p.quizScore!);
+      .filter((p) => p.quizScore !== undefined)
+      .map((p) => p.quizScore!);
 
     if (quizScores.length > 0) {
       const averageScore = quizScores.reduce((sum, score) => sum + score, 0) / quizScores.length;
@@ -723,24 +746,25 @@ export class EnrollmentService implements IEnrollmentService {
     }
 
     // Analyze time spent patterns
-    const timeSpentRecords = progressRecords.filter(p => p.timeSpentSeconds > 0);
+    const timeSpentRecords = progressRecords.filter((p) => p.timeSpentSeconds > 0);
     if (timeSpentRecords.length > 0) {
-      const averageTime = timeSpentRecords.reduce((sum, p) => sum + p.timeSpentSeconds, 0) / timeSpentRecords.length;
-      const highTimeRecords = timeSpentRecords.filter(p => p.timeSpentSeconds > averageTime * 2);
-      
+      const averageTime =
+        timeSpentRecords.reduce((sum, p) => sum + p.timeSpentSeconds, 0) / timeSpentRecords.length;
+      const highTimeRecords = timeSpentRecords.filter((p) => p.timeSpentSeconds > averageTime * 2);
+
       if (highTimeRecords.length > timeSpentRecords.length * 0.3) {
         strugglingAreas.push('Taking longer than average on lessons');
       }
     }
 
     // Analyze attempt patterns
-    const highAttemptRecords = progressRecords.filter(p => p.attemptsCount > 3);
+    const highAttemptRecords = progressRecords.filter((p) => p.attemptsCount > 3);
     if (highAttemptRecords.length > progressRecords.length * 0.2) {
       strugglingAreas.push('Multiple attempts required on lessons');
     }
 
     // Analyze completion patterns
-    const inProgressRecords = progressRecords.filter(p => p.status === 'in_progress');
+    const inProgressRecords = progressRecords.filter((p) => p.status === 'in_progress');
     if (inProgressRecords.length > progressRecords.length * 0.3) {
       strugglingAreas.push('Many lessons started but not completed');
     }
@@ -753,10 +777,10 @@ export class EnrollmentService implements IEnrollmentService {
    */
   private async recalculateEnrollmentProgress(enrollmentId: string): Promise<void> {
     const progressSummary = await this.lessonProgressRepository.getProgressSummary(enrollmentId);
-    
+
     const updateData: UpdateEnrollmentDTO = {
       progressPercentage: progressSummary.progressPercentage.toString(),
-      lastAccessedAt: new Date()
+      lastAccessedAt: new Date(),
     };
 
     await this.enrollmentRepository.update(enrollmentId, updateData);
@@ -781,10 +805,13 @@ export class EnrollmentService implements IEnrollmentService {
 
   /**
    * Checks if a lesson can be accessed based on prerequisites
-   * 
+   *
    * Requirements: 5.8 - Prerequisite enforcement for lesson access
    */
-  async checkLessonAccess(enrollmentId: string, lessonId: string): Promise<{
+  async checkLessonAccess(
+    enrollmentId: string,
+    lessonId: string
+  ): Promise<{
     canAccess: boolean;
     reasons: string[];
     prerequisiteModules?: {
@@ -802,7 +829,7 @@ export class EnrollmentService implements IEnrollmentService {
     if (enrollmentRecord.status !== 'active') {
       return {
         canAccess: false,
-        reasons: ['Enrollment is not active']
+        reasons: ['Enrollment is not active'],
       };
     }
 
@@ -820,12 +847,12 @@ export class EnrollmentService implements IEnrollmentService {
 
     // Verify lesson belongs to the enrolled course
     const courseLessons = await this.lessonRepository.findByCourse(enrollmentRecord.courseId);
-    const lessonBelongsToCourse = courseLessons.some(l => l.id === lessonId);
-    
+    const lessonBelongsToCourse = courseLessons.some((l) => l.id === lessonId);
+
     if (!lessonBelongsToCourse) {
       return {
         canAccess: false,
-        reasons: ['Lesson does not belong to the enrolled course']
+        reasons: ['Lesson does not belong to the enrolled course'],
       };
     }
 
@@ -834,7 +861,7 @@ export class EnrollmentService implements IEnrollmentService {
       // No prerequisites, access is allowed
       return {
         canAccess: true,
-        reasons: []
+        reasons: [],
       };
     }
 
@@ -851,23 +878,23 @@ export class EnrollmentService implements IEnrollmentService {
         return {
           moduleId: prereqModule.id,
           moduleTitle: prereqModule.title,
-          isCompleted
+          isCompleted,
         };
       })
     );
 
     // Check if all prerequisites are completed
-    const uncompletedPrerequisites = prerequisiteResults.filter(p => !p.isCompleted);
-    
+    const uncompletedPrerequisites = prerequisiteResults.filter((p) => !p.isCompleted);
+
     if (uncompletedPrerequisites.length > 0) {
-      const reasons = uncompletedPrerequisites.map(p => 
-        `Prerequisite module "${p.moduleTitle}" must be completed first`
+      const reasons = uncompletedPrerequisites.map(
+        (p) => `Prerequisite module "${p.moduleTitle}" must be completed first`
       );
-      
+
       return {
         canAccess: false,
         reasons,
-        prerequisiteModules: prerequisiteResults
+        prerequisiteModules: prerequisiteResults,
       };
     }
 
@@ -875,7 +902,7 @@ export class EnrollmentService implements IEnrollmentService {
     return {
       canAccess: true,
       reasons: [],
-      prerequisiteModules: prerequisiteResults
+      prerequisiteModules: prerequisiteResults,
     };
   }
 
@@ -899,11 +926,13 @@ export class EnrollmentService implements IEnrollmentService {
       return [];
     }
 
-    const prerequisites = [{ 
-      id: module.id, 
-      title: module.title, 
-      prerequisiteModuleId: module.prerequisiteModuleId 
-    }];
+    const prerequisites = [
+      {
+        id: module.id,
+        title: module.title,
+        prerequisiteModuleId: module.prerequisiteModuleId,
+      },
+    ];
 
     // If this module has its own prerequisites, get them recursively
     if (module.prerequisiteModuleId) {
@@ -924,7 +953,7 @@ export class EnrollmentService implements IEnrollmentService {
   private async isModuleCompleted(enrollmentId: string, moduleId: string): Promise<boolean> {
     // Get all lessons in the module
     const moduleLessons = await this.lessonRepository.findByModule(moduleId);
-    
+
     if (moduleLessons.length === 0) {
       // Empty module is considered completed
       return true;
@@ -932,14 +961,14 @@ export class EnrollmentService implements IEnrollmentService {
 
     // Check if all lessons in the module are completed
     const progressRecords = await Promise.all(
-      moduleLessons.map(lesson => 
+      moduleLessons.map((lesson) =>
         this.lessonProgressRepository.findByEnrollmentAndLesson(enrollmentId, lesson.id)
       )
     );
 
     // All lessons must have progress records and be completed
-    return progressRecords.every(progress => 
-      progress !== null && progress.status === 'completed'
+    return progressRecords.every(
+      (progress) => progress !== null && progress.status === 'completed'
     );
   }
 }

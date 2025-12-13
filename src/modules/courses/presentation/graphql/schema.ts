@@ -1,9 +1,9 @@
 /**
  * GraphQL Schema for Courses Module
- * 
+ *
  * Defines GraphQL types, inputs, and schema for course creation,
  * management, module and lesson operations.
- * 
+ *
  * Requirements: 21.1, 21.2
  */
 
@@ -17,10 +17,10 @@ export const courseTypeDefs = gql`
   # Scalar types
   "Custom scalar type for date and time values in ISO 8601 format"
   scalar DateTime
-  
+
   "Custom scalar type for arbitrary JSON data"
   scalar JSON
-  
+
   "Custom scalar type for decimal numbers with precision (e.g., prices)"
   scalar Decimal
 
@@ -303,7 +303,7 @@ export const courseTypeDefs = gql`
     # Course mutations
     """
     Create a new course with basic information. Only educators can create courses.
-    
+
     Example:
     mutation {
       createCourse(input: {
@@ -325,14 +325,14 @@ export const courseTypeDefs = gql`
         }
       }
     }
-    
+
     Requirements: 3.1
     """
     createCourse(input: CreateCourseInput!): Course!
-    
+
     """
     Update existing course information. Only course instructor can update.
-    
+
     Example:
     mutation {
       updateCourse(id: "course-123", input: {
@@ -345,15 +345,15 @@ export const courseTypeDefs = gql`
         updatedAt
       }
     }
-    
+
     Requirements: 3.6
     """
     updateCourse(id: ID!, input: UpdateCourseInput!): Course!
-    
+
     """
     Publish course making it available for student enrollment.
     Validates minimum content requirements before publishing.
-    
+
     Example:
     mutation {
       publishCourse(id: "course-123") {
@@ -362,27 +362,27 @@ export const courseTypeDefs = gql`
         publishedAt
       }
     }
-    
+
     Requirements: 3.5
     """
     publishCourse(id: ID!): Course!
-    
+
     """
     Delete course and all associated content. Only course instructor can delete.
-    
+
     Example:
     mutation {
       deleteCourse(id: "course-123")
     }
-    
+
     Requirements: 3.7
     """
     deleteCourse(id: ID!): Boolean!
-    
+
     # Module mutations
     """
     Add new module to existing course with sequential ordering.
-    
+
     Example:
     mutation {
       addModule(courseId: "course-123", input: {
@@ -398,14 +398,14 @@ export const courseTypeDefs = gql`
         }
       }
     }
-    
+
     Requirements: 3.2
     """
     addModule(courseId: ID!, input: CreateModuleInput!): CourseModule!
-    
+
     """
     Update existing module information and prerequisites.
-    
+
     Example:
     mutation {
       updateModule(id: "module-123", input: {
@@ -419,26 +419,26 @@ export const courseTypeDefs = gql`
         }
       }
     }
-    
+
     Requirements: 3.2
     """
     updateModule(id: ID!, input: UpdateModuleInput!): CourseModule!
-    
+
     """
     Delete module and all contained lessons.
-    
+
     Example:
     mutation {
       deleteModule(id: "module-123")
     }
-    
+
     Requirements: 3.7
     """
     deleteModule(id: ID!): Boolean!
-    
+
     """
     Reorder modules within a course by providing new sequence.
-    
+
     Example:
     mutation {
       reorderModules(courseId: "course-123", input: {
@@ -449,15 +449,15 @@ export const courseTypeDefs = gql`
         orderNumber
       }
     }
-    
+
     Requirements: 3.4
     """
     reorderModules(courseId: ID!, input: ReorderModulesInput!): [CourseModule!]!
-    
+
     # Lesson mutations
     """
     Add new lesson to existing module with type-specific content.
-    
+
     Example:
     mutation {
       addLesson(moduleId: "module-123", input: {
@@ -475,14 +475,14 @@ export const courseTypeDefs = gql`
         isPreview
       }
     }
-    
+
     Requirements: 3.3
     """
     addLesson(moduleId: ID!, input: CreateLessonInput!): Lesson!
-    
+
     """
     Update existing lesson content and properties.
-    
+
     Example:
     mutation {
       updateLesson(id: "lesson-123", input: {
@@ -495,26 +495,26 @@ export const courseTypeDefs = gql`
         updatedAt
       }
     }
-    
+
     Requirements: 3.3
     """
     updateLesson(id: ID!, input: UpdateLessonInput!): Lesson!
-    
+
     """
     Delete lesson from module.
-    
+
     Example:
     mutation {
       deleteLesson(id: "lesson-123")
     }
-    
+
     Requirements: 3.7
     """
     deleteLesson(id: ID!): Boolean!
-    
+
     """
     Reorder lessons within a module by providing new sequence.
-    
+
     Example:
     mutation {
       reorderLessons(moduleId: "module-123", input: {
@@ -525,7 +525,7 @@ export const courseTypeDefs = gql`
         orderNumber
       }
     }
-    
+
     Requirements: 3.4
     """
     reorderLessons(moduleId: ID!, input: ReorderLessonsInput!): [Lesson!]!
@@ -535,7 +535,7 @@ export const courseTypeDefs = gql`
   type Query {
     """
     Get single course by ID with complete module and lesson structure.
-    
+
     Example:
     query {
       course(id: "course-123") {
@@ -557,14 +557,14 @@ export const courseTypeDefs = gql`
         }
       }
     }
-    
+
     Requirements: 21.2
     """
     course(id: ID!): Course
-    
+
     """
     Get course by URL slug for public course pages.
-    
+
     Example:
     query {
       courseBySlug(slug: "introduction-to-react") {
@@ -576,14 +576,14 @@ export const courseTypeDefs = gql`
         averageRating
       }
     }
-    
+
     Requirements: 21.2
     """
     courseBySlug(slug: String!): Course
-    
+
     """
     Search and filter courses with pagination support.
-    
+
     Example:
     query {
       courses(
@@ -612,17 +612,14 @@ export const courseTypeDefs = gql`
         totalCount
       }
     }
-    
+
     Requirements: 21.2, 8.1
     """
-    courses(
-      filter: CourseFilter
-      pagination: PaginationInput
-    ): CourseConnection!
-    
+    courses(filter: CourseFilter, pagination: PaginationInput): CourseConnection!
+
     """
     Get courses created by the authenticated educator.
-    
+
     Example:
     query {
       myCourses(
@@ -645,17 +642,14 @@ export const courseTypeDefs = gql`
         totalCount
       }
     }
-    
+
     Requirements: 21.2, 21.7
     """
-    myCourses(
-      filter: CourseFilter
-      pagination: PaginationInput
-    ): CourseConnection!
-    
+    myCourses(filter: CourseFilter, pagination: PaginationInput): CourseConnection!
+
     """
     Validate if course meets requirements for publication.
-    
+
     Example:
     query {
       validateCoursePublication(id: "course-123") {
@@ -663,7 +657,7 @@ export const courseTypeDefs = gql`
         reasons
       }
     }
-    
+
     Requirements: 3.5
     """
     validateCoursePublication(id: ID!): PublicationValidationResult!

@@ -1,10 +1,10 @@
 /**
  * User Profile Repository Interface
- * 
+ *
  * Defines the contract for user profile data access operations.
  * Abstracts database operations behind a clean interface following
  * the Repository pattern for domain independence.
- * 
+ *
  * Requirements: 10.7
  */
 
@@ -39,14 +39,14 @@ export interface UpdateUserProfileDTO {
 
 /**
  * User Profile Repository Interface
- * 
+ *
  * Provides methods for all user profile data access operations with caching support.
  * Implementations must handle database errors and map them to domain errors.
  */
 export interface IUserProfileRepository {
   /**
    * Creates a new user profile in the database
-   * 
+   *
    * @param data - User profile creation data
    * @returns The created user profile
    * @throws ConflictError if profile already exists for user
@@ -56,7 +56,7 @@ export interface IUserProfileRepository {
 
   /**
    * Finds a user profile by user ID
-   * 
+   *
    * @param userId - User ID
    * @returns The user profile if found, null otherwise
    * @throws DatabaseError if database operation fails
@@ -65,7 +65,7 @@ export interface IUserProfileRepository {
 
   /**
    * Updates a user profile's data
-   * 
+   *
    * @param userId - User ID
    * @param data - Update data
    * @returns The updated user profile
@@ -76,7 +76,7 @@ export interface IUserProfileRepository {
 
   /**
    * Deletes a user profile
-   * 
+   *
    * @param userId - User ID
    * @returns void
    * @throws NotFoundError if profile doesn't exist
@@ -86,7 +86,7 @@ export interface IUserProfileRepository {
 
   /**
    * Checks if a user profile exists
-   * 
+   *
    * @param userId - User ID
    * @returns True if profile exists, false otherwise
    * @throws DatabaseError if database operation fails
@@ -96,7 +96,7 @@ export interface IUserProfileRepository {
   /**
    * Invalidates cache for a specific user profile
    * Should be called after any update operation
-   * 
+   *
    * @param userId - User ID
    * @returns void
    */

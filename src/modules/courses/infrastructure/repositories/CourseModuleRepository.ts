@@ -1,24 +1,33 @@
 /**
  * Course Module Repository Implementation
- * 
+ *
  * Implements course module data access operations with Drizzle ORM queries,
  * Redis caching, and module ordering management.
  * Handles prerequisite relationships and sequential ordering.
- * 
+ *
  * Requirements: 3.2
  */
 
 import { eq, and, asc, sql, max, inArray } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
-import { cache, buildCacheKey, CachePrefix, CacheTTL } from '../../../../infrastructure/cache/index.js';
-import { getWriteDb, getReadDb, withDrizzleTransaction } from '../../../../infrastructure/database/index.js';
-import { 
-  courseModules, 
-  CourseModule, 
+import {
+  cache,
+  buildCacheKey,
+  CachePrefix,
+  CacheTTL,
+} from '../../../../infrastructure/cache/index.js';
+import {
+  getWriteDb,
+  getReadDb,
+  withDrizzleTransaction,
+} from '../../../../infrastructure/database/index.js';
+import {
+  courseModules,
+  CourseModule,
   NewCourseModule,
   courses,
-  lessons
+  lessons,
 } from '../../../../infrastructure/database/schema/courses.schema.js';
 import {
   DatabaseError,
@@ -35,7 +44,7 @@ import {
 
 /**
  * Course Module Repository Implementation
- * 
+ *
  * Provides data access methods for course module entities with:
  * - Drizzle ORM for type-safe queries
  * - Redis caching with 5-minute TTL
@@ -75,10 +84,10 @@ export class CourseModuleRepository implements ICourseModuleRepository {
 
   /**
    * Creates a new course module in the database
-   * 
+   *
    * Validates order number uniqueness within the course.
    * Validates prerequisite module exists and belongs to same course.
-   * 
+   *
    * @param data - Module creation data
    * @returns The created module
    * @throws ConflictError if order number already exists for the course
@@ -95,10 +104,9 @@ export class CourseModuleRepository implements ICourseModuleRepository {
         .limit(1);
 
       if (!courseExists) {
-        throw new ValidationError(
-          'Invalid course ID',
-          [{ field: 'courseId', message: 'Course does not exist' }]
-        );
+        throw new ValidationError('Invalid course ID', [
+          { field: 'courseId', message: 'Course does not exist' },
+        ]);
       }
 
       // Check for order number conflicts
@@ -129,17 +137,18 @@ export class CourseModuleRepository implements ICourseModuleRepository {
           .limit(1);
 
         if (!prerequisiteModule) {
-          throw new ValidationError(
-            'Invalid prerequisite module ID',
-            [{ field: 'prerequisiteModuleId', message: 'Prerequisite module does not exist' }]
-          );
+          throw new ValidationError('Invalid prerequisite module ID', [
+            { field: 'prerequisiteModuleId', message: 'Prerequisite module does not exist' },
+          ]);
         }
 
         if (prerequisiteModule.courseId !== data.courseId) {
-          throw new ValidationError(
-            'Prerequisite module must belong to the same course',
-            [{ field: 'prerequisiteModuleId', message: 'Prerequisite module belongs to different course' }]
-          );
+          throw new ValidationError('Prerequisite module must belong to the same course', [
+            {
+              field: 'prerequisiteModuleId',
+              message: 'Prerequisite module belongs to different course',
+            },
+          ]);
         }
       }
 
@@ -160,10 +169,7 @@ export class CourseModuleRepository implements ICourseModuleRepository {
         .returning();
 
       if (!createdModule) {
-        throw new DatabaseError(
-          'Failed to create course module',
-          'insert'
-        );
+        throw new DatabaseError('Failed to create course module', 'insert');
       }
 
       // Invalidate course modules cache
@@ -189,10 +195,9 @@ export class CourseModuleRepository implements ICourseModuleRepository {
           );
         }
         if (error.message.includes('foreign key')) {
-          throw new ValidationError(
-            'Invalid course or prerequisite module ID',
-            [{ field: 'courseId', message: 'Referenced entity does not exist' }]
-          );
+          throw new ValidationError('Invalid course or prerequisite module ID', [
+            { field: 'courseId', message: 'Referenced entity does not exist' },
+          ]);
         }
       }
 
@@ -207,9 +212,9 @@ export class CourseModuleRepository implements ICourseModuleRepository {
 
   /**
    * Finds a module by its unique ID
-   * 
+   *
    * Implements caching with 5-minute TTL.
-   * 
+   *
    * @param id - Module ID
    * @returns The module if found, null otherwise
    * @throws DatabaseError if database operation fails
@@ -219,7 +224,7 @@ export class CourseModuleRepository implements ICourseModuleRepository {
       // Check cache first
       const cacheKey = this.getModuleCacheKey(id);
       const cachedModule = await cache.get<CourseModule>(cacheKey);
-      
+
       if (cachedModule) {
         return cachedModule;
       }
@@ -250,9 +255,9 @@ export class CourseModuleRepository implements ICourseModuleRepository {
 
   /**
    * Finds all modules for a course ordered by orderNumber
-   * 
+   *
    * Implements caching with 5-minute TTL.
-   * 
+   *
    * @param courseId - Course ID
    * @returns Array of modules ordered by orderNumber
    * @throws DatabaseError if database operation fails
@@ -262,7 +267,7 @@ export class CourseModuleRepository implements ICourseModuleRepository {
       // Check cache first
       const cacheKey = this.getCourseModulesCacheKey(courseId);
       const cachedModules = await cache.get<CourseModule[]>(cacheKey);
-      
+
       if (cachedModules) {
         return cachedModules;
       }
@@ -289,9 +294,9 @@ export class CourseModuleRepository implements ICourseModuleRepository {
 
   /**
    * Finds modules that have the specified module as a prerequisite
-   * 
+   *
    * Implements caching with 5-minute TTL.
-   * 
+   *
    * @param prerequisiteModuleId - Prerequisite module ID
    * @returns Array of dependent modules
    * @throws DatabaseError if database operation fails
@@ -301,7 +306,7 @@ export class CourseModuleRepository implements ICourseModuleRepository {
       // Check cache first
       const cacheKey = this.getPrerequisiteModulesCacheKey(prerequisiteModuleId);
       const cachedModules = await cache.get<CourseModule[]>(cacheKey);
-      
+
       if (cachedModules) {
         return cachedModules;
       }
@@ -328,10 +333,10 @@ export class CourseModuleRepository implements ICourseModuleRepository {
 
   /**
    * Updates a module's data
-   * 
+   *
    * Validates order number uniqueness and prerequisite relationships.
    * Invalidates all related cache entries after successful update.
-   * 
+   *
    * @param id - Module ID
    * @param data - Update data
    * @returns The updated module
@@ -375,10 +380,9 @@ export class CourseModuleRepository implements ICourseModuleRepository {
         if (data.prerequisiteModuleId) {
           // Prevent self-reference
           if (data.prerequisiteModuleId === id) {
-            throw new ValidationError(
-              'Module cannot be its own prerequisite',
-              [{ field: 'prerequisiteModuleId', message: 'Self-reference not allowed' }]
-            );
+            throw new ValidationError('Module cannot be its own prerequisite', [
+              { field: 'prerequisiteModuleId', message: 'Self-reference not allowed' },
+            ]);
           }
 
           const [prerequisiteModule] = await this.readDb
@@ -388,17 +392,18 @@ export class CourseModuleRepository implements ICourseModuleRepository {
             .limit(1);
 
           if (!prerequisiteModule) {
-            throw new ValidationError(
-              'Invalid prerequisite module ID',
-              [{ field: 'prerequisiteModuleId', message: 'Prerequisite module does not exist' }]
-            );
+            throw new ValidationError('Invalid prerequisite module ID', [
+              { field: 'prerequisiteModuleId', message: 'Prerequisite module does not exist' },
+            ]);
           }
 
           if (prerequisiteModule.courseId !== existingModule.courseId) {
-            throw new ValidationError(
-              'Prerequisite module must belong to the same course',
-              [{ field: 'prerequisiteModuleId', message: 'Prerequisite module belongs to different course' }]
-            );
+            throw new ValidationError('Prerequisite module must belong to the same course', [
+              {
+                field: 'prerequisiteModuleId',
+                message: 'Prerequisite module belongs to different course',
+              },
+            ]);
           }
         }
       }
@@ -417,21 +422,21 @@ export class CourseModuleRepository implements ICourseModuleRepository {
         .returning();
 
       if (!updatedModule) {
-        throw new DatabaseError(
-          'Failed to update course module',
-          'update'
-        );
+        throw new DatabaseError('Failed to update course module', 'update');
       }
 
       // Invalidate all cache entries for this module
       await this.invalidateCache(id);
       await this.invalidateCacheByCourse(existingModule.courseId);
-      
+
       // Invalidate prerequisite cache if it changed
       if (existingModule.prerequisiteModuleId) {
         await this.invalidateCacheByPrerequisite(existingModule.prerequisiteModuleId);
       }
-      if (data.prerequisiteModuleId && data.prerequisiteModuleId !== existingModule.prerequisiteModuleId) {
+      if (
+        data.prerequisiteModuleId &&
+        data.prerequisiteModuleId !== existingModule.prerequisiteModuleId
+      ) {
         await this.invalidateCacheByPrerequisite(data.prerequisiteModuleId);
       }
 
@@ -468,9 +473,9 @@ export class CourseModuleRepository implements ICourseModuleRepository {
 
   /**
    * Deletes a module and all its lessons
-   * 
+   *
    * Checks for dependent modules before deletion.
-   * 
+   *
    * @param id - Module ID
    * @returns void
    * @throws NotFoundError if module doesn't exist
@@ -501,10 +506,7 @@ export class CourseModuleRepository implements ICourseModuleRepository {
         .returning();
 
       if (!result || result.length === 0) {
-        throw new DatabaseError(
-          'Failed to delete course module',
-          'delete'
-        );
+        throw new DatabaseError('Failed to delete course module', 'delete');
       }
 
       // Invalidate all cache entries
@@ -535,7 +537,7 @@ export class CourseModuleRepository implements ICourseModuleRepository {
   /**
    * Reorders modules within a course
    * Updates order numbers to maintain sequential integrity
-   * 
+   *
    * @param courseId - Course ID
    * @param moduleIds - Array of module IDs in desired order
    * @returns Array of updated modules
@@ -550,18 +552,12 @@ export class CourseModuleRepository implements ICourseModuleRepository {
         const existingModules = await tx
           .select()
           .from(courseModules)
-          .where(
-            and(
-              eq(courseModules.courseId, courseId),
-              inArray(courseModules.id, moduleIds)
-            )
-          );
+          .where(and(eq(courseModules.courseId, courseId), inArray(courseModules.id, moduleIds)));
 
         if (existingModules.length !== moduleIds.length) {
-          throw new ValidationError(
-            'Some module IDs do not exist or do not belong to the course',
-            [{ field: 'moduleIds', message: 'Invalid module IDs provided' }]
-          );
+          throw new ValidationError('Some module IDs do not exist or do not belong to the course', [
+            { field: 'moduleIds', message: 'Invalid module IDs provided' },
+          ]);
         }
 
         // Update order numbers
@@ -610,7 +606,7 @@ export class CourseModuleRepository implements ICourseModuleRepository {
 
   /**
    * Gets the next available order number for a course
-   * 
+   *
    * @param courseId - Course ID
    * @returns Next available order number
    * @throws DatabaseError if database operation fails
@@ -634,7 +630,7 @@ export class CourseModuleRepository implements ICourseModuleRepository {
 
   /**
    * Checks if a module can be deleted (no dependent modules)
-   * 
+   *
    * @param id - Module ID
    * @returns True if module can be safely deleted
    * @throws DatabaseError if database operation fails
@@ -654,7 +650,7 @@ export class CourseModuleRepository implements ICourseModuleRepository {
 
   /**
    * Updates the total duration of a module based on its lessons
-   * 
+   *
    * @param id - Module ID
    * @returns The updated module
    * @throws NotFoundError if module doesn't exist
@@ -664,8 +660,8 @@ export class CourseModuleRepository implements ICourseModuleRepository {
     try {
       // Calculate total duration from lessons
       const [result] = await this.readDb
-        .select({ 
-          totalDuration: sql<number>`COALESCE(SUM(${lessons.durationMinutes}), 0)` 
+        .select({
+          totalDuration: sql<number>`COALESCE(SUM(${lessons.durationMinutes}), 0)`,
         })
         .from(lessons)
         .where(eq(lessons.moduleId, id));
@@ -706,7 +702,7 @@ export class CourseModuleRepository implements ICourseModuleRepository {
 
   /**
    * Invalidates cache for a specific module
-   * 
+   *
    * @param id - Module ID
    * @returns void
    */
@@ -722,7 +718,7 @@ export class CourseModuleRepository implements ICourseModuleRepository {
 
   /**
    * Invalidates cache for all modules in a course
-   * 
+   *
    * @param courseId - Course ID
    * @returns void
    */
@@ -738,7 +734,7 @@ export class CourseModuleRepository implements ICourseModuleRepository {
 
   /**
    * Invalidates cache for modules by prerequisite
-   * 
+   *
    * @param prerequisiteModuleId - Prerequisite module ID
    * @returns void
    */
@@ -748,7 +744,10 @@ export class CourseModuleRepository implements ICourseModuleRepository {
       await cache.delete(cacheKey);
     } catch (error) {
       // Log error but don't throw - cache invalidation failure shouldn't break the operation
-      console.error(`Failed to invalidate cache for prerequisite modules ${prerequisiteModuleId}:`, error);
+      console.error(
+        `Failed to invalidate cache for prerequisite modules ${prerequisiteModuleId}:`,
+        error
+      );
     }
   }
 }

@@ -1,6 +1,6 @@
 /**
  * Email Service Factory
- * 
+ *
  * Factory for creating email service instances based on configuration
  * Supports both SendGrid and AWS SES implementations
  */
@@ -20,7 +20,7 @@ export type EmailProvider = 'sendgrid' | 'ses';
 
 /**
  * Email service factory
- * 
+ *
  * Requirements:
  * - 10.2: Support for both SendGrid and AWS SES email providers
  */
@@ -42,16 +42,16 @@ export class EmailServiceFactory {
    */
   private static createEmailService(): IEmailService {
     const provider = this.determineProvider();
-    
+
     switch (provider) {
       case 'sendgrid':
         logger.info('Creating SendGrid email service');
         return new SendGridEmailService();
-      
+
       case 'ses':
         logger.info('Creating AWS SES email service');
         return new SESEmailService();
-      
+
       default:
         logger.warn('No email provider configured, using SendGrid as default');
         return new SendGridEmailService();
@@ -71,11 +71,11 @@ export class EmailServiceFactory {
     // Auto-detect based on available configuration
     const sendGridConfig = secrets.getSendGridConfig();
     const awsConfig = secrets.getAwsConfig();
-    
+
     const hasSendGridConfig = Boolean(sendGridConfig.apiKey);
-    const hasSESConfig = Boolean(
-      awsConfig.accessKeyId && awsConfig.secretAccessKey
-    ) || Boolean(process.env['AWS_PROFILE']); // AWS profile or IAM role
+    const hasSESConfig =
+      Boolean(awsConfig.accessKeyId && awsConfig.secretAccessKey) ||
+      Boolean(process.env['AWS_PROFILE']); // AWS profile or IAM role
 
     // Prefer SendGrid if both are configured
     if (hasSendGridConfig) {
@@ -122,7 +122,7 @@ export class EmailServiceFactory {
     healthy?: boolean;
   } {
     const provider = this.determineProvider();
-    
+
     return {
       provider,
       configured: true, // If we got here, some configuration exists
@@ -170,7 +170,7 @@ export class EmailServiceFactory {
         const service = this.createSpecificService(provider);
         if (service.healthCheck) {
           const healthy = await service.healthCheck();
-          
+
           if (!healthy) {
             errors.push(`${provider.toUpperCase()} service health check failed`);
           }
@@ -180,16 +180,17 @@ export class EmailServiceFactory {
       return {
         valid: errors.length === 0,
         provider,
-        errors
+        errors,
       };
-
     } catch (error) {
-      errors.push(`Configuration validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      
+      errors.push(
+        `Configuration validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+
       return {
         valid: false,
         provider,
-        errors
+        errors,
       };
     }
   }

@@ -1,9 +1,9 @@
 /**
  * Content Webhook Handler
- * 
+ *
  * Implements webhook handling for MediaConvert job completion
  * and updates video processing status in the content module.
- * 
+ *
  * Requirements:
  * - 4.4: Processing completion handling
  * - 4.2: Video status updates after transcoding
@@ -13,18 +13,15 @@
 import { logger } from '../../../../shared/utils/logger.js';
 
 import { IContentRepository } from '../../infrastructure/repositories/IContentRepository.js';
-import { 
-  IWebhookHandler, 
-  ProcessedWebhookData 
+import {
+  IWebhookHandler,
+  ProcessedWebhookData,
 } from '../../../../shared/services/MediaConvertWebhookHandler.js';
-import { 
-  IContentService,
-  TranscodingCompleteParams 
-} from './IContentService.js';
+import { IContentService, TranscodingCompleteParams } from './IContentService.js';
 
 /**
  * Content Webhook Handler Implementation
- * 
+ *
  * Handles MediaConvert webhook events and updates video processing
  * status in the content module database.
  */
@@ -58,7 +55,7 @@ export class ContentWebhookHandler implements IWebhookHandler {
       const transcodingParams: TranscodingCompleteParams = {
         jobId: data.jobId,
         status: data.status === 'completed' ? 'completed' : 'failed',
-        outputs: data.outputs?.map(output => ({
+        outputs: data.outputs?.map((output) => ({
           resolution: output.resolution,
           url: output.url,
           bitrate: output.bitrate,
@@ -167,14 +164,9 @@ export class ContentWebhookHandler implements IWebhookHandler {
       }
 
       // Update processing job status
-      await this.contentRepository.updateProcessingJobStatus(
-        processingJob.id,
-        'cancelled',
-        0,
-        {
-          canceledAt: new Date().toISOString(),
-        }
-      );
+      await this.contentRepository.updateProcessingJobStatus(processingJob.id, 'cancelled', 0, {
+        canceledAt: new Date().toISOString(),
+      });
 
       // Update video asset status if applicable
       if (processingJob.videoAssetId) {
@@ -220,14 +212,9 @@ export class ContentWebhookHandler implements IWebhookHandler {
       }
 
       // Update processing job status
-      await this.contentRepository.updateProcessingJobStatus(
-        processingJob.id,
-        'pending',
-        0,
-        {
-          submittedAt: new Date().toISOString(),
-        }
-      );
+      await this.contentRepository.updateProcessingJobStatus(processingJob.id, 'pending', 0, {
+        submittedAt: new Date().toISOString(),
+      });
 
       logger.info('Job submission confirmed', {
         jobId: data.jobId,

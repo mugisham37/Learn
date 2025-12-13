@@ -1,8 +1,8 @@
 /**
  * Content Module Presentation Layer
- * 
+ *
  * Exports GraphQL schema and resolvers for the content module.
- * 
+ *
  * Requirements: 21.1, 21.2
  */
 

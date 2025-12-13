@@ -1,6 +1,6 @@
 /**
  * WebSocket Infrastructure Tests
- * 
+ *
  * Tests for Socket.io server configuration and basic functionality
  */
 
@@ -8,7 +8,6 @@ import { describe, it, expect } from 'vitest';
 import { SocketRooms } from '../index.js';
 
 describe('WebSocket Infrastructure', () => {
-
   describe('Room Naming Conventions', () => {
     it('should generate correct user room names', () => {
       const userId = 'user-123';
@@ -25,10 +24,10 @@ describe('WebSocket Infrastructure', () => {
     it('should generate consistent conversation room names regardless of parameter order', () => {
       const user1 = 'user-123';
       const user2 = 'user-456';
-      
+
       const room1 = SocketRooms.conversation(user1, user2);
       const room2 = SocketRooms.conversation(user2, user1);
-      
+
       expect(room1).toBe(room2);
       expect(room1).toBe('conversation:user-123:user-456');
     });

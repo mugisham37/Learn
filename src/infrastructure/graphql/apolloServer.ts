@@ -1,15 +1,18 @@
 /**
  * Apollo Server Configuration
- * 
+ *
  * This module creates and configures Apollo Server with Fastify integration,
  * schema stitching for all modules, and development tools.
- * 
+ *
  * Requirements: 21.1
  */
 
 import { ApolloServer } from '@apollo/server';
 import { ApolloServerPluginDrainHttpServer } from '@apollo/server/plugin/drainHttpServer';
-import { ApolloServerPluginLandingPageLocalDefault, ApolloServerPluginLandingPageProductionDefault } from '@apollo/server/plugin/landingPage/default';
+import {
+  ApolloServerPluginLandingPageLocalDefault,
+  ApolloServerPluginLandingPageProductionDefault,
+} from '@apollo/server/plugin/landingPage/default';
 import { FastifyInstance } from 'fastify';
 import { GraphQLSchema } from 'graphql';
 import { mergeTypeDefs, mergeResolvers } from '@graphql-tools/merge';
@@ -20,34 +23,58 @@ import { createPubSub } from './pubsub.js';
 import { config } from '../../config/index.js';
 import { logger } from '../../shared/utils/logger.js';
 import { formatGraphQLError } from './errorFormatter.js';
-import { 
-  createComplexityAnalysisRule, 
-  createComplexityAnalysisPlugin, 
-  getComplexityConfig 
+import {
+  createComplexityAnalysisRule,
+  createComplexityAnalysisPlugin,
+  getComplexityConfig,
 } from './complexityAnalysis.js';
 import { complexityDirectiveTypeDefs } from './complexityDirectives.js';
 import { createExecutionTimeTracker } from './complexityMonitoring.js';
 import { complexityMonitoringSchema } from './complexitySchema.js';
 import { createGraphQLCachingPlugin, createCacheAwareContext } from './cachingPlugin.js';
-import { createResponseOptimizationPlugin, getEnvironmentOptimizationConfig } from './responseOptimization.js';
+import {
+  createResponseOptimizationPlugin,
+  getEnvironmentOptimizationConfig,
+} from './responseOptimization.js';
 
 // Import all module schemas and resolvers
 import { userTypeDefs, userResolvers } from '../../modules/users/presentation/graphql/index.js';
-import { courseTypeDefs, courseResolvers } from '../../modules/courses/presentation/graphql/index.js';
+import {
+  courseTypeDefs,
+  courseResolvers,
+} from '../../modules/courses/presentation/graphql/index.js';
 import { contentTypeDefs, contentResolvers } from '../../modules/content/presentation/index.js';
-import { assessmentTypeDefs, assessmentResolvers } from '../../modules/assessments/presentation/graphql/index.js';
-import { enrollmentTypeDefs, enrollmentResolvers } from '../../modules/enrollments/presentation/graphql/index.js';
-import { communicationTypeDefs, communicationResolvers } from '../../modules/communication/presentation/graphql/index.js';
+import {
+  assessmentTypeDefs,
+  assessmentResolvers,
+} from '../../modules/assessments/presentation/graphql/index.js';
+import {
+  enrollmentTypeDefs,
+  enrollmentResolvers,
+} from '../../modules/enrollments/presentation/graphql/index.js';
+import {
+  communicationTypeDefs,
+  communicationResolvers,
+} from '../../modules/communication/presentation/graphql/index.js';
 import { notificationTypeDefs } from '../../modules/notifications/presentation/index.js';
-import { analyticsTypeDefs, analyticsResolvers } from '../../modules/analytics/presentation/index.js';
-import { paymentTypeDefs, paymentResolvers } from '../../modules/payments/presentation/graphql/index.js';
-import { searchTypeDefs, searchResolvers } from '../../modules/search/presentation/graphql/index.js';
+import {
+  analyticsTypeDefs,
+  analyticsResolvers,
+} from '../../modules/analytics/presentation/index.js';
+import {
+  paymentTypeDefs,
+  paymentResolvers,
+} from '../../modules/payments/presentation/graphql/index.js';
+import {
+  searchTypeDefs,
+  searchResolvers,
+} from '../../modules/search/presentation/graphql/index.js';
 import { adminTypeDefs, adminResolvers } from '../../modules/admin/presentation/graphql/index.js';
 
 // Helper function to safely import resolvers
 function safeImportResolvers(): any[] {
   const resolvers = [];
-  
+
   // Always available resolvers
   resolvers.push(complexityMonitoringSchema.resolvers);
   resolvers.push(userResolvers);
@@ -59,14 +86,14 @@ function safeImportResolvers(): any[] {
   resolvers.push(paymentResolvers);
   resolvers.push(searchResolvers);
   resolvers.push(adminResolvers);
-  
+
   // Try to import communication resolvers if available
   try {
     resolvers.push(communicationResolvers);
   } catch (error) {
     logger.warn('Communication resolvers not available yet, skipping');
   }
-  
+
   // Try to import notification resolvers if available
   try {
     // Import notification resolvers dynamically if they exist
@@ -75,7 +102,7 @@ function safeImportResolvers(): any[] {
   } catch (error) {
     logger.warn('Notification resolvers not available yet, skipping');
   }
-  
+
   return resolvers.filter(Boolean);
 }
 
@@ -98,13 +125,13 @@ export interface GraphQLContext {
   dataloaders?: {
     // User data loaders
     users?: UserDataLoaders;
-    
-    // Course data loaders  
+
+    // Course data loaders
     courses?: CourseDataLoaders;
-    
+
     // Enrollment data loaders
     enrollments?: EnrollmentDataLoaders;
-    
+
     // Legacy individual loaders for backward compatibility
     userById?: any;
     usersByIds?: any;
@@ -208,7 +235,7 @@ export async function createApolloServer(fastify: FastifyInstance): Promise<{
 
   // Create subscription server for WebSocket support
   let subscriptionCleanup: (() => Promise<void>) | undefined;
-  
+
   try {
     const { cleanup } = createSubscriptionServer(fastify.server, schema);
     subscriptionCleanup = cleanup;
@@ -221,35 +248,33 @@ export async function createApolloServer(fastify: FastifyInstance): Promise<{
 
   // Get complexity configuration for current environment
   const complexityConfig = getComplexityConfig();
-  
+
   const server = new ApolloServer<GraphQLContext>({
     schema,
-    
+
     // Configure introspection based on environment
     introspection: config.nodeEnv !== 'production',
-    
+
     // Add validation rules including complexity analysis
-    validationRules: [
-      createComplexityAnalysisRule(complexityConfig),
-    ],
-    
+    validationRules: [createComplexityAnalysisRule(complexityConfig)],
+
     // Plugins configuration
     plugins: [
       // Drain HTTP server plugin for graceful shutdown
       ApolloServerPluginDrainHttpServer({ httpServer: fastify.server }),
-      
+
       // Query complexity analysis plugin for monitoring
       createComplexityAnalysisPlugin(complexityConfig),
-      
+
       // Execution time tracking plugin
       createExecutionTimeTracker(),
-      
+
       // HTTP caching plugin for GraphQL responses
       createGraphQLCachingPlugin(),
-      
+
       // Response optimization plugin for payload size reduction
       createResponseOptimizationPlugin(getEnvironmentOptimizationConfig()),
-      
+
       // Landing page configuration based on environment
       config.nodeEnv === 'production'
         ? ApolloServerPluginLandingPageProductionDefault({
@@ -288,7 +313,9 @@ import { createDataLoaders as createDataLoadersFactory } from './dataLoaderFacto
 /**
  * Creates data loaders for efficient data fetching
  */
-async function createDataLoaders(context: Pick<GraphQLContext, 'requestId'>): Promise<GraphQLContext['dataloaders']> {
+async function createDataLoaders(
+  context: Pick<GraphQLContext, 'requestId'>
+): Promise<GraphQLContext['dataloaders']> {
   return await createDataLoadersFactory(context.requestId);
 }
 
@@ -306,7 +333,11 @@ interface GraphQLRequest {
 /**
  * Context function to extract user information from request
  */
-export async function createGraphQLContext({ request }: { request: GraphQLRequest }): Promise<GraphQLContext> {
+export async function createGraphQLContext({
+  request,
+}: {
+  request: GraphQLRequest;
+}): Promise<GraphQLContext> {
   const context: GraphQLContext = {
     requestId: request.id || 'unknown',
   };
@@ -316,13 +347,13 @@ export async function createGraphQLContext({ request }: { request: GraphQLReques
     const authHeader = request.headers.authorization;
     if (authHeader && typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
       const token = authHeader.substring(7);
-      
+
       // Import JWT utilities
       const { verifyToken } = await import('../../shared/utils/auth.js');
-      
+
       // Verify and decode JWT token
       const { payload, expired } = verifyToken(token);
-      
+
       // Check if token is expired
       if (expired) {
         logger.warn('Expired JWT token in GraphQL request', {
@@ -337,7 +368,7 @@ export async function createGraphQLContext({ request }: { request: GraphQLReques
           email: payload.email,
           role: payload.role,
         };
-        
+
         logger.debug('Authenticated GraphQL request', {
           requestId: context.requestId,
           userId: payload.userId,

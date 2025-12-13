@@ -1,9 +1,9 @@
 /**
  * DataLoader Factory
- * 
+ *
  * Creates and configures DataLoader instances for GraphQL context.
  * Provides a centralized way to manage DataLoader creation and caching.
- * 
+ *
  * Requirements: 21.5
  */
 
@@ -19,9 +19,12 @@ export async function createDataLoaders(requestId: string): Promise<GraphQLConte
 
   try {
     // Import DataLoader classes
-    const { createUserDataLoaders } = await import('../../modules/users/presentation/graphql/dataloaders.js');
-    const { createCourseDataLoaders } = await import('../../modules/courses/presentation/graphql/dataloaders.js');
-    const { createEnrollmentDataLoaders } = await import('../../modules/enrollments/presentation/graphql/dataloaders.js');
+    const { createUserDataLoaders } =
+      await import('../../modules/users/presentation/graphql/dataloaders.js');
+    const { createCourseDataLoaders } =
+      await import('../../modules/courses/presentation/graphql/dataloaders.js');
+    const { createEnrollmentDataLoaders } =
+      await import('../../modules/enrollments/presentation/graphql/dataloaders.js');
 
     // Note: In a production application, these dependencies would be injected
     // through a dependency injection container. For now, we'll create a structure
@@ -34,7 +37,6 @@ export async function createDataLoaders(requestId: string): Promise<GraphQLConte
 
     // Return empty structure for now - can be populated when services are available
     return dataloaders;
-
   } catch (error) {
     logger.warn('Failed to initialize DataLoader factory', {
       error: error instanceof Error ? error.message : String(error),

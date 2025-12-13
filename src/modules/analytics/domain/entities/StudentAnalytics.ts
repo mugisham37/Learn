@@ -1,9 +1,9 @@
 /**
  * StudentAnalytics Domain Entity
- * 
+ *
  * Represents aggregated analytics data for a student including course progress,
  * performance metrics, learning streaks, and skill development.
- * 
+ *
  * Requirements:
  * - 12.2: Student analytics aggregation with course progress, scores, and engagement metrics
  */
@@ -153,11 +153,7 @@ export class StudentAnalytics {
   /**
    * Update course enrollment metrics
    */
-  public updateCourseMetrics(
-    totalEnrolled: number,
-    completed: number,
-    inProgress: number
-  ): void {
+  public updateCourseMetrics(totalEnrolled: number, completed: number, inProgress: number): void {
     this._totalCoursesEnrolled = totalEnrolled;
     this._coursesCompleted = completed;
     this._coursesInProgress = inProgress;
@@ -225,7 +221,7 @@ export class StudentAnalytics {
       currentRating,
       previousRating: prevRating,
       improvement,
-      coursesContributing: [] // This would be populated by the service layer
+      coursesContributing: [], // This would be populated by the service layer
     };
   }
 
@@ -237,7 +233,7 @@ export class StudentAnalytics {
       currentStreak: this._currentStreakDays,
       longestStreak: this._longestStreakDays,
       lastActivityDate: this._lastUpdated,
-      streakStartDate: this.calculateStreakStartDate()
+      streakStartDate: this.calculateStreakStartDate(),
     };
   }
 
@@ -265,7 +261,7 @@ export class StudentAnalytics {
       engagementLevel,
       learningConsistency,
       totalBadges,
-      averageSkillRating
+      averageSkillRating,
     };
   }
 
@@ -281,7 +277,9 @@ export class StudentAnalytics {
       case 'streak_30':
         return this._currentStreakDays >= 30 && !this._badgesEarned.includes('streak_30');
       case 'high_performer':
-        return (this._averageQuizScore || 0) >= 90 && !this._badgesEarned.includes('high_performer');
+        return (
+          (this._averageQuizScore || 0) >= 90 && !this._badgesEarned.includes('high_performer')
+        );
       case 'course_completionist':
         return this._coursesCompleted >= 10 && !this._badgesEarned.includes('course_completionist');
       default:
@@ -304,7 +302,7 @@ export class StudentAnalytics {
       longestStreakDays: this._longestStreakDays,
       badgesEarned: this._badgesEarned,
       skillRatings: this._skillRatings,
-      lastUpdated: this._lastUpdated
+      lastUpdated: this._lastUpdated,
     };
   }
 
@@ -325,7 +323,10 @@ export class StudentAnalytics {
       throw new Error('StudentAnalytics: coursesInProgress cannot be negative');
     }
 
-    if (this._averageQuizScore !== undefined && (this._averageQuizScore < 0 || this._averageQuizScore > 100)) {
+    if (
+      this._averageQuizScore !== undefined &&
+      (this._averageQuizScore < 0 || this._averageQuizScore > 100)
+    ) {
       throw new Error('StudentAnalytics: averageQuizScore must be between 0 and 100');
     }
 

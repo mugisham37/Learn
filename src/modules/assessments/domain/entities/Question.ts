@@ -1,13 +1,19 @@
 /**
  * Question Domain Entity
- * 
+ *
  * Represents a quiz question with type-specific validation and answer checking.
  * Supports multiple question types with appropriate validation for each.
- * 
+ *
  * Requirements: 6.1, 6.4, 6.5
  */
 
-export type QuestionType = 'multiple_choice' | 'true_false' | 'short_answer' | 'essay' | 'fill_blank' | 'matching';
+export type QuestionType =
+  | 'multiple_choice'
+  | 'true_false'
+  | 'short_answer'
+  | 'essay'
+  | 'fill_blank'
+  | 'matching';
 export type Difficulty = 'easy' | 'medium' | 'hard';
 
 export interface MultipleChoiceOptions {
@@ -72,7 +78,7 @@ export class Question {
   static create(data: CreateQuestionData, orderNumber: number): Question {
     // Validate question data
     this.validateQuestionData(data);
-    
+
     const question = new Question(
       crypto.randomUUID(),
       data.quizId,
@@ -88,7 +94,7 @@ export class Question {
       new Date(),
       new Date()
     );
-    
+
     return question;
   }
 
@@ -153,7 +159,11 @@ export class Question {
         if (!Array.isArray(options) || options.length < 2) {
           throw new Error('Multiple choice questions must have at least 2 options');
         }
-        if (typeof correctAnswer !== 'number' || correctAnswer < 0 || correctAnswer >= options.length) {
+        if (
+          typeof correctAnswer !== 'number' ||
+          correctAnswer < 0 ||
+          correctAnswer >= options.length
+        ) {
           throw new Error('Multiple choice questions must have a valid correct answer index');
         }
         break;
@@ -165,7 +175,10 @@ export class Question {
         break;
 
       case 'short_answer':
-        if (!correctAnswer || (!Array.isArray(correctAnswer) && typeof correctAnswer !== 'string')) {
+        if (
+          !correctAnswer ||
+          (!Array.isArray(correctAnswer) && typeof correctAnswer !== 'string')
+        ) {
           throw new Error('Short answer questions must have correct answer(s)');
         }
         break;
@@ -209,23 +222,24 @@ export class Question {
         }
         const studentAnswers = studentAnswer as string[];
         const correctAnswers = this.correctAnswer as string[];
-        
+
         if (studentAnswers.length !== correctAnswers.length) {
           return false;
         }
-        
-        return studentAnswers.every((answer, index) => 
-          answer.toLowerCase().trim() === correctAnswers[index]?.toLowerCase().trim()
+
+        return studentAnswers.every(
+          (answer, index) =>
+            answer.toLowerCase().trim() === correctAnswers[index]?.toLowerCase().trim()
         );
 
       case 'short_answer':
-        const correctAnswerArray = Array.isArray(this.correctAnswer) 
-          ? this.correctAnswer as string[]
+        const correctAnswerArray = Array.isArray(this.correctAnswer)
+          ? (this.correctAnswer as string[])
           : [this.correctAnswer as string];
-        
+
         const studentAnswerStr = (studentAnswer as string).toLowerCase().trim();
-        return correctAnswerArray.some(correct => 
-          correct.toLowerCase().trim() === studentAnswerStr
+        return correctAnswerArray.some(
+          (correct) => correct.toLowerCase().trim() === studentAnswerStr
         );
 
       default:
@@ -245,7 +259,7 @@ export class Question {
     const options = this.options as string[];
     const correctIndex = this.correctAnswer as number;
     // const correctOption = options[correctIndex]; // Not used in current implementation
-    
+
     // Create array of indices and shuffle
     const indices = Array.from({ length: options.length }, (_, i) => i);
     for (let i = indices.length - 1; i > 0; i--) {
@@ -254,14 +268,14 @@ export class Question {
       indices[i] = indices[j]!;
       indices[j] = temp;
     }
-    
+
     // Return shuffled options with new correct index
-    const shuffledOptions = indices.map(i => options[i]);
+    const shuffledOptions = indices.map((i) => options[i]);
     const newCorrectIndex = indices.indexOf(correctIndex);
-    
+
     return {
       options: shuffledOptions,
-      correctAnswerIndex: newCorrectIndex
+      correctAnswerIndex: newCorrectIndex,
     };
   }
 
@@ -285,7 +299,7 @@ export class Question {
       correctAnswer: correctAnswer !== undefined ? correctAnswer : this.correctAnswer,
       explanation: explanation !== undefined ? explanation : this.explanation,
       points: points || this.points,
-      difficulty: difficulty || this.difficulty
+      difficulty: difficulty || this.difficulty,
     };
 
     Question.validateQuestionData(updatedData);
@@ -306,4 +320,4 @@ export class Question {
       new Date()
     );
   }
-} 
+}

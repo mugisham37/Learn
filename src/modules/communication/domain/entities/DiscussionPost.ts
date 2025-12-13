@@ -1,13 +1,13 @@
 /**
  * Discussion Post Domain Entity
- * 
+ *
  * Represents a post within a discussion thread
  * Contains business logic for post management, voting, and solution marking
  */
 
 /**
  * Discussion Post Entity
- * 
+ *
  * Requirements:
  * - 9.3: Reply threading with nested structure
  * - 9.4: Post upvoting with duplicate prevention
@@ -66,7 +66,7 @@ export class DiscussionPost {
    * Check if user can mark this post as solution
    */
   canMarkAsSolution(userRole: string, userIsInstructor: boolean): boolean {
-    return (userRole === 'educator' || userRole === 'admin') || userIsInstructor;
+    return userRole === 'educator' || userRole === 'admin' || userIsInstructor;
   }
 
   /**
@@ -152,10 +152,13 @@ export class DiscussionPost {
     }
 
     // Add to edit history
-    const newEditHistory = [...this.editHistory, {
-      previousContent: this.content,
-      editedAt: new Date(),
-    }];
+    const newEditHistory = [
+      ...this.editHistory,
+      {
+        previousContent: this.content,
+        editedAt: new Date(),
+      },
+    ];
 
     return new DiscussionPost(
       this.id,
@@ -218,5 +221,5 @@ export interface UpdateDiscussionPostDTO {
  */
 export enum VoteType {
   UPVOTE = 'upvote',
-  REMOVE_VOTE = 'remove_vote'
+  REMOVE_VOTE = 'remove_vote',
 }

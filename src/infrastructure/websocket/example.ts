@@ -1,18 +1,18 @@
 /**
  * WebSocket Usage Examples
- * 
+ *
  * This file demonstrates how to use the WebSocket infrastructure
  * in various scenarios throughout the application.
  */
 
 import { RealtimeService } from '../../shared/services/RealtimeService.js';
-import { 
-  emitToUser, 
-  emitToCourse, 
-  emitToConversation, 
+import {
+  emitToUser,
+  emitToCourse,
+  emitToConversation,
   emitToThread,
   getOnlineUsersInCourse,
-  getUserPresence 
+  getUserPresence,
 } from './index.js';
 
 // Initialize the realtime service
@@ -39,7 +39,7 @@ export async function broadcastAnnouncementExample() {
   await realtimeService.emitAnnouncement('course-123', {
     announcementId: 'announce-456',
     title: 'Class Cancelled',
-    content: 'Tomorrow\'s class is cancelled due to weather conditions',
+    content: "Tomorrow's class is cancelled due to weather conditions",
     publishedAt: new Date().toISOString(),
   });
 }
@@ -193,7 +193,7 @@ export async function batchOperationsExample() {
   const onlineUsers = await getOnlineUsersInCourse(courseId);
 
   // Send notification to all online users in the course
-  const notifications = onlineUsers.map(userId => 
+  const notifications = onlineUsers.map((userId) =>
     realtimeService.emitNotification(userId, {
       notificationId: `notif-${userId}-${Date.now()}`,
       type: 'course_update',

@@ -1,8 +1,8 @@
 /**
  * Shared Validation Schemas
- * 
+ *
  * Exports all common validation schemas for use across the application.
- * 
+ *
  * Requirements: 13.1
  */
 

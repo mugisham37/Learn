@@ -1,6 +1,6 @@
 /**
  * Request Logging Middleware
- * 
+ *
  * Implements comprehensive request/response logging with Winston
  * as per Requirements 17.3 and 17.4
  */
@@ -35,7 +35,7 @@ interface ResponseContext extends RequestContext {
 /**
  * Sanitize request body for logging
  * Removes sensitive fields
- * 
+ *
  * @param body - Request body
  * @returns Sanitized body
  */
@@ -70,7 +70,7 @@ function sanitizeBody(body: unknown): unknown {
 
 /**
  * Build request context for logging
- * 
+ *
  * @param request - Fastify request
  * @returns Request context
  */
@@ -109,17 +109,14 @@ function buildRequestContext(request: FastifyRequest): RequestContext {
 
 /**
  * Build response context for logging
- * 
+ *
  * @param request - Fastify request
  * @param reply - Fastify reply
  * @returns Response context
  */
-function buildResponseContext(
-  request: FastifyRequest,
-  reply: FastifyReply
-): ResponseContext {
+function buildResponseContext(request: FastifyRequest, reply: FastifyReply): ResponseContext {
   const requestContext = buildRequestContext(request);
-  
+
   return {
     ...requestContext,
     statusCode: reply.statusCode,
@@ -129,7 +126,7 @@ function buildResponseContext(
 
 /**
  * Determine log level based on status code
- * 
+ *
  * @param statusCode - HTTP status code
  * @returns Log level
  */
@@ -148,46 +145,37 @@ function getLogLevel(statusCode: number): string {
 /**
  * Request logging hook for Fastify
  * Logs incoming requests with context
- * 
+ *
  * @param request - Fastify request
  */
-export async function logRequest(
-  request: FastifyRequest,
-  _reply: FastifyReply
-): Promise<void> {
+export async function logRequest(request: FastifyRequest, _reply: FastifyReply): Promise<void> {
   const context = buildRequestContext(request);
-  
+
   logger.http('Incoming request', context);
 }
 
 /**
  * Response logging hook for Fastify
  * Logs completed requests with response details
- * 
+ *
  * @param request - Fastify request
  * @param reply - Fastify reply
  */
-export async function logResponse(
-  request: FastifyRequest,
-  reply: FastifyReply
-): Promise<void> {
+export async function logResponse(request: FastifyRequest, reply: FastifyReply): Promise<void> {
   const context = buildResponseContext(request, reply);
   const level = getLogLevel(reply.statusCode);
-  
+
   logger.log(level, 'Request completed', context);
 }
 
 /**
  * Error logging function
  * Logs errors with full context
- * 
+ *
  * @param request - Fastify request
  * @param error - Error that occurred
  */
-export function logError(
-  request: FastifyRequest,
-  error: Error
-): void {
+export function logError(request: FastifyRequest, error: Error): void {
   const context = {
     ...buildRequestContext(request),
     error: {
@@ -196,7 +184,6 @@ export function logError(
       stack: error.stack,
     },
   };
-  
+
   logger.error('Request error', context);
 }
-

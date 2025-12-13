@@ -1,9 +1,9 @@
 /**
  * Elasticsearch Configuration and Client
- * 
+ *
  * Manages Elasticsearch connection with retry logic, health checks,
  * index mappings, and aliases for zero-downtime reindexing.
- * 
+ *
  * Requirements: 8.1
  */
 
@@ -349,7 +349,10 @@ async function createIndexWithRetry(
       const isLastAttempt = attempt === RETRY_CONFIG.maxRetries - 1;
 
       if (isLastAttempt) {
-        console.error(`Failed to create index ${indexName} after ${RETRY_CONFIG.maxRetries} attempts:`, error);
+        console.error(
+          `Failed to create index ${indexName} after ${RETRY_CONFIG.maxRetries} attempts:`,
+          error
+        );
         throw error;
       }
 
@@ -388,7 +391,7 @@ export async function checkElasticsearchHealth(): Promise<{
   try {
     // Test basic connectivity with cluster health
     const clusterHealth = await elasticsearch.cluster.health();
-    
+
     // Check if our indices exist
     const [coursesExists, lessonsExists] = await Promise.all([
       elasticsearch.indices.exists({ index: ElasticsearchAlias.COURSES }),
@@ -413,7 +416,7 @@ export async function checkElasticsearchHealth(): Promise<{
     };
   } catch (error) {
     const latencyMs = Date.now() - startTime;
-    
+
     return {
       healthy: false,
       latencyMs,
@@ -625,7 +628,7 @@ export async function getIndexStats(indexName: string): Promise<{
 
     return {
       documentCount: indexStats.total?.docs?.count || 0,
-      storeSize: indexStats.total?.store?.size_in_bytes 
+      storeSize: indexStats.total?.store?.size_in_bytes
         ? `${Math.round(indexStats.total.store.size_in_bytes / 1024 / 1024)}MB`
         : '0MB',
       indexingRate: indexStats.total?.indexing?.index_total || 0,
@@ -648,7 +651,6 @@ export async function getIndexStats(indexName: string): Promise<{
 export async function closeElasticsearchConnection(): Promise<void> {
   try {
     await elasticsearch.close();
-    
   } catch (error) {
     console.error('Error closing Elasticsearch connection:', error);
   }

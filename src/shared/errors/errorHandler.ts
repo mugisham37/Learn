@@ -1,6 +1,6 @@
 /**
  * Global Error Handler for Fastify
- * 
+ *
  * Implements comprehensive error handling with logging and sanitization
  * as per Requirements 13.1 and 17.2
  */
@@ -42,7 +42,7 @@ interface ErrorContext {
 /**
  * Sanitize request body for logging
  * Removes sensitive fields like passwords, tokens, etc.
- * 
+ *
  * @param body - Request body to sanitize
  * @returns Sanitized body
  */
@@ -77,15 +77,12 @@ function sanitizeRequestBody(body: unknown): unknown {
 
 /**
  * Build error context for logging
- * 
+ *
  * @param request - Fastify request
  * @param error - Error that occurred
  * @returns Error context object
  */
-function buildErrorContext(
-  request: FastifyRequest,
-  error: Error | FastifyError
-): ErrorContext {
+function buildErrorContext(request: FastifyRequest, error: Error | FastifyError): ErrorContext {
   const context: ErrorContext = {
     requestId: request.id,
     method: request.method,
@@ -137,7 +134,7 @@ function buildErrorContext(
 /**
  * Determine if error should trigger an alert
  * Critical errors like database failures and payment errors should alert on-call
- * 
+ *
  * @param error - Error to check
  * @returns True if error should trigger alert
  */
@@ -164,7 +161,7 @@ function shouldAlert(error: Error): boolean {
 /**
  * Global error handler for Fastify
  * Handles all errors with proper logging, sanitization, and response formatting
- * 
+ *
  * @param error - Error that occurred
  * @param request - Fastify request
  * @param reply - Fastify reply
@@ -185,7 +182,7 @@ export async function errorHandler(
   // Log error with appropriate level using Winston
   if (isServerError) {
     logger.error('Server error occurred', context);
-    
+
     // Trigger alert for critical errors
     if (shouldAlert(error)) {
       // TODO: Integrate with alerting system (PagerDuty, Slack, etc.)
@@ -204,11 +201,7 @@ export async function errorHandler(
   const errorToFormat = isDevelopment ? error : sanitizeError(error);
 
   // Format error response
-  const errorResponse = formatErrorResponse(
-    errorToFormat,
-    request.id,
-    isDevelopment
-  );
+  const errorResponse = formatErrorResponse(errorToFormat, request.id, isDevelopment);
 
   // Add rate limit headers if this is a RateLimitError (Requirement 13.6)
   if (error instanceof RateLimitError) {
@@ -219,15 +212,13 @@ export async function errorHandler(
   }
 
   // Send error response
-  await reply
-    .code(getStatusCode(error))
-    .send(errorResponse);
+  await reply.code(getStatusCode(error)).send(errorResponse);
 }
 
 /**
  * Handle uncaught exceptions
  * Logs the error and exits the process gracefully
- * 
+ *
  * @param error - Uncaught exception
  */
 export function handleUncaughtException(error: Error): void {
@@ -249,21 +240,21 @@ export function handleUncaughtException(error: Error): void {
 /**
  * Handle unhandled promise rejections
  * Logs the error and exits the process gracefully
- * 
+ *
  * @param reason - Rejection reason
  * @param promise - Promise that was rejected
  */
-export function handleUnhandledRejection(
-  reason: unknown,
-  promise: Promise<unknown>
-): void {
+export function handleUnhandledRejection(reason: unknown, promise: Promise<unknown>): void {
   logger.error('UNHANDLED REJECTION! Shutting down...', {
     promise: String(promise),
-    reason: reason instanceof Error ? {
-      name: reason.name,
-      message: reason.message,
-      stack: reason.stack,
-    } : String(reason),
+    reason:
+      reason instanceof Error
+        ? {
+            name: reason.name,
+            message: reason.message,
+            stack: reason.stack,
+          }
+        : String(reason),
     critical: true,
   });
 

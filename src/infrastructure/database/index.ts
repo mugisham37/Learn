@@ -1,9 +1,9 @@
 /**
  * Database Connection and Configuration
- * 
+ *
  * Manages PostgreSQL connection using Drizzle ORM with connection pooling,
  * retry logic, separate read/write pools, transaction management, and PgBouncer support.
- * 
+ *
  * Requirements: 15.7, 16.3
  */
 
@@ -50,16 +50,21 @@ async function createPoolWithRetry(poolConfig: PoolConfig, poolName: string): Pr
       const client = await pool.connect();
       await client.query('SELECT 1');
       client.release();
-      
+
       console.log(`${poolName} connection pool established successfully`);
       return pool;
     } catch (error) {
       const isLastAttempt = attempt === RETRY_CONFIG.maxRetries - 1;
-      
+
       if (isLastAttempt) {
-        console.error(`${poolName} connection failed after ${RETRY_CONFIG.maxRetries} attempts:`, error);
+        console.error(
+          `${poolName} connection failed after ${RETRY_CONFIG.maxRetries} attempts:`,
+          error
+        );
         await pool.end();
-        throw new Error(`Failed to establish ${poolName} connection: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        throw new Error(
+          `Failed to establish ${poolName} connection: ${error instanceof Error ? error.message : 'Unknown error'}`
+        );
       }
 
       const delay = calculateBackoffDelay(attempt);
@@ -67,7 +72,7 @@ async function createPoolWithRetry(poolConfig: PoolConfig, poolName: string): Pr
         `${poolName} connection attempt ${attempt + 1} failed. Retrying in ${delay}ms...`,
         error instanceof Error ? error.message : error
       );
-      
+
       await sleep(delay);
     }
   }
@@ -125,10 +130,10 @@ export async function initializeDatabasePools(): Promise<void> {
   console.log('Initializing database connection pools...');
 
   // Determine pool sizes based on PgBouncer usage
-  const writePoolSize = config.database.usePgBouncer 
+  const writePoolSize = config.database.usePgBouncer
     ? Math.ceil(config.database.poolMax * 0.5) // Smaller pools when using PgBouncer
     : Math.ceil(config.database.poolMax * 0.6);
-    
+
   const readPoolSize = config.database.usePgBouncer
     ? Math.floor(config.database.poolMax * 0.3)
     : Math.floor(config.database.poolMax * 0.4);
@@ -182,7 +187,7 @@ export async function initializeDatabasePools(): Promise<void> {
   if (config.database.enableConnectionMonitoring) {
     connectionMonitor.initialize(writePool, readPool);
     connectionMonitor.startMonitoring();
-    
+
     // Set up alert handling
     connectionMonitor.on('alert', (alert) => {
       console.warn(`[DB Connection Alert] ${alert.type}: ${alert.message}`);
@@ -192,7 +197,9 @@ export async function initializeDatabasePools(): Promise<void> {
     console.log('Connection monitoring enabled');
   }
 
-  console.log(`Database connection pools initialized successfully (PgBouncer: ${config.database.usePgBouncer ? 'enabled' : 'disabled'})`);
+  console.log(
+    `Database connection pools initialized successfully (PgBouncer: ${config.database.usePgBouncer ? 'enabled' : 'disabled'})`
+  );
 }
 
 /**
@@ -246,7 +253,7 @@ export type TransactionCallback<T> = (client: PoolClient) => Promise<T>;
 
 /**
  * Execute a database transaction with automatic rollback on error
- * 
+ *
  * @param callback - Function to execute within the transaction
  * @returns Result of the transaction callback
  * @throws Error if transaction fails
@@ -271,7 +278,7 @@ export async function withTransaction<T>(callback: TransactionCallback<T>): Prom
 
 /**
  * Execute a database transaction with Drizzle ORM
- * 
+ *
  * @param callback - Function to execute within the transaction
  * @returns Result of the transaction callback
  */

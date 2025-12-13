@@ -1,9 +1,9 @@
 /**
  * Course Module Repository Interface
- * 
+ *
  * Defines the contract for course module data access operations.
  * Handles module ordering, prerequisites, and relationships.
- * 
+ *
  * Requirements: 3.2
  */
 
@@ -34,14 +34,14 @@ export interface UpdateCourseModuleDTO {
 
 /**
  * Course Module Repository Interface
- * 
+ *
  * Provides methods for course module data access operations with caching support.
  * Handles module ordering and prerequisite relationships.
  */
 export interface ICourseModuleRepository {
   /**
    * Creates a new course module in the database
-   * 
+   *
    * @param data - Module creation data
    * @returns The created module
    * @throws ConflictError if order number already exists for the course
@@ -51,7 +51,7 @@ export interface ICourseModuleRepository {
 
   /**
    * Finds a module by its unique ID
-   * 
+   *
    * @param id - Module ID
    * @returns The module if found, null otherwise
    * @throws DatabaseError if database operation fails
@@ -60,7 +60,7 @@ export interface ICourseModuleRepository {
 
   /**
    * Finds all modules for a course ordered by orderNumber
-   * 
+   *
    * @param courseId - Course ID
    * @returns Array of modules ordered by orderNumber
    * @throws DatabaseError if database operation fails
@@ -69,7 +69,7 @@ export interface ICourseModuleRepository {
 
   /**
    * Finds modules that have the specified module as a prerequisite
-   * 
+   *
    * @param prerequisiteModuleId - Prerequisite module ID
    * @returns Array of dependent modules
    * @throws DatabaseError if database operation fails
@@ -78,7 +78,7 @@ export interface ICourseModuleRepository {
 
   /**
    * Updates a module's data
-   * 
+   *
    * @param id - Module ID
    * @param data - Update data
    * @returns The updated module
@@ -90,7 +90,7 @@ export interface ICourseModuleRepository {
 
   /**
    * Deletes a module and all its lessons
-   * 
+   *
    * @param id - Module ID
    * @returns void
    * @throws NotFoundError if module doesn't exist
@@ -102,7 +102,7 @@ export interface ICourseModuleRepository {
   /**
    * Reorders modules within a course
    * Updates order numbers to maintain sequential integrity
-   * 
+   *
    * @param courseId - Course ID
    * @param moduleIds - Array of module IDs in desired order
    * @returns Array of updated modules
@@ -114,7 +114,7 @@ export interface ICourseModuleRepository {
 
   /**
    * Gets the next available order number for a course
-   * 
+   *
    * @param courseId - Course ID
    * @returns Next available order number
    * @throws DatabaseError if database operation fails
@@ -123,7 +123,7 @@ export interface ICourseModuleRepository {
 
   /**
    * Checks if a module can be deleted (no dependent modules)
-   * 
+   *
    * @param id - Module ID
    * @returns True if module can be safely deleted
    * @throws DatabaseError if database operation fails
@@ -132,7 +132,7 @@ export interface ICourseModuleRepository {
 
   /**
    * Updates the total duration of a module based on its lessons
-   * 
+   *
    * @param id - Module ID
    * @returns The updated module
    * @throws NotFoundError if module doesn't exist
@@ -142,7 +142,7 @@ export interface ICourseModuleRepository {
 
   /**
    * Invalidates cache for a specific module
-   * 
+   *
    * @param id - Module ID
    * @returns void
    */
@@ -150,7 +150,7 @@ export interface ICourseModuleRepository {
 
   /**
    * Invalidates cache for all modules in a course
-   * 
+   *
    * @param courseId - Course ID
    * @returns void
    */

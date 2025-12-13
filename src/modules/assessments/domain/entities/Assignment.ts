@@ -1,9 +1,9 @@
 /**
  * Assignment Domain Entity
- * 
+ *
  * Represents a file-based assignment with due dates, rubrics, and late submission policies.
  * Implements business logic for assignment creation, validation, and lifecycle management.
- * 
+ *
  * Requirements: 7.1, 7.3, 7.6
  */
 
@@ -42,7 +42,7 @@ export class Assignment {
   static create(data: CreateAssignmentData): Assignment {
     // Validate assignment configuration
     this.validateAssignmentConfig(data.config);
-    
+
     const assignment = new Assignment(
       crypto.randomUUID(),
       data.lessonId,
@@ -53,7 +53,7 @@ export class Assignment {
       new Date(),
       new Date()
     );
-    
+
     return assignment;
   }
   static fromPersistence(
@@ -66,7 +66,16 @@ export class Assignment {
     createdAt: Date,
     updatedAt: Date
   ): Assignment {
-    return new Assignment(id, lessonId, title, description, instructions, config, createdAt, updatedAt);
+    return new Assignment(
+      id,
+      lessonId,
+      title,
+      description,
+      instructions,
+      config,
+      createdAt,
+      updatedAt
+    );
   }
 
   /**
@@ -89,7 +98,10 @@ export class Assignment {
       throw new Error('Max file size must be positive');
     }
 
-    if (config.requiresFileUpload && (!config.allowedFileTypes || config.allowedFileTypes.length === 0)) {
+    if (
+      config.requiresFileUpload &&
+      (!config.allowedFileTypes || config.allowedFileTypes.length === 0)
+    ) {
       throw new Error('Allowed file types must be specified when file upload is required');
     }
 
@@ -98,7 +110,9 @@ export class Assignment {
       const validExtensions = /^\.[a-zA-Z0-9]+$/;
       for (const fileType of config.allowedFileTypes) {
         if (!validExtensions.test(fileType)) {
-          throw new Error(`Invalid file type format: ${fileType}. Must be in format like .pdf, .docx`);
+          throw new Error(
+            `Invalid file type format: ${fileType}. Must be in format like .pdf, .docx`
+          );
         }
       }
     }
@@ -109,11 +123,11 @@ export class Assignment {
    */
   isAcceptingSubmissions(): boolean {
     const now = new Date();
-    
+
     if (now <= this.config.dueDate) {
       return true;
     }
-    
+
     return this.config.lateSubmissionAllowed;
   }
 
@@ -131,7 +145,7 @@ export class Assignment {
     if (!this.isSubmissionLate(submissionDate)) {
       return 0;
     }
-    
+
     return this.config.latePenaltyPercentage;
   }
   /**
@@ -147,18 +161,18 @@ export class Assignment {
     if (fileSizeMb > this.config.maxFileSizeMb) {
       return {
         isValid: false,
-        error: `File size ${fileSizeMb.toFixed(2)}MB exceeds maximum allowed size of ${this.config.maxFileSizeMb}MB`
+        error: `File size ${fileSizeMb.toFixed(2)}MB exceeds maximum allowed size of ${this.config.maxFileSizeMb}MB`,
       };
     }
 
     // Check file type
     const fileExtension = fileName.toLowerCase().substring(fileName.lastIndexOf('.'));
-    const allowedTypes = this.config.allowedFileTypes.map(type => type.toLowerCase());
-    
+    const allowedTypes = this.config.allowedFileTypes.map((type) => type.toLowerCase());
+
     if (!allowedTypes.includes(fileExtension)) {
       return {
         isValid: false,
-        error: `File type ${fileExtension} is not allowed. Allowed types: ${this.config.allowedFileTypes.join(', ')}`
+        error: `File type ${fileExtension} is not allowed. Allowed types: ${this.config.allowedFileTypes.join(', ')}`,
       };
     }
 
@@ -171,7 +185,7 @@ export class Assignment {
   updateConfig(newConfig: Partial<AssignmentConfig>): Assignment {
     const updatedConfig = { ...this.config, ...newConfig };
     Assignment.validateAssignmentConfig(updatedConfig);
-    
+
     return new Assignment(
       this.id,
       this.lessonId,

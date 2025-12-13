@@ -1,9 +1,9 @@
 /**
  * CloudWatch Service
- * 
+ *
  * Handles CloudWatch Logs and Metrics integration for monitoring and observability.
  * Implements log group management, custom metrics, and application KPIs.
- * 
+ *
  * Requirements: 17.4, 17.6
  */
 
@@ -32,7 +32,7 @@ class CloudWatchClient {
   constructor(_config?: unknown) {
     // Mock constructor
   }
-  
+
   async send(_command: unknown): Promise<unknown> {
     return Promise.resolve({});
   }
@@ -42,7 +42,7 @@ class CloudWatchLogsClient {
   constructor(_config?: unknown) {
     // Mock constructor
   }
-  
+
   async send(_command: unknown): Promise<unknown> {
     return Promise.resolve({});
   }
@@ -80,18 +80,23 @@ export interface ICloudWatchService {
   createLogGroup(logGroupName: string, retentionDays?: number): Promise<void>;
   createLogStream(logGroupName: string, logStreamName: string): Promise<void>;
   ensureLogGroupExists(logGroupName: string, retentionDays?: number): Promise<void>;
-  
+
   // Custom Metrics
-  putMetric(metricName: string, value: number, unit?: string, dimensions?: Dimension[]): Promise<void>;
+  putMetric(
+    metricName: string,
+    value: number,
+    unit?: string,
+    dimensions?: Dimension[]
+  ): Promise<void>;
   putMetrics(metrics: MetricDatum[]): Promise<void>;
-  
+
   // Application KPIs
   recordResponseTime(endpoint: string, method: string, responseTime: number): Promise<void>;
   recordThroughput(endpoint: string, method: string, count?: number): Promise<void>;
   recordErrorRate(endpoint: string, method: string, errorType: string): Promise<void>;
   recordDatabaseQueryTime(operation: string, table: string, duration: number): Promise<void>;
   recordCacheHitRate(cacheType: string, hits: number, misses: number): Promise<void>;
-  
+
   // Health Check
   isHealthy(): Promise<boolean>;
 }
@@ -115,7 +120,7 @@ export class CloudWatchService implements ICloudWatchService {
   private initializeClients(): boolean {
     try {
       const awsConfig = secrets.getAwsConfig();
-      
+
       if (!awsConfig.accessKeyId || !awsConfig.secretAccessKey || !awsConfig.region) {
         logger.warn('CloudWatch service disabled: Missing AWS credentials');
         return false;
@@ -162,11 +167,16 @@ export class CloudWatchService implements ICloudWatchService {
         await this.setLogRetention(logGroupName, retentionDays);
       }
     } catch (error: unknown) {
-      if (error && typeof error === 'object' && 'name' in error && error.name === 'ResourceAlreadyExistsException') {
+      if (
+        error &&
+        typeof error === 'object' &&
+        'name' in error &&
+        error.name === 'ResourceAlreadyExistsException'
+      ) {
         logger.debug(`Log group already exists: ${logGroupName}`);
       } else {
-        logger.error(`Failed to create log group: ${logGroupName}`, { 
-          error: error instanceof Error ? error.message : 'Unknown error' 
+        logger.error(`Failed to create log group: ${logGroupName}`, {
+          error: error instanceof Error ? error.message : 'Unknown error',
         });
         throw error;
       }
@@ -191,11 +201,16 @@ export class CloudWatchService implements ICloudWatchService {
       await this.logsClient.send(command);
       logger.info(`Created CloudWatch log stream: ${logStreamName} in ${logGroupName}`);
     } catch (error: unknown) {
-      if (error && typeof error === 'object' && 'name' in error && error.name === 'ResourceAlreadyExistsException') {
+      if (
+        error &&
+        typeof error === 'object' &&
+        'name' in error &&
+        error.name === 'ResourceAlreadyExistsException'
+      ) {
         logger.debug(`Log stream already exists: ${logStreamName}`);
       } else {
-        logger.error(`Failed to create log stream: ${logStreamName}`, { 
-          error: error instanceof Error ? error.message : 'Unknown error' 
+        logger.error(`Failed to create log stream: ${logStreamName}`, {
+          error: error instanceof Error ? error.message : 'Unknown error',
         });
         throw error;
       }
@@ -215,8 +230,10 @@ export class CloudWatchService implements ICloudWatchService {
         logGroupNamePrefix: logGroupName,
       });
 
-      const response = await this.logsClient.send(command) as { logGroups?: LogGroup[] };
-      const exists = response.logGroups?.some((group: LogGroup) => group.logGroupName === logGroupName);
+      const response = (await this.logsClient.send(command)) as { logGroups?: LogGroup[] };
+      const exists = response.logGroups?.some(
+        (group: LogGroup) => group.logGroupName === logGroupName
+      );
 
       if (!exists) {
         await this.createLogGroup(logGroupName, retentionDays);

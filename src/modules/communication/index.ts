@@ -1,6 +1,6 @@
 /**
  * Communication Module
- * 
+ *
  * Handles direct messaging, discussion forums, and announcements
  * Provides real-time communication capabilities for the learning platform
  */

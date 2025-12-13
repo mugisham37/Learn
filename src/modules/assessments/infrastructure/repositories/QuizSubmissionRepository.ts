@@ -1,23 +1,28 @@
 /**
  * Quiz Submission Repository Implementation
- * 
+ *
  * Implements quiz submission data access operations with Drizzle ORM queries,
  * Redis caching with 5-minute TTL, and cache invalidation on updates.
  * Handles database errors and maps them to domain errors.
- * 
+ *
  * Requirements: 6.3, 6.4, 6.5, 6.6, 6.7
  */
 
 import { eq, and, desc, count, sql, max, gte, lte } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
-import { cache, buildCacheKey, CachePrefix, CacheTTL } from '../../../../infrastructure/cache/index.js';
+import {
+  cache,
+  buildCacheKey,
+  CachePrefix,
+  CacheTTL,
+} from '../../../../infrastructure/cache/index.js';
 import { getWriteDb, getReadDb } from '../../../../infrastructure/database/index.js';
-import { 
+import {
   quizSubmissions,
   quizzes,
-  QuizSubmission, 
-  NewQuizSubmission
+  QuizSubmission,
+  NewQuizSubmission,
 } from '../../../../infrastructure/database/schema/assessments.schema.js';
 import { users, userProfiles } from '../../../../infrastructure/database/schema/users.schema.js';
 import {
@@ -40,7 +45,7 @@ import {
 
 /**
  * Quiz Submission Repository Implementation
- * 
+ *
  * Provides data access methods for quiz submission entities with:
  * - Drizzle ORM for type-safe queries
  * - Redis caching with 5-minute TTL
@@ -68,8 +73,8 @@ export class QuizSubmissionRepository implements IQuizSubmissionRepository {
    * Builds cache key for quiz submissions list
    */
   private getQuizSubmissionsCacheKey(
-    quizId: string, 
-    page: number, 
+    quizId: string,
+    page: number,
     limit: number,
     filters?: QuizSubmissionFilters
   ): string {
@@ -81,13 +86,20 @@ export class QuizSubmissionRepository implements IQuizSubmissionRepository {
    * Builds cache key for student submissions list
    */
   private getStudentSubmissionsCacheKey(
-    studentId: string, 
-    page: number, 
+    studentId: string,
+    page: number,
     limit: number,
     filters?: QuizSubmissionFilters
   ): string {
     const filterKey = filters ? JSON.stringify(filters) : 'all';
-    return buildCacheKey(CachePrefix.QUIZ, 'student-submissions', studentId, page, limit, filterKey);
+    return buildCacheKey(
+      CachePrefix.QUIZ,
+      'student-submissions',
+      studentId,
+      page,
+      limit,
+      filterKey
+    );
   }
 
   /**
@@ -99,7 +111,7 @@ export class QuizSubmissionRepository implements IQuizSubmissionRepository {
 
   /**
    * Creates a new quiz submission in the database
-   * 
+   *
    * @param data - Quiz submission creation data
    * @returns The created quiz submission
    * @throws ValidationError if quiz, student, or enrollment doesn't exist
@@ -125,10 +137,7 @@ export class QuizSubmissionRepository implements IQuizSubmissionRepository {
         .returning();
 
       if (!createdSubmission) {
-        throw new DatabaseError(
-          'Failed to create quiz submission',
-          'insert'
-        );
+        throw new DatabaseError('Failed to create quiz submission', 'insert');
       }
 
       // Invalidate related caches
@@ -145,22 +154,19 @@ export class QuizSubmissionRepository implements IQuizSubmissionRepository {
       if (error instanceof Error) {
         if (error.message.includes('foreign key')) {
           if (error.message.includes('quiz')) {
-            throw new ValidationError(
-              'Invalid quiz ID',
-              [{ field: 'quizId', message: 'Quiz does not exist' }]
-            );
+            throw new ValidationError('Invalid quiz ID', [
+              { field: 'quizId', message: 'Quiz does not exist' },
+            ]);
           }
           if (error.message.includes('student') || error.message.includes('user')) {
-            throw new ValidationError(
-              'Invalid student ID',
-              [{ field: 'studentId', message: 'Student does not exist' }]
-            );
+            throw new ValidationError('Invalid student ID', [
+              { field: 'studentId', message: 'Student does not exist' },
+            ]);
           }
           if (error.message.includes('enrollment')) {
-            throw new ValidationError(
-              'Invalid enrollment ID',
-              [{ field: 'enrollmentId', message: 'Enrollment does not exist' }]
-            );
+            throw new ValidationError('Invalid enrollment ID', [
+              { field: 'enrollmentId', message: 'Enrollment does not exist' },
+            ]);
           }
         }
         if (error.message.includes('unique') || error.message.includes('attempt')) {
@@ -182,7 +188,7 @@ export class QuizSubmissionRepository implements IQuizSubmissionRepository {
 
   /**
    * Finds a quiz submission by its unique ID
-   * 
+   *
    * @param id - Quiz submission ID
    * @returns The quiz submission if found, null otherwise
    * @throws DatabaseError if database operation fails
@@ -192,7 +198,7 @@ export class QuizSubmissionRepository implements IQuizSubmissionRepository {
       // Check cache first
       const cacheKey = this.getSubmissionCacheKey(id);
       const cachedSubmission = await cache.get<QuizSubmission>(cacheKey);
-      
+
       if (cachedSubmission) {
         return cachedSubmission;
       }
@@ -223,7 +229,7 @@ export class QuizSubmissionRepository implements IQuizSubmissionRepository {
 
   /**
    * Finds a quiz submission by ID with related quiz and student data
-   * 
+   *
    * @param id - Quiz submission ID
    * @returns The quiz submission with details if found, null otherwise
    * @throws DatabaseError if database operation fails
@@ -281,7 +287,7 @@ export class QuizSubmissionRepository implements IQuizSubmissionRepository {
 
   /**
    * Finds quiz submissions by quiz with pagination
-   * 
+   *
    * @param quizId - Quiz ID
    * @param pagination - Pagination parameters
    * @param filters - Optional filters
@@ -296,54 +302,52 @@ export class QuizSubmissionRepository implements IQuizSubmissionRepository {
     try {
       // Check cache first
       const cacheKey = this.getQuizSubmissionsCacheKey(
-        quizId, 
-        pagination.page, 
-        pagination.limit, 
+        quizId,
+        pagination.page,
+        pagination.limit,
         filters
       );
       const cachedResult = await cache.get<PaginatedResult<QuizSubmission>>(cacheKey);
-      
+
       if (cachedResult) {
         return cachedResult;
       }
 
       // Build where conditions
       const whereConditions = [eq(quizSubmissions.quizId, quizId)];
-      
+
       if (filters?.studentId) {
         whereConditions.push(eq(quizSubmissions.studentId, filters.studentId));
       }
-      
+
       if (filters?.enrollmentId) {
         whereConditions.push(eq(quizSubmissions.enrollmentId, filters.enrollmentId));
       }
-      
+
       if (filters?.gradingStatus) {
         whereConditions.push(eq(quizSubmissions.gradingStatus, filters.gradingStatus));
       }
-      
+
       if (filters?.submittedOnly) {
         whereConditions.push(sql`${quizSubmissions.submittedAt} IS NOT NULL`);
       }
-      
+
       if (filters?.dateFrom) {
         whereConditions.push(gte(quizSubmissions.startedAt, filters.dateFrom));
       }
-      
+
       if (filters?.dateTo) {
         whereConditions.push(lte(quizSubmissions.startedAt, filters.dateTo));
       }
 
-      const whereClause = whereConditions.length > 1 
-        ? and(...whereConditions) 
-        : whereConditions[0];
+      const whereClause = whereConditions.length > 1 ? and(...whereConditions) : whereConditions[0];
 
       // Get total count
       const [totalResult] = await this.readDb
         .select({ total: count() })
         .from(quizSubmissions)
         .where(whereClause);
-      
+
       const total = totalResult?.total || 0;
 
       // Get paginated results
@@ -379,7 +383,7 @@ export class QuizSubmissionRepository implements IQuizSubmissionRepository {
 
   /**
    * Finds quiz submissions by student with pagination
-   * 
+   *
    * @param studentId - Student ID
    * @param pagination - Pagination parameters
    * @param filters - Optional filters
@@ -394,54 +398,52 @@ export class QuizSubmissionRepository implements IQuizSubmissionRepository {
     try {
       // Check cache first
       const cacheKey = this.getStudentSubmissionsCacheKey(
-        studentId, 
-        pagination.page, 
-        pagination.limit, 
+        studentId,
+        pagination.page,
+        pagination.limit,
         filters
       );
       const cachedResult = await cache.get<PaginatedResult<QuizSubmission>>(cacheKey);
-      
+
       if (cachedResult) {
         return cachedResult;
       }
 
       // Build where conditions
       const whereConditions = [eq(quizSubmissions.studentId, studentId)];
-      
+
       if (filters?.quizId) {
         whereConditions.push(eq(quizSubmissions.quizId, filters.quizId));
       }
-      
+
       if (filters?.enrollmentId) {
         whereConditions.push(eq(quizSubmissions.enrollmentId, filters.enrollmentId));
       }
-      
+
       if (filters?.gradingStatus) {
         whereConditions.push(eq(quizSubmissions.gradingStatus, filters.gradingStatus));
       }
-      
+
       if (filters?.submittedOnly) {
         whereConditions.push(sql`${quizSubmissions.submittedAt} IS NOT NULL`);
       }
-      
+
       if (filters?.dateFrom) {
         whereConditions.push(gte(quizSubmissions.startedAt, filters.dateFrom));
       }
-      
+
       if (filters?.dateTo) {
         whereConditions.push(lte(quizSubmissions.startedAt, filters.dateTo));
       }
 
-      const whereClause = whereConditions.length > 1 
-        ? and(...whereConditions) 
-        : whereConditions[0];
+      const whereClause = whereConditions.length > 1 ? and(...whereConditions) : whereConditions[0];
 
       // Get total count
       const [totalResult] = await this.readDb
         .select({ total: count() })
         .from(quizSubmissions)
         .where(whereClause);
-      
+
       const total = totalResult?.total || 0;
 
       // Get paginated results
@@ -477,7 +479,7 @@ export class QuizSubmissionRepository implements IQuizSubmissionRepository {
 
   /**
    * Finds quiz submissions by enrollment with pagination
-   * 
+   *
    * @param enrollmentId - Enrollment ID
    * @param pagination - Pagination parameters
    * @param filters - Optional filters
@@ -492,41 +494,39 @@ export class QuizSubmissionRepository implements IQuizSubmissionRepository {
     try {
       // Build where conditions
       const whereConditions = [eq(quizSubmissions.enrollmentId, enrollmentId)];
-      
+
       if (filters?.quizId) {
         whereConditions.push(eq(quizSubmissions.quizId, filters.quizId));
       }
-      
+
       if (filters?.studentId) {
         whereConditions.push(eq(quizSubmissions.studentId, filters.studentId));
       }
-      
+
       if (filters?.gradingStatus) {
         whereConditions.push(eq(quizSubmissions.gradingStatus, filters.gradingStatus));
       }
-      
+
       if (filters?.submittedOnly) {
         whereConditions.push(sql`${quizSubmissions.submittedAt} IS NOT NULL`);
       }
-      
+
       if (filters?.dateFrom) {
         whereConditions.push(gte(quizSubmissions.startedAt, filters.dateFrom));
       }
-      
+
       if (filters?.dateTo) {
         whereConditions.push(lte(quizSubmissions.startedAt, filters.dateTo));
       }
 
-      const whereClause = whereConditions.length > 1 
-        ? and(...whereConditions) 
-        : whereConditions[0];
+      const whereClause = whereConditions.length > 1 ? and(...whereConditions) : whereConditions[0];
 
       // Get total count
       const [totalResult] = await this.readDb
         .select({ total: count() })
         .from(quizSubmissions)
         .where(whereClause);
-      
+
       const total = totalResult?.total || 0;
 
       // Get paginated results
@@ -559,14 +559,18 @@ export class QuizSubmissionRepository implements IQuizSubmissionRepository {
 
   /**
    * Finds a specific attempt for a student and quiz
-   * 
+   *
    * @param quizId - Quiz ID
    * @param studentId - Student ID
    * @param attemptNumber - Attempt number
    * @returns The quiz submission if found, null otherwise
    * @throws DatabaseError if database operation fails
    */
-  async findAttempt(quizId: string, studentId: string, attemptNumber: number): Promise<QuizSubmission | null> {
+  async findAttempt(
+    quizId: string,
+    studentId: string,
+    attemptNumber: number
+  ): Promise<QuizSubmission | null> {
     try {
       const [submission] = await this.readDb
         .select()
@@ -592,7 +596,7 @@ export class QuizSubmissionRepository implements IQuizSubmissionRepository {
 
   /**
    * Finds the latest attempt for a student and quiz
-   * 
+   *
    * @param quizId - Quiz ID
    * @param studentId - Student ID
    * @returns The latest quiz submission if found, null otherwise
@@ -603,12 +607,7 @@ export class QuizSubmissionRepository implements IQuizSubmissionRepository {
       const [submission] = await this.readDb
         .select()
         .from(quizSubmissions)
-        .where(
-          and(
-            eq(quizSubmissions.quizId, quizId),
-            eq(quizSubmissions.studentId, studentId)
-          )
-        )
+        .where(and(eq(quizSubmissions.quizId, quizId), eq(quizSubmissions.studentId, studentId)))
         .orderBy(desc(quizSubmissions.attemptNumber))
         .limit(1);
 
@@ -624,7 +623,7 @@ export class QuizSubmissionRepository implements IQuizSubmissionRepository {
 
   /**
    * Finds all attempts for a student and quiz
-   * 
+   *
    * @param quizId - Quiz ID
    * @param studentId - Student ID
    * @returns All quiz submissions for the student and quiz
@@ -635,12 +634,7 @@ export class QuizSubmissionRepository implements IQuizSubmissionRepository {
       const submissions = await this.readDb
         .select()
         .from(quizSubmissions)
-        .where(
-          and(
-            eq(quizSubmissions.quizId, quizId),
-            eq(quizSubmissions.studentId, studentId)
-          )
-        )
+        .where(and(eq(quizSubmissions.quizId, quizId), eq(quizSubmissions.studentId, studentId)))
         .orderBy(quizSubmissions.attemptNumber);
 
       return submissions;
@@ -655,7 +649,7 @@ export class QuizSubmissionRepository implements IQuizSubmissionRepository {
 
   /**
    * Finds submissions pending manual grading
-   * 
+   *
    * @param pagination - Pagination parameters
    * @param filters - Optional filters
    * @returns Paginated submissions pending review
@@ -668,37 +662,35 @@ export class QuizSubmissionRepository implements IQuizSubmissionRepository {
     try {
       // Build where conditions
       const whereConditions = [eq(quizSubmissions.gradingStatus, 'pending_review')];
-      
+
       if (filters?.quizId) {
         whereConditions.push(eq(quizSubmissions.quizId, filters.quizId));
       }
-      
+
       if (filters?.studentId) {
         whereConditions.push(eq(quizSubmissions.studentId, filters.studentId));
       }
-      
+
       if (filters?.enrollmentId) {
         whereConditions.push(eq(quizSubmissions.enrollmentId, filters.enrollmentId));
       }
-      
+
       if (filters?.dateFrom) {
         whereConditions.push(gte(quizSubmissions.submittedAt, filters.dateFrom));
       }
-      
+
       if (filters?.dateTo) {
         whereConditions.push(lte(quizSubmissions.submittedAt, filters.dateTo));
       }
 
-      const whereClause = whereConditions.length > 1 
-        ? and(...whereConditions) 
-        : whereConditions[0];
+      const whereClause = whereConditions.length > 1 ? and(...whereConditions) : whereConditions[0];
 
       // Get total count
       const [totalResult] = await this.readDb
         .select({ total: count() })
         .from(quizSubmissions)
         .where(whereClause);
-      
+
       const total = totalResult?.total || 0;
 
       // Get paginated results with details
@@ -729,7 +721,7 @@ export class QuizSubmissionRepository implements IQuizSubmissionRepository {
         .limit(pagination.limit)
         .offset(offset);
 
-      const submissionsWithDetails: QuizSubmissionWithDetails[] = results.map(result => ({
+      const submissionsWithDetails: QuizSubmissionWithDetails[] = results.map((result) => ({
         ...result.submission,
         quiz: result.quiz || undefined,
         student: {
@@ -759,7 +751,7 @@ export class QuizSubmissionRepository implements IQuizSubmissionRepository {
 
   /**
    * Updates a quiz submission's data
-   * 
+   *
    * @param id - Quiz submission ID
    * @param data - Update data
    * @returns The updated quiz submission
@@ -788,10 +780,7 @@ export class QuizSubmissionRepository implements IQuizSubmissionRepository {
         .returning();
 
       if (!updatedSubmission) {
-        throw new DatabaseError(
-          'Failed to update quiz submission',
-          'update'
-        );
+        throw new DatabaseError('Failed to update quiz submission', 'update');
       }
 
       // Invalidate cache
@@ -801,10 +790,7 @@ export class QuizSubmissionRepository implements IQuizSubmissionRepository {
       return updatedSubmission;
     } catch (error) {
       // Re-throw known errors
-      if (
-        error instanceof NotFoundError ||
-        error instanceof DatabaseError
-      ) {
+      if (error instanceof NotFoundError || error instanceof DatabaseError) {
         throw error;
       }
 
@@ -819,7 +805,7 @@ export class QuizSubmissionRepository implements IQuizSubmissionRepository {
 
   /**
    * Deletes a quiz submission from the database
-   * 
+   *
    * @param id - Quiz submission ID
    * @returns void
    * @throws NotFoundError if quiz submission doesn't exist
@@ -840,10 +826,7 @@ export class QuizSubmissionRepository implements IQuizSubmissionRepository {
         .returning();
 
       if (!result || result.length === 0) {
-        throw new DatabaseError(
-          'Failed to delete quiz submission',
-          'delete'
-        );
+        throw new DatabaseError('Failed to delete quiz submission', 'delete');
       }
 
       // Invalidate cache
@@ -866,7 +849,7 @@ export class QuizSubmissionRepository implements IQuizSubmissionRepository {
 
   /**
    * Deletes all submissions for a quiz
-   * 
+   *
    * @param quizId - Quiz ID
    * @returns Number of deleted submissions
    * @throws DatabaseError if database operation fails
@@ -887,8 +870,8 @@ export class QuizSubmissionRepository implements IQuizSubmissionRepository {
 
       // Invalidate cache for all deleted submissions
       await Promise.all([
-        ...existingSubmissions.map(s => cache.delete(this.getSubmissionCacheKey(s.id))),
-        ...existingSubmissions.map(s => this.invalidateCache(s.quizId, s.studentId))
+        ...existingSubmissions.map((s) => cache.delete(this.getSubmissionCacheKey(s.id))),
+        ...existingSubmissions.map((s) => this.invalidateCache(s.quizId, s.studentId)),
       ]);
 
       return result.length;
@@ -903,7 +886,7 @@ export class QuizSubmissionRepository implements IQuizSubmissionRepository {
 
   /**
    * Gets the next attempt number for a student and quiz
-   * 
+   *
    * @param quizId - Quiz ID
    * @param studentId - Student ID
    * @returns Next attempt number
@@ -914,12 +897,7 @@ export class QuizSubmissionRepository implements IQuizSubmissionRepository {
       const [result] = await this.readDb
         .select({ maxAttempt: max(quizSubmissions.attemptNumber) })
         .from(quizSubmissions)
-        .where(
-          and(
-            eq(quizSubmissions.quizId, quizId),
-            eq(quizSubmissions.studentId, studentId)
-          )
-        );
+        .where(and(eq(quizSubmissions.quizId, quizId), eq(quizSubmissions.studentId, studentId)));
 
       return (result?.maxAttempt || 0) + 1;
     } catch (error) {
@@ -933,7 +911,7 @@ export class QuizSubmissionRepository implements IQuizSubmissionRepository {
 
   /**
    * Counts total attempts for a student and quiz
-   * 
+   *
    * @param quizId - Quiz ID
    * @param studentId - Student ID
    * @returns Number of attempts
@@ -944,12 +922,7 @@ export class QuizSubmissionRepository implements IQuizSubmissionRepository {
       const [result] = await this.readDb
         .select({ count: count() })
         .from(quizSubmissions)
-        .where(
-          and(
-            eq(quizSubmissions.quizId, quizId),
-            eq(quizSubmissions.studentId, studentId)
-          )
-        );
+        .where(and(eq(quizSubmissions.quizId, quizId), eq(quizSubmissions.studentId, studentId)));
 
       return result?.count || 0;
     } catch (error) {
@@ -963,7 +936,7 @@ export class QuizSubmissionRepository implements IQuizSubmissionRepository {
 
   /**
    * Gets the best score for a student and quiz
-   * 
+   *
    * @param quizId - Quiz ID
    * @param studentId - Student ID
    * @returns Best score percentage, null if no attempts
@@ -972,8 +945,8 @@ export class QuizSubmissionRepository implements IQuizSubmissionRepository {
   async getBestScore(quizId: string, studentId: string): Promise<number | null> {
     try {
       const [result] = await this.readDb
-        .select({ 
-          bestScore: sql<string>`MAX(${quizSubmissions.scorePercentage})` 
+        .select({
+          bestScore: sql<string>`MAX(${quizSubmissions.scorePercentage})`,
         })
         .from(quizSubmissions)
         .where(
@@ -996,7 +969,7 @@ export class QuizSubmissionRepository implements IQuizSubmissionRepository {
 
   /**
    * Gets attempt summary for a student and quiz
-   * 
+   *
    * @param quizId - Quiz ID
    * @param studentId - Student ID
    * @returns Student attempt summary
@@ -1007,7 +980,7 @@ export class QuizSubmissionRepository implements IQuizSubmissionRepository {
       // Check cache first
       const cacheKey = this.getAttemptSummaryCacheKey(quizId, studentId);
       const cachedSummary = await cache.get<StudentAttemptSummary>(cacheKey);
-      
+
       if (cachedSummary) {
         return cachedSummary;
       }
@@ -1019,12 +992,7 @@ export class QuizSubmissionRepository implements IQuizSubmissionRepository {
           lastAttemptAt: sql<Date>`MAX(${quizSubmissions.startedAt})`,
         })
         .from(quizSubmissions)
-        .where(
-          and(
-            eq(quizSubmissions.quizId, quizId),
-            eq(quizSubmissions.studentId, studentId)
-          )
-        );
+        .where(and(eq(quizSubmissions.quizId, quizId), eq(quizSubmissions.studentId, studentId)));
 
       // Get quiz passing score to determine if student has passing score
       const [quiz] = await this.readDb
@@ -1035,7 +1003,7 @@ export class QuizSubmissionRepository implements IQuizSubmissionRepository {
 
       const bestScore = result?.bestScore ? parseFloat(result.bestScore) : null;
       const passingScore = quiz?.passingScorePercentage || 0;
-      
+
       const summary: StudentAttemptSummary = {
         studentId,
         quizId,
@@ -1060,7 +1028,7 @@ export class QuizSubmissionRepository implements IQuizSubmissionRepository {
 
   /**
    * Checks if a student has a passing score for a quiz
-   * 
+   *
    * @param quizId - Quiz ID
    * @param studentId - Student ID
    * @returns True if student has passing score, false otherwise
@@ -1081,7 +1049,7 @@ export class QuizSubmissionRepository implements IQuizSubmissionRepository {
 
   /**
    * Checks if a quiz submission exists
-   * 
+   *
    * @param id - Quiz submission ID
    * @returns True if submission exists, false otherwise
    * @throws DatabaseError if database operation fails
@@ -1102,16 +1070,14 @@ export class QuizSubmissionRepository implements IQuizSubmissionRepository {
   /**
    * Invalidates cache for quiz submissions
    * Should be called after any update operation
-   * 
+   *
    * @param quizId - Quiz ID
    * @param studentId - Optional student ID for targeted invalidation
    * @returns void
    */
   async invalidateCache(quizId: string, studentId?: string): Promise<void> {
     try {
-      const patterns = [
-        buildCacheKey(CachePrefix.QUIZ, 'submissions', quizId, '*'),
-      ];
+      const patterns = [buildCacheKey(CachePrefix.QUIZ, 'submissions', quizId, '*')];
 
       if (studentId) {
         patterns.push(
@@ -1120,7 +1086,7 @@ export class QuizSubmissionRepository implements IQuizSubmissionRepository {
         );
       }
 
-      await Promise.all(patterns.map(pattern => cache.deletePattern(pattern)));
+      await Promise.all(patterns.map((pattern) => cache.deletePattern(pattern)));
     } catch (error) {
       // Log error but don't throw - cache invalidation failure shouldn't break the operation
       console.error(`Failed to invalidate cache for quiz submissions ${quizId}:`, error);

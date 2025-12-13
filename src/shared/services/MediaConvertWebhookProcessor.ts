@@ -1,18 +1,16 @@
 /**
  * MediaConvert Webhook Processor
- * 
+ *
  * Processes MediaConvert job completion webhooks and updates video processing status.
  * Integrates with the video processing workflow to handle job completion events.
- * 
+ *
  * Requirements:
  * - 4.4: Processing completion handling
  * - 4.6: Notification on processing completion/failure
  */
 
 import { IContentRepository } from '../../modules/content/infrastructure/repositories/IContentRepository.js';
-import { 
-  ValidationError
-} from '../errors/index.js';
+import { ValidationError } from '../errors/index.js';
 import { logger } from '../utils/logger.js';
 
 /**
@@ -59,14 +57,12 @@ interface ProcessedOutput {
 
 /**
  * MediaConvert Webhook Processor
- * 
+ *
  * Handles MediaConvert job completion events and updates video processing status
  * in the database with comprehensive error handling and logging.
  */
 export class MediaConvertWebhookProcessor {
-  constructor(
-    private readonly contentRepository: IContentRepository
-  ) {}
+  constructor(private readonly contentRepository: IContentRepository) {}
 
   /**
    * Processes a MediaConvert webhook event
@@ -133,12 +129,7 @@ export class MediaConvertWebhookProcessor {
 
         case 'ERROR':
         case 'CANCELED':
-          await this.handleJobFailure(
-            processingJob.id,
-            videoAsset.id,
-            status,
-            errorMessage
-          );
+          await this.handleJobFailure(processingJob.id, videoAsset.id, status, errorMessage);
           break;
 
         case 'PROGRESSING':
@@ -186,7 +177,7 @@ export class MediaConvertWebhookProcessor {
       const outputs = this.parseOutputDetails(outputGroupDetails);
 
       // Prepare video asset update data
-      const availableResolutions = outputs.map(output => ({
+      const availableResolutions = outputs.map((output) => ({
         resolution: output.resolution,
         url: output.url,
         bitrate: output.bitrate,
@@ -194,41 +185,35 @@ export class MediaConvertWebhookProcessor {
         duration: output.duration,
       }));
 
-      const streamingUrls = outputs.reduce((urls, output) => {
-        urls[output.resolution] = output.url;
-        return urls;
-      }, {} as Record<string, string>);
+      const streamingUrls = outputs.reduce(
+        (urls, output) => {
+          urls[output.resolution] = output.url;
+          return urls;
+        },
+        {} as Record<string, string>
+      );
 
       // Find HLS manifest URL (usually the highest resolution or master playlist)
-      const hlsManifestUrl = outputs.find(o => o.resolution === '1080p')?.url || 
-                            outputs[0]?.url;
+      const hlsManifestUrl = outputs.find((o) => o.resolution === '1080p')?.url || outputs[0]?.url;
 
       // Update video asset with completion data
-      await this.contentRepository.updateVideoAssetProcessingStatus(
-        videoAssetId,
-        'completed',
-        {
-          availableResolutions,
-          streamingUrls,
-          hlsManifestUrl,
-          processingCompletedAt: new Date().toISOString(),
-          ...(outputs.length > 0 && outputs[0]?.duration && {
+      await this.contentRepository.updateVideoAssetProcessingStatus(videoAssetId, 'completed', {
+        availableResolutions,
+        streamingUrls,
+        hlsManifestUrl,
+        processingCompletedAt: new Date().toISOString(),
+        ...(outputs.length > 0 &&
+          outputs[0]?.duration && {
             durationSeconds: Math.round(outputs[0].duration / 1000),
           }),
-        }
-      );
+      });
 
       // Update processing job status
-      await this.contentRepository.updateProcessingJobStatus(
-        processingJobId,
-        'completed',
-        100,
-        {
-          outputs,
-          completedAt: new Date().toISOString(),
-          userMetadata,
-        }
-      );
+      await this.contentRepository.updateProcessingJobStatus(processingJobId, 'completed', 100, {
+        outputs,
+        completedAt: new Date().toISOString(),
+        userMetadata,
+      });
 
       logger.info('Video processing completed successfully', {
         videoAssetId,
@@ -315,10 +300,7 @@ export class MediaConvertWebhookProcessor {
   /**
    * Handles job progress updates
    */
-  private async handleJobProgress(
-    processingJobId: string,
-    videoAssetId: string
-  ): Promise<void> {
+  private async handleJobProgress(processingJobId: string, videoAssetId: string): Promise<void> {
     try {
       logger.debug('Handling MediaConvert job progress', {
         processingJobId,
@@ -328,19 +310,13 @@ export class MediaConvertWebhookProcessor {
       // Update video asset status to in_progress if not already
       const videoAsset = await this.contentRepository.findVideoAssetById(videoAssetId);
       if (videoAsset && videoAsset.processingStatus === 'pending') {
-        await this.contentRepository.updateVideoAssetProcessingStatus(
-          videoAssetId,
-          'in_progress'
-        );
+        await this.contentRepository.updateVideoAssetProcessingStatus(videoAssetId, 'in_progress');
       }
 
       // Update processing job status
       const processingJob = await this.contentRepository.findProcessingJobById(processingJobId);
       if (processingJob && processingJob.status === 'pending') {
-        await this.contentRepository.updateProcessingJobStatus(
-          processingJobId,
-          'in_progress'
-        );
+        await this.contentRepository.updateProcessingJobStatus(processingJobId, 'in_progress');
       }
     } catch (error) {
       logger.error('Failed to handle job progress', {
@@ -411,11 +387,16 @@ export class MediaConvertWebhookProcessor {
    */
   private estimateBitrateFromResolution(resolution: string): number {
     switch (resolution) {
-      case '1080p': return 5000000; // 5 Mbps
-      case '720p': return 3000000;  // 3 Mbps
-      case '480p': return 1500000;  // 1.5 Mbps
-      case '360p': return 800000;   // 800 Kbps
-      default: return 2000000;      // 2 Mbps default
+      case '1080p':
+        return 5000000; // 5 Mbps
+      case '720p':
+        return 3000000; // 3 Mbps
+      case '480p':
+        return 1500000; // 1.5 Mbps
+      case '360p':
+        return 800000; // 800 Kbps
+      default:
+        return 2000000; // 2 Mbps default
     }
   }
 

@@ -1,6 +1,6 @@
 /**
  * S3 Service Interface
- * 
+ *
  * Defines the contract for S3 file operations.
  * Abstracts AWS S3 operations behind a clean interface.
  */
@@ -35,14 +35,14 @@ export interface PresignedUrlParams {
 
 /**
  * S3 Service Interface
- * 
+ *
  * Provides methods for S3 file operations including uploads,
  * deletions, and presigned URL generation.
  */
 export interface IS3Service {
   /**
    * Uploads a file to S3
-   * 
+   *
    * @param params - Upload parameters
    * @returns Upload result with URL and metadata
    * @throws ExternalServiceError if S3 operation fails
@@ -51,7 +51,7 @@ export interface IS3Service {
 
   /**
    * Deletes a file from S3
-   * 
+   *
    * @param key - S3 object key
    * @returns void
    * @throws ExternalServiceError if S3 operation fails
@@ -60,7 +60,7 @@ export interface IS3Service {
 
   /**
    * Generates a presigned URL for file upload
-   * 
+   *
    * @param params - Presigned URL parameters
    * @returns Presigned URL
    * @throws ExternalServiceError if S3 operation fails
@@ -69,7 +69,7 @@ export interface IS3Service {
 
   /**
    * Checks if a file exists in S3
-   * 
+   *
    * @param key - S3 object key
    * @returns True if file exists, false otherwise
    * @throws ExternalServiceError if S3 operation fails
@@ -78,7 +78,7 @@ export interface IS3Service {
 
   /**
    * Gets the public URL for a file
-   * 
+   *
    * @param key - S3 object key
    * @returns Public URL
    */
@@ -86,7 +86,7 @@ export interface IS3Service {
 
   /**
    * Health check for S3 connectivity
-   * 
+   *
    * @returns Health check result with connectivity status
    */
   healthCheck(): Promise<{

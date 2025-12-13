@@ -1,6 +1,6 @@
 /**
  * Announcement Repository Interface
- * 
+ *
  * Defines data access operations for announcements
  */
 
@@ -20,19 +20,25 @@ export interface IAnnouncementRepository {
   /**
    * Find announcements by course ID
    */
-  findByCourseId(courseId: string, options?: {
-    includeScheduled?: boolean;
-    limit?: number;
-    offset?: number;
-  }): Promise<Announcement[]>;
+  findByCourseId(
+    courseId: string,
+    options?: {
+      includeScheduled?: boolean;
+      limit?: number;
+      offset?: number;
+    }
+  ): Promise<Announcement[]>;
 
   /**
    * Find announcements by educator ID
    */
-  findByEducatorId(educatorId: string, options?: {
-    limit?: number;
-    offset?: number;
-  }): Promise<Announcement[]>;
+  findByEducatorId(
+    educatorId: string,
+    options?: {
+      limit?: number;
+      offset?: number;
+    }
+  ): Promise<Announcement[]>;
 
   /**
    * Find scheduled announcements ready to be published

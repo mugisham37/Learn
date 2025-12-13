@@ -1,6 +1,6 @@
 /**
  * Content Service Interface
- * 
+ *
  * Defines the contract for content management operations.
  * Combines S3 storage with CloudFront CDN for optimal content delivery.
  */
@@ -55,14 +55,14 @@ export interface ContentDeleteParams {
 
 /**
  * Content Service Interface
- * 
+ *
  * Provides high-level content management operations combining
  * S3 storage with CloudFront CDN for optimal delivery.
  */
 export interface IContentService {
   /**
    * Generates a presigned upload URL for content
-   * 
+   *
    * @param params - Upload parameters
    * @returns Upload URL and metadata
    * @throws ExternalServiceError if operation fails
@@ -71,7 +71,7 @@ export interface IContentService {
 
   /**
    * Generates a streaming URL for video content
-   * 
+   *
    * @param params - Streaming URL parameters
    * @returns Signed streaming URL
    * @throws ExternalServiceError if operation fails
@@ -80,7 +80,7 @@ export interface IContentService {
 
   /**
    * Gets the public URL for content
-   * 
+   *
    * @param s3Key - S3 object key
    * @param useCloudFront - Whether to use CloudFront URL
    * @returns Public content URL
@@ -89,7 +89,7 @@ export interface IContentService {
 
   /**
    * Deletes content from storage
-   * 
+   *
    * @param params - Deletion parameters
    * @returns void
    * @throws ExternalServiceError if operation fails
@@ -98,7 +98,7 @@ export interface IContentService {
 
   /**
    * Checks if content exists
-   * 
+   *
    * @param s3Key - S3 object key
    * @returns True if content exists, false otherwise
    * @throws ExternalServiceError if operation fails
@@ -107,7 +107,7 @@ export interface IContentService {
 
   /**
    * Generates S3 key for content based on user and file info
-   * 
+   *
    * @param userId - User ID
    * @param fileName - Original file name
    * @param fileType - Content type (video, image, document, etc.)

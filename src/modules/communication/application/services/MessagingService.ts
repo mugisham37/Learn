@@ -1,6 +1,6 @@
 /**
  * Messaging Service Implementation
- * 
+ *
  * Implements messaging operations with real-time delivery, notifications,
  * and S3 file attachment handling
  */
@@ -8,22 +8,26 @@
 import { randomUUID } from 'node:crypto';
 
 import type { Message } from '../../../../infrastructure/database/schema/communication.schema.js';
-import { ValidationError, NotFoundError, AuthorizationError } from '../../../../shared/errors/index.js';
+import {
+  ValidationError,
+  NotFoundError,
+  AuthorizationError,
+} from '../../../../shared/errors/index.js';
 import { sanitizeByContentType } from '../../../../shared/utils/sanitization.js';
 import { IS3Service } from '../../../../shared/services/IS3Service.js';
-import { 
-  IMessagingRepository, 
-  MessagePagination, 
-  PaginatedResult, 
-  CreateMessageDTO 
+import {
+  IMessagingRepository,
+  MessagePagination,
+  PaginatedResult,
+  CreateMessageDTO,
 } from '../../infrastructure/repositories/IMessagingRepository.js';
 
-import { 
-  IMessagingService, 
-  MessageContent, 
-  MessageAttachment, 
-  MessageResult, 
-  ConversationResult 
+import {
+  IMessagingService,
+  MessageContent,
+  MessageAttachment,
+  MessageResult,
+  ConversationResult,
 } from './IMessagingService.js';
 
 /**
@@ -35,21 +39,24 @@ interface IRealtimeService {
 }
 
 interface INotificationService {
-  createNotification(recipientId: string, data: {
-    type: string;
-    title: string;
-    content: string;
-    actionUrl?: string;
-    metadata?: Record<string, unknown>;
-  }): Promise<void>;
+  createNotification(
+    recipientId: string,
+    data: {
+      type: string;
+      title: string;
+      content: string;
+      actionUrl?: string;
+      metadata?: Record<string, unknown>;
+    }
+  ): Promise<void>;
 }
 
 /**
  * MessagingService
- * 
+ *
  * Handles direct messaging between users with real-time delivery,
  * notification integration, and file attachment support
- * 
+ *
  * Requirements:
  * - 9.1: Direct messaging with real-time delivery and notifications
  */
@@ -65,8 +72,8 @@ export class MessagingService implements IMessagingService {
    * Send a message with real-time delivery and notifications
    */
   async sendMessage(
-    senderId: string, 
-    recipientId: string, 
+    senderId: string,
+    recipientId: string,
     content: MessageContent
   ): Promise<MessageResult> {
     // Validate input
@@ -90,7 +97,10 @@ export class MessagingService implements IMessagingService {
       }
 
       // Ensure parent message is in the same conversation
-      const conversationId = this.messagingRepository.getOrCreateConversationId(senderId, recipientId);
+      const conversationId = this.messagingRepository.getOrCreateConversationId(
+        senderId,
+        recipientId
+      );
       if (parentMessage.conversationId !== conversationId) {
         throw new ValidationError('Parent message is not in the same conversation');
       }
@@ -136,7 +146,7 @@ export class MessagingService implements IMessagingService {
         await this.notificationService.createNotification(recipientId, {
           type: 'new_message',
           title: 'New Message',
-          content: content.subject 
+          content: content.subject
             ? `${content.subject}: ${content.content.substring(0, 100)}${content.content.length > 100 ? '...' : ''}`
             : content.content.substring(0, 100) + (content.content.length > 100 ? '...' : ''),
           actionUrl: `/messages/${message.conversationId}`,
@@ -164,7 +174,7 @@ export class MessagingService implements IMessagingService {
    * Get conversations for a user with pagination
    */
   async getConversations(
-    userId: string, 
+    userId: string,
     pagination: MessagePagination
   ): Promise<ConversationResult> {
     if (!userId) {

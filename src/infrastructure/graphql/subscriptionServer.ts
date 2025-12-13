@@ -1,9 +1,9 @@
 /**
  * GraphQL Subscription Server
- * 
+ *
  * Configures WebSocket server for GraphQL subscriptions with authentication,
  * connection management, and proper error handling.
- * 
+ *
  * Requirements: 21.4
  */
 
@@ -38,7 +38,6 @@ export function createSubscriptionServer(
   server: any,
   schema: GraphQLSchema
 ): { wsServer: WebSocketServer; cleanup: () => Promise<void> } {
-  
   // Create WebSocket server
   const wsServer = new WebSocketServer({
     server,
@@ -61,7 +60,7 @@ export function createSubscriptionServer(
   const serverCleanup = useServer(
     {
       schema,
-      
+
       // Connection initialization
       onConnect: async (ctx) => {
         logger.info('WebSocket connection attempt', {
@@ -70,9 +69,10 @@ export function createSubscriptionServer(
 
         try {
           // Extract authentication token from connection params or headers
-          const token = ctx.connectionParams?.authorization || 
-                       ctx.connectionParams?.Authorization ||
-                       ctx.extra?.request?.headers?.authorization;
+          const token =
+            ctx.connectionParams?.authorization ||
+            ctx.connectionParams?.Authorization ||
+            ctx.extra?.request?.headers?.authorization;
 
           if (!token) {
             logger.warn('WebSocket connection rejected: No authentication token');
@@ -80,9 +80,8 @@ export function createSubscriptionServer(
           }
 
           // Remove 'Bearer ' prefix if present
-          const cleanToken = typeof token === 'string' && token.startsWith('Bearer ') 
-            ? token.substring(7) 
-            : token;
+          const cleanToken =
+            typeof token === 'string' && token.startsWith('Bearer ') ? token.substring(7) : token;
 
           // Verify JWT token
           const decoded = verify(cleanToken, secrets.getJwtConfig().secret) as {
@@ -112,7 +111,6 @@ export function createSubscriptionServer(
           });
 
           return true;
-
         } catch (error) {
           logger.warn('WebSocket connection rejected: Authentication failed', {
             error: error instanceof Error ? error.message : String(error),
@@ -167,7 +165,7 @@ export function createSubscriptionServer(
           operationName: msg?.payload?.operationName,
           userId: ctx.extra.connectionContext?.user?.id,
           connectionId: ctx.extra.connectionContext?.connectionId,
-          errors: errors.map(err => ({
+          errors: errors.map((err) => ({
             message: err.message,
             path: err.path,
             extensions: err.extensions,
@@ -178,10 +176,12 @@ export function createSubscriptionServer(
       // Context factory for subscription resolvers
       context: async (ctx, msg, args) => {
         // Return the context created in onSubscribe
-        return args.contextValue || {
-          user: ctx.extra.connectionContext?.user,
-          requestId: `sub-${ctx.extra.connectionContext?.connectionId}-${Date.now()}`,
-        };
+        return (
+          args.contextValue || {
+            user: ctx.extra.connectionContext?.user,
+            requestId: `sub-${ctx.extra.connectionContext?.connectionId}-${Date.now()}`,
+          }
+        );
       },
     },
     wsServer
@@ -210,10 +210,10 @@ export function createSubscriptionServer(
   const cleanup = async (): Promise<void> => {
     try {
       logger.info('Cleaning up WebSocket server...');
-      
+
       // Close all connections
       await serverCleanup.dispose();
-      
+
       // Close WebSocket server
       await new Promise<void>((resolve, reject) => {
         wsServer.close((error) => {
@@ -239,7 +239,9 @@ export function createSubscriptionServer(
 /**
  * Utility to check if user is authorized for subscription
  */
-export function requireSubscriptionAuth(context: GraphQLContext): NonNullable<GraphQLContext['user']> {
+export function requireSubscriptionAuth(
+  context: GraphQLContext
+): NonNullable<GraphQLContext['user']> {
   if (!context.user) {
     throw new Error('Authentication required for subscription');
   }
@@ -254,10 +256,10 @@ export function requireSubscriptionRole(
   allowedRoles: string[]
 ): NonNullable<GraphQLContext['user']> {
   const user = requireSubscriptionAuth(context);
-  
+
   if (!allowedRoles.includes(user.role)) {
     throw new Error(`Access denied. Required roles: ${allowedRoles.join(', ')}`);
   }
-  
+
   return user;
 }

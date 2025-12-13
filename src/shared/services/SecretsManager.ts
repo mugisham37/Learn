@@ -1,16 +1,20 @@
 /**
  * Secrets Management Service
- * 
+ *
  * Provides centralized secrets management with support for:
  * - Environment variables (development/testing)
  * - AWS Secrets Manager (production)
  * - Secret validation and rotation
  * - Secure secret handling without logging
- * 
+ *
  * Requirements: 13.7
  */
 
-import { SecretsManagerClient, GetSecretValueCommand, UpdateSecretCommand } from '@aws-sdk/client-secrets-manager';
+import {
+  SecretsManagerClient,
+  GetSecretValueCommand,
+  UpdateSecretCommand,
+} from '@aws-sdk/client-secrets-manager';
 
 import { config } from '../../config/index.js';
 import { logger } from '../utils/logger.js';
@@ -73,7 +77,7 @@ export class SecretsManager {
       required: true,
       rotatable: true,
     },
-    
+
     // Database secrets
     {
       name: 'database_url',
@@ -90,7 +94,7 @@ export class SecretsManager {
       defaultValue: '',
       rotatable: true,
     },
-    
+
     // AWS secrets
     {
       name: 'aws_access_key_id',
@@ -106,7 +110,7 @@ export class SecretsManager {
       required: false,
       rotatable: true,
     },
-    
+
     // Third-party service secrets
     {
       name: 'stripe_secret_key',
@@ -137,7 +141,7 @@ export class SecretsManager {
       defaultValue: 'changeme',
       rotatable: true,
     },
-    
+
     // Firebase secrets
     {
       name: 'firebase_private_key',
@@ -146,7 +150,7 @@ export class SecretsManager {
       required: false,
       rotatable: true,
     },
-    
+
     // CloudFront secrets
     {
       name: 'cloudfront_private_key_path',
@@ -155,7 +159,7 @@ export class SecretsManager {
       required: false,
       rotatable: true,
     },
-    
+
     // Certificate signing
     {
       name: 'certificate_signing_key',
@@ -168,19 +172,22 @@ export class SecretsManager {
 
   private constructor() {
     this.isProduction = config.nodeEnv === 'production';
-    
+
     // Initialize AWS Secrets Manager client for production
     if (this.isProduction) {
       // Use environment variables for initial AWS credentials to bootstrap secrets manager
       const awsAccessKeyId = process.env['AWS_ACCESS_KEY_ID'];
       const awsSecretAccessKey = process.env['AWS_SECRET_ACCESS_KEY'];
-      
+
       this.awsClient = new SecretsManagerClient({
         region: config.aws.region,
-        credentials: awsAccessKeyId && awsSecretAccessKey ? {
-          accessKeyId: awsAccessKeyId,
-          secretAccessKey: awsSecretAccessKey,
-        } : undefined, // Use default credential chain if not provided
+        credentials:
+          awsAccessKeyId && awsSecretAccessKey
+            ? {
+                accessKeyId: awsAccessKeyId,
+                secretAccessKey: awsSecretAccessKey,
+              }
+            : undefined, // Use default credential chain if not provided
       });
     }
   }
@@ -199,9 +206,9 @@ export class SecretsManager {
    * Initialize secrets manager and load all secrets
    */
   public async initialize(): Promise<void> {
-    logger.info('Initializing secrets manager', { 
+    logger.info('Initializing secrets manager', {
       environment: config.nodeEnv,
-      useAwsSecretsManager: this.isProduction 
+      useAwsSecretsManager: this.isProduction,
     });
 
     // Load all secrets
@@ -244,16 +251,20 @@ export class SecretsManager {
         const command = new GetSecretValueCommand({
           SecretId: secretConfig.awsSecretName,
         });
-        
+
         const response = await this.awsClient.send(command);
-        
+
         if (response.SecretString) {
           // Handle JSON secrets (like AWS credentials)
-          if (secretConfig.name === 'aws_access_key_id' || secretConfig.name === 'aws_secret_access_key') {
+          if (
+            secretConfig.name === 'aws_access_key_id' ||
+            secretConfig.name === 'aws_secret_access_key'
+          ) {
             const credentials = JSON.parse(response.SecretString);
-            secretValue = secretConfig.name === 'aws_access_key_id' 
-              ? credentials.accessKeyId 
-              : credentials.secretAccessKey;
+            secretValue =
+              secretConfig.name === 'aws_access_key_id'
+                ? credentials.accessKeyId
+                : credentials.secretAccessKey;
           } else {
             // Handle simple string secrets
             try {
@@ -265,10 +276,10 @@ export class SecretsManager {
             }
           }
         }
-        
+
         lastUpdated = response.CreatedDate;
         version = response.VersionId;
-        
+
         logger.debug(`Loaded secret from AWS Secrets Manager`, {
           secretName: secretConfig.name,
           version,
@@ -278,7 +289,7 @@ export class SecretsManager {
           error: error instanceof Error ? error.message : 'Unknown error',
           secretName: secretConfig.name,
         });
-        
+
         // Fallback to environment variable
         secretValue = process.env[secretConfig.envVar];
       }
@@ -335,7 +346,7 @@ export class SecretsManager {
     if (!secret) {
       return undefined;
     }
-    
+
     return {
       lastUpdated: secret.lastUpdated,
       version: secret.version,
@@ -346,7 +357,7 @@ export class SecretsManager {
    * Refresh a specific secret (useful for rotation)
    */
   public async refreshSecret(name: string): Promise<void> {
-    const secretConfig = this.secretConfigs.find(config => config.name === name);
+    const secretConfig = this.secretConfigs.find((config) => config.name === name);
     if (!secretConfig) {
       throw new Error(`Secret configuration not found: ${name}`);
     }
@@ -361,7 +372,7 @@ export class SecretsManager {
    */
   public async refreshAllSecrets(): Promise<void> {
     logger.info('Refreshing all secrets');
-    
+
     const refreshPromises = this.secretConfigs.map(async (secretConfig) => {
       try {
         await this.loadSecret(secretConfig);
@@ -387,7 +398,7 @@ export class SecretsManager {
       throw new Error('Secret updates are only supported in production with AWS Secrets Manager');
     }
 
-    const secretConfig = this.secretConfigs.find(config => config.name === name);
+    const secretConfig = this.secretConfigs.find((config) => config.name === name);
     if (!secretConfig || !secretConfig.awsSecretName) {
       throw new Error(`Secret configuration not found or not configured for AWS: ${name}`);
     }
@@ -403,10 +414,10 @@ export class SecretsManager {
       });
 
       await this.awsClient.send(command);
-      
+
       // Refresh the cached value
       await this.refreshSecret(name);
-      
+
       logger.info(`Secret updated successfully: ${name}`);
     } catch (error) {
       logger.error(`Failed to update secret: ${name}`, {
@@ -421,7 +432,7 @@ export class SecretsManager {
    */
   public validateSecrets(): void {
     const missingSecrets: string[] = [];
-    
+
     for (const secretConfig of this.secretConfigs) {
       if (secretConfig.required && !this.secretsCache.has(secretConfig.name)) {
         missingSecrets.push(secretConfig.name);
@@ -439,16 +450,14 @@ export class SecretsManager {
    * Get list of all configured secrets (names only, no values)
    */
   public getSecretNames(): string[] {
-    return this.secretConfigs.map(config => config.name);
+    return this.secretConfigs.map((config) => config.name);
   }
 
   /**
    * Get list of rotatable secrets
    */
   public getRotatableSecrets(): string[] {
-    return this.secretConfigs
-      .filter(config => config.rotatable)
-      .map(config => config.name);
+    return this.secretConfigs.filter((config) => config.rotatable).map((config) => config.name);
   }
 
   /**
@@ -458,7 +467,7 @@ export class SecretsManager {
     try {
       // Validate that all required secrets are present
       this.validateSecrets();
-      
+
       // If using AWS Secrets Manager, test connectivity
       if (this.isProduction && this.awsClient) {
         // Try to list secrets to test connectivity
@@ -466,7 +475,7 @@ export class SecretsManager {
         const command = new ListSecretsCommand({ MaxResults: 1 });
         await this.awsClient.send(command);
       }
-      
+
       return true;
     } catch (error) {
       logger.error('Secrets manager health check failed', {

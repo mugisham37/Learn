@@ -1,9 +1,9 @@
 /**
  * User Entity
- * 
+ *
  * Core domain entity representing a user in the system.
  * Encapsulates user identity, authentication, and role information.
- * 
+ *
  * Requirements: 1.1, 1.2, 1.3
  */
 
@@ -34,7 +34,7 @@ export interface UserProps {
 
 /**
  * User entity
- * 
+ *
  * Represents a user in the system with identity, authentication, and role.
  * Enforces business rules and validation at the domain level.
  */
@@ -54,7 +54,7 @@ export class User {
 
   /**
    * Creates a new User entity
-   * 
+   *
    * @param props - User properties
    */
   private constructor(props: UserProps) {
@@ -74,7 +74,7 @@ export class User {
 
   /**
    * Factory method to create a new User entity
-   * 
+   *
    * @param props - User properties
    * @returns User entity
    * @throws Error if validation fails
@@ -119,7 +119,7 @@ export class User {
 
   /**
    * Factory method to reconstitute a User entity from persistence
-   * 
+   *
    * @param props - User properties from database
    * @returns User entity
    */
@@ -181,7 +181,7 @@ export class User {
 
   /**
    * Checks if the user is deleted (soft delete)
-   * 
+   *
    * @returns True if user is deleted
    */
   isDeleted(): boolean {
@@ -190,7 +190,7 @@ export class User {
 
   /**
    * Checks if the user is active (not deleted and email verified)
-   * 
+   *
    * @returns True if user is active
    */
   isActive(): boolean {
@@ -199,7 +199,7 @@ export class User {
 
   /**
    * Checks if the user has a specific role
-   * 
+   *
    * @param role - Role to check
    * @returns True if user has the role
    */
@@ -209,7 +209,7 @@ export class User {
 
   /**
    * Checks if the user has any of the specified roles
-   * 
+   *
    * @param roles - Roles to check
    * @returns True if user has any of the roles
    */
@@ -219,7 +219,7 @@ export class User {
 
   /**
    * Checks if the user is a student
-   * 
+   *
    * @returns True if user is a student
    */
   isStudent(): boolean {
@@ -228,7 +228,7 @@ export class User {
 
   /**
    * Checks if the user is an educator
-   * 
+   *
    * @returns True if user is an educator
    */
   isEducator(): boolean {
@@ -237,7 +237,7 @@ export class User {
 
   /**
    * Checks if the user is an admin
-   * 
+   *
    * @returns True if user is an admin
    */
   isAdmin(): boolean {
@@ -246,7 +246,7 @@ export class User {
 
   /**
    * Checks if password reset token is valid (not expired)
-   * 
+   *
    * @returns True if token is valid
    */
   isPasswordResetTokenValid(): boolean {
@@ -272,7 +272,7 @@ export class User {
 
   /**
    * Updates the user's email
-   * 
+   *
    * @param email - New email
    */
   updateEmail(email: Email): void {
@@ -287,7 +287,7 @@ export class User {
 
   /**
    * Updates the user's password hash
-   * 
+   *
    * @param passwordHash - New password hash
    */
   updatePasswordHash(passwordHash: string): void {
@@ -303,7 +303,7 @@ export class User {
 
   /**
    * Updates the user's role
-   * 
+   *
    * @param role - New role
    */
   updateRole(role: UserRole): void {
@@ -318,7 +318,7 @@ export class User {
 
   /**
    * Sets the verification token
-   * 
+   *
    * @param token - Verification token
    */
   setVerificationToken(token: string): void {
@@ -332,7 +332,7 @@ export class User {
 
   /**
    * Sets the password reset token and expiration
-   * 
+   *
    * @param token - Password reset token
    * @param expiresAt - Expiration date
    */
@@ -397,7 +397,7 @@ export class User {
 
   /**
    * Converts the entity to a plain object for persistence
-   * 
+   *
    * @returns Plain object representation
    */
   toPersistence(): {
@@ -432,7 +432,7 @@ export class User {
 
   /**
    * Returns JSON representation (excludes sensitive data)
-   * 
+   *
    * @returns JSON object
    */
   toJSON(): {

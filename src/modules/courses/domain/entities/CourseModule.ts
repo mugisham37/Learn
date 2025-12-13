@@ -1,8 +1,8 @@
 import { Lesson } from './Lesson';
-import { 
+import {
   LessonAddedEvent,
   LessonRemovedEvent,
-  LessonsReorderedEvent
+  LessonsReorderedEvent,
 } from '../events/CourseEvents';
 
 export interface CourseModuleProps {
@@ -28,22 +28,46 @@ export class CourseModule {
   }
 
   // Getters
-  get id(): string { return this._props.id; }
-  get courseId(): string { return this._props.courseId; }
-  get title(): string { return this._props.title; }
-  get description(): string | undefined { return this._props.description; }
-  get orderNumber(): number { return this._props.orderNumber; }
-  get durationMinutes(): number { return this._props.durationMinutes; }
-  get prerequisiteModuleId(): string | undefined { return this._props.prerequisiteModuleId; }
-  get createdAt(): Date { return this._props.createdAt; }
-  get updatedAt(): Date { return this._props.updatedAt; }
-  get lessons(): Lesson[] { return [...this._lessons]; }
-  get domainEvents(): any[] { return [...this._domainEvents]; }
+  get id(): string {
+    return this._props.id;
+  }
+  get courseId(): string {
+    return this._props.courseId;
+  }
+  get title(): string {
+    return this._props.title;
+  }
+  get description(): string | undefined {
+    return this._props.description;
+  }
+  get orderNumber(): number {
+    return this._props.orderNumber;
+  }
+  get durationMinutes(): number {
+    return this._props.durationMinutes;
+  }
+  get prerequisiteModuleId(): string | undefined {
+    return this._props.prerequisiteModuleId;
+  }
+  get createdAt(): Date {
+    return this._props.createdAt;
+  }
+  get updatedAt(): Date {
+    return this._props.updatedAt;
+  }
+  get lessons(): Lesson[] {
+    return [...this._lessons];
+  }
+  get domainEvents(): any[] {
+    return [...this._domainEvents];
+  }
 
   // Static factory method for creating new modules
-  static create(props: Omit<CourseModuleProps, 'id' | 'durationMinutes' | 'createdAt' | 'updatedAt'>): CourseModule {
+  static create(
+    props: Omit<CourseModuleProps, 'id' | 'durationMinutes' | 'createdAt' | 'updatedAt'>
+  ): CourseModule {
     const now = new Date();
-    
+
     const moduleProps: CourseModuleProps = {
       ...props,
       id: crypto.randomUUID(),
@@ -56,7 +80,9 @@ export class CourseModule {
   }
 
   // Update module properties
-  update(updates: Partial<Pick<CourseModuleProps, 'title' | 'description' | 'prerequisiteModuleId'>>): void {
+  update(
+    updates: Partial<Pick<CourseModuleProps, 'title' | 'description' | 'prerequisiteModuleId'>>
+  ): void {
     Object.assign(this._props, updates, { updatedAt: new Date() });
     this.validateProps(this._props);
   }
@@ -66,7 +92,7 @@ export class CourseModule {
     if (orderNumber <= 0) {
       throw new Error('Order number must be positive');
     }
-    
+
     this._props.orderNumber = orderNumber;
     this._props.updatedAt = new Date();
   }
@@ -74,34 +100,36 @@ export class CourseModule {
   // Add lesson to module
   addLesson(lesson: Lesson): void {
     // Ensure unique order numbers within module
-    const existingOrderNumbers = this._lessons.map(l => l.orderNumber);
+    const existingOrderNumbers = this._lessons.map((l) => l.orderNumber);
     if (existingOrderNumbers.includes(lesson.orderNumber)) {
       throw new Error(`Lesson with order number ${lesson.orderNumber} already exists in module`);
     }
 
     this._lessons.push(lesson);
     this.recalculateDuration();
-    
-    this.addDomainEvent(new LessonAddedEvent(
-      this.id,
-      this.courseId,
-      lesson.id,
-      lesson.title,
-      lesson.type,
-      lesson.orderNumber
-    ));
+
+    this.addDomainEvent(
+      new LessonAddedEvent(
+        this.id,
+        this.courseId,
+        lesson.id,
+        lesson.title,
+        lesson.type,
+        lesson.orderNumber
+      )
+    );
   }
 
   // Remove lesson from module
   removeLesson(lessonId: string): void {
-    const lessonIndex = this._lessons.findIndex(l => l.id === lessonId);
+    const lessonIndex = this._lessons.findIndex((l) => l.id === lessonId);
     if (lessonIndex === -1) {
       throw new Error(`Lesson with id ${lessonId} not found`);
     }
 
     this._lessons.splice(lessonIndex, 1);
     this.recalculateDuration();
-    
+
     this.addDomainEvent(new LessonRemovedEvent(this.id, this.courseId, lessonId));
   }
 
@@ -112,30 +140,32 @@ export class CourseModule {
     }
 
     // Verify all lesson IDs exist
-    const existingIds = new Set(this._lessons.map(l => l.id));
+    const existingIds = new Set(this._lessons.map((l) => l.id));
     const providedIds = new Set(lessonIds);
-    
-    if (existingIds.size !== providedIds.size || 
-        !Array.from(existingIds).every(id => providedIds.has(id))) {
+
+    if (
+      existingIds.size !== providedIds.size ||
+      !Array.from(existingIds).every((id) => providedIds.has(id))
+    ) {
       throw new Error('Invalid lesson IDs provided');
     }
 
     // Reorder lessons and update order numbers
     const reorderedLessons: Lesson[] = [];
     lessonIds.forEach((lessonId, index) => {
-      const lesson = this._lessons.find(l => l.id === lessonId)!;
+      const lesson = this._lessons.find((l) => l.id === lessonId)!;
       lesson.updateOrderNumber(index + 1);
       reorderedLessons.push(lesson);
     });
 
     this._lessons = reorderedLessons;
     this._props.updatedAt = new Date();
-    
-    const newOrder = reorderedLessons.map(lesson => ({
+
+    const newOrder = reorderedLessons.map((lesson) => ({
       lessonId: lesson.id,
-      orderNumber: lesson.orderNumber
+      orderNumber: lesson.orderNumber,
     }));
-    
+
     this.addDomainEvent(new LessonsReorderedEvent(this.id, this.courseId, newOrder));
   }
 
@@ -144,8 +174,8 @@ export class CourseModule {
     if (this._lessons.length === 0) {
       return 1;
     }
-    
-    const maxOrderNumber = Math.max(...this._lessons.map(l => l.orderNumber));
+
+    const maxOrderNumber = Math.max(...this._lessons.map((l) => l.orderNumber));
     return maxOrderNumber + 1;
   }
 
@@ -170,7 +200,7 @@ export class CourseModule {
     const totalDuration = this._lessons.reduce((sum, lesson) => {
       return sum + (lesson.durationMinutes || 0);
     }, 0);
-    
+
     this._props.durationMinutes = totalDuration;
     this._props.updatedAt = new Date();
   }

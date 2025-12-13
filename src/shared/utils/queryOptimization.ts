@@ -1,9 +1,9 @@
 /**
  * Database Query Optimization Utilities
- * 
+ *
  * Provides tools for analyzing and optimizing database queries
  * Implements EXPLAIN ANALYZE functionality and performance monitoring
- * 
+ *
  * Requirements: 15.1 - Database query optimization with strategic indexes
  */
 
@@ -52,7 +52,7 @@ interface QueryPlanNode {
   'Actual Loops': number;
   'Index Name'?: string;
   'Relation Name'?: string;
-  'Plans'?: QueryPlanNode[];
+  Plans?: QueryPlanNode[];
 }
 
 /**
@@ -76,7 +76,7 @@ export interface CursorPaginationResult<T> {
 
 /**
  * Query Optimization Analyzer
- * 
+ *
  * Analyzes database queries using EXPLAIN ANALYZE and provides
  * optimization recommendations
  */
@@ -89,11 +89,11 @@ export class QueryOptimizer {
   async analyzeQuery(query: string, params: unknown[] = []): Promise<QueryAnalysis> {
     try {
       const startTime = Date.now();
-      
+
       // Execute EXPLAIN ANALYZE
       const explainQuery = `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) ${query}`;
       const result = await this.db.execute(sql.raw(explainQuery, params));
-      
+
       const executionTime = Date.now() - startTime;
       const planData = result.rows[0] as { 'QUERY PLAN': QueryPlanNode[] };
       const plan = planData['QUERY PLAN'][0];
@@ -111,7 +111,7 @@ export class QueryOptimizer {
   private parseQueryPlan(query: string, plan: QueryPlanNode, executionTime: number): QueryAnalysis {
     const indexesUsed = this.extractIndexesUsed(plan);
     const recommendations = this.generateRecommendations(plan, executionTime);
-    
+
     return {
       query,
       executionTime,
@@ -130,17 +130,17 @@ export class QueryOptimizer {
    */
   private extractIndexesUsed(plan: QueryPlanNode): string[] {
     const indexes: string[] = [];
-    
+
     const extractFromNode = (node: QueryPlanNode): void => {
       if (node['Index Name']) {
         indexes.push(node['Index Name']);
       }
-      
+
       if (node.Plans) {
         node.Plans.forEach(extractFromNode);
       }
     };
-    
+
     extractFromNode(plan);
     return [...new Set(indexes)];
   }
@@ -150,24 +150,25 @@ export class QueryOptimizer {
    */
   private generateRecommendations(plan: QueryPlanNode, executionTime: number): string[] {
     const recommendations: string[] = [];
-    
+
     if (executionTime > PERFORMANCE_THRESHOLDS.SLOW_QUERY_MS) {
       recommendations.push('Query execution time exceeds threshold - consider optimization');
     }
-    
+
     if (plan['Total Cost'] > PERFORMANCE_THRESHOLDS.HIGH_COST) {
       recommendations.push('High query cost detected - review query structure');
     }
-    
-    const estimationVariance = Math.abs(plan['Actual Rows'] - plan['Plan Rows']) / plan['Plan Rows'];
+
+    const estimationVariance =
+      Math.abs(plan['Actual Rows'] - plan['Plan Rows']) / plan['Plan Rows'];
     if (estimationVariance > PERFORMANCE_THRESHOLDS.ROW_ESTIMATION_VARIANCE) {
       recommendations.push('Row estimation variance high - update table statistics');
     }
-    
+
     if (this.hasSequentialScans(plan)) {
       recommendations.push('Sequential scans detected - consider adding indexes');
     }
-    
+
     return recommendations;
   }
 
@@ -189,11 +190,11 @@ export class QueryOptimizer {
     if (plan['Node Type'] === 'Seq Scan') {
       return true;
     }
-    
+
     if (plan.Plans) {
-      return plan.Plans.some(subPlan => this.hasSequentialScans(subPlan));
+      return plan.Plans.some((subPlan) => this.hasSequentialScans(subPlan));
     }
-    
+
     return false;
   }
 }
@@ -211,12 +212,12 @@ export class QueryCache {
   get<T>(key: string): T | null {
     const entry = this.cache.get(key);
     if (!entry) return null;
-    
+
     if (Date.now() - entry.timestamp > entry.ttl) {
       this.cache.delete(key);
       return null;
     }
-    
+
     return entry.data as T;
   }
 

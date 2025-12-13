@@ -1,10 +1,10 @@
 /**
  * GraphQL Resolvers for Search Module
- * 
+ *
  * Implements GraphQL resolvers for search operations including course search,
  * lesson search, autocomplete, and trending searches with proper error handling
  * and pagination support.
- * 
+ *
  * Requirements: 21.2
  */
 
@@ -54,7 +54,9 @@ interface SearchSort {
 /**
  * Helper function to convert GraphQL sort field to service interface
  */
-function mapSortFieldFromGraphQL(field: string): 'relevance' | 'popularity' | 'rating' | 'price' | 'created' | 'updated' | 'trending' {
+function mapSortFieldFromGraphQL(
+  field: string
+): 'relevance' | 'popularity' | 'rating' | 'price' | 'created' | 'updated' | 'trending' {
   switch (field) {
     case 'RELEVANCE':
       return 'relevance';
@@ -86,7 +88,7 @@ function mapSortOrderFromGraphQL(order: string): 'asc' | 'desc' {
  * Helper function to convert GraphQL difficulty to domain values
  */
 function mapDifficultyFromGraphQL(difficulties: string[]): string[] {
-  return difficulties.map(difficulty => {
+  return difficulties.map((difficulty) => {
     switch (difficulty) {
       case 'BEGINNER':
         return 'beginner';
@@ -119,7 +121,9 @@ function mapDifficultyToGraphQL(difficulty: string): 'BEGINNER' | 'INTERMEDIATE'
 /**
  * Helper function to convert domain course status to GraphQL enum
  */
-function mapCourseStatusToGraphQL(status: string): 'DRAFT' | 'PENDING_REVIEW' | 'PUBLISHED' | 'ARCHIVED' {
+function mapCourseStatusToGraphQL(
+  status: string
+): 'DRAFT' | 'PENDING_REVIEW' | 'PUBLISHED' | 'ARCHIVED' {
   switch (status) {
     case 'draft':
       return 'DRAFT';
@@ -157,34 +161,34 @@ function mapLessonTypeToGraphQL(type: string): 'VIDEO' | 'TEXT' | 'QUIZ' | 'ASSI
  */
 function handleSearchError(error: unknown, operation: string): never {
   console.error(`Search ${operation} failed:`, error);
-  
+
   // Check for specific Elasticsearch errors
   const errorMessage = error instanceof Error ? error.message : String(error);
-  
+
   if (errorMessage.includes('index_not_found_exception')) {
     throw new GraphQLError('Search index not available', {
       extensions: {
         code: 'SEARCH_INDEX_UNAVAILABLE',
-        http: { status: 503 }
-      }
+        http: { status: 503 },
+      },
     });
   }
-  
+
   if (errorMessage.includes('parsing_exception')) {
     throw new GraphQLError('Invalid search query', {
       extensions: {
         code: 'INVALID_SEARCH_QUERY',
-        http: { status: 400 }
-      }
+        http: { status: 400 },
+      },
     });
   }
-  
+
   // Generic search error
   throw new GraphQLError(`Search ${operation} failed`, {
     extensions: {
       code: 'SEARCH_ERROR',
-      http: { status: 500 }
-    }
+      http: { status: 500 },
+    },
   });
 }
 
@@ -220,30 +224,36 @@ export const searchResolvers = {
           throw new GraphQLError('Search query is required', {
             extensions: {
               code: 'INVALID_INPUT',
-              http: { status: 400 }
-            }
+              http: { status: 400 },
+            },
           });
         }
 
         // Convert GraphQL inputs to service interfaces
-        const filters = args.filters ? {
-          category: args.filters.category,
-          difficulty: args.filters.difficulty ? mapDifficultyFromGraphQL(args.filters.difficulty) : undefined,
-          priceRange: args.filters.priceRange,
-          rating: args.filters.rating,
-          status: args.filters.status?.map(s => s.toLowerCase()),
-          language: args.filters.language,
-        } : {};
+        const filters = args.filters
+          ? {
+              category: args.filters.category,
+              difficulty: args.filters.difficulty
+                ? mapDifficultyFromGraphQL(args.filters.difficulty)
+                : undefined,
+              priceRange: args.filters.priceRange,
+              rating: args.filters.rating,
+              status: args.filters.status?.map((s) => s.toLowerCase()),
+              language: args.filters.language,
+            }
+          : {};
 
         const pagination = {
           from: args.pagination?.from || 0,
           size: Math.min(args.pagination?.size || 20, 100), // Cap at 100 results
         };
 
-        const sort = args.sort ? {
-          field: mapSortFieldFromGraphQL(args.sort.field),
-          order: mapSortOrderFromGraphQL(args.sort.order),
-        } : { field: 'relevance' as const, order: 'desc' as const };
+        const sort = args.sort
+          ? {
+              field: mapSortFieldFromGraphQL(args.sort.field),
+              order: mapSortOrderFromGraphQL(args.sort.order),
+            }
+          : { field: 'relevance' as const, order: 'desc' as const };
 
         const includeFacets = args.includeFacets !== false; // Default to true
 
@@ -258,7 +268,7 @@ export const searchResolvers = {
 
         // Transform results to match GraphQL schema
         return {
-          documents: searchResult.documents.map(course => ({
+          documents: searchResult.documents.map((course) => ({
             ...course,
             difficulty: mapDifficultyToGraphQL(course.difficulty),
             status: mapCourseStatusToGraphQL(course.status),
@@ -299,8 +309,8 @@ export const searchResolvers = {
           throw new GraphQLError('Search query is required', {
             extensions: {
               code: 'INVALID_INPUT',
-              http: { status: 400 }
-            }
+              http: { status: 400 },
+            },
           });
         }
 
@@ -318,7 +328,7 @@ export const searchResolvers = {
 
         // Transform results to match GraphQL schema
         return {
-          documents: searchResult.documents.map(lesson => ({
+          documents: searchResult.documents.map((lesson) => ({
             ...lesson,
             lessonType: mapLessonTypeToGraphQL(lesson.lessonType),
             courseDifficulty: mapDifficultyToGraphQL(lesson.courseDifficulty),
@@ -353,10 +363,7 @@ export const searchResolvers = {
         const limit = Math.min(args.limit || 10, 20); // Cap at 20 suggestions
 
         // Get autocomplete suggestions
-        const suggestions = await context.searchService.autocomplete(
-          args.query.trim(),
-          limit
-        );
+        const suggestions = await context.searchService.autocomplete(args.query.trim(), limit);
 
         return suggestions;
       } catch (error) {

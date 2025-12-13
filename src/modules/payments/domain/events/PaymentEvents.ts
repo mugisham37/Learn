@@ -1,9 +1,9 @@
 /**
  * Payment Domain Events
- * 
+ *
  * Defines domain events for payment lifecycle management.
  * These events are emitted when significant payment state changes occur.
- * 
+ *
  * Requirements:
  * - 11.1: Payment processing events for enrollment creation
  * - 11.5: Refund processing events for enrollment status updates
@@ -213,7 +213,7 @@ export class RefundFailedEvent implements PaymentDomainEvent {
 /**
  * Union type of all payment domain events
  */
-export type PaymentDomainEvents = 
+export type PaymentDomainEvents =
   | PaymentCreatedEvent
   | PaymentSucceededEvent
   | PaymentFailedEvent

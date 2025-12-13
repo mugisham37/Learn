@@ -1,15 +1,13 @@
 /**
  * Assignment Submission Repository Interface
- * 
+ *
  * Defines the contract for assignment submission data access operations.
  * Handles submission tracking with revision history and parent linking.
- * 
+ *
  * Requirements: 7.1, 7.2
  */
 
-import { 
-  AssignmentSubmission
-} from '../../../../infrastructure/database/schema/assessments.schema.js';
+import { AssignmentSubmission } from '../../../../infrastructure/database/schema/assessments.schema.js';
 
 /**
  * Pagination parameters for list queries
@@ -98,14 +96,14 @@ export interface StudentSubmissionSummary {
 
 /**
  * Assignment Submission Repository Interface
- * 
+ *
  * Provides methods for all assignment submission data access operations
  * with support for revision tracking and parent linking.
  */
 export interface IAssignmentSubmissionRepository {
   /**
    * Creates a new assignment submission in the database
-   * 
+   *
    * @param data - Assignment submission creation data
    * @returns The created assignment submission
    * @throws ValidationError if assignment, student, or enrollment doesn't exist
@@ -115,7 +113,7 @@ export interface IAssignmentSubmissionRepository {
 
   /**
    * Finds an assignment submission by its unique ID
-   * 
+   *
    * @param id - Assignment submission ID
    * @returns The assignment submission if found, null otherwise
    * @throws DatabaseError if database operation fails
@@ -124,7 +122,7 @@ export interface IAssignmentSubmissionRepository {
 
   /**
    * Finds an assignment submission by ID with revision history
-   * 
+   *
    * @param id - Assignment submission ID
    * @returns The assignment submission with revisions if found, null otherwise
    * @throws DatabaseError if database operation fails
@@ -133,7 +131,7 @@ export interface IAssignmentSubmissionRepository {
 
   /**
    * Finds assignment submissions by assignment with pagination
-   * 
+   *
    * @param assignmentId - Assignment ID
    * @param pagination - Pagination parameters
    * @param filters - Optional filters
@@ -148,7 +146,7 @@ export interface IAssignmentSubmissionRepository {
 
   /**
    * Finds assignment submissions by student with pagination
-   * 
+   *
    * @param studentId - Student ID
    * @param pagination - Pagination parameters
    * @param filters - Optional filters
@@ -163,7 +161,7 @@ export interface IAssignmentSubmissionRepository {
 
   /**
    * Finds the latest submission for a student and assignment
-   * 
+   *
    * @param assignmentId - Assignment ID
    * @param studentId - Student ID
    * @returns The latest submission if found, null otherwise
@@ -176,7 +174,7 @@ export interface IAssignmentSubmissionRepository {
 
   /**
    * Gets submission summary for a student and assignment
-   * 
+   *
    * @param assignmentId - Assignment ID
    * @param studentId - Student ID
    * @returns Submission summary
@@ -189,7 +187,7 @@ export interface IAssignmentSubmissionRepository {
 
   /**
    * Finds all assignment submissions with pagination and filtering
-   * 
+   *
    * @param pagination - Pagination parameters
    * @param filters - Optional filters
    * @returns Paginated assignment submission results
@@ -202,7 +200,7 @@ export interface IAssignmentSubmissionRepository {
 
   /**
    * Updates an assignment submission's data
-   * 
+   *
    * @param id - Assignment submission ID
    * @param data - Update data
    * @returns The updated assignment submission
@@ -214,7 +212,7 @@ export interface IAssignmentSubmissionRepository {
   /**
    * Deletes an assignment submission from the database
    * This also deletes any child revisions
-   * 
+   *
    * @param id - Assignment submission ID
    * @returns void
    * @throws NotFoundError if assignment submission doesn't exist
@@ -224,7 +222,7 @@ export interface IAssignmentSubmissionRepository {
 
   /**
    * Checks if an assignment submission exists
-   * 
+   *
    * @param id - Assignment submission ID
    * @returns True if assignment submission exists, false otherwise
    * @throws DatabaseError if database operation fails
@@ -233,7 +231,7 @@ export interface IAssignmentSubmissionRepository {
 
   /**
    * Gets the revision count for a submission chain
-   * 
+   *
    * @param parentSubmissionId - Parent submission ID (or any submission in the chain)
    * @returns Number of revisions in the chain
    * @throws DatabaseError if database operation fails
@@ -242,7 +240,7 @@ export interface IAssignmentSubmissionRepository {
 
   /**
    * Finds all revisions for a submission
-   * 
+   *
    * @param parentSubmissionId - Parent submission ID
    * @returns Array of revisions ordered by revision number
    * @throws DatabaseError if database operation fails
@@ -252,7 +250,7 @@ export interface IAssignmentSubmissionRepository {
   /**
    * Invalidates cache for a specific assignment submission
    * Should be called after any update operation
-   * 
+   *
    * @param id - Assignment submission ID
    * @returns void
    */
@@ -261,7 +259,7 @@ export interface IAssignmentSubmissionRepository {
   /**
    * Invalidates cache for assignment submissions by assignment
    * Should be called after operations that affect assignment submission lists
-   * 
+   *
    * @param assignmentId - Assignment ID
    * @returns void
    */
@@ -270,7 +268,7 @@ export interface IAssignmentSubmissionRepository {
   /**
    * Invalidates cache for assignment submissions by student
    * Should be called after operations that affect student submission lists
-   * 
+   *
    * @param studentId - Student ID
    * @returns void
    */

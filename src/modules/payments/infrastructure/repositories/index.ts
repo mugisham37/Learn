@@ -1,9 +1,9 @@
 /**
  * Payment Infrastructure Repositories
- * 
+ *
  * Data access implementations for payment entities.
  * Provides repository interfaces and implementations for payments, subscriptions, and refunds.
- * 
+ *
  * Requirements: 11.1, 11.5
  */
 

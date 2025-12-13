@@ -1,6 +1,6 @@
 /**
  * Application Entry Point
- * 
+ *
  * This file initializes and starts the Fastify server with all required plugins,
  * middleware, and module registrations.
  */
@@ -23,33 +23,33 @@ async function bootstrap(): Promise<void> {
       environment: config.nodeEnv,
       port: config.port,
     });
-    
+
     // Initialize Sentry error tracking (must be first)
     const { sentryService } = await import('./shared/services/SentryService.js');
     sentryService.initialize();
-    
+
     // Set up Sentry error handlers
     const { setupSentryErrorHandlers } = await import('./shared/middleware/sentryMiddleware.js');
     setupSentryErrorHandlers();
-    
+
     // Initialize startup service (includes secrets management, config validation, etc.)
     const { startupService } = await import('./shared/services/StartupService.js');
     await startupService.initialize();
-    
+
     // Create and configure Fastify server
     server = await createServer();
-    
+
     // Initialize infrastructure (database, Redis, Elasticsearch)
     const { initializeInfrastructure } = await import('./infrastructure/index.js');
     await initializeInfrastructure();
-    
+
     // Initialize CloudWatch integration
     if (config.nodeEnv === 'production') {
       const { CloudWatchInitializer } = await import('./shared/services/CloudWatchInitializer.js');
       await CloudWatchInitializer.initialize();
       logger.info('CloudWatch integration initialized successfully');
     }
-    
+
     // Initialize unified scheduler service (includes analytics, session cleanup, log pruning)
     const { initializeSchedulerService } = await import('./shared/services/SchedulerService.js');
     const schedulerService = initializeSchedulerService({
@@ -58,24 +58,27 @@ async function bootstrap(): Promise<void> {
     });
     await schedulerService.initialize();
     logger.info('Unified scheduler service initialized successfully');
-    
+
     // Register module routes
     const { registerModules } = await import('./modules/index.js');
     await registerModules(server);
-    
+
     // TODO: Register GraphQL server
-    
+
     // Start the server
     await startServer(server);
-    
+
     logger.info('Server initialization complete');
   } catch (error) {
     logger.error('Failed to start server', {
-      error: error instanceof Error ? {
-        name: error.name,
-        message: error.message,
-        stack: error.stack,
-      } : String(error),
+      error:
+        error instanceof Error
+          ? {
+              name: error.name,
+              message: error.message,
+              stack: error.stack,
+            }
+          : String(error),
     });
     process.exit(1);
   }
@@ -86,37 +89,40 @@ async function bootstrap(): Promise<void> {
  */
 async function shutdown(signal: string): Promise<void> {
   logger.info(`${signal} signal received: closing HTTP server`, { signal });
-  
+
   if (server) {
     try {
       // Stop the server first
       await stopServer(server);
-      
+
       // Shutdown unified scheduler service
       const { shutdownSchedulerService } = await import('./shared/services/SchedulerService.js');
       await shutdownSchedulerService();
-      
+
       // Then shutdown infrastructure
       const { shutdownInfrastructure } = await import('./infrastructure/index.js');
       await shutdownInfrastructure();
-      
+
       // Finally shutdown startup service
       const { startupService } = await import('./shared/services/StartupService.js');
       await startupService.shutdown();
-      
+
       // Close Sentry and flush pending events
       const { sentryService } = await import('./shared/services/SentryService.js');
       await sentryService.close(2000);
-      
+
       logger.info('Graceful shutdown completed');
       process.exit(0);
     } catch (error) {
       logger.error('Error during graceful shutdown', {
-        error: error instanceof Error ? {
-          name: error.name,
-          message: error.message,
-          stack: error.stack,
-        } : String(error),
+        error:
+          error instanceof Error
+            ? {
+                name: error.name,
+                message: error.message,
+                stack: error.stack,
+              }
+            : String(error),
       });
       process.exit(1);
     }

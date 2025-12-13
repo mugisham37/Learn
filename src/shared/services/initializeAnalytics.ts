@@ -1,9 +1,9 @@
 /**
  * Analytics Initialization Helper
- * 
+ *
  * Provides a convenient function to initialize all analytics-related services
  * including the analytics service, metrics calculator, queue, and scheduler.
- * 
+ *
  * Requirements:
  * - 12.5: Scheduled analytics aggregation
  * - 14.3: Analytics aggregation queue setup
@@ -11,10 +11,10 @@
 
 import { AnalyticsService } from '../../modules/analytics/application/services/AnalyticsService.js';
 import { MetricsCalculator } from '../../modules/analytics/application/services/MetricsCalculator.js';
-import { 
+import {
   AnalyticsEventsRepository,
   CourseAnalyticsRepository,
-  StudentAnalyticsRepository
+  StudentAnalyticsRepository,
 } from '../../modules/analytics/infrastructure/repositories/index.js';
 import { logger } from '../utils/logger.js';
 
@@ -22,14 +22,14 @@ import { initializeAnalyticsScheduler, type SchedulerConfig } from './AnalyticsS
 
 /**
  * Initialize all analytics services and scheduling
- * 
+ *
  * This function sets up the complete analytics infrastructure including:
  * - Analytics repositories
  * - Analytics service
  * - Metrics calculator
  * - Analytics queue
  * - Analytics scheduler with cron jobs
- * 
+ *
  * @param config Optional scheduler configuration
  * @returns Promise that resolves when initialization is complete
  */
@@ -70,7 +70,9 @@ export async function initializeAnalytics(config?: Partial<SchedulerConfig>): Pr
 /**
  * Get default scheduler configuration for different environments
  */
-export function getDefaultSchedulerConfig(environment: 'development' | 'staging' | 'production'): SchedulerConfig {
+export function getDefaultSchedulerConfig(
+  environment: 'development' | 'staging' | 'production'
+): SchedulerConfig {
   const baseConfig: SchedulerConfig = {
     enableHourlyMetrics: true,
     enableDailyAnalytics: true,
@@ -86,13 +88,13 @@ export function getDefaultSchedulerConfig(environment: 'development' | 'staging'
         // In development, you might want to disable some jobs or run them less frequently
         enableMonthlyReports: false,
       };
-    
+
     case 'staging':
       return {
         ...baseConfig,
         // In staging, you might want to test all jobs but with reduced frequency
       };
-    
+
     case 'production':
     default:
       return baseConfig;

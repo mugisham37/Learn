@@ -1,8 +1,8 @@
 /**
  * GraphQL Exports for Assessments Module
- * 
+ *
  * Exports GraphQL schema and resolvers for assessments functionality.
- * 
+ *
  * Requirements: 21.1, 21.2
  */
 

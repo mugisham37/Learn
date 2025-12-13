@@ -1,6 +1,6 @@
 /**
  * Stripe Client Implementation
- * 
+ *
  * Concrete implementation of the Stripe API client.
  * Handles all interactions with the Stripe API including
  * payments, subscriptions, refunds, and webhook verification.
@@ -11,11 +11,11 @@ import Stripe from 'stripe';
 import { config } from '../../../../config';
 import { secrets } from '../../../../shared/utils/secureConfig';
 import { logger } from '../../../../shared/utils/logger';
-import { 
-  IStripeClient, 
-  CheckoutSessionParams, 
-  SubscriptionParams, 
-  RefundParams 
+import {
+  IStripeClient,
+  CheckoutSessionParams,
+  SubscriptionParams,
+  RefundParams,
 } from './IStripeClient';
 
 export class StripeClient implements IStripeClient {
@@ -37,9 +37,9 @@ export class StripeClient implements IStripeClient {
 
   async createCheckoutSession(params: CheckoutSessionParams): Promise<Stripe.Checkout.Session> {
     try {
-      logger.info('Creating Stripe checkout session', { 
+      logger.info('Creating Stripe checkout session', {
         courseId: params.courseId,
-        customerEmail: params.customerEmail 
+        customerEmail: params.customerEmail,
       });
 
       const session = await this.stripe.checkout.sessions.create({
@@ -75,16 +75,16 @@ export class StripeClient implements IStripeClient {
         },
       });
 
-      logger.info('Stripe checkout session created', { 
+      logger.info('Stripe checkout session created', {
         sessionId: session.id,
-        courseId: params.courseId 
+        courseId: params.courseId,
       });
 
       return session;
     } catch (error) {
-      logger.error('Failed to create Stripe checkout session', { 
+      logger.error('Failed to create Stripe checkout session', {
         error: error instanceof Error ? error.message : 'Unknown error',
-        courseId: params.courseId 
+        courseId: params.courseId,
       });
       throw error;
     }
@@ -92,9 +92,9 @@ export class StripeClient implements IStripeClient {
 
   async createRefund(params: RefundParams): Promise<Stripe.Refund> {
     try {
-      logger.info('Creating Stripe refund', { 
+      logger.info('Creating Stripe refund', {
         paymentIntentId: params.paymentIntentId,
-        amount: params.amount 
+        amount: params.amount,
       });
 
       const refundData: Stripe.RefundCreateParams = {
@@ -111,16 +111,16 @@ export class StripeClient implements IStripeClient {
 
       const refund = await this.stripe.refunds.create(refundData);
 
-      logger.info('Stripe refund created', { 
+      logger.info('Stripe refund created', {
         refundId: refund.id,
-        paymentIntentId: params.paymentIntentId 
+        paymentIntentId: params.paymentIntentId,
       });
 
       return refund;
     } catch (error) {
-      logger.error('Failed to create Stripe refund', { 
+      logger.error('Failed to create Stripe refund', {
         error: error instanceof Error ? error.message : 'Unknown error',
-        paymentIntentId: params.paymentIntentId 
+        paymentIntentId: params.paymentIntentId,
       });
       throw error;
     }
@@ -128,9 +128,9 @@ export class StripeClient implements IStripeClient {
 
   async createSubscription(params: SubscriptionParams): Promise<Stripe.Subscription> {
     try {
-      logger.info('Creating Stripe subscription', { 
+      logger.info('Creating Stripe subscription', {
         customerId: params.customerId,
-        priceId: params.priceId 
+        priceId: params.priceId,
       });
 
       const subscription = await this.stripe.subscriptions.create({
@@ -139,16 +139,16 @@ export class StripeClient implements IStripeClient {
         metadata: params.metadata,
       });
 
-      logger.info('Stripe subscription created', { 
+      logger.info('Stripe subscription created', {
         subscriptionId: subscription.id,
-        customerId: params.customerId 
+        customerId: params.customerId,
       });
 
       return subscription;
     } catch (error) {
-      logger.error('Failed to create Stripe subscription', { 
+      logger.error('Failed to create Stripe subscription', {
         error: error instanceof Error ? error.message : 'Unknown error',
-        customerId: params.customerId 
+        customerId: params.customerId,
       });
       throw error;
     }
@@ -164,9 +164,9 @@ export class StripeClient implements IStripeClient {
 
       return subscription;
     } catch (error) {
-      logger.error('Failed to cancel Stripe subscription', { 
+      logger.error('Failed to cancel Stripe subscription', {
         error: error instanceof Error ? error.message : 'Unknown error',
-        subscriptionId 
+        subscriptionId,
       });
       throw error;
     }
@@ -175,24 +175,24 @@ export class StripeClient implements IStripeClient {
   async getCustomer(customerId: string): Promise<Stripe.Customer> {
     try {
       const customer = await this.stripe.customers.retrieve(customerId);
-      
+
       if (customer.deleted) {
         throw new Error(`Customer ${customerId} has been deleted`);
       }
 
       return customer as Stripe.Customer;
     } catch (error) {
-      logger.error('Failed to retrieve Stripe customer', { 
+      logger.error('Failed to retrieve Stripe customer', {
         error: error instanceof Error ? error.message : 'Unknown error',
-        customerId 
+        customerId,
       });
       throw error;
     }
   }
 
   async createOrUpdateCustomer(
-    email: string, 
-    name?: string, 
+    email: string,
+    name?: string,
     metadata?: Record<string, string>
   ): Promise<Stripe.Customer> {
     try {
@@ -204,11 +204,11 @@ export class StripeClient implements IStripeClient {
 
       if (existingCustomers.data.length > 0) {
         const customer = existingCustomers.data[0];
-        
+
         if (!customer) {
           throw new Error('Customer data is unexpectedly undefined');
         }
-        
+
         // Update existing customer if needed
         const updateData: Stripe.CustomerUpdateParams = {};
         if (name && customer.name !== name) {
@@ -230,7 +230,7 @@ export class StripeClient implements IStripeClient {
 
       // Create new customer
       logger.info('Creating new Stripe customer', { email });
-      
+
       const customer = await this.stripe.customers.create({
         email,
         name,
@@ -241,9 +241,9 @@ export class StripeClient implements IStripeClient {
 
       return customer;
     } catch (error) {
-      logger.error('Failed to create or update Stripe customer', { 
+      logger.error('Failed to create or update Stripe customer', {
         error: error instanceof Error ? error.message : 'Unknown error',
-        email 
+        email,
       });
       throw error;
     }
@@ -266,8 +266,8 @@ export class StripeClient implements IStripeClient {
 
       return event;
     } catch (error) {
-      logger.error('Failed to verify Stripe webhook signature', { 
-        error: error instanceof Error ? error.message : 'Unknown error' 
+      logger.error('Failed to verify Stripe webhook signature', {
+        error: error instanceof Error ? error.message : 'Unknown error',
       });
       throw error;
     }
@@ -278,9 +278,9 @@ export class StripeClient implements IStripeClient {
       const paymentIntent = await this.stripe.paymentIntents.retrieve(paymentIntentId);
       return paymentIntent;
     } catch (error) {
-      logger.error('Failed to retrieve Stripe payment intent', { 
+      logger.error('Failed to retrieve Stripe payment intent', {
         error: error instanceof Error ? error.message : 'Unknown error',
-        paymentIntentId 
+        paymentIntentId,
       });
       throw error;
     }
@@ -291,9 +291,9 @@ export class StripeClient implements IStripeClient {
       const session = await this.stripe.checkout.sessions.retrieve(sessionId);
       return session;
     } catch (error) {
-      logger.error('Failed to retrieve Stripe checkout session', { 
+      logger.error('Failed to retrieve Stripe checkout session', {
         error: error instanceof Error ? error.message : 'Unknown error',
-        sessionId 
+        sessionId,
       });
       throw error;
     }

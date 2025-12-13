@@ -1,6 +1,6 @@
 /**
  * Discussion Repository Implementation
- * 
+ *
  * Implements discussion data access using Drizzle ORM
  * Handles threads, posts, voting, and nested reply structures
  */
@@ -8,42 +8,42 @@
 import { eq, and, desc, asc, count, sql, inArray } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
-import { 
+import {
   discussionThreads,
   discussionPosts,
   postVotes,
-  DiscussionThread, 
+  DiscussionThread,
   NewDiscussionThread,
   DiscussionPost,
-  NewDiscussionPost
+  NewDiscussionPost,
 } from '../../../../infrastructure/database/schema/communication.schema.js';
 import { users } from '../../../../infrastructure/database/schema/users.schema.js';
 import { VoteType } from '../../domain/entities/DiscussionPost.js';
-import type { 
-  CreateDiscussionPostDTO, 
-  UpdateDiscussionPostDTO
+import type {
+  CreateDiscussionPostDTO,
+  UpdateDiscussionPostDTO,
 } from '../../domain/entities/DiscussionPost.js';
-import type { 
-  CreateDiscussionThreadDTO, 
-  UpdateDiscussionThreadDTO 
+import type {
+  CreateDiscussionThreadDTO,
+  UpdateDiscussionThreadDTO,
 } from '../../domain/entities/DiscussionThread.js';
 
-import { 
+import {
   IDiscussionRepository,
   DiscussionPagination,
   PaginatedResult,
   ThreadFilter,
   ThreadSortBy,
   PostWithReplies,
-  ThreadWithDetails
+  ThreadWithDetails,
 } from './IDiscussionRepository.js';
 
 /**
  * DiscussionRepository
- * 
+ *
  * Provides data access methods for discussion functionality
  * Implements thread and post management with voting and solution marking
- * 
+ *
  * Requirements:
  * - 9.2: Discussion thread creation with enrollment validation
  * - 9.3: Reply threading with nested structure
@@ -74,10 +74,7 @@ export class DiscussionRepository implements IDiscussionRepository {
       updatedAt: new Date(),
     };
 
-    const [thread] = await this.db
-      .insert(discussionThreads)
-      .values(threadData)
-      .returning();
+    const [thread] = await this.db.insert(discussionThreads).values(threadData).returning();
 
     if (!thread) {
       throw new Error('Failed to create discussion thread');
@@ -153,7 +150,7 @@ export class DiscussionRepository implements IDiscussionRepository {
       .select({ totalCount: count() })
       .from(discussionThreads)
       .where(whereClause);
-    
+
     const totalCount = totalCountResult[0]?.totalCount || 0;
 
     // Get threads with author information
@@ -176,7 +173,9 @@ export class DiscussionRepository implements IDiscussionRepository {
         // Author fields
         authorEmail: users.email,
         authorFullName: sql<string>`COALESCE((SELECT full_name FROM user_profiles WHERE user_id = ${users.id}), ${users.email})`,
-        authorAvatarUrl: sql<string | null>`(SELECT avatar_url FROM user_profiles WHERE user_id = ${users.id})`,
+        authorAvatarUrl: sql<
+          string | null
+        >`(SELECT avatar_url FROM user_profiles WHERE user_id = ${users.id})`,
       })
       .from(discussionThreads)
       .leftJoin(users, eq(discussionThreads.authorId, users.id))
@@ -186,7 +185,7 @@ export class DiscussionRepository implements IDiscussionRepository {
       .offset(pagination.offset);
 
     // Transform results to include author information
-    const threadsWithDetails: ThreadWithDetails[] = threadsWithAuthor.map(row => ({
+    const threadsWithDetails: ThreadWithDetails[] = threadsWithAuthor.map((row) => ({
       id: row.id,
       courseId: row.courseId,
       authorId: row.authorId,
@@ -200,21 +199,24 @@ export class DiscussionRepository implements IDiscussionRepository {
       lastActivityAt: row.lastActivityAt,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
-      author: row.authorEmail ? {
-        id: row.authorId,
-        email: row.authorEmail,
-        fullName: row.authorFullName,
-        avatarUrl: row.authorAvatarUrl || undefined,
-      } : undefined,
+      author: row.authorEmail
+        ? {
+            id: row.authorId,
+            email: row.authorEmail,
+            fullName: row.authorFullName,
+            avatarUrl: row.authorAvatarUrl || undefined,
+          }
+        : undefined,
     }));
 
     return {
       items: threadsWithDetails,
       totalCount: Number(totalCount),
       hasMore: pagination.offset + threadsWithDetails.length < Number(totalCount),
-      nextCursor: threadsWithDetails.length > 0 
-        ? threadsWithDetails[threadsWithDetails.length - 1]?.id 
-        : undefined
+      nextCursor:
+        threadsWithDetails.length > 0
+          ? threadsWithDetails[threadsWithDetails.length - 1]?.id
+          : undefined,
     };
   }
 
@@ -247,9 +249,7 @@ export class DiscussionRepository implements IDiscussionRepository {
   async deleteThread(id: string): Promise<void> {
     // For now, we'll implement hard delete since there's no soft delete field in schema
     // In a production system, you might want to add an isDeleted field
-    await this.db
-      .delete(discussionThreads)
-      .where(eq(discussionThreads.id, id));
+    await this.db.delete(discussionThreads).where(eq(discussionThreads.id, id));
   }
 
   /**
@@ -312,10 +312,7 @@ export class DiscussionRepository implements IDiscussionRepository {
       updatedAt: new Date(),
     };
 
-    const [post] = await this.db
-      .insert(discussionPosts)
-      .values(postData)
-      .returning();
+    const [post] = await this.db.insert(discussionPosts).values(postData).returning();
 
     if (!post) {
       throw new Error('Failed to create discussion post');
@@ -334,10 +331,7 @@ export class DiscussionRepository implements IDiscussionRepository {
     const [post] = await this.db
       .select()
       .from(discussionPosts)
-      .where(and(
-        eq(discussionPosts.id, id),
-        eq(discussionPosts.isDeleted, false)
-      ))
+      .where(and(eq(discussionPosts.id, id), eq(discussionPosts.isDeleted, false)))
       .limit(1);
 
     return post || null;
@@ -370,28 +364,24 @@ export class DiscussionRepository implements IDiscussionRepository {
         // Author fields
         authorEmail: users.email,
         authorFullName: sql<string>`COALESCE((SELECT full_name FROM user_profiles WHERE user_id = ${users.id}), ${users.email})`,
-        authorAvatarUrl: sql<string | null>`(SELECT avatar_url FROM user_profiles WHERE user_id = ${users.id})`,
+        authorAvatarUrl: sql<
+          string | null
+        >`(SELECT avatar_url FROM user_profiles WHERE user_id = ${users.id})`,
       })
       .from(discussionPosts)
       .leftJoin(users, eq(discussionPosts.authorId, users.id))
-      .where(and(
-        eq(discussionPosts.threadId, threadId),
-        eq(discussionPosts.isDeleted, false)
-      ))
+      .where(and(eq(discussionPosts.threadId, threadId), eq(discussionPosts.isDeleted, false)))
       .orderBy(asc(discussionPosts.createdAt));
 
     // Get user votes if userId is provided
     let userVotes: Set<string> = new Set();
     if (userId && allPosts.length > 0) {
-      const postIds = allPosts.map(p => p.id);
+      const postIds = allPosts.map((p) => p.id);
       const votes = await this.db
         .select({ postId: postVotes.postId })
         .from(postVotes)
-        .where(and(
-          eq(postVotes.userId, userId),
-          inArray(postVotes.postId, postIds)
-        ));
-      userVotes = new Set(votes.map(v => v.postId));
+        .where(and(eq(postVotes.userId, userId), inArray(postVotes.postId, postIds)));
+      userVotes = new Set(votes.map((v) => v.postId));
     }
 
     // Transform to PostWithReplies and build nested structure
@@ -414,12 +404,14 @@ export class DiscussionRepository implements IDiscussionRepository {
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
         replies: [],
-        author: row.authorEmail ? {
-          id: row.authorId,
-          email: row.authorEmail,
-          fullName: row.authorFullName,
-          avatarUrl: row.authorAvatarUrl || undefined,
-        } : undefined,
+        author: row.authorEmail
+          ? {
+              id: row.authorId,
+              email: row.authorEmail,
+              fullName: row.authorFullName,
+              avatarUrl: row.authorAvatarUrl || undefined,
+            }
+          : undefined,
         hasUserVoted: userId ? userVotes.has(row.id) : undefined,
       };
 
@@ -441,19 +433,18 @@ export class DiscussionRepository implements IDiscussionRepository {
     }
 
     // Apply pagination to top-level posts only
-    const paginatedPosts = pagination 
+    const paginatedPosts = pagination
       ? topLevelPosts.slice(pagination.offset, pagination.offset + pagination.limit)
       : topLevelPosts;
 
     return {
       items: paginatedPosts,
       totalCount: topLevelPosts.length,
-      hasMore: pagination 
+      hasMore: pagination
         ? pagination.offset + paginatedPosts.length < topLevelPosts.length
         : false,
-      nextCursor: paginatedPosts.length > 0 
-        ? paginatedPosts[paginatedPosts.length - 1]?.id 
-        : undefined
+      nextCursor:
+        paginatedPosts.length > 0 ? paginatedPosts[paginatedPosts.length - 1]?.id : undefined,
     };
   }
 
@@ -468,21 +459,15 @@ export class DiscussionRepository implements IDiscussionRepository {
     const totalCountResult = await this.db
       .select({ totalCount: count() })
       .from(discussionPosts)
-      .where(and(
-        eq(discussionPosts.authorId, authorId),
-        eq(discussionPosts.isDeleted, false)
-      ));
-    
+      .where(and(eq(discussionPosts.authorId, authorId), eq(discussionPosts.isDeleted, false)));
+
     const totalCount = totalCountResult[0]?.totalCount || 0;
 
     // Get posts
     const posts = await this.db
       .select()
       .from(discussionPosts)
-      .where(and(
-        eq(discussionPosts.authorId, authorId),
-        eq(discussionPosts.isDeleted, false)
-      ))
+      .where(and(eq(discussionPosts.authorId, authorId), eq(discussionPosts.isDeleted, false)))
       .orderBy(desc(discussionPosts.createdAt))
       .limit(pagination.limit)
       .offset(pagination.offset);
@@ -491,9 +476,7 @@ export class DiscussionRepository implements IDiscussionRepository {
       items: posts,
       totalCount: Number(totalCount),
       hasMore: pagination.offset + posts.length < Number(totalCount),
-      nextCursor: posts.length > 0 
-        ? posts[posts.length - 1]?.id 
-        : undefined
+      nextCursor: posts.length > 0 ? posts[posts.length - 1]?.id : undefined,
     };
   }
 
@@ -570,10 +553,7 @@ export class DiscussionRepository implements IDiscussionRepository {
       const existingVote = await this.db
         .select()
         .from(postVotes)
-        .where(and(
-          eq(postVotes.postId, postId),
-          eq(postVotes.userId, userId)
-        ))
+        .where(and(eq(postVotes.postId, postId), eq(postVotes.userId, userId)))
         .limit(1);
 
       if (existingVote.length === 0) {
@@ -597,10 +577,7 @@ export class DiscussionRepository implements IDiscussionRepository {
       // Remove vote
       const deletedVotes = await this.db
         .delete(postVotes)
-        .where(and(
-          eq(postVotes.postId, postId),
-          eq(postVotes.userId, userId)
-        ))
+        .where(and(eq(postVotes.postId, postId), eq(postVotes.userId, userId)))
         .returning();
 
       if (deletedVotes.length > 0) {
@@ -623,10 +600,7 @@ export class DiscussionRepository implements IDiscussionRepository {
     const [vote] = await this.db
       .select()
       .from(postVotes)
-      .where(and(
-        eq(postVotes.postId, postId),
-        eq(postVotes.userId, userId)
-      ))
+      .where(and(eq(postVotes.postId, postId), eq(postVotes.userId, userId)))
       .limit(1);
 
     return !!vote;
@@ -647,17 +621,17 @@ export class DiscussionRepository implements IDiscussionRepository {
   /**
    * Get posts voted by user
    */
-  async getPostsVotedByUser(userId: string, pagination: DiscussionPagination): Promise<PaginatedResult<DiscussionPost>> {
+  async getPostsVotedByUser(
+    userId: string,
+    pagination: DiscussionPagination
+  ): Promise<PaginatedResult<DiscussionPost>> {
     // Get total count
     const totalCountResult = await this.db
       .select({ totalCount: count() })
       .from(postVotes)
       .innerJoin(discussionPosts, eq(postVotes.postId, discussionPosts.id))
-      .where(and(
-        eq(postVotes.userId, userId),
-        eq(discussionPosts.isDeleted, false)
-      ));
-    
+      .where(and(eq(postVotes.userId, userId), eq(discussionPosts.isDeleted, false)));
+
     const totalCount = totalCountResult[0]?.totalCount || 0;
 
     // Get posts
@@ -678,10 +652,7 @@ export class DiscussionRepository implements IDiscussionRepository {
       })
       .from(postVotes)
       .innerJoin(discussionPosts, eq(postVotes.postId, discussionPosts.id))
-      .where(and(
-        eq(postVotes.userId, userId),
-        eq(discussionPosts.isDeleted, false)
-      ))
+      .where(and(eq(postVotes.userId, userId), eq(discussionPosts.isDeleted, false)))
       .orderBy(desc(postVotes.createdAt))
       .limit(pagination.limit)
       .offset(pagination.offset);
@@ -690,9 +661,7 @@ export class DiscussionRepository implements IDiscussionRepository {
       items: posts,
       totalCount: Number(totalCount),
       hasMore: pagination.offset + posts.length < Number(totalCount),
-      nextCursor: posts.length > 0 
-        ? posts[posts.length - 1]?.id 
-        : undefined
+      nextCursor: posts.length > 0 ? posts[posts.length - 1]?.id : undefined,
     };
   }
 
@@ -724,10 +693,7 @@ export class DiscussionRepository implements IDiscussionRepository {
       .select({ totalPosts: count() })
       .from(discussionPosts)
       .innerJoin(discussionThreads, eq(discussionPosts.threadId, discussionThreads.id))
-      .where(and(
-        eq(discussionThreads.courseId, courseId),
-        eq(discussionPosts.isDeleted, false)
-      ));
+      .where(and(eq(discussionThreads.courseId, courseId), eq(discussionPosts.isDeleted, false)));
 
     const postStats = postStatsResult[0];
 
@@ -742,22 +708,22 @@ export class DiscussionRepository implements IDiscussionRepository {
   /**
    * Get user participation statistics
    */
-  async getUserParticipationStats(userId: string, courseId?: string): Promise<{
+  async getUserParticipationStats(
+    userId: string,
+    courseId?: string
+  ): Promise<{
     threadsCreated: number;
     postsCreated: number;
     solutionsMarked: number;
     votesReceived: number;
   }> {
     // Build where conditions
-    const threadWhere = courseId 
+    const threadWhere = courseId
       ? and(eq(discussionThreads.authorId, userId), eq(discussionThreads.courseId, courseId))
       : eq(discussionThreads.authorId, userId);
 
     const postWhere = courseId
-      ? and(
-          eq(discussionPosts.authorId, userId),
-          eq(discussionPosts.isDeleted, false)
-        )
+      ? and(eq(discussionPosts.authorId, userId), eq(discussionPosts.isDeleted, false))
       : and(eq(discussionPosts.authorId, userId), eq(discussionPosts.isDeleted, false));
 
     // Get threads created
@@ -776,20 +742,14 @@ export class DiscussionRepository implements IDiscussionRepository {
     const solutionCountResult = await this.db
       .select({ count: count() })
       .from(discussionPosts)
-      .where(and(
-        postWhere,
-        eq(discussionPosts.isSolution, true)
-      ));
+      .where(and(postWhere, eq(discussionPosts.isSolution, true)));
 
     // Get votes received
     const voteCountResult = await this.db
       .select({ count: count() })
       .from(postVotes)
       .innerJoin(discussionPosts, eq(postVotes.postId, discussionPosts.id))
-      .where(and(
-        eq(discussionPosts.authorId, userId),
-        eq(discussionPosts.isDeleted, false)
-      ));
+      .where(and(eq(discussionPosts.authorId, userId), eq(discussionPosts.isDeleted, false)));
 
     const threadCount = threadCountResult[0];
     const postCount = postCountResult[0];

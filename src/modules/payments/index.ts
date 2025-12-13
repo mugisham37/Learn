@@ -1,6 +1,6 @@
 /**
  * Payments Module
- * 
+ *
  * Handles Stripe integration, payment processing, subscriptions, and refunds.
  * This module provides the public API for the payments domain.
  */
@@ -8,7 +8,7 @@
 // Infrastructure exports
 export * from './infrastructure';
 
-// Domain exports  
+// Domain exports
 export * from './domain';
 
 // Application exports

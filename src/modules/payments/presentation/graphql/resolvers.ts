@@ -1,21 +1,21 @@
 /**
  * GraphQL Resolvers for Payments Module
- * 
+ *
  * Implements GraphQL resolvers for payment processing, subscription management,
  * and refund operations with proper error handling, validation, and authorization.
- * 
+ *
  * Requirements: 21.2, 21.3
  */
 
 import { GraphQLError } from 'graphql';
 
-import { 
-  ValidationError, 
-  NotFoundError, 
-  ConflictError, 
+import {
+  ValidationError,
+  NotFoundError,
+  ConflictError,
   AuthenticationError,
   AuthorizationError,
-  ExternalServiceError 
+  ExternalServiceError,
 } from '../../../../shared/errors/index.js';
 import { logger } from '../../../../shared/utils/logger.js';
 import { IPaymentService } from '../../application/services/IPaymentService.js';
@@ -73,14 +73,12 @@ function requireAuth(context: GraphQLContext): { id: string; email: string; role
     throw new GraphQLError('Authentication required', {
       extensions: {
         code: 'UNAUTHENTICATED',
-        http: { status: 401 }
-      }
+        http: { status: 401 },
+      },
     });
   }
   return context.user;
 }
-
-
 
 /**
  * Helper function to convert domain errors to GraphQL errors
@@ -90,7 +88,7 @@ function handleError(error: Error, operation: string, context: GraphQLContext): 
     error: error.message,
     stack: error.stack,
     requestId: context.requestId,
-    userId: context.user?.id
+    userId: context.user?.id,
   });
 
   if (error instanceof ValidationError) {
@@ -98,8 +96,8 @@ function handleError(error: Error, operation: string, context: GraphQLContext): 
       extensions: {
         code: 'BAD_USER_INPUT',
         http: { status: 400 },
-        details: error.details
-      }
+        details: error.details,
+      },
     });
   }
 
@@ -107,8 +105,8 @@ function handleError(error: Error, operation: string, context: GraphQLContext): 
     throw new GraphQLError(error.message, {
       extensions: {
         code: 'UNAUTHENTICATED',
-        http: { status: 401 }
-      }
+        http: { status: 401 },
+      },
     });
   }
 
@@ -116,8 +114,8 @@ function handleError(error: Error, operation: string, context: GraphQLContext): 
     throw new GraphQLError(error.message, {
       extensions: {
         code: 'FORBIDDEN',
-        http: { status: 403 }
-      }
+        http: { status: 403 },
+      },
     });
   }
 
@@ -125,8 +123,8 @@ function handleError(error: Error, operation: string, context: GraphQLContext): 
     throw new GraphQLError(error.message, {
       extensions: {
         code: 'NOT_FOUND',
-        http: { status: 404 }
-      }
+        http: { status: 404 },
+      },
     });
   }
 
@@ -134,8 +132,8 @@ function handleError(error: Error, operation: string, context: GraphQLContext): 
     throw new GraphQLError(error.message, {
       extensions: {
         code: 'CONFLICT',
-        http: { status: 409 }
-      }
+        http: { status: 409 },
+      },
     });
   }
 
@@ -143,8 +141,8 @@ function handleError(error: Error, operation: string, context: GraphQLContext): 
     throw new GraphQLError(`Payment service error: ${error.message}`, {
       extensions: {
         code: 'EXTERNAL_SERVICE_ERROR',
-        http: { status: 502 }
-      }
+        http: { status: 502 },
+      },
     });
   }
 
@@ -152,15 +150,17 @@ function handleError(error: Error, operation: string, context: GraphQLContext): 
   throw new GraphQLError('An unexpected error occurred', {
     extensions: {
       code: 'INTERNAL_ERROR',
-      http: { status: 500 }
-    }
+      http: { status: 500 },
+    },
   });
 }
 
 /**
  * Helper function to map payment status to GraphQL enum
  */
-function mapPaymentStatusToGraphQL(status: string): 'PENDING' | 'SUCCEEDED' | 'FAILED' | 'REFUNDED' {
+function mapPaymentStatusToGraphQL(
+  status: string
+): 'PENDING' | 'SUCCEEDED' | 'FAILED' | 'REFUNDED' {
   switch (status) {
     case 'pending':
       return 'PENDING';
@@ -178,7 +178,9 @@ function mapPaymentStatusToGraphQL(status: string): 'PENDING' | 'SUCCEEDED' | 'F
 /**
  * Helper function to map subscription status to GraphQL enum
  */
-function mapSubscriptionStatusToGraphQL(status: string): 'ACTIVE' | 'CANCELED' | 'PAST_DUE' | 'UNPAID' {
+function mapSubscriptionStatusToGraphQL(
+  status: string
+): 'ACTIVE' | 'CANCELED' | 'PAST_DUE' | 'UNPAID' {
   switch (status) {
     case 'active':
       return 'ACTIVE';
@@ -218,12 +220,12 @@ export const paymentResolvers = {
      * Get payment history for the authenticated user
      */
     getPaymentHistory: async (
-      _parent: unknown, 
-      args: { input?: PaymentHistoryInput }, 
+      _parent: unknown,
+      args: { input?: PaymentHistoryInput },
       context: GraphQLContext
     ): Promise<unknown> => {
       const user = requireAuth(context);
-      
+
       try {
         const page = args.input?.page || 1;
         const limit = Math.min(args.input?.limit || 20, 100); // Cap at 100 items per page
@@ -231,7 +233,7 @@ export const paymentResolvers = {
         const result = await context.paymentService.getPaymentHistory(user.id, page, limit);
 
         return {
-          payments: result.payments.map(payment => ({
+          payments: result.payments.map((payment) => ({
             id: payment.getId(),
             userId: payment.getUserId(),
             courseId: payment.getCourseId(),
@@ -243,12 +245,12 @@ export const paymentResolvers = {
             paymentMethod: payment.getPaymentMethod(),
             metadata: payment.getMetadata(),
             createdAt: payment.getCreatedAt(),
-            updatedAt: payment.getUpdatedAt()
+            updatedAt: payment.getUpdatedAt(),
           })),
           total: result.total,
           page: result.page,
           limit: result.limit,
-          totalPages: result.totalPages
+          totalPages: result.totalPages,
         };
       } catch (error) {
         handleError(error as Error, 'getPaymentHistory', context);
@@ -259,17 +261,17 @@ export const paymentResolvers = {
      * Get specific payment by ID (with ownership check)
      */
     getPayment: async (
-      _parent: unknown, 
-      args: { id: string }, 
+      _parent: unknown,
+      args: { id: string },
       context: GraphQLContext
     ): Promise<Record<string, unknown> | null> => {
       const user = requireAuth(context);
-      
+
       try {
         // Get payment history to find the payment (this ensures ownership check)
         const result = await context.paymentService.getPaymentHistory(user.id, 1, 1000);
-        const payment = result.payments.find(p => p.getId() === args.id);
-        
+        const payment = result.payments.find((p) => p.getId() === args.id);
+
         if (!payment) {
           return null;
         }
@@ -286,7 +288,7 @@ export const paymentResolvers = {
           paymentMethod: payment.getPaymentMethod(),
           metadata: payment.getMetadata(),
           createdAt: payment.getCreatedAt(),
-          updatedAt: payment.getUpdatedAt()
+          updatedAt: payment.getUpdatedAt(),
         };
       } catch (error) {
         handleError(error as Error, 'getPayment', context);
@@ -297,16 +299,16 @@ export const paymentResolvers = {
      * Get user's subscriptions
      */
     getUserSubscriptions: async (
-      _parent: unknown, 
-      _args: unknown, 
+      _parent: unknown,
+      _args: unknown,
       context: GraphQLContext
     ): Promise<unknown[]> => {
       const user = requireAuth(context);
-      
+
       try {
         const subscriptions = await context.paymentService.getUserSubscriptions(user.id);
 
-        return subscriptions.map(subscription => ({
+        return subscriptions.map((subscription) => ({
           id: subscription.getId(),
           userId: subscription.getUserId(),
           stripeSubscriptionId: subscription.getStripeSubscriptionId(),
@@ -320,7 +322,7 @@ export const paymentResolvers = {
           isActive: subscription.isActive(),
           isExpired: subscription.isExpired(),
           createdAt: subscription.getCreatedAt(),
-          updatedAt: subscription.getUpdatedAt()
+          updatedAt: subscription.getUpdatedAt(),
         }));
       } catch (error) {
         handleError(error as Error, 'getUserSubscriptions', context);
@@ -331,16 +333,16 @@ export const paymentResolvers = {
      * Get specific subscription by ID (with ownership check)
      */
     getSubscription: async (
-      _parent: unknown, 
-      args: { id: string }, 
+      _parent: unknown,
+      args: { id: string },
       context: GraphQLContext
     ): Promise<Record<string, unknown> | null> => {
       const user = requireAuth(context);
-      
+
       try {
         const subscriptions = await context.paymentService.getUserSubscriptions(user.id);
-        const subscription = subscriptions.find(s => s.getId() === args.id);
-        
+        const subscription = subscriptions.find((s) => s.getId() === args.id);
+
         if (!subscription) {
           return null;
         }
@@ -359,7 +361,7 @@ export const paymentResolvers = {
           isActive: subscription.isActive(),
           isExpired: subscription.isExpired(),
           createdAt: subscription.getCreatedAt(),
-          updatedAt: subscription.getUpdatedAt()
+          updatedAt: subscription.getUpdatedAt(),
         };
       } catch (error) {
         handleError(error as Error, 'getSubscription', context);
@@ -370,16 +372,18 @@ export const paymentResolvers = {
      * Get refund eligibility for an enrollment
      */
     getRefundEligibility: async (
-      _parent: unknown, 
-      args: { enrollmentId: string }, 
+      _parent: unknown,
+      args: { enrollmentId: string },
       context: GraphQLContext
     ): Promise<unknown> => {
       requireAuth(context);
-      
+
       try {
         // Note: In a real implementation, you'd need to check enrollment ownership
         // For now, we'll trust the service to handle authorization
-        const eligibility = await context.paymentService.validateRefundEligibility(args.enrollmentId);
+        const eligibility = await context.paymentService.validateRefundEligibility(
+          args.enrollmentId
+        );
 
         return {
           eligible: eligibility.eligible,
@@ -389,8 +393,8 @@ export const paymentResolvers = {
             fullRefundDays: eligibility.refundPolicy.fullRefundDays,
             contentConsumptionThreshold: eligibility.refundPolicy.contentConsumptionThreshold,
             minimumRefundPercentage: eligibility.refundPolicy.minimumRefundPercentage,
-            administrativeFeePercentage: eligibility.refundPolicy.administrativeFeePercentage
-          }
+            administrativeFeePercentage: eligibility.refundPolicy.administrativeFeePercentage,
+          },
         };
       } catch (error) {
         handleError(error as Error, 'getRefundEligibility', context);
@@ -401,16 +405,16 @@ export const paymentResolvers = {
      * Get refund by ID (with ownership check through payment)
      */
     getRefund: async (
-      _parent: unknown, 
-      _args: { id: string }, 
+      _parent: unknown,
+      _args: { id: string },
       context: GraphQLContext
     ): Promise<Record<string, unknown> | null> => {
       const user = requireAuth(context);
-      
+
       try {
         // Get user's payment history to find refunds
         const result = await context.paymentService.getPaymentHistory(user.id, 1, 1000);
-        
+
         // Find the refund through payments (this ensures ownership)
         const foundRefund: Record<string, unknown> | null = null;
         for (const _payment of result.payments) {
@@ -423,7 +427,7 @@ export const paymentResolvers = {
       } catch (error) {
         handleError(error as Error, 'getRefund', context);
       }
-    }
+    },
   },
 
   Mutation: {
@@ -431,25 +435,25 @@ export const paymentResolvers = {
      * Create checkout session for course purchase
      */
     createCheckoutSession: async (
-      _parent: unknown, 
-      args: { input: CreateCheckoutSessionInput }, 
+      _parent: unknown,
+      args: { input: CreateCheckoutSessionInput },
       context: GraphQLContext
     ): Promise<unknown> => {
       const user = requireAuth(context);
-      
+
       try {
         const result = await context.paymentService.createCheckoutSession({
           courseId: args.input.courseId,
           studentId: user.id,
           successUrl: args.input.successUrl,
           cancelUrl: args.input.cancelUrl,
-          metadata: args.input.metadata
+          metadata: args.input.metadata,
         });
 
         return {
           sessionId: result.sessionId,
           sessionUrl: result.sessionUrl,
-          paymentId: result.paymentId
+          paymentId: result.paymentId,
         };
       } catch (error) {
         handleError(error as Error, 'createCheckoutSession', context);
@@ -460,18 +464,18 @@ export const paymentResolvers = {
      * Request refund for an enrollment
      */
     requestRefund: async (
-      _parent: unknown, 
-      args: { input: RequestRefundInput }, 
+      _parent: unknown,
+      args: { input: RequestRefundInput },
       context: GraphQLContext
     ): Promise<unknown> => {
       const user = requireAuth(context);
-      
+
       try {
         const refund = await context.paymentService.processRefund({
           enrollmentId: args.input.enrollmentId,
           reason: args.input.reason,
           amount: args.input.amount,
-          requestedBy: user.id
+          requestedBy: user.id,
         });
 
         return {
@@ -483,7 +487,7 @@ export const paymentResolvers = {
           reason: refund.getReason(),
           status: mapRefundStatusToGraphQL(refund.getStatus()),
           createdAt: refund.getCreatedAt(),
-          updatedAt: refund.getUpdatedAt()
+          updatedAt: refund.getUpdatedAt(),
         };
       } catch (error) {
         handleError(error as Error, 'requestRefund', context);
@@ -494,17 +498,17 @@ export const paymentResolvers = {
      * Create subscription for user
      */
     createSubscription: async (
-      _parent: unknown, 
-      args: { input: CreateSubscriptionInput }, 
+      _parent: unknown,
+      args: { input: CreateSubscriptionInput },
       context: GraphQLContext
     ): Promise<unknown> => {
       const user = requireAuth(context);
-      
+
       try {
         const subscription = await context.paymentService.createSubscription({
           userId: user.id,
           planId: args.input.planId,
-          metadata: args.input.metadata
+          metadata: args.input.metadata,
         });
 
         return {
@@ -521,7 +525,7 @@ export const paymentResolvers = {
           isActive: subscription.isActive(),
           isExpired: subscription.isExpired(),
           createdAt: subscription.getCreatedAt(),
-          updatedAt: subscription.getUpdatedAt()
+          updatedAt: subscription.getUpdatedAt(),
         };
       } catch (error) {
         handleError(error as Error, 'createSubscription', context);
@@ -532,17 +536,17 @@ export const paymentResolvers = {
      * Cancel subscription
      */
     cancelSubscription: async (
-      _parent: unknown, 
-      args: { input: CancelSubscriptionInput }, 
+      _parent: unknown,
+      args: { input: CancelSubscriptionInput },
       context: GraphQLContext
     ): Promise<unknown> => {
       const user = requireAuth(context);
-      
+
       try {
         // First verify ownership of the subscription
         const userSubscriptions = await context.paymentService.getUserSubscriptions(user.id);
-        const subscription = userSubscriptions.find(s => s.getId() === args.input.subscriptionId);
-        
+        const subscription = userSubscriptions.find((s) => s.getId() === args.input.subscriptionId);
+
         if (!subscription) {
           throw new NotFoundError('Subscription not found or access denied');
         }
@@ -550,7 +554,7 @@ export const paymentResolvers = {
         const updatedSubscription = await context.paymentService.cancelSubscription({
           subscriptionId: args.input.subscriptionId,
           cancelAtPeriodEnd: args.input.cancelAtPeriodEnd,
-          reason: args.input.reason
+          reason: args.input.reason,
         });
 
         return {
@@ -567,23 +571,31 @@ export const paymentResolvers = {
           isActive: updatedSubscription.isActive(),
           isExpired: updatedSubscription.isExpired(),
           createdAt: updatedSubscription.getCreatedAt(),
-          updatedAt: updatedSubscription.getUpdatedAt()
+          updatedAt: updatedSubscription.getUpdatedAt(),
         };
       } catch (error) {
         handleError(error as Error, 'cancelSubscription', context);
       }
-    }
+    },
   },
 
   // Type resolvers for nested fields
   Payment: {
     // These would be resolved by DataLoaders in a real implementation
-    user: (parent: { userId: string }, _args: unknown, _context: GraphQLContext): { id: string } => {
+    user: (
+      parent: { userId: string },
+      _args: unknown,
+      _context: GraphQLContext
+    ): { id: string } => {
       // Return user data - would typically use a DataLoader
       return { id: parent.userId };
     },
-    
-    course: (parent: { courseId?: string }, _args: unknown, _context: GraphQLContext): { id: string } | null => {
+
+    course: (
+      parent: { courseId?: string },
+      _args: unknown,
+      _context: GraphQLContext
+    ): { id: string } | null => {
       if (!parent.courseId) return null;
       // Return course data - would typically use a DataLoader
       return { id: parent.courseId };
@@ -592,26 +604,38 @@ export const paymentResolvers = {
     refunds: (_parent: unknown, _args: unknown, _context: GraphQLContext): unknown[] => {
       // Return refunds for this payment - would typically use a DataLoader
       return [];
-    }
+    },
   },
 
   Subscription: {
-    user: (parent: { userId: string }, _args: unknown, _context: GraphQLContext): { id: string } => {
+    user: (
+      parent: { userId: string },
+      _args: unknown,
+      _context: GraphQLContext
+    ): { id: string } => {
       // Return user data - would typically use a DataLoader
       return { id: parent.userId };
-    }
+    },
   },
 
   Refund: {
-    payment: (parent: { paymentId: string }, _args: unknown, _context: GraphQLContext): { id: string } => {
+    payment: (
+      parent: { paymentId: string },
+      _args: unknown,
+      _context: GraphQLContext
+    ): { id: string } => {
       // Return payment data - would typically use a DataLoader
       return { id: parent.paymentId };
     },
 
-    enrollment: (parent: { enrollmentId?: string }, _args: unknown, _context: GraphQLContext): { id: string } | null => {
+    enrollment: (
+      parent: { enrollmentId?: string },
+      _args: unknown,
+      _context: GraphQLContext
+    ): { id: string } | null => {
       if (!parent.enrollmentId) return null;
       // Return enrollment data - would typically use a DataLoader
       return { id: parent.enrollmentId };
-    }
-  }
+    },
+  },
 };

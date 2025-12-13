@@ -1,9 +1,9 @@
 /**
  * Real-time Service Implementation
- * 
+ *
  * Concrete implementation of the real-time service interface
  * Wraps Socket.io functionality for use by application services
- * 
+ *
  * Requirements: 9.6, 9.7, 9.8
  */
 
@@ -34,7 +34,7 @@ export class RealtimeService implements IRealtimeService {
   ): Promise<void> {
     try {
       await emitToUser(userId, event, data);
-      
+
       logger.debug('Real-time event emitted to user', {
         userId,
         event,
@@ -60,7 +60,7 @@ export class RealtimeService implements IRealtimeService {
   ): Promise<void> {
     try {
       await emitToRoom(room, event, data);
-      
+
       logger.debug('Real-time event emitted to room', {
         room,
         event,
@@ -86,7 +86,7 @@ export class RealtimeService implements IRealtimeService {
   ): Promise<void> {
     try {
       await emitToCourse(courseId, event, data);
-      
+
       logger.debug('Real-time event emitted to course', {
         courseId,
         event,
@@ -113,7 +113,7 @@ export class RealtimeService implements IRealtimeService {
   ): Promise<void> {
     try {
       await emitToConversation(userId1, userId2, event, data);
-      
+
       logger.debug('Real-time event emitted to conversation', {
         userId1,
         userId2,
@@ -141,7 +141,7 @@ export class RealtimeService implements IRealtimeService {
   ): Promise<void> {
     try {
       await emitToThread(threadId, event, data);
-      
+
       logger.debug('Real-time event emitted to thread', {
         threadId,
         event,
@@ -205,7 +205,7 @@ export class RealtimeService implements IRealtimeService {
   async getOnlineUsersInCourse(courseId: string): Promise<string[]> {
     try {
       const onlineUsers = await getOnlineUsersInCourse(courseId);
-      
+
       logger.debug('Retrieved online users in course', {
         courseId,
         userCount: onlineUsers.length,
@@ -230,7 +230,7 @@ export class RealtimeService implements IRealtimeService {
   } | null> {
     try {
       const presence = await getUserPresence(userId);
-      
+
       logger.debug('Retrieved user presence', {
         userId,
         status: presence?.status || 'offline',

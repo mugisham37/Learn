@@ -1,10 +1,10 @@
 /**
  * User Repository Interface
- * 
+ *
  * Defines the contract for user data access operations.
  * Abstracts database operations behind a clean interface following
  * the Repository pattern for domain independence.
- * 
+ *
  * Requirements: 1.1, 1.2
  */
 
@@ -37,14 +37,14 @@ export interface UpdateUserDTO {
 
 /**
  * User Repository Interface
- * 
+ *
  * Provides methods for all user data access operations with caching support.
  * Implementations must handle database errors and map them to domain errors.
  */
 export interface IUserRepository {
   /**
    * Creates a new user in the database
-   * 
+   *
    * @param data - User creation data
    * @returns The created user
    * @throws ConflictError if email already exists
@@ -54,7 +54,7 @@ export interface IUserRepository {
 
   /**
    * Finds a user by their unique ID
-   * 
+   *
    * @param id - User ID
    * @returns The user if found, null otherwise
    * @throws DatabaseError if database operation fails
@@ -63,7 +63,7 @@ export interface IUserRepository {
 
   /**
    * Finds a user by their email address
-   * 
+   *
    * @param email - User email
    * @returns The user if found, null otherwise
    * @throws DatabaseError if database operation fails
@@ -72,7 +72,7 @@ export interface IUserRepository {
 
   /**
    * Finds a user by verification token
-   * 
+   *
    * @param token - Verification token
    * @returns The user if found, null otherwise
    * @throws DatabaseError if database operation fails
@@ -81,7 +81,7 @@ export interface IUserRepository {
 
   /**
    * Finds a user by password reset token
-   * 
+   *
    * @param token - Password reset token
    * @returns The user if found, null otherwise
    * @throws DatabaseError if database operation fails
@@ -90,7 +90,7 @@ export interface IUserRepository {
 
   /**
    * Updates a user's data
-   * 
+   *
    * @param id - User ID
    * @param data - Update data
    * @returns The updated user
@@ -102,7 +102,7 @@ export interface IUserRepository {
 
   /**
    * Soft deletes a user by setting deletedAt timestamp
-   * 
+   *
    * @param id - User ID
    * @returns void
    * @throws NotFoundError if user doesn't exist
@@ -113,7 +113,7 @@ export interface IUserRepository {
   /**
    * Permanently deletes a user from the database
    * USE WITH CAUTION - This is irreversible
-   * 
+   *
    * @param id - User ID
    * @returns void
    * @throws NotFoundError if user doesn't exist
@@ -123,7 +123,7 @@ export interface IUserRepository {
 
   /**
    * Checks if a user with the given email exists
-   * 
+   *
    * @param email - User email
    * @returns True if user exists, false otherwise
    * @throws DatabaseError if database operation fails
@@ -133,7 +133,7 @@ export interface IUserRepository {
   /**
    * Invalidates cache for a specific user
    * Should be called after any update operation
-   * 
+   *
    * @param id - User ID
    * @returns void
    */
@@ -142,7 +142,7 @@ export interface IUserRepository {
   /**
    * Invalidates cache for a user by email
    * Should be called after operations that affect email lookups
-   * 
+   *
    * @param email - User email
    * @returns void
    */

@@ -1,9 +1,9 @@
 /**
  * Secure File Upload Service
- * 
+ *
  * Provides secure file upload functionality by combining content management
  * with comprehensive security validation.
- * 
+ *
  * Requirements: 13.4
  */
 
@@ -11,11 +11,11 @@ import { ValidationError, ExternalServiceError } from '../errors/index.js';
 import { logger } from '../utils/logger.js';
 
 import { IContentService, ContentUploadParams, ContentUploadResult } from './IContentService.js';
-import { 
-  IFileUploadSecurityService, 
-  FileUploadContext, 
-  FileUploadParams, 
-  FileValidationResult 
+import {
+  IFileUploadSecurityService,
+  FileUploadContext,
+  FileUploadParams,
+  FileValidationResult,
 } from './IFileUploadSecurityService.js';
 
 /**
@@ -122,14 +122,7 @@ export class SecureFileUploadService implements ISecureFileUploadService {
 
       // 2. Check if validation passed
       if (!validationResult.valid) {
-        throw new ValidationError(
-          `File validation failed: ${validationResult.errors.join(', ')}`,
-          { 
-            fileName: params.fileName,
-            errors: validationResult.errors,
-            warnings: validationResult.warnings,
-          }
-        );
+        throw new ValidationError(`File validation failed: ${validationResult.errors.map(e => e.message).join(', ')}`);
       }
 
       // 3. Map context to file type for content service
@@ -138,14 +131,14 @@ export class SecureFileUploadService implements ISecureFileUploadService {
       // 4. Generate upload URL using the unique file name
       const contentUploadParams: ContentUploadParams = {
         userId: params.userId,
-        fileName: validationResult.uniqueFileName,
+        fileName: validationResult.uniqueFileName || validationResult.sanitizedFileName || params.fileName,
         fileType,
-        contentType: validationResult.detectedMimeType || params.declaredMimeType,
+        contentType: validationResult.detectedMimeType || params.declaredMimeType || 'application/octet-stream',
         isPrivate: params.isPrivate,
         metadata: {
           ...params.metadata,
           originalFileName: params.fileName,
-          sanitizedFileName: validationResult.sanitizedFileName,
+          sanitizedFileName: validationResult.sanitizedFileName || params.fileName,
           fileHash: validationResult.fileHash || '',
           uploadContext: params.context,
           validatedAt: new Date().toISOString(),
@@ -174,11 +167,11 @@ export class SecureFileUploadService implements ISecureFileUploadService {
         originalFileName: params.fileName,
         uniqueFileName: validationResult.uniqueFileName,
         s3Key: uploadResult.key,
-        warningCount: validationResult.warnings.length,
+        warningCount: validationResult.warnings?.length || 0,
       });
 
       // Log warnings if any
-      if (validationResult.warnings.length > 0) {
+      if (validationResult.warnings && validationResult.warnings.length > 0) {
         logger.warn('File validation warnings', {
           userId: params.userId,
           fileName: params.fileName,
@@ -240,11 +233,13 @@ export class SecureFileUploadService implements ISecureFileUploadService {
 
       // 3. Generate S3 key if not provided
       const fileType = this.mapContextToFileType(params.context);
-      const s3Key = params.s3Key || this.contentService.generateContentKey(
-        params.userId,
-        validationResult.uniqueFileName,
-        fileType
-      );
+      const s3Key =
+        params.s3Key ||
+        this.contentService.generateContentKey(
+          params.userId,
+          validationResult.uniqueFileName || validationResult.sanitizedFileName || params.fileName,
+          fileType
+        );
 
       // 4. For direct upload, we would typically use S3Service directly
       // This is a simplified implementation - in practice, you might want to
@@ -263,7 +258,7 @@ export class SecureFileUploadService implements ISecureFileUploadService {
         originalFileName: params.fileName,
         uniqueFileName: validationResult.uniqueFileName,
         s3Key,
-        warningCount: validationResult.warnings.length,
+        warningCount: validationResult.warnings?.length || 0,
       });
 
       return result;
@@ -305,7 +300,7 @@ export class SecureFileUploadService implements ISecureFileUploadService {
         fileName: params.fileName,
         valid: result.valid,
         errorCount: result.errors.length,
-        warningCount: result.warnings.length,
+        warningCount: result.warnings?.length || 0,
       });
 
       return result;
@@ -330,10 +325,13 @@ export class SecureFileUploadService implements ISecureFileUploadService {
   private mapContextToFileType(context: FileUploadContext): string {
     const mapping: Record<FileUploadContext, string> = {
       avatar: 'images',
-      course_resource: 'documents',
+      course_thumbnail: 'images',
+      lesson_video: 'videos',
       assignment_submission: 'assignments',
+      course_resource: 'documents',
       video_content: 'videos',
       document: 'documents',
+      general: 'documents',
     };
 
     return mapping[context] || 'documents';

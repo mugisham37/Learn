@@ -1,6 +1,6 @@
 /**
  * Stripe Client Tests
- * 
+ *
  * Unit tests for the Stripe client wrapper implementation.
  * Tests all required methods and error handling scenarios.
  */
@@ -19,17 +19,17 @@ vi.mock('../../../../config', () => ({
   config: {
     stripe: {
       secretKey: 'sk_test_123',
-      webhookSecret: 'whsec_test_123'
-    }
-  }
+      webhookSecret: 'whsec_test_123',
+    },
+  },
 }));
 
 // Mock logger
 vi.mock('../../../../shared/utils/logger', () => ({
   logger: {
     info: vi.fn(),
-    error: vi.fn()
-  }
+    error: vi.fn(),
+  },
 }));
 
 describe('StripeClient', () => {
@@ -45,28 +45,28 @@ describe('StripeClient', () => {
       checkout: {
         sessions: {
           create: vi.fn(),
-          retrieve: vi.fn()
-        }
+          retrieve: vi.fn(),
+        },
       },
       refunds: {
-        create: vi.fn()
+        create: vi.fn(),
       },
       subscriptions: {
         create: vi.fn(),
-        cancel: vi.fn()
+        cancel: vi.fn(),
       },
       customers: {
         retrieve: vi.fn(),
         list: vi.fn(),
         create: vi.fn(),
-        update: vi.fn()
+        update: vi.fn(),
       },
       paymentIntents: {
-        retrieve: vi.fn()
+        retrieve: vi.fn(),
       },
       webhooks: {
-        constructEvent: vi.fn()
-      }
+        constructEvent: vi.fn(),
+      },
     };
 
     // Mock Stripe constructor
@@ -83,7 +83,7 @@ describe('StripeClient', () => {
     it('should initialize Stripe with correct configuration', () => {
       expect(MockedStripe).toHaveBeenCalledWith(config.stripe.secretKey, {
         apiVersion: '2023-10-16',
-        typescript: true
+        typescript: true,
       });
     });
   });
@@ -100,7 +100,7 @@ describe('StripeClient', () => {
         currency: 'usd',
         customerEmail: 'test@example.com',
         successUrl: 'https://example.com/success',
-        cancelUrl: 'https://example.com/cancel'
+        cancelUrl: 'https://example.com/cancel',
       };
 
       const result = await stripeClient.createCheckoutSession(params);
@@ -115,26 +115,26 @@ describe('StripeClient', () => {
               product_data: {
                 name: 'Test Course',
                 metadata: {
-                  courseId: 'course_123'
-                }
+                  courseId: 'course_123',
+                },
               },
-              unit_amount: 9999 // 99.99 * 100
+              unit_amount: 9999, // 99.99 * 100
             },
-            quantity: 1
-          }
+            quantity: 1,
+          },
         ],
         mode: 'payment',
         success_url: 'https://example.com/success',
         cancel_url: 'https://example.com/cancel',
         customer_email: 'test@example.com',
         metadata: {
-          courseId: 'course_123'
+          courseId: 'course_123',
         },
         payment_intent_data: {
           metadata: {
-            courseId: 'course_123'
-          }
-        }
+            courseId: 'course_123',
+          },
+        },
       });
     });
 
@@ -149,7 +149,7 @@ describe('StripeClient', () => {
         currency: 'usd',
         customerEmail: 'test@example.com',
         successUrl: 'https://example.com/success',
-        cancelUrl: 'https://example.com/cancel'
+        cancelUrl: 'https://example.com/cancel',
       };
 
       await expect(stripeClient.createCheckoutSession(params)).rejects.toThrow('Stripe API error');
@@ -164,7 +164,7 @@ describe('StripeClient', () => {
       const params = {
         paymentIntentId: 'pi_test_123',
         amount: 5000,
-        reason: 'requested_by_customer'
+        reason: 'requested_by_customer',
       };
 
       const result = await stripeClient.createRefund(params);
@@ -173,7 +173,7 @@ describe('StripeClient', () => {
       expect(mockStripe.refunds.create).toHaveBeenCalledWith({
         payment_intent: 'pi_test_123',
         amount: 5000,
-        reason: 'requested_by_customer'
+        reason: 'requested_by_customer',
       });
     });
 
@@ -182,14 +182,14 @@ describe('StripeClient', () => {
       mockStripe.refunds.create.mockResolvedValue(mockRefund);
 
       const params = {
-        paymentIntentId: 'pi_test_123'
+        paymentIntentId: 'pi_test_123',
       };
 
       const result = await stripeClient.createRefund(params);
 
       expect(result).toEqual(mockRefund);
       expect(mockStripe.refunds.create).toHaveBeenCalledWith({
-        payment_intent: 'pi_test_123'
+        payment_intent: 'pi_test_123',
       });
     });
   });
@@ -202,7 +202,7 @@ describe('StripeClient', () => {
       const params = {
         customerId: 'cus_test_123',
         priceId: 'price_test_123',
-        metadata: { courseId: 'course_123' }
+        metadata: { courseId: 'course_123' },
       };
 
       const result = await stripeClient.createSubscription(params);
@@ -211,7 +211,7 @@ describe('StripeClient', () => {
       expect(mockStripe.subscriptions.create).toHaveBeenCalledWith({
         customer: 'cus_test_123',
         items: [{ price: 'price_test_123' }],
-        metadata: { courseId: 'course_123' }
+        metadata: { courseId: 'course_123' },
       });
     });
   });
@@ -261,8 +261,9 @@ describe('StripeClient', () => {
       const payload = '{"id":"evt_test_123"}';
       const signature = 'invalid_signature';
 
-      expect(() => stripeClient.verifyWebhookSignature(payload, signature))
-        .toThrow('Invalid signature');
+      expect(() => stripeClient.verifyWebhookSignature(payload, signature)).toThrow(
+        'Invalid signature'
+      );
     });
   });
 
@@ -302,7 +303,7 @@ describe('StripeClient', () => {
       expect(mockStripe.customers.create).toHaveBeenCalledWith({
         email: 'test@example.com',
         name: 'Test User',
-        metadata: undefined
+        metadata: undefined,
       });
     });
 

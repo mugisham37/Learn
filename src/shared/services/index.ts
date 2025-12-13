@@ -1,6 +1,6 @@
 /**
  * Shared Services Index
- * 
+ *
  * Exports all shared services for easy importing throughout the application.
  * Provides centralized access to all service implementations.
  */
@@ -10,45 +10,45 @@ export { getEmailQueue, initializeEmailQueue, shutdownEmailQueue } from './Email
 export type { EmailJobData, EmailDeliveryStatus, WebhookData } from './EmailQueue.js';
 
 // Certificate generation services
-export { 
-  getCertificateGenerationQueue, 
-  initializeCertificateGenerationQueue, 
-  shutdownCertificateGenerationQueue 
+export {
+  getCertificateGenerationQueue,
+  initializeCertificateGenerationQueue,
+  shutdownCertificateGenerationQueue,
 } from './CertificateGenerationQueue.js';
-export type { 
-  CertificateGenerationJobData, 
-  CertificateGenerationResult 
+export type {
+  CertificateGenerationJobData,
+  CertificateGenerationResult,
 } from './CertificateGenerationQueue.js';
 
 // Analytics services
-export { 
-  getAnalyticsQueue, 
-  initializeAnalyticsQueue, 
-  shutdownAnalyticsQueue 
+export {
+  getAnalyticsQueue,
+  initializeAnalyticsQueue,
+  shutdownAnalyticsQueue,
 } from './AnalyticsQueue.js';
-export type { 
+export type {
   AnalyticsJobData,
   RealTimeMetricsJobData,
   CourseAnalyticsJobData,
   StudentAnalyticsJobData,
   TrendReportsJobData,
-  ExecutiveSummaryJobData
+  ExecutiveSummaryJobData,
 } from './AnalyticsQueue.js';
 
-export { 
-  getAnalyticsScheduler, 
-  initializeAnalyticsScheduler, 
-  shutdownAnalyticsScheduler 
+export {
+  getAnalyticsScheduler,
+  initializeAnalyticsScheduler,
+  shutdownAnalyticsScheduler,
 } from './AnalyticsScheduler.js';
 export type { SchedulerConfig } from './AnalyticsScheduler.js';
 
 // Video processing services
 export { VideoProcessingQueue } from './VideoProcessingQueue.js';
 export { VideoProcessingService } from './VideoProcessingService.js';
-export { 
-  getVideoProcessingQueue, 
-  initializeVideoProcessingQueue, 
-  shutdownVideoProcessingQueue 
+export {
+  getVideoProcessingQueue,
+  initializeVideoProcessingQueue,
+  shutdownVideoProcessingQueue,
 } from './VideoProcessingQueue.js';
 export type { VideoProcessingJobData, JobCompletionData } from './VideoProcessingQueue.js';
 
@@ -58,7 +58,10 @@ export { ContentService } from './ContentService.js';
 export { S3Service } from './S3Service.js';
 export { FileUploadSecurityService } from './FileUploadSecurityService.js';
 export { SecureFileUploadService } from './SecureFileUploadService.js';
-export { AssetOptimizationService, createAssetOptimizationService } from './AssetOptimizationService.js';
+export {
+  AssetOptimizationService,
+  createAssetOptimizationService,
+} from './AssetOptimizationService.js';
 export { LazyLoadingService, lazyLoadingService } from './LazyLoadingService.js';
 
 // Email services
@@ -78,10 +81,10 @@ export { RealtimeService } from './RealtimeService.js';
 export { ServiceFactory } from './ServiceFactory.js';
 
 // Startup integration
-export { 
-  initializeApplicationServices, 
+export {
+  initializeApplicationServices,
   shutdownApplicationServices,
-  CourseServiceWithSearchIntegration
+  CourseServiceWithSearchIntegration,
 } from './startupIntegration.js';
 export type { StartupConfig } from './startupIntegration.js';
 
@@ -91,7 +94,7 @@ export type { DomainEvent, EventHandler, EventSubscription } from './EventBus.js
 
 // Search indexing
 export { SearchIndexingQueue } from './SearchIndexingQueue.js';
-export type { 
+export type {
   SearchIndexingJobType,
   SearchIndexingJobData,
   IndexCourseJobData,
@@ -99,27 +102,24 @@ export type {
   RemoveCourseJobData,
   RemoveLessonJobData,
   RemoveLessonsByCourseJobData,
-  BulkReindexJobData
+  BulkReindexJobData,
 } from './SearchIndexingQueue.js';
 
 // Scheduler services
-export { 
-  getSchedulerService, 
-  initializeSchedulerService, 
-  shutdownSchedulerService 
+export {
+  getSchedulerService,
+  initializeSchedulerService,
+  shutdownSchedulerService,
 } from './SchedulerService.js';
 export type { UnifiedSchedulerConfig, SchedulerStatus } from './SchedulerService.js';
 
-export { 
-  getSessionCleanupService, 
-  initializeSessionCleanupService 
+export {
+  getSessionCleanupService,
+  initializeSessionCleanupService,
 } from './SessionCleanupService.js';
 export type { SessionCleanupConfig } from './SessionCleanupService.js';
 
-export { 
-  getLogPruningService, 
-  initializeLogPruningService 
-} from './LogPruningService.js';
+export { getLogPruningService, initializeLogPruningService } from './LogPruningService.js';
 export type { LogPruningConfig } from './LogPruningService.js';
 
 export { cronJobService } from './CronJobService.js';
@@ -127,37 +127,32 @@ export type { CronJobConfig } from './CronJobService.js';
 
 // Job monitoring services
 export { JobMonitoringService } from './JobMonitoringService.js';
-export type { 
-  JobDashboardData, 
-  JobRetryOptions, 
-  QueueManagementOptions 
+export type {
+  JobDashboardData,
+  JobRetryOptions,
+  QueueManagementOptions,
 } from './JobMonitoringService.js';
 
 // Alerting services
 export { AlertingService } from './AlertingService.js';
-export { AlertingRulesService, getAlertingRulesService, initializeAlertingRules } from './AlertingRulesService.js';
-export type { 
-  Alert, 
-  AlertSeverity, 
-  AlertChannelConfig, 
-  AlertRule 
-} from './AlertingService.js';
+export {
+  AlertingRulesService,
+  getAlertingRulesService,
+  initializeAlertingRules,
+} from './AlertingRulesService.js';
+export type { Alert, AlertSeverity, AlertChannelConfig, AlertRule } from './AlertingService.js';
 export type { IAlertingRulesService } from './AlertingRulesService.js';
 
 // Job event logging services
 export { JobEventLogger } from './JobEventLogger.js';
-export type { 
-  JobEvent, 
-  JobEventType, 
-  JobPerformanceMetrics 
-} from './JobEventLogger.js';
+export type { JobEvent, JobEventType, JobPerformanceMetrics } from './JobEventLogger.js';
 
 // Comprehensive caching services
-export { 
-  comprehensiveCacheService, 
+export {
+  comprehensiveCacheService,
   initializeComprehensiveCaching,
   ComprehensiveCacheTTL,
-  ComprehensiveCacheKeys
+  ComprehensiveCacheKeys,
 } from './ComprehensiveCacheService.js';
 
 // Startup service
@@ -166,7 +161,10 @@ export { startupService } from './StartupService.js';
 // CloudWatch services
 export { CloudWatchService, cloudWatchService, metrics } from './CloudWatchService.js';
 export { CloudWatchInitializer } from './CloudWatchInitializer.js';
-export { ApplicationMetricsService, applicationMetricsService } from './ApplicationMetricsService.js';
+export {
+  ApplicationMetricsService,
+  applicationMetricsService,
+} from './ApplicationMetricsService.js';
 export type { ICloudWatchService } from './CloudWatchService.js';
 export type { IApplicationMetricsService } from './ApplicationMetricsService.js';
 
@@ -175,36 +173,51 @@ export { SentryService, sentryService } from './SentryService.js';
 export type { ISentryService } from './SentryService.js';
 
 // Request tracing services
-export { RequestTracingService, requestTracingService, trace, traceAsync } from './RequestTracingService.js';
-export type { 
-  IRequestTracingService, 
-  RequestTraceContext, 
-  TraceSpan, 
-  RequestTrace 
+export {
+  RequestTracingService,
+  requestTracingService,
+  trace,
+  traceAsync,
+} from './RequestTracingService.js';
+export type {
+  IRequestTracingService,
+  RequestTraceContext,
+  TraceSpan,
+  RequestTrace,
 } from './RequestTracingService.js';
 
 // Monitoring dashboard services
-export { MonitoringDashboardService, monitoringDashboardService, initializeMonitoringDashboards } from './MonitoringDashboardService.js';
+export {
+  MonitoringDashboardService,
+  monitoringDashboardService,
+  initializeMonitoringDashboards,
+} from './MonitoringDashboardService.js';
 export type { IMonitoringDashboardService } from './MonitoringDashboardService.js';
 
 // Interfaces
 export type { ICloudFrontService } from './ICloudFrontService.js';
 export type { IContentService } from './IContentService.js';
-export type { IEmailService, EmailOptions, EmailResult, BulkEmailResult, EmailTemplateData } from './IEmailService.js';
+export type {
+  IEmailService,
+  EmailOptions,
+  EmailResult,
+  BulkEmailResult,
+  EmailTemplateData,
+} from './IEmailService.js';
 export type { IFileUploadSecurityService } from './IFileUploadSecurityService.js';
-export type { 
-  FileUploadContext, 
-  FileValidationResult, 
+export type {
+  FileUploadContext,
+  FileValidationResult,
   FileUploadParams,
   MalwareScanResult,
-  ContentValidationResult
+  ContentValidationResult,
 } from './FileUploadSecurityService.js';
-export type { 
+export type {
   ISecureFileUploadService,
   SecureUploadParams,
   SecureUploadResult,
   DirectFileUploadParams,
-  DirectFileUploadResult
+  DirectFileUploadResult,
 } from './SecureFileUploadService.js';
 export type { IImageProcessingService } from './IImageProcessingService.js';
 export type { IMediaConvertService } from './IMediaConvertService.js';

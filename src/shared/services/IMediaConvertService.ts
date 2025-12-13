@@ -1,9 +1,9 @@
 /**
  * MediaConvert Service Interface
- * 
+ *
  * Defines the contract for AWS MediaConvert operations including
  * video transcoding job creation, status monitoring, and configuration.
- * 
+ *
  * Requirements:
  * - 4.2: MediaConvert transcoding with multiple resolutions
  * - 4.3: Transcoding job status and retry logic
@@ -73,14 +73,14 @@ export interface CreateJobResult {
 
 /**
  * MediaConvert Service Interface
- * 
+ *
  * Provides AWS MediaConvert operations for video transcoding
  * with support for multiple resolutions and HLS streaming.
  */
 export interface IMediaConvertService {
   /**
    * Creates a transcoding job for video processing
-   * 
+   *
    * @param input - Job configuration parameters
    * @returns Promise resolving to job creation result
    * @throws ExternalServiceError if job creation fails
@@ -89,7 +89,7 @@ export interface IMediaConvertService {
 
   /**
    * Gets the status of a transcoding job
-   * 
+   *
    * @param jobId - MediaConvert job ID
    * @returns Promise resolving to job status information
    * @throws NotFoundError if job not found
@@ -99,7 +99,7 @@ export interface IMediaConvertService {
 
   /**
    * Cancels a running transcoding job
-   * 
+   *
    * @param jobId - MediaConvert job ID
    * @returns Promise resolving when job is cancelled
    * @throws NotFoundError if job not found
@@ -109,20 +109,23 @@ export interface IMediaConvertService {
 
   /**
    * Lists recent transcoding jobs
-   * 
+   *
    * @param maxResults - Maximum number of jobs to return (default: 20)
    * @param nextToken - Pagination token for next page
    * @returns Promise resolving to job list
    * @throws ExternalServiceError if listing fails
    */
-  listJobs(maxResults?: number, nextToken?: string): Promise<{
+  listJobs(
+    maxResults?: number,
+    nextToken?: string
+  ): Promise<{
     jobs: JobStatus[];
     nextToken?: string;
   }>;
 
   /**
    * Gets MediaConvert service endpoint for the current region
-   * 
+   *
    * @returns Promise resolving to service endpoint URL
    * @throws ExternalServiceError if endpoint retrieval fails
    */
@@ -130,7 +133,7 @@ export interface IMediaConvertService {
 
   /**
    * Validates MediaConvert configuration
-   * 
+   *
    * @returns Promise resolving to validation result
    * @throws ExternalServiceError if configuration is invalid
    */

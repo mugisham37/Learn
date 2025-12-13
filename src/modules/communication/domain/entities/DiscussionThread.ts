@@ -1,13 +1,13 @@
 /**
  * Discussion Thread Domain Entity
- * 
+ *
  * Represents a discussion thread in a course forum
  * Contains business logic for thread management and validation
  */
 
 /**
  * Discussion Thread Entity
- * 
+ *
  * Requirements:
  * - 9.2: Discussion thread creation with enrollment validation
  * - 9.3: Reply threading with nested structure

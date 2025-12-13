@@ -1,6 +1,6 @@
 /**
  * Shared TypeScript Types
- * 
+ *
  * Common types used across multiple modules
  */
 

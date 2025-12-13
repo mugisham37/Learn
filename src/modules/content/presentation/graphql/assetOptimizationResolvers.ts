@@ -1,9 +1,9 @@
 /**
  * Asset Optimization GraphQL Resolvers
- * 
+ *
  * Provides GraphQL resolvers for asset optimization operations
  * including CDN URLs, responsive images, and lazy loading configuration.
- * 
+ *
  * Requirements: 15.5, 21.2
  */
 
@@ -39,7 +39,9 @@ export const assetOptimizationResolvers = {
         const cloudFrontService = new CloudFrontService();
         const assetOptimizationService = new AssetOptimizationService(
           cloudFrontService,
-          new (await import('../../../shared/services/ImageProcessingService.js')).ImageProcessingService(),
+          new (
+            await import('../../../shared/services/ImageProcessingService.js')
+          ).ImageProcessingService(),
           new (await import('../../../shared/services/LazyLoadingService.js')).LazyLoadingService()
         );
 
@@ -85,7 +87,9 @@ export const assetOptimizationResolvers = {
         const cloudFrontService = new CloudFrontService();
         const assetOptimizationService = new AssetOptimizationService(
           cloudFrontService,
-          new (await import('../../../shared/services/ImageProcessingService.js')).ImageProcessingService(),
+          new (
+            await import('../../../shared/services/ImageProcessingService.js')
+          ).ImageProcessingService(),
           new (await import('../../../shared/services/LazyLoadingService.js')).LazyLoadingService()
         );
 
@@ -119,9 +123,10 @@ export const assetOptimizationResolvers = {
      */
     lazyLoadingScript: async () => {
       try {
-        const { LazyLoadingService } = await import('../../../shared/services/LazyLoadingService.js');
+        const { LazyLoadingService } =
+          await import('../../../shared/services/LazyLoadingService.js');
         const lazyLoadingService = new LazyLoadingService();
-        
+
         return {
           script: lazyLoadingService.generateClientScript(),
           version: '1.0.0',
@@ -151,7 +156,9 @@ export const assetOptimizationResolvers = {
         const cloudFrontService = new CloudFrontService();
         const assetOptimizationService = new AssetOptimizationService(
           cloudFrontService,
-          new (await import('../../../shared/services/ImageProcessingService.js')).ImageProcessingService(),
+          new (
+            await import('../../../shared/services/ImageProcessingService.js')
+          ).ImageProcessingService(),
           new (await import('../../../shared/services/LazyLoadingService.js')).LazyLoadingService()
         );
 
@@ -206,7 +213,9 @@ export const assetOptimizationResolvers = {
         const cloudFrontService = new CloudFrontService();
         const assetOptimizationService = new AssetOptimizationService(
           cloudFrontService,
-          new (await import('../../../shared/services/ImageProcessingService.js')).ImageProcessingService(),
+          new (
+            await import('../../../shared/services/ImageProcessingService.js')
+          ).ImageProcessingService(),
           new (await import('../../../shared/services/LazyLoadingService.js')).LazyLoadingService()
         );
 

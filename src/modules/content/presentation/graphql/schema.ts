@@ -1,9 +1,9 @@
 /**
  * GraphQL Schema for Content Module
- * 
+ *
  * Defines GraphQL types, inputs, and schema for video assets, file assets,
  * processing jobs, and content management operations.
- * 
+ *
  * Requirements: 21.1, 21.2
  */
 
@@ -128,7 +128,7 @@ export const contentTypeDefs = gql`
     metadata: JSON!
     createdAt: DateTime!
     updatedAt: DateTime!
-    
+
     # Computed fields
     formattedDuration: String
     formattedFileSize: String!
@@ -169,7 +169,7 @@ export const contentTypeDefs = gql`
     expiresAt: DateTime
     createdAt: DateTime!
     updatedAt: DateTime!
-    
+
     # Computed fields
     formattedFileSize: String!
     fileExtension: String!
@@ -221,7 +221,7 @@ export const contentTypeDefs = gql`
     metadata: JSON!
     createdAt: DateTime!
     updatedAt: DateTime!
-    
+
     # Computed fields
     isPending: Boolean!
     isInProgress: Boolean!
@@ -373,15 +373,15 @@ export const contentTypeDefs = gql`
   type Mutation {
     # Upload URL generation
     generateUploadUrl(input: GenerateUploadUrlInput!): PresignedUploadUrl!
-    
+
     # Course resource upload
     uploadCourseResource(input: UploadCourseResourceInput!): FileAsset!
-    
+
     # Content deletion
     deleteContent(fileKey: String!): Boolean!
     deleteVideoAsset(id: ID!): Boolean!
     deleteFileAsset(id: ID!): Boolean!
-    
+
     # Processing job management
     retryProcessingJob(id: ID!): ProcessingJob!
     cancelProcessingJob(id: ID!): ProcessingJob!
@@ -393,42 +393,26 @@ export const contentTypeDefs = gql`
     videoAsset(id: ID!): VideoAsset
     fileAsset(id: ID!): FileAsset
     processingJob(id: ID!): ProcessingJob
-    
+
     # Asset list queries with pagination and filtering
-    videoAssets(
-      filter: VideoAssetFilter
-      pagination: PaginationInput
-    ): VideoAssetConnection!
-    
-    fileAssets(
-      filter: FileAssetFilter
-      pagination: PaginationInput
-    ): FileAssetConnection!
-    
+    videoAssets(filter: VideoAssetFilter, pagination: PaginationInput): VideoAssetConnection!
+
+    fileAssets(filter: FileAssetFilter, pagination: PaginationInput): FileAssetConnection!
+
     processingJobs(
       filter: ProcessingJobFilter
       pagination: PaginationInput
     ): ProcessingJobConnection!
-    
+
     # Video processing status
     videoProcessingStatus(videoAssetId: ID!): ProcessingJob
-    
+
     # Streaming URL generation
-    generateStreamingUrl(
-      lessonId: ID!
-      resolution: String
-      format: String
-    ): SignedStreamingUrl!
-    
+    generateStreamingUrl(lessonId: ID!, resolution: String, format: String): SignedStreamingUrl!
+
     # My uploaded content (requires authentication)
-    myVideoAssets(
-      filter: VideoAssetFilter
-      pagination: PaginationInput
-    ): VideoAssetConnection!
-    
-    myFileAssets(
-      filter: FileAssetFilter
-      pagination: PaginationInput
-    ): FileAssetConnection!
+    myVideoAssets(filter: VideoAssetFilter, pagination: PaginationInput): VideoAssetConnection!
+
+    myFileAssets(filter: FileAssetFilter, pagination: PaginationInput): FileAssetConnection!
   }
 `;

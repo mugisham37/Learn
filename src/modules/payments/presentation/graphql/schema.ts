@@ -1,9 +1,9 @@
 /**
  * GraphQL Schema for Payments Module
- * 
+ *
  * Defines GraphQL types, inputs, and schema for payment processing,
  * subscription management, and refund operations.
- * 
+ *
  * Requirements: 21.1, 21.2
  */
 
@@ -152,10 +152,10 @@ export const paymentTypeDefs = gql`
   type Mutation {
     # Payment mutations
     createCheckoutSession(input: CreateCheckoutSessionInput!): CheckoutSession!
-    
+
     # Refund mutations
     requestRefund(input: RequestRefundInput!): Refund!
-    
+
     # Subscription mutations
     createSubscription(input: CreateSubscriptionInput!): Subscription!
     cancelSubscription(input: CancelSubscriptionInput!): Subscription!
@@ -166,11 +166,11 @@ export const paymentTypeDefs = gql`
     # Payment queries
     getPaymentHistory(input: PaymentHistoryInput): PaymentHistory!
     getPayment(id: ID!): Payment
-    
+
     # Subscription queries
     getUserSubscriptions: [Subscription!]!
     getSubscription(id: ID!): Subscription
-    
+
     # Refund queries
     getRefund(id: ID!): Refund
     getRefundEligibility(enrollmentId: ID!): RefundEligibility!

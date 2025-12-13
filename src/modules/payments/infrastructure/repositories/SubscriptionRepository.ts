@@ -1,10 +1,10 @@
 /**
  * Subscription Repository Implementation
- * 
+ *
  * Implements subscription data access operations with Drizzle ORM queries,
  * Redis caching with 5-minute TTL, and cache invalidation on updates.
  * Handles database errors and maps them to domain errors.
- * 
+ *
  * Requirements: 11.1, 11.5
  */
 
@@ -12,16 +12,18 @@ import { eq, and, desc, lte, gte } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
 import { getWriteDb, getReadDb } from '../../../../infrastructure/database/index.js';
-import { 
-  subscriptions, 
-  Subscription, 
-  NewSubscription 
-} from '../../../../infrastructure/database/schema/payments.schema.js';
-import { cache, buildCacheKey, CachePrefix, CacheTTL } from '../../../../infrastructure/cache/index.js';
 import {
-  DatabaseError,
-  NotFoundError,
-} from '../../../../shared/errors/index.js';
+  subscriptions,
+  Subscription,
+  NewSubscription,
+} from '../../../../infrastructure/database/schema/payments.schema.js';
+import {
+  cache,
+  buildCacheKey,
+  CachePrefix,
+  CacheTTL,
+} from '../../../../infrastructure/cache/index.js';
+import { DatabaseError, NotFoundError } from '../../../../shared/errors/index.js';
 import {
   ISubscriptionRepository,
   CreateSubscriptionDTO,
@@ -30,7 +32,7 @@ import {
 
 /**
  * Subscription Repository Implementation
- * 
+ *
  * Provides data access methods for subscription entities with:
  * - Drizzle ORM for type-safe queries
  * - Redis caching with 5-minute TTL
@@ -77,7 +79,7 @@ export class SubscriptionRepository implements ISubscriptionRepository {
 
   /**
    * Creates a new subscription in the database
-   * 
+   *
    * @param data - Subscription creation data
    * @returns The created subscription
    * @throws DatabaseError if database operation fails
@@ -103,10 +105,7 @@ export class SubscriptionRepository implements ISubscriptionRepository {
         .returning();
 
       if (!createdSubscription) {
-        throw new DatabaseError(
-          'Failed to create subscription',
-          'insert'
-        );
+        throw new DatabaseError('Failed to create subscription', 'insert');
       }
 
       // Invalidate user subscriptions cache
@@ -141,10 +140,10 @@ export class SubscriptionRepository implements ISubscriptionRepository {
 
   /**
    * Finds a subscription by its unique ID
-   * 
+   *
    * Implements caching with 5-minute TTL.
    * Uses read database for query optimization.
-   * 
+   *
    * @param id - Subscription ID
    * @returns The subscription if found, null otherwise
    * @throws DatabaseError if database operation fails
@@ -154,7 +153,7 @@ export class SubscriptionRepository implements ISubscriptionRepository {
       // Check cache first
       const cacheKey = this.getSubscriptionCacheKey(id);
       const cachedSubscription = await cache.get<Subscription>(cacheKey);
-      
+
       if (cachedSubscription) {
         return cachedSubscription;
       }
@@ -185,9 +184,9 @@ export class SubscriptionRepository implements ISubscriptionRepository {
 
   /**
    * Finds a subscription by Stripe subscription ID
-   * 
+   *
    * Implements caching with 5-minute TTL.
-   * 
+   *
    * @param stripeSubscriptionId - Stripe subscription ID
    * @returns The subscription if found, null otherwise
    * @throws DatabaseError if database operation fails
@@ -197,7 +196,7 @@ export class SubscriptionRepository implements ISubscriptionRepository {
       // Check cache first
       const cacheKey = this.getSubscriptionStripeIdCacheKey(stripeSubscriptionId);
       const cachedSubscription = await cache.get<Subscription>(cacheKey);
-      
+
       if (cachedSubscription) {
         return cachedSubscription;
       }
@@ -232,9 +231,9 @@ export class SubscriptionRepository implements ISubscriptionRepository {
 
   /**
    * Finds subscriptions by user ID
-   * 
+   *
    * Implements caching with 5-minute TTL.
-   * 
+   *
    * @param userId - User ID
    * @returns Array of user's subscriptions
    * @throws DatabaseError if database operation fails
@@ -244,7 +243,7 @@ export class SubscriptionRepository implements ISubscriptionRepository {
       // Check cache first
       const cacheKey = this.getUserSubscriptionsCacheKey(userId);
       const cachedSubscriptions = await cache.get<Subscription[]>(cacheKey);
-      
+
       if (cachedSubscriptions) {
         return cachedSubscriptions;
       }
@@ -271,9 +270,9 @@ export class SubscriptionRepository implements ISubscriptionRepository {
 
   /**
    * Updates a subscription's data
-   * 
+   *
    * Invalidates all related cache entries after successful update.
-   * 
+   *
    * @param id - Subscription ID
    * @param data - Update data
    * @returns The updated subscription
@@ -302,10 +301,7 @@ export class SubscriptionRepository implements ISubscriptionRepository {
         .returning();
 
       if (!updatedSubscription) {
-        throw new DatabaseError(
-          'Failed to update subscription',
-          'update'
-        );
+        throw new DatabaseError('Failed to update subscription', 'update');
       }
 
       // Invalidate all cache entries for this subscription
@@ -316,10 +312,7 @@ export class SubscriptionRepository implements ISubscriptionRepository {
       return updatedSubscription;
     } catch (error) {
       // Re-throw known errors
-      if (
-        error instanceof NotFoundError ||
-        error instanceof DatabaseError
-      ) {
+      if (error instanceof NotFoundError || error instanceof DatabaseError) {
         throw error;
       }
 
@@ -334,7 +327,7 @@ export class SubscriptionRepository implements ISubscriptionRepository {
 
   /**
    * Gets subscriptions expiring soon (within specified days)
-   * 
+   *
    * @param days - Number of days to look ahead
    * @returns Array of expiring subscriptions
    * @throws DatabaseError if database operation fails
@@ -368,9 +361,9 @@ export class SubscriptionRepository implements ISubscriptionRepository {
 
   /**
    * Gets active subscriptions for a user
-   * 
+   *
    * Implements caching with 5-minute TTL.
-   * 
+   *
    * @param userId - User ID
    * @returns Array of active subscriptions
    * @throws DatabaseError if database operation fails
@@ -380,7 +373,7 @@ export class SubscriptionRepository implements ISubscriptionRepository {
       // Check cache first
       const cacheKey = this.getUserActiveSubscriptionsCacheKey(userId);
       const cachedSubscriptions = await cache.get<Subscription[]>(cacheKey);
-      
+
       if (cachedSubscriptions) {
         return cachedSubscriptions;
       }
@@ -414,7 +407,7 @@ export class SubscriptionRepository implements ISubscriptionRepository {
   /**
    * Invalidates cache for a specific subscription
    * Should be called after any update operation
-   * 
+   *
    * @param id - Subscription ID
    * @returns void
    */
@@ -430,7 +423,7 @@ export class SubscriptionRepository implements ISubscriptionRepository {
 
   /**
    * Invalidates cache for a subscription by Stripe ID
-   * 
+   *
    * @param stripeSubscriptionId - Stripe subscription ID
    * @returns void
    */
@@ -439,13 +432,16 @@ export class SubscriptionRepository implements ISubscriptionRepository {
       const cacheKey = this.getSubscriptionStripeIdCacheKey(stripeSubscriptionId);
       await cache.delete(cacheKey);
     } catch (error) {
-      console.error(`Failed to invalidate cache for subscription Stripe ID ${stripeSubscriptionId}:`, error);
+      console.error(
+        `Failed to invalidate cache for subscription Stripe ID ${stripeSubscriptionId}:`,
+        error
+      );
     }
   }
 
   /**
    * Invalidates cache for user subscriptions
-   * 
+   *
    * @param userId - User ID
    * @returns void
    */

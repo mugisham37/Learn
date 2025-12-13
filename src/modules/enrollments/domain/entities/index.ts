@@ -1,6 +1,6 @@
 /**
  * Enrollments Domain Entities
- * 
+ *
  * Exports all domain entities for the enrollments module
  */
 

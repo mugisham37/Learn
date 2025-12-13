@@ -1,9 +1,9 @@
 /**
  * Enrollment Domain Entity
- * 
+ *
  * Represents the relationship between a student and a course.
  * Manages enrollment status, progress tracking, and completion detection.
- * 
+ *
  * Requirements: 5.1, 5.4, 5.5, 5.6
  */
 
@@ -13,7 +13,7 @@ import {
   EnrollmentCreatedEvent,
   CourseProgressUpdatedEvent,
   CourseCompletedEvent,
-  EnrollmentWithdrawnEvent
+  EnrollmentWithdrawnEvent,
 } from '../events/EnrollmentEvents';
 
 export type EnrollmentStatus = 'active' | 'completed' | 'dropped';
@@ -45,28 +45,54 @@ export class Enrollment {
   }
 
   // Getters
-  get id(): string { return this._props.id; }
-  get studentId(): string { return this._props.studentId; }
-  get courseId(): string { return this._props.courseId; }
-  get enrolledAt(): Date { return this._props.enrolledAt; }
-  get completedAt(): Date | undefined { return this._props.completedAt; }
-  get progressPercentage(): number { return this._props.progressPercentage; }
-  get lastAccessedAt(): Date | undefined { return this._props.lastAccessedAt; }
-  get paymentId(): string | undefined { return this._props.paymentId; }
-  get certificateId(): string | undefined { return this._props.certificateId; }
-  get status(): EnrollmentStatus { return this._props.status; }
-  get createdAt(): Date { return this._props.createdAt; }
-  get updatedAt(): Date { return this._props.updatedAt; }
-  get lessonProgress(): LessonProgress[] { return [...this._lessonProgress]; }
-  get certificate(): Certificate | undefined { return this._certificate; }
-  get domainEvents(): any[] { return [...this._domainEvents]; }
+  get id(): string {
+    return this._props.id;
+  }
+  get studentId(): string {
+    return this._props.studentId;
+  }
+  get courseId(): string {
+    return this._props.courseId;
+  }
+  get enrolledAt(): Date {
+    return this._props.enrolledAt;
+  }
+  get completedAt(): Date | undefined {
+    return this._props.completedAt;
+  }
+  get progressPercentage(): number {
+    return this._props.progressPercentage;
+  }
+  get lastAccessedAt(): Date | undefined {
+    return this._props.lastAccessedAt;
+  }
+  get paymentId(): string | undefined {
+    return this._props.paymentId;
+  }
+  get certificateId(): string | undefined {
+    return this._props.certificateId;
+  }
+  get status(): EnrollmentStatus {
+    return this._props.status;
+  }
+  get createdAt(): Date {
+    return this._props.createdAt;
+  }
+  get updatedAt(): Date {
+    return this._props.updatedAt;
+  }
+  get lessonProgress(): LessonProgress[] {
+    return [...this._lessonProgress];
+  }
+  get certificate(): Certificate | undefined {
+    return this._certificate;
+  }
+  get domainEvents(): any[] {
+    return [...this._domainEvents];
+  }
 
   // Static factory method for creating new enrollment
-  static create(props: {
-    studentId: string;
-    courseId: string;
-    paymentId?: string;
-  }): Enrollment {
+  static create(props: { studentId: string; courseId: string; paymentId?: string }): Enrollment {
     const now = new Date();
     const enrollmentProps: EnrollmentProps = {
       id: `enrollment-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -81,16 +107,15 @@ export class Enrollment {
     };
 
     const enrollment = new Enrollment(enrollmentProps);
-    
-    enrollment.addDomainEvent(new EnrollmentCreatedEvent(
-      enrollment.id,
-      {
+
+    enrollment.addDomainEvent(
+      new EnrollmentCreatedEvent(enrollment.id, {
         studentId: props.studentId,
         courseId: props.courseId,
         enrolledAt: now,
         paymentId: props.paymentId,
-      }
-    ));
+      })
+    );
 
     return enrollment;
   }
@@ -109,7 +134,7 @@ export class Enrollment {
       throw new Error('Lesson progress already initialized');
     }
 
-    this._lessonProgress = lessonIds.map(lessonId => 
+    this._lessonProgress = lessonIds.map((lessonId) =>
       LessonProgress.create({
         enrollmentId: this.id,
         lessonId,
@@ -133,7 +158,7 @@ export class Enrollment {
    * Update progress for a specific lesson
    */
   updateLessonProgress(lessonId: string, updateFn: (progress: LessonProgress) => void): void {
-    const progress = this._lessonProgress.find(p => p.lessonId === lessonId);
+    const progress = this._lessonProgress.find((p) => p.lessonId === lessonId);
     if (!progress) {
       throw new Error(`Lesson progress not found for lesson ${lessonId}`);
     }
@@ -162,25 +187,24 @@ export class Enrollment {
       return;
     }
 
-    const completedLessons = this._lessonProgress.filter(p => p.isCompleted()).length;
+    const completedLessons = this._lessonProgress.filter((p) => p.isCompleted()).length;
     const totalLessons = this._lessonProgress.length;
     const previousProgress = this._props.progressPercentage;
-    
+
     this._props.progressPercentage = Math.round((completedLessons / totalLessons) * 100);
 
     // Emit progress update event if progress changed
     if (previousProgress !== this._props.progressPercentage) {
-      this.addDomainEvent(new CourseProgressUpdatedEvent(
-        this.id,
-        {
+      this.addDomainEvent(
+        new CourseProgressUpdatedEvent(this.id, {
           studentId: this.studentId,
           courseId: this.courseId,
           previousProgressPercentage: previousProgress,
           newProgressPercentage: this._props.progressPercentage,
           completedLessons,
           totalLessons,
-        }
-      ));
+        })
+      );
     }
   }
 
@@ -192,7 +216,7 @@ export class Enrollment {
     if (this._lessonProgress.length === 0) {
       return false;
     }
-    return this._lessonProgress.every(p => p.isCompleted());
+    return this._lessonProgress.every((p) => p.isCompleted());
   }
 
   /**
@@ -218,16 +242,15 @@ export class Enrollment {
       (now.getTime() - this._props.enrolledAt.getTime()) / (1000 * 60 * 60 * 24)
     );
 
-    this.addDomainEvent(new CourseCompletedEvent(
-      this.id,
-      {
+    this.addDomainEvent(
+      new CourseCompletedEvent(this.id, {
         studentId: this.studentId,
         courseId: this.courseId,
         completedAt: now,
         finalProgressPercentage: this._props.progressPercentage,
         timeToCompletionDays,
-      }
-    ));
+      })
+    );
   }
 
   /**
@@ -291,23 +314,22 @@ export class Enrollment {
     this._props.status = 'dropped';
     this._props.updatedAt = now;
 
-    this.addDomainEvent(new EnrollmentWithdrawnEvent(
-      this.id,
-      {
+    this.addDomainEvent(
+      new EnrollmentWithdrawnEvent(this.id, {
         studentId: this.studentId,
         courseId: this.courseId,
         withdrawnAt: now,
         reason,
         progressAtWithdrawal: this._props.progressPercentage,
-      }
-    ));
+      })
+    );
   }
 
   /**
    * Get completed lessons count
    */
   getCompletedLessonsCount(): number {
-    return this._lessonProgress.filter(p => p.isCompleted()).length;
+    return this._lessonProgress.filter((p) => p.isCompleted()).length;
   }
 
   /**
@@ -329,8 +351,8 @@ export class Enrollment {
    */
   getAverageQuizScore(): number | undefined {
     const scoresWithQuizzes = this._lessonProgress
-      .filter(p => p.quizScore !== undefined)
-      .map(p => p.quizScore!);
+      .filter((p) => p.quizScore !== undefined)
+      .map((p) => p.quizScore!);
 
     if (scoresWithQuizzes.length === 0) {
       return undefined;
@@ -343,14 +365,14 @@ export class Enrollment {
    * Get lessons that are in progress but not completed
    */
   getInProgressLessons(): LessonProgress[] {
-    return this._lessonProgress.filter(p => p.isInProgress());
+    return this._lessonProgress.filter((p) => p.isInProgress());
   }
 
   /**
    * Get next lesson to complete (first not completed lesson)
    */
   getNextLesson(): LessonProgress | undefined {
-    return this._lessonProgress.find(p => !p.isCompleted());
+    return this._lessonProgress.find((p) => !p.isCompleted());
   }
 
   /**
@@ -384,7 +406,7 @@ export class Enrollment {
   // Clear domain events
   clearDomainEvents(): void {
     this._domainEvents = [];
-    this._lessonProgress.forEach(p => p.clearDomainEvents());
+    this._lessonProgress.forEach((p) => p.clearDomainEvents());
     this._certificate?.clearDomainEvents();
   }
 

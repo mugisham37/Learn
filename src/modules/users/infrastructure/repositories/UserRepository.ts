@@ -1,10 +1,10 @@
 /**
  * User Repository Implementation
- * 
+ *
  * Implements user data access operations with Drizzle ORM queries,
  * Redis caching with 5-minute TTL, and cache invalidation on updates.
  * Handles database errors and maps them to domain errors.
- * 
+ *
  * Requirements: 1.1, 1.2
  */
 
@@ -13,21 +13,18 @@ import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
 import { getWriteDb, getReadDb } from '../../../../infrastructure/database/index.js';
 import { users, User, NewUser } from '../../../../infrastructure/database/schema/users.schema.js';
-import { cache, buildCacheKey, CachePrefix, CacheTTL } from '../../../../infrastructure/cache/index.js';
 import {
-  DatabaseError,
-  ConflictError,
-  NotFoundError,
-} from '../../../../shared/errors/index.js';
-import {
-  IUserRepository,
-  CreateUserDTO,
-  UpdateUserDTO,
-} from './IUserRepository.js';
+  cache,
+  buildCacheKey,
+  CachePrefix,
+  CacheTTL,
+} from '../../../../infrastructure/cache/index.js';
+import { DatabaseError, ConflictError, NotFoundError } from '../../../../shared/errors/index.js';
+import { IUserRepository, CreateUserDTO, UpdateUserDTO } from './IUserRepository.js';
 
 /**
  * User Repository Implementation
- * 
+ *
  * Provides data access methods for user entities with:
  * - Drizzle ORM for type-safe queries
  * - Redis caching with 5-minute TTL
@@ -73,10 +70,10 @@ export class UserRepository implements IUserRepository {
 
   /**
    * Creates a new user in the database
-   * 
+   *
    * Validates email uniqueness before insertion.
    * Does not cache on creation as the user will be fetched immediately after.
-   * 
+   *
    * @param data - User creation data
    * @returns The created user
    * @throws ConflictError if email already exists
@@ -87,10 +84,7 @@ export class UserRepository implements IUserRepository {
       // Check for existing user with same email
       const existingUser = await this.findByEmail(data.email);
       if (existingUser) {
-        throw new ConflictError(
-          'A user with this email already exists',
-          'email'
-        );
+        throw new ConflictError('A user with this email already exists', 'email');
       }
 
       // Prepare user data for insertion
@@ -103,16 +97,10 @@ export class UserRepository implements IUserRepository {
       };
 
       // Insert user into database
-      const [createdUser] = await this.writeDb
-        .insert(users)
-        .values(newUser)
-        .returning();
+      const [createdUser] = await this.writeDb.insert(users).values(newUser).returning();
 
       if (!createdUser) {
-        throw new DatabaseError(
-          'Failed to create user',
-          'insert'
-        );
+        throw new DatabaseError('Failed to create user', 'insert');
       }
 
       return createdUser;
@@ -125,10 +113,7 @@ export class UserRepository implements IUserRepository {
       // Handle database constraint violations
       if (error instanceof Error) {
         if (error.message.includes('unique') || error.message.includes('duplicate')) {
-          throw new ConflictError(
-            'A user with this email already exists',
-            'email'
-          );
+          throw new ConflictError('A user with this email already exists', 'email');
         }
       }
 
@@ -143,10 +128,10 @@ export class UserRepository implements IUserRepository {
 
   /**
    * Finds a user by their unique ID
-   * 
+   *
    * Implements caching with 5-minute TTL.
    * Uses read database for query optimization.
-   * 
+   *
    * @param id - User ID
    * @returns The user if found, null otherwise
    * @throws DatabaseError if database operation fails
@@ -156,7 +141,7 @@ export class UserRepository implements IUserRepository {
       // Check cache first
       const cacheKey = this.getUserCacheKey(id);
       const cachedUser = await cache.get<User>(cacheKey);
-      
+
       if (cachedUser) {
         return cachedUser;
       }
@@ -192,10 +177,10 @@ export class UserRepository implements IUserRepository {
 
   /**
    * Finds a user by their email address
-   * 
+   *
    * Implements caching with 5-minute TTL.
    * Email is normalized to lowercase for case-insensitive matching.
-   * 
+   *
    * @param email - User email
    * @returns The user if found, null otherwise
    * @throws DatabaseError if database operation fails
@@ -203,11 +188,11 @@ export class UserRepository implements IUserRepository {
   async findByEmail(email: string): Promise<User | null> {
     try {
       const normalizedEmail = email.toLowerCase();
-      
+
       // Check cache first
       const cacheKey = this.getUserEmailCacheKey(normalizedEmail);
       const cachedUser = await cache.get<User>(cacheKey);
-      
+
       if (cachedUser) {
         return cachedUser;
       }
@@ -247,9 +232,9 @@ export class UserRepository implements IUserRepository {
 
   /**
    * Finds a user by verification token
-   * 
+   *
    * Implements caching with 5-minute TTL.
-   * 
+   *
    * @param token - Verification token
    * @returns The user if found, null otherwise
    * @throws DatabaseError if database operation fails
@@ -259,7 +244,7 @@ export class UserRepository implements IUserRepository {
       // Check cache first
       const cacheKey = this.getUserVerificationTokenCacheKey(token);
       const cachedUser = await cache.get<User>(cacheKey);
-      
+
       if (cachedUser) {
         return cachedUser;
       }
@@ -295,10 +280,10 @@ export class UserRepository implements IUserRepository {
 
   /**
    * Finds a user by password reset token
-   * 
+   *
    * Implements caching with 5-minute TTL.
    * Only returns user if reset token hasn't expired.
-   * 
+   *
    * @param token - Password reset token
    * @returns The user if found and token is valid, null otherwise
    * @throws DatabaseError if database operation fails
@@ -308,7 +293,7 @@ export class UserRepository implements IUserRepository {
       // Check cache first
       const cacheKey = this.getUserPasswordResetTokenCacheKey(token);
       const cachedUser = await cache.get<User>(cacheKey);
-      
+
       if (cachedUser) {
         // Verify token hasn't expired
         if (cachedUser.passwordResetExpires && cachedUser.passwordResetExpires > new Date()) {
@@ -355,10 +340,10 @@ export class UserRepository implements IUserRepository {
 
   /**
    * Updates a user's data
-   * 
+   *
    * Invalidates all related cache entries after successful update.
    * Validates email uniqueness if email is being changed.
-   * 
+   *
    * @param id - User ID
    * @param data - Update data
    * @returns The updated user
@@ -378,10 +363,7 @@ export class UserRepository implements IUserRepository {
       if (data.email && data.email.toLowerCase() !== existingUser.email) {
         const emailConflict = await this.findByEmail(data.email);
         if (emailConflict && emailConflict.id !== id) {
-          throw new ConflictError(
-            'A user with this email already exists',
-            'email'
-          );
+          throw new ConflictError('A user with this email already exists', 'email');
         }
       }
 
@@ -400,10 +382,7 @@ export class UserRepository implements IUserRepository {
         .returning();
 
       if (!updatedUser) {
-        throw new DatabaseError(
-          'Failed to update user',
-          'update'
-        );
+        throw new DatabaseError('Failed to update user', 'update');
       }
 
       // Invalidate all cache entries for this user
@@ -429,10 +408,7 @@ export class UserRepository implements IUserRepository {
       // Handle database constraint violations
       if (error instanceof Error) {
         if (error.message.includes('unique') || error.message.includes('duplicate')) {
-          throw new ConflictError(
-            'A user with this email already exists',
-            'email'
-          );
+          throw new ConflictError('A user with this email already exists', 'email');
         }
       }
 
@@ -447,10 +423,10 @@ export class UserRepository implements IUserRepository {
 
   /**
    * Soft deletes a user by setting deletedAt timestamp
-   * 
+   *
    * Invalidates all cache entries after successful deletion.
    * Soft-deleted users are excluded from all queries.
-   * 
+   *
    * @param id - User ID
    * @returns void
    * @throws NotFoundError if user doesn't exist
@@ -475,10 +451,7 @@ export class UserRepository implements IUserRepository {
         .returning();
 
       if (!deletedUser) {
-        throw new DatabaseError(
-          'Failed to soft delete user',
-          'update'
-        );
+        throw new DatabaseError('Failed to soft delete user', 'update');
       }
 
       // Invalidate all cache entries
@@ -504,9 +477,9 @@ export class UserRepository implements IUserRepository {
   /**
    * Permanently deletes a user from the database
    * USE WITH CAUTION - This is irreversible
-   * 
+   *
    * Invalidates all cache entries after successful deletion.
-   * 
+   *
    * @param id - User ID
    * @returns void
    * @throws NotFoundError if user doesn't exist
@@ -521,16 +494,10 @@ export class UserRepository implements IUserRepository {
       }
 
       // Permanently delete user
-      const result = await this.writeDb
-        .delete(users)
-        .where(eq(users.id, id))
-        .returning();
+      const result = await this.writeDb.delete(users).where(eq(users.id, id)).returning();
 
       if (!result || result.length === 0) {
-        throw new DatabaseError(
-          'Failed to hard delete user',
-          'delete'
-        );
+        throw new DatabaseError('Failed to hard delete user', 'delete');
       }
 
       // Invalidate all cache entries
@@ -555,9 +522,9 @@ export class UserRepository implements IUserRepository {
 
   /**
    * Checks if a user with the given email exists
-   * 
+   *
    * More efficient than findByEmail when only existence check is needed.
-   * 
+   *
    * @param email - User email
    * @returns True if user exists, false otherwise
    * @throws DatabaseError if database operation fails
@@ -565,10 +532,10 @@ export class UserRepository implements IUserRepository {
   async existsByEmail(email: string): Promise<boolean> {
     try {
       const normalizedEmail = email.toLowerCase();
-      
+
       // Try to find user by email
       const user = await this.findByEmail(normalizedEmail);
-      
+
       return user !== null;
     } catch (error) {
       throw new DatabaseError(
@@ -581,10 +548,10 @@ export class UserRepository implements IUserRepository {
 
   /**
    * Invalidates cache for a specific user
-   * 
+   *
    * Removes all cache entries related to the user by ID.
    * Should be called after any update operation.
-   * 
+   *
    * @param id - User ID
    * @returns void
    */
@@ -600,10 +567,10 @@ export class UserRepository implements IUserRepository {
 
   /**
    * Invalidates cache for a user by email
-   * 
+   *
    * Removes all cache entries related to the user by email.
    * Should be called after operations that affect email lookups.
-   * 
+   *
    * @param email - User email
    * @returns void
    */

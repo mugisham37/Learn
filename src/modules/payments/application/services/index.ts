@@ -1,6 +1,6 @@
 /**
  * Payment Application Services
- * 
+ *
  * Exports all payment application services and their interfaces.
  * These services orchestrate payment operations and business workflows.
  */

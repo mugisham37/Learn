@@ -1,6 +1,6 @@
 /**
  * Job Event Logger
- * 
+ *
  * Comprehensive logging system for job events with structured logging,
  * event correlation, and performance tracking.
  */
@@ -12,7 +12,7 @@ import { logger } from '../utils/logger.js';
 /**
  * Job event types
  */
-export type JobEventType = 
+export type JobEventType =
   | 'job:created'
   | 'job:started'
   | 'job:progress'
@@ -80,16 +80,19 @@ export class JobEventLogger extends EventEmitter {
   private events: JobEvent[] = [];
   private performanceMetrics = new Map<string, JobPerformanceMetrics>();
   private jobTimings = new Map<string, { startTime: Date; queueName: string }>();
-  
+
   private constructor() {
     super();
-    
+
     // Set up periodic cleanup
-    setInterval(() => {
-      this.cleanupOldEvents();
-    }, 60 * 60 * 1000); // Every hour
+    setInterval(
+      () => {
+        this.cleanupOldEvents();
+      },
+      60 * 60 * 1000
+    ); // Every hour
   }
-  
+
   /**
    * Get singleton instance
    */
@@ -99,7 +102,7 @@ export class JobEventLogger extends EventEmitter {
     }
     return JobEventLogger.instance;
   }
-  
+
   /**
    * Log a job event
    */
@@ -111,7 +114,7 @@ export class JobEventLogger extends EventEmitter {
     metadata?: JobEvent['metadata']
   ): JobEvent {
     const eventId = `${type}-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
-    
+
     const event: JobEvent = {
       id: eventId,
       type,
@@ -119,20 +122,20 @@ export class JobEventLogger extends EventEmitter {
       queueName,
       jobId,
       data,
-      metadata
+      metadata,
     };
-    
+
     // Store event
     this.events.push(event);
-    
+
     // Track job timing
     if (type === 'job:started' && jobId) {
       this.jobTimings.set(jobId, {
         startTime: event.timestamp,
-        queueName
+        queueName,
       });
     }
-    
+
     // Calculate duration for completed/failed jobs
     if ((type === 'job:completed' || type === 'job:failed') && jobId) {
       const timing = this.jobTimings.get(jobId);
@@ -140,58 +143,66 @@ export class JobEventLogger extends EventEmitter {
         const duration = event.timestamp.getTime() - timing.startTime.getTime();
         event.metadata = {
           ...event.metadata,
-          duration
+          duration,
         };
         this.jobTimings.delete(jobId);
-        
+
         // Update performance metrics
         this.updatePerformanceMetrics(queueName, type === 'job:completed', duration);
       }
     }
-    
+
     // Structured logging
     this.logStructuredEvent(event);
-    
+
     // Emit event for listeners
     this.emit('event', event);
     this.emit(type, event);
-    
+
     // Keep only recent events in memory
     if (this.events.length > 10000) {
       this.events = this.events.slice(-5000);
     }
-    
+
     return event;
   }
-  
+
   /**
    * Log job creation
    */
-  public logJobCreated(queueName: string, jobId: string, jobData: Record<string, unknown>): JobEvent {
+  public logJobCreated(
+    queueName: string,
+    jobId: string,
+    jobData: Record<string, unknown>
+  ): JobEvent {
     return this.logEvent('job:created', queueName, jobId, jobData);
   }
-  
+
   /**
    * Log job start
    */
   public logJobStarted(queueName: string, jobId: string, workerId?: string): JobEvent {
     return this.logEvent('job:started', queueName, jobId, undefined, { workerId });
   }
-  
+
   /**
    * Log job progress
    */
   public logJobProgress(queueName: string, jobId: string, progress: number): JobEvent {
     return this.logEvent('job:progress', queueName, jobId, undefined, { progress });
   }
-  
+
   /**
    * Log job completion
    */
-  public logJobCompleted(queueName: string, jobId: string, result?: Record<string, unknown>): JobEvent {
+  public logJobCompleted(
+    queueName: string,
+    jobId: string,
+    result?: Record<string, unknown>
+  ): JobEvent {
     return this.logEvent('job:completed', queueName, jobId, { result });
   }
-  
+
   /**
    * Log job failure
    */
@@ -201,80 +212,80 @@ export class JobEventLogger extends EventEmitter {
       error: {
         message: error.message,
         stack: error.stack,
-        code: (error as Error & { code?: string }).code
-      }
+        code: (error as Error & { code?: string }).code,
+      },
     });
   }
-  
+
   /**
    * Log job stalled
    */
   public logJobStalled(queueName: string, jobId: string): JobEvent {
     return this.logEvent('job:stalled', queueName, jobId);
   }
-  
+
   /**
    * Log job retry
    */
   public logJobRetry(queueName: string, jobId: string, attempt: number): JobEvent {
     return this.logEvent('job:retry', queueName, jobId, undefined, { attempt });
   }
-  
+
   /**
    * Log queue operations
    */
   public logQueuePaused(queueName: string): JobEvent {
     return this.logEvent('queue:paused', queueName);
   }
-  
+
   public logQueueResumed(queueName: string): JobEvent {
     return this.logEvent('queue:resumed', queueName);
   }
-  
+
   public logQueueDrained(queueName: string): JobEvent {
     return this.logEvent('queue:drained', queueName);
   }
-  
+
   /**
    * Log worker operations
    */
   public logWorkerStarted(queueName: string, workerId: string): JobEvent {
     return this.logEvent('worker:started', queueName, undefined, undefined, { workerId });
   }
-  
+
   public logWorkerStopped(queueName: string, workerId: string): JobEvent {
     return this.logEvent('worker:stopped', queueName, undefined, undefined, { workerId });
   }
-  
+
   /**
    * Get events by queue
    */
   public getEventsByQueue(queueName: string, limit: number = 100): JobEvent[] {
     return this.events
-      .filter(event => event.queueName === queueName)
+      .filter((event) => event.queueName === queueName)
       .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
       .slice(0, limit);
   }
-  
+
   /**
    * Get events by type
    */
   public getEventsByType(type: JobEventType, limit: number = 100): JobEvent[] {
     return this.events
-      .filter(event => event.type === type)
+      .filter((event) => event.type === type)
       .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
       .slice(0, limit);
   }
-  
+
   /**
    * Get events by job ID
    */
   public getEventsByJobId(jobId: string): JobEvent[] {
     return this.events
-      .filter(event => event.jobId === jobId)
+      .filter((event) => event.jobId === jobId)
       .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
   }
-  
+
   /**
    * Get performance metrics
    */
@@ -283,10 +294,10 @@ export class JobEventLogger extends EventEmitter {
       const metrics = this.performanceMetrics.get(queueName);
       return metrics ? [metrics] : [];
     }
-    
+
     return Array.from(this.performanceMetrics.values());
   }
-  
+
   /**
    * Get event statistics
    */
@@ -297,34 +308,34 @@ export class JobEventLogger extends EventEmitter {
     timeRange: { start: Date; end: Date };
   } {
     let events = this.events;
-    
+
     if (timeRange) {
-      events = events.filter(event => 
-        event.timestamp >= timeRange.start && event.timestamp <= timeRange.end
+      events = events.filter(
+        (event) => event.timestamp >= timeRange.start && event.timestamp <= timeRange.end
       );
     }
-    
+
     const eventsByType = {} as Record<JobEventType, number>;
     const eventsByQueue = {} as Record<string, number>;
-    
-    events.forEach(event => {
+
+    events.forEach((event) => {
       eventsByType[event.type] = (eventsByType[event.type] || 0) + 1;
       eventsByQueue[event.queueName] = (eventsByQueue[event.queueName] || 0) + 1;
     });
-    
+
     const actualTimeRange = timeRange || {
-      start: events.length > 0 ? events[0]?.timestamp ?? new Date() : new Date(),
-      end: new Date()
+      start: events.length > 0 ? (events[0]?.timestamp ?? new Date()) : new Date(),
+      end: new Date(),
     };
-    
+
     return {
       totalEvents: events.length,
       eventsByType,
       eventsByQueue,
-      timeRange: actualTimeRange
+      timeRange: actualTimeRange,
     };
   }
-  
+
   /**
    * Export events for analysis
    */
@@ -338,42 +349,42 @@ export class JobEventLogger extends EventEmitter {
     }
   ): string {
     let events = this.events;
-    
+
     // Apply filters
     if (filters) {
       if (filters.queueName) {
-        events = events.filter(e => e.queueName === filters.queueName);
+        events = events.filter((e) => e.queueName === filters.queueName);
       }
       if (filters.type) {
-        events = events.filter(e => e.type === filters.type);
+        events = events.filter((e) => e.type === filters.type);
       }
       if (filters.startDate) {
-        events = events.filter(e => e.timestamp >= filters.startDate!);
+        events = events.filter((e) => e.timestamp >= filters.startDate!);
       }
       if (filters.endDate) {
-        events = events.filter(e => e.timestamp <= filters.endDate!);
+        events = events.filter((e) => e.timestamp <= filters.endDate!);
       }
     }
-    
+
     if (format === 'json') {
       return JSON.stringify(events, null, 2);
     } else {
       // CSV format
       const headers = ['id', 'type', 'timestamp', 'queueName', 'jobId', 'duration', 'error'];
-      const rows = events.map(event => [
+      const rows = events.map((event) => [
         event.id,
         event.type,
         event.timestamp.toISOString(),
         event.queueName,
         event.jobId || '',
         event.metadata?.duration || '',
-        event.metadata?.error?.message || ''
+        event.metadata?.error?.message || '',
       ]);
-      
-      return [headers, ...rows].map(row => row.join(',')).join('\n');
+
+      return [headers, ...rows].map((row) => row.join(',')).join('\n');
     }
   }
-  
+
   /**
    * Log structured event with appropriate log level
    */
@@ -384,9 +395,9 @@ export class JobEventLogger extends EventEmitter {
       queueName: event.queueName,
       jobId: event.jobId,
       timestamp: event.timestamp,
-      ...event.metadata
+      ...event.metadata,
     };
-    
+
     switch (event.type) {
       case 'job:failed':
       case 'job:stalled':
@@ -404,13 +415,13 @@ export class JobEventLogger extends EventEmitter {
         break;
     }
   }
-  
+
   /**
    * Update performance metrics for a queue
    */
   private updatePerformanceMetrics(queueName: string, completed: boolean, duration: number): void {
     let metrics = this.performanceMetrics.get(queueName);
-    
+
     if (!metrics) {
       metrics = {
         queueName,
@@ -422,51 +433,52 @@ export class JobEventLogger extends EventEmitter {
         p95Duration: 0,
         throughputPerMinute: 0,
         errorRate: 0,
-        lastUpdated: new Date()
+        lastUpdated: new Date(),
       };
     }
-    
+
     metrics.totalJobs++;
     if (completed) {
       metrics.completedJobs++;
     } else {
       metrics.failedJobs++;
     }
-    
+
     // Update duration metrics (simplified calculation)
     metrics.averageDuration = (metrics.averageDuration + duration) / 2;
     metrics.errorRate = metrics.failedJobs / metrics.totalJobs;
     metrics.lastUpdated = new Date();
-    
+
     // Calculate throughput (jobs per minute in last hour)
-    const recentEvents = this.events.filter(event => 
-      event.queueName === queueName &&
-      (event.type === 'job:completed' || event.type === 'job:failed') &&
-      event.timestamp.getTime() > Date.now() - 60 * 60 * 1000
+    const recentEvents = this.events.filter(
+      (event) =>
+        event.queueName === queueName &&
+        (event.type === 'job:completed' || event.type === 'job:failed') &&
+        event.timestamp.getTime() > Date.now() - 60 * 60 * 1000
     );
     metrics.throughputPerMinute = recentEvents.length / 60;
-    
+
     this.performanceMetrics.set(queueName, metrics);
   }
-  
+
   /**
    * Clean up old events to prevent memory leaks
    */
   private cleanupOldEvents(): void {
     const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000); // 24 hours
-    
-    this.events = this.events.filter(event => event.timestamp > cutoff);
-    
+
+    this.events = this.events.filter((event) => event.timestamp > cutoff);
+
     // Clean up old job timings
     for (const [jobId, timing] of this.jobTimings.entries()) {
       if (timing.startTime < cutoff) {
         this.jobTimings.delete(jobId);
       }
     }
-    
+
     logger.debug('Cleaned up old job events', {
       remainingEvents: this.events.length,
-      remainingTimings: this.jobTimings.size
+      remainingTimings: this.jobTimings.size,
     });
   }
 }

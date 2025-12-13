@@ -1,6 +1,6 @@
 /**
  * Courses Application Layer
- * 
+ *
  * Exports application services and interfaces for the courses module.
  * This layer contains business logic, use cases, and orchestration.
  */

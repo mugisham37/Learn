@@ -1,18 +1,16 @@
 /**
  * Quiz Service Interface
- * 
+ *
  * Defines the contract for quiz business operations in the application layer.
  * Orchestrates domain entities and infrastructure repositories to implement
  * quiz management use cases.
- * 
+ *
  * Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8
  */
 
 import { Quiz } from '../../domain/entities/Quiz.js';
 import { Question } from '../../domain/entities/Question.js';
-import { 
-  QuizSubmission
-} from '../../../../infrastructure/database/schema/assessments.schema.js';
+import { QuizSubmission } from '../../../../infrastructure/database/schema/assessments.schema.js';
 
 /**
  * Data Transfer Object for creating a new quiz
@@ -37,7 +35,13 @@ export interface CreateQuizDTO {
  * Data Transfer Object for creating a new question
  */
 export interface CreateQuestionDTO {
-  questionType: 'multiple_choice' | 'true_false' | 'short_answer' | 'essay' | 'fill_blank' | 'matching';
+  questionType:
+    | 'multiple_choice'
+    | 'true_false'
+    | 'short_answer'
+    | 'essay'
+    | 'fill_blank'
+    | 'matching';
   questionText: string;
   questionMediaUrl?: string;
   options?: unknown; // Type-specific options (e.g., multiple choice options)
@@ -112,14 +116,14 @@ export interface GradingResult {
 
 /**
  * Quiz Service Interface
- * 
+ *
  * Provides methods for all quiz business operations including creation,
  * question management, attempt handling, and grading workflows.
  */
 export interface IQuizService {
   /**
    * Creates a new quiz with validation
-   * 
+   *
    * @param educatorId - ID of the educator creating the quiz
    * @param data - Quiz creation data
    * @returns The created quiz
@@ -131,7 +135,7 @@ export interface IQuizService {
 
   /**
    * Adds a question to an existing quiz with validation
-   * 
+   *
    * @param educatorId - ID of the educator adding the question
    * @param quizId - ID of the quiz to add question to
    * @param data - Question creation data
@@ -144,7 +148,7 @@ export interface IQuizService {
 
   /**
    * Starts a new quiz attempt with randomization if configured
-   * 
+   *
    * @param data - Attempt start data
    * @returns Quiz attempt result with questions
    * @throws ValidationError if quiz, student, or enrollment doesn't exist
@@ -155,7 +159,7 @@ export interface IQuizService {
 
   /**
    * Submits an answer for progressive submission
-   * 
+   *
    * @param data - Answer submission data
    * @returns Updated submission
    * @throws ValidationError if submission or question doesn't exist
@@ -166,7 +170,7 @@ export interface IQuizService {
 
   /**
    * Submits a complete quiz with auto-grading
-   * 
+   *
    * @param data - Quiz submission data
    * @returns Graded submission with results
    * @throws ValidationError if submission doesn't exist
@@ -177,7 +181,7 @@ export interface IQuizService {
 
   /**
    * Manually grades a quiz submission
-   * 
+   *
    * @param data - Grading data
    * @returns Updated submission with grades
    * @throws ValidationError if submission doesn't exist
@@ -189,7 +193,7 @@ export interface IQuizService {
 
   /**
    * Gets quiz by ID with authorization check
-   * 
+   *
    * @param quizId - Quiz ID
    * @param userId - User requesting the quiz
    * @param userRole - Role of the requesting user
@@ -202,7 +206,7 @@ export interface IQuizService {
 
   /**
    * Gets quiz submission by ID with authorization check
-   * 
+   *
    * @param submissionId - Submission ID
    * @param userId - User requesting the submission
    * @param userRole - Role of the requesting user
@@ -215,7 +219,7 @@ export interface IQuizService {
 
   /**
    * Checks if a student can start a new attempt
-   * 
+   *
    * @param quizId - Quiz ID
    * @param studentId - Student ID
    * @returns True if student can start attempt, false otherwise
@@ -226,14 +230,17 @@ export interface IQuizService {
 
   /**
    * Gets student's attempt summary for a quiz
-   * 
+   *
    * @param quizId - Quiz ID
    * @param studentId - Student ID
    * @returns Attempt summary with statistics
    * @throws NotFoundError if quiz doesn't exist
    * @throws DatabaseError if database operation fails
    */
-  getAttemptSummary(quizId: string, studentId: string): Promise<{
+  getAttemptSummary(
+    quizId: string,
+    studentId: string
+  ): Promise<{
     totalAttempts: number;
     bestScore: number | null;
     hasPassingScore: boolean;

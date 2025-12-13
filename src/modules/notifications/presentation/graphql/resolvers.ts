@@ -1,28 +1,25 @@
 /**
  * GraphQL Resolvers for Notifications Module
- * 
+ *
  * Implements GraphQL resolvers for notification queries, mutations, and subscriptions.
  * Handles notification filtering, marking as read, preference management, and real-time updates.
- * 
+ *
  * Requirements: 21.2, 21.3, 21.4
  */
 
-import { 
-  GraphQLError,
-  GraphQLResolveInfo,
-} from 'graphql';
-import { 
+import { GraphQLError, GraphQLResolveInfo } from 'graphql';
+import {
   AuthenticationError,
   AuthorizationError,
   ValidationError,
   NotFoundError,
 } from '../../../../shared/errors/index.js';
 import { logger } from '../../../../shared/utils/logger.js';
-import { 
-  SUBSCRIPTION_EVENTS, 
-  createAsyncIterator, 
-  publishEvent, 
-  withFilter 
+import {
+  SUBSCRIPTION_EVENTS,
+  createAsyncIterator,
+  publishEvent,
+  withFilter,
 } from '../../../../infrastructure/graphql/pubsub.js';
 import { requireAuth } from '../../../../infrastructure/graphql/utils.js';
 import { type GraphQLContext } from '../../../../infrastructure/graphql/apolloServer.js';
@@ -31,14 +28,12 @@ import { INotificationPreferenceService } from '../../application/services/INoti
 import { INotificationRepository } from '../../infrastructure/repositories/INotificationRepository.js';
 import { IRealtimeService } from '../../../../shared/services/IRealtimeService.js';
 import { IUserRepository } from '../../../users/infrastructure/repositories/IUserRepository.js';
-import { 
+import {
   Notification,
   NotificationType,
   Priority,
 } from '../../../../infrastructure/database/schema/notifications.schema.js';
 import { NotificationPreferences } from '../../../users/domain/value-objects/UserProfile.js';
-
-
 
 /**
  * Input types for GraphQL operations
@@ -92,8 +87,6 @@ interface PageInfo {
   startCursor?: string;
   endCursor?: string;
 }
-
-
 
 /**
  * Utility function to get data sources
@@ -199,7 +192,7 @@ export const notificationResolvers = {
   Query: {
     /**
      * Gets user notifications with filtering and pagination
-     * 
+     *
      * Requirements: 21.2
      */
     getUserNotifications: async (
@@ -244,28 +237,18 @@ export const notificationResolvers = {
         }
 
         // Get notifications
-        const result = await notificationRepository.findByRecipient(
-          user.id,
-          filters,
-          {
-            limit,
-            offset,
-            orderBy: 'createdAt',
-            orderDirection: 'desc',
-          }
-        );
+        const result = await notificationRepository.findByRecipient(user.id, filters, {
+          limit,
+          offset,
+          orderBy: 'createdAt',
+          orderDirection: 'desc',
+        });
 
         // Get unread count
         const unreadCount = await notificationRepository.countUnreadByRecipient(user.id);
 
         // Convert to GraphQL connection
-        const connection = createConnection(
-          result.items,
-          result.total,
-          limit,
-          offset,
-          unreadCount
-        );
+        const connection = createConnection(result.items, result.total, limit, offset, unreadCount);
 
         logger.info('User notifications retrieved successfully', {
           userId: user.id,
@@ -297,7 +280,7 @@ export const notificationResolvers = {
 
     /**
      * Gets notification preferences for current user
-     * 
+     *
      * Requirements: 21.2
      */
     getNotificationPreferences: async (
@@ -350,7 +333,7 @@ export const notificationResolvers = {
 
     /**
      * Gets a single notification by ID
-     * 
+     *
      * Requirements: 21.2, 21.3
      */
     getNotification: async (
@@ -415,7 +398,7 @@ export const notificationResolvers = {
 
     /**
      * Gets unread notification count
-     * 
+     *
      * Requirements: 21.2
      */
     getUnreadNotificationCount: async (
@@ -484,7 +467,7 @@ export const notificationResolvers = {
   Mutation: {
     /**
      * Marks a notification as read
-     * 
+     *
      * Requirements: 21.2, 21.3
      */
     markNotificationRead: async (
@@ -516,7 +499,7 @@ export const notificationResolvers = {
         // Publish notification read event
         await publishEvent(SUBSCRIPTION_EVENTS.NOTIFICATION_READ, {
           notificationRead: notification,
-          userId: user.id
+          userId: user.id,
         });
 
         logger.info('Notification marked as read successfully', {
@@ -566,7 +549,7 @@ export const notificationResolvers = {
 
     /**
      * Marks all notifications as read
-     * 
+     *
      * Requirements: 21.2, 21.3
      */
     markAllNotificationsRead: async (
@@ -591,11 +574,11 @@ export const notificationResolvers = {
         if (args.input?.notificationType || args.input?.olderThan) {
           // Mark specific notifications as read
           const filters: any = { isRead: false };
-          
+
           if (args.input.notificationType) {
             filters.notificationType = args.input.notificationType;
           }
-          
+
           if (args.input.olderThan) {
             filters.createdBefore = new Date(args.input.olderThan);
           }
@@ -608,7 +591,7 @@ export const notificationResolvers = {
           );
 
           if (result.items.length > 0) {
-            const notificationIds = result.items.map(n => n.id);
+            const notificationIds = result.items.map((n) => n.id);
             await notificationRepository.markManyAsRead(notificationIds);
             markedCount = notificationIds.length;
           } else {
@@ -647,7 +630,7 @@ export const notificationResolvers = {
 
     /**
      * Updates notification preferences
-     * 
+     *
      * Requirements: 21.2, 21.3
      */
     updateNotificationPreferences: async (
@@ -670,10 +653,7 @@ export const notificationResolvers = {
           throw new ValidationError('Notification preferences are required');
         }
 
-        await notificationPreferenceService.updatePreferences(
-          user.id,
-          args.input.preferences
-        );
+        await notificationPreferenceService.updatePreferences(user.id, args.input.preferences);
 
         // Get updated preferences
         const updatedPreferences = await notificationPreferenceService.getPreferences(user.id);
@@ -717,7 +697,7 @@ export const notificationResolvers = {
 
     /**
      * Deletes expired notifications (admin only)
-     * 
+     *
      * Requirements: 21.2, 21.3
      */
     deleteExpiredNotifications: async (
@@ -778,7 +758,7 @@ export const notificationResolvers = {
   Subscription: {
     /**
      * Real-time notification delivery
-     * 
+     *
      * Requirements: 21.4
      */
     notificationReceived: {
@@ -786,7 +766,7 @@ export const notificationResolvers = {
         (_parent: any, _args: any, context: GraphQLContext) => {
           // Require authentication for subscriptions
           const user = requireAuth(context);
-          
+
           logger.info('Setting up notification subscription', {
             userId: user.id,
             requestId: context.requestId,
@@ -799,7 +779,7 @@ export const notificationResolvers = {
           const user = requireAuth(context);
           return payload.userId === variables.userId && payload.userId === user.id;
         }
-      )
+      ),
     },
 
     /**
@@ -810,7 +790,7 @@ export const notificationResolvers = {
         (_parent: any, _args: any, context: GraphQLContext) => {
           // Require authentication for subscriptions
           const user = requireAuth(context);
-          
+
           logger.info('Setting up notification read subscription', {
             userId: user.id,
             requestId: context.requestId,
@@ -823,7 +803,7 @@ export const notificationResolvers = {
           const user = requireAuth(context);
           return payload.userId === variables.userId && payload.userId === user.id;
         }
-      )
+      ),
     },
 
     /**
@@ -834,7 +814,7 @@ export const notificationResolvers = {
         (_parent: any, _args: any, context: GraphQLContext) => {
           // Require authentication for subscriptions
           const user = requireAuth(context);
-          
+
           logger.info('Setting up unread count subscription', {
             userId: user.id,
             requestId: context.requestId,
@@ -847,7 +827,7 @@ export const notificationResolvers = {
           const user = requireAuth(context);
           return payload.userId === variables.userId && payload.userId === user.id;
         }
-      )
+      ),
     },
   },
 
@@ -855,7 +835,7 @@ export const notificationResolvers = {
   Notification: {
     /**
      * Resolves the recipient user for a notification
-     * 
+     *
      * Requirements: 21.2
      */
     recipient: async (

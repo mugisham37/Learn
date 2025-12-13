@@ -1,9 +1,9 @@
 /**
  * HTTP Response Caching Middleware
- * 
+ *
  * Implements HTTP caching mechanisms including Cache-Control headers,
  * ETag generation, conditional requests, and 304 Not Modified responses.
- * 
+ *
  * Requirements: 15.4
  */
 
@@ -100,15 +100,8 @@ export const CacheConfigs = {
 /**
  * Generate ETag for response data
  */
-export function generateETag(
-  data: any,
-  options: ETagOptions = {}
-): string {
-  const {
-    weak = false,
-    algorithm = 'sha256',
-    includeRequestData = false,
-  } = options;
+export function generateETag(data: any, options: ETagOptions = {}): string {
+  const { weak = false, algorithm = 'sha256', includeRequestData = false } = options;
 
   try {
     // Convert data to string for hashing
@@ -122,10 +115,7 @@ export function generateETag(
     }
 
     // Generate hash
-    const hash = createHash(algorithm)
-      .update(content)
-      .digest('hex')
-      .substring(0, 16); // Use first 16 characters for shorter ETags
+    const hash = createHash(algorithm).update(content).digest('hex').substring(0, 16); // Use first 16 characters for shorter ETags
 
     // Return ETag with appropriate format
     return weak ? `W/"${hash}"` : `"${hash}"`;
@@ -134,13 +124,13 @@ export function generateETag(
       error: error instanceof Error ? error.message : String(error),
       dataType: typeof data,
     });
-    
+
     // Fallback to timestamp-based ETag
     const fallbackHash = createHash('md5')
       .update(Date.now().toString())
       .digest('hex')
       .substring(0, 8);
-    
+
     return weak ? `W/"${fallbackHash}"` : `"${fallbackHash}"`;
   }
 }
@@ -200,8 +190,8 @@ export function parseIfNoneMatch(ifNoneMatch: string): string[] {
   // Parse comma-separated ETags
   return ifNoneMatch
     .split(',')
-    .map(etag => etag.trim())
-    .filter(etag => etag.length > 0);
+    .map((etag) => etag.trim())
+    .filter((etag) => etag.length > 0);
 }
 
 /**
@@ -214,7 +204,7 @@ export function etagsMatch(etag1: string, etag2: string): boolean {
 
   // Normalize ETags (remove W/ prefix for comparison)
   const normalize = (etag: string) => etag.replace(/^W\//, '');
-  
+
   return normalize(etag1) === normalize(etag2);
 }
 
@@ -248,68 +238,67 @@ export function createHttpCachingMiddleware(
         try {
           // Generate ETag for the response payload
           const etag = generateETag(payload, etagOptions);
-          
+
           // Set ETag header
           reply.header('ETag', etag);
-          
+
           // Set Cache-Control header
           reply.header('Cache-Control', buildCacheControlHeader(config));
-          
+
           // Handle conditional requests
           const ifNoneMatch = request.headers['if-none-match'];
           if (ifNoneMatch) {
             const clientETags = parseIfNoneMatch(ifNoneMatch);
-            
+
             // Check if any client ETag matches current ETag
-            const matches = clientETags.some(clientETag => 
-              clientETag === '*' || etagsMatch(clientETag, etag)
+            const matches = clientETags.some(
+              (clientETag) => clientETag === '*' || etagsMatch(clientETag, etag)
             );
-            
+
             if (matches) {
               // Return 304 Not Modified
               reply.code(304);
-              
+
               // Remove content-related headers for 304 responses
               reply.removeHeader('Content-Type');
               reply.removeHeader('Content-Length');
               reply.removeHeader('Content-Encoding');
-              
+
               logger.debug('Returning 304 Not Modified', {
                 requestId,
                 url: request.url,
                 etag,
                 clientETags,
               });
-              
+
               return ''; // Empty body for 304
             }
           }
-          
+
           logger.debug('HTTP caching headers added', {
             requestId,
             url: request.url,
             etag,
             cacheControl: buildCacheControlHeader(config),
           });
-          
+
           return payload;
         } catch (error) {
           logger.error('Error in HTTP caching onSend hook', {
             requestId,
             error: error instanceof Error ? error.message : String(error),
           });
-          
+
           // Continue with original payload if caching fails
           return payload;
         }
       });
-
     } catch (error) {
       logger.error('Error in HTTP caching middleware', {
         requestId,
         error: error instanceof Error ? error.message : String(error),
       });
-      
+
       // Continue without caching if middleware fails
     }
   };
@@ -347,8 +336,13 @@ export async function registerHttpCaching(fastify: FastifyInstance): Promise<voi
     generateETag,
     buildCacheControlHeader,
     createMiddleware: createHttpCachingMiddleware,
-    addToRoute: (method: any, url: string, config: CacheConfig, handler: any, etagOptions?: ETagOptions) =>
-      addCachingToRoute(fastify, method, url, config, handler, etagOptions),
+    addToRoute: (
+      method: any,
+      url: string,
+      config: CacheConfig,
+      handler: any,
+      etagOptions?: ETagOptions
+    ) => addCachingToRoute(fastify, method, url, config, handler, etagOptions),
     configs: CacheConfigs,
   });
 

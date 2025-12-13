@@ -1,6 +1,6 @@
 /**
  * Announcement Repository Implementation
- * 
+ *
  * Implements data access operations for announcements using Drizzle ORM
  */
 
@@ -87,16 +87,11 @@ export class AnnouncementRepository implements IAnnouncementRepository {
 
   async findScheduledReadyToPublish(): Promise<Announcement[]> {
     const now = new Date();
-    
+
     const results = await this.db
       .select()
       .from(announcements)
-      .where(
-        and(
-          lte(announcements.scheduledFor, now),
-          isNull(announcements.publishedAt)
-        )
-      )
+      .where(and(lte(announcements.scheduledFor, now), isNull(announcements.publishedAt)))
       .orderBy(asc(announcements.scheduledFor));
 
     return results.map(this.mapToEntity);
@@ -129,9 +124,7 @@ export class AnnouncementRepository implements IAnnouncementRepository {
   }
 
   async delete(id: string): Promise<void> {
-    await this.db
-      .delete(announcements)
-      .where(eq(announcements.id, id));
+    await this.db.delete(announcements).where(eq(announcements.id, id));
   }
 
   async countByCourseId(courseId: string): Promise<number> {

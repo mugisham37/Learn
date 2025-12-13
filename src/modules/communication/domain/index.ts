@@ -1,6 +1,6 @@
 /**
  * Communication Domain Layer
- * 
+ *
  * Business entities, value objects, and domain services
  */
 

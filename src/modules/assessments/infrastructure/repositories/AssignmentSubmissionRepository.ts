@@ -1,28 +1,29 @@
 /**
  * Assignment Submission Repository Implementation
- * 
+ *
  * Implements assignment submission data access operations with Drizzle ORM queries,
  * Redis caching with 5-minute TTL, and cache invalidation on updates.
  * Handles submission tracking with revision history and parent linking.
- * 
+ *
  * Requirements: 7.1, 7.2
  */
 
 import { eq, and, desc, count, sql, gte, lte, or } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
-import { cache, buildCacheKey, CachePrefix, CacheTTL } from '../../../../infrastructure/cache/index.js';
-import { getWriteDb, getReadDb } from '../../../../infrastructure/database/index.js';
-import { 
-  assignmentSubmissions, 
-  AssignmentSubmission, 
-  NewAssignmentSubmission
-} from '../../../../infrastructure/database/schema/assessments.schema.js';
 import {
-  DatabaseError,
-  NotFoundError,
-  ValidationError,
-} from '../../../../shared/errors/index.js';
+  cache,
+  buildCacheKey,
+  CachePrefix,
+  CacheTTL,
+} from '../../../../infrastructure/cache/index.js';
+import { getWriteDb, getReadDb } from '../../../../infrastructure/database/index.js';
+import {
+  assignmentSubmissions,
+  AssignmentSubmission,
+  NewAssignmentSubmission,
+} from '../../../../infrastructure/database/schema/assessments.schema.js';
+import { DatabaseError, NotFoundError, ValidationError } from '../../../../shared/errors/index.js';
 
 import {
   IAssignmentSubmissionRepository,
@@ -37,7 +38,7 @@ import {
 
 /**
  * Assignment Submission Repository Implementation
- * 
+ *
  * Provides data access methods for assignment submission entities with:
  * - Drizzle ORM for type-safe queries
  * - Redis caching with 5-minute TTL
@@ -72,26 +73,40 @@ export class AssignmentSubmissionRepository implements IAssignmentSubmissionRepo
    * Builds cache key for assignment submissions list
    */
   private getAssignmentSubmissionsCacheKey(
-    assignmentId: string, 
-    page: number, 
+    assignmentId: string,
+    page: number,
     limit: number,
     filters?: AssignmentSubmissionFilters
   ): string {
     const filterKey = filters ? JSON.stringify(filters) : 'all';
-    return buildCacheKey(CachePrefix.ASSIGNMENT_SUBMISSION, 'assignment', assignmentId, page, limit, filterKey);
+    return buildCacheKey(
+      CachePrefix.ASSIGNMENT_SUBMISSION,
+      'assignment',
+      assignmentId,
+      page,
+      limit,
+      filterKey
+    );
   }
 
   /**
    * Builds cache key for student submissions list
    */
   private getStudentSubmissionsCacheKey(
-    studentId: string, 
-    page: number, 
+    studentId: string,
+    page: number,
     limit: number,
     filters?: AssignmentSubmissionFilters
   ): string {
     const filterKey = filters ? JSON.stringify(filters) : 'all';
-    return buildCacheKey(CachePrefix.ASSIGNMENT_SUBMISSION, 'student', studentId, page, limit, filterKey);
+    return buildCacheKey(
+      CachePrefix.ASSIGNMENT_SUBMISSION,
+      'student',
+      studentId,
+      page,
+      limit,
+      filterKey
+    );
   }
 
   /**
@@ -110,7 +125,7 @@ export class AssignmentSubmissionRepository implements IAssignmentSubmissionRepo
 
   /**
    * Creates a new assignment submission in the database
-   * 
+   *
    * @param data - Assignment submission creation data
    * @returns The created assignment submission
    * @throws ValidationError if assignment, student, or enrollment doesn't exist
@@ -139,10 +154,7 @@ export class AssignmentSubmissionRepository implements IAssignmentSubmissionRepo
         .returning();
 
       if (!createdSubmission) {
-        throw new DatabaseError(
-          'Failed to create assignment submission',
-          'insert'
-        );
+        throw new DatabaseError('Failed to create assignment submission', 'insert');
       }
 
       // Invalidate related caches
@@ -160,22 +172,19 @@ export class AssignmentSubmissionRepository implements IAssignmentSubmissionRepo
       if (error instanceof Error) {
         if (error.message.includes('foreign key')) {
           if (error.message.includes('assignment')) {
-            throw new ValidationError(
-              'Invalid assignment ID',
-              [{ field: 'assignmentId', message: 'Assignment does not exist' }]
-            );
+            throw new ValidationError('Invalid assignment ID', [
+              { field: 'assignmentId', message: 'Assignment does not exist' },
+            ]);
           }
           if (error.message.includes('student') || error.message.includes('user')) {
-            throw new ValidationError(
-              'Invalid student ID',
-              [{ field: 'studentId', message: 'Student does not exist' }]
-            );
+            throw new ValidationError('Invalid student ID', [
+              { field: 'studentId', message: 'Student does not exist' },
+            ]);
           }
           if (error.message.includes('enrollment')) {
-            throw new ValidationError(
-              'Invalid enrollment ID',
-              [{ field: 'enrollmentId', message: 'Enrollment does not exist' }]
-            );
+            throw new ValidationError('Invalid enrollment ID', [
+              { field: 'enrollmentId', message: 'Enrollment does not exist' },
+            ]);
           }
         }
       }
@@ -191,7 +200,7 @@ export class AssignmentSubmissionRepository implements IAssignmentSubmissionRepo
 
   /**
    * Finds an assignment submission by its unique ID
-   * 
+   *
    * @param id - Assignment submission ID
    * @returns The assignment submission if found, null otherwise
    * @throws DatabaseError if database operation fails
@@ -201,7 +210,7 @@ export class AssignmentSubmissionRepository implements IAssignmentSubmissionRepo
       // Check cache first
       const cacheKey = this.getSubmissionCacheKey(id);
       const cachedSubmission = await cache.get<AssignmentSubmission>(cacheKey);
-      
+
       if (cachedSubmission) {
         return cachedSubmission;
       }
@@ -232,7 +241,7 @@ export class AssignmentSubmissionRepository implements IAssignmentSubmissionRepo
 
   /**
    * Finds an assignment submission by ID with revision history
-   * 
+   *
    * @param id - Assignment submission ID
    * @returns The assignment submission with revisions if found, null otherwise
    * @throws DatabaseError if database operation fails
@@ -241,8 +250,9 @@ export class AssignmentSubmissionRepository implements IAssignmentSubmissionRepo
     try {
       // Check cache first
       const cacheKey = this.getSubmissionWithRevisionsCacheKey(id);
-      const cachedSubmissionWithRevisions = await cache.get<AssignmentSubmissionWithRevisions>(cacheKey);
-      
+      const cachedSubmissionWithRevisions =
+        await cache.get<AssignmentSubmissionWithRevisions>(cacheKey);
+
       if (cachedSubmissionWithRevisions) {
         return cachedSubmissionWithRevisions;
       }
@@ -256,7 +266,7 @@ export class AssignmentSubmissionRepository implements IAssignmentSubmissionRepo
       // Get parent submission if this is a revision
       let parentSubmission: AssignmentSubmission | undefined;
       if (submission.parentSubmissionId) {
-        parentSubmission = await this.findById(submission.parentSubmissionId) || undefined;
+        parentSubmission = (await this.findById(submission.parentSubmissionId)) || undefined;
       }
 
       // Get all revisions (submissions that have this submission as parent)
@@ -287,7 +297,7 @@ export class AssignmentSubmissionRepository implements IAssignmentSubmissionRepo
 
   /**
    * Finds assignment submissions by assignment with pagination
-   * 
+   *
    * @param assignmentId - Assignment ID
    * @param pagination - Pagination parameters
    * @param filters - Optional filters
@@ -302,50 +312,48 @@ export class AssignmentSubmissionRepository implements IAssignmentSubmissionRepo
     try {
       // Check cache first
       const cacheKey = this.getAssignmentSubmissionsCacheKey(
-        assignmentId, 
-        pagination.page, 
-        pagination.limit, 
+        assignmentId,
+        pagination.page,
+        pagination.limit,
         filters
       );
       const cachedResult = await cache.get<PaginatedResult<AssignmentSubmission>>(cacheKey);
-      
+
       if (cachedResult) {
         return cachedResult;
       }
 
       // Build where conditions
       const whereConditions = [eq(assignmentSubmissions.assignmentId, assignmentId)];
-      
+
       if (filters?.studentId) {
         whereConditions.push(eq(assignmentSubmissions.studentId, filters.studentId));
       }
-      
+
       if (filters?.gradingStatus) {
         whereConditions.push(eq(assignmentSubmissions.gradingStatus, filters.gradingStatus));
       }
-      
+
       if (filters?.isLate !== undefined) {
         whereConditions.push(eq(assignmentSubmissions.isLate, filters.isLate));
       }
-      
+
       if (filters?.submittedAfter) {
         whereConditions.push(gte(assignmentSubmissions.submittedAt, filters.submittedAfter));
       }
-      
+
       if (filters?.submittedBefore) {
         whereConditions.push(lte(assignmentSubmissions.submittedAt, filters.submittedBefore));
       }
 
-      const whereClause = whereConditions.length > 1 
-        ? and(...whereConditions) 
-        : whereConditions[0];
+      const whereClause = whereConditions.length > 1 ? and(...whereConditions) : whereConditions[0];
 
       // Get total count
       const [totalResult] = await this.readDb
         .select({ total: count() })
         .from(assignmentSubmissions)
         .where(whereClause);
-      
+
       const total = totalResult?.total || 0;
 
       // Get paginated results
@@ -381,7 +389,7 @@ export class AssignmentSubmissionRepository implements IAssignmentSubmissionRepo
 
   /**
    * Finds assignment submissions by student with pagination
-   * 
+   *
    * @param studentId - Student ID
    * @param pagination - Pagination parameters
    * @param filters - Optional filters
@@ -396,50 +404,48 @@ export class AssignmentSubmissionRepository implements IAssignmentSubmissionRepo
     try {
       // Check cache first
       const cacheKey = this.getStudentSubmissionsCacheKey(
-        studentId, 
-        pagination.page, 
-        pagination.limit, 
+        studentId,
+        pagination.page,
+        pagination.limit,
         filters
       );
       const cachedResult = await cache.get<PaginatedResult<AssignmentSubmission>>(cacheKey);
-      
+
       if (cachedResult) {
         return cachedResult;
       }
 
       // Build where conditions
       const whereConditions = [eq(assignmentSubmissions.studentId, studentId)];
-      
+
       if (filters?.assignmentId) {
         whereConditions.push(eq(assignmentSubmissions.assignmentId, filters.assignmentId));
       }
-      
+
       if (filters?.gradingStatus) {
         whereConditions.push(eq(assignmentSubmissions.gradingStatus, filters.gradingStatus));
       }
-      
+
       if (filters?.isLate !== undefined) {
         whereConditions.push(eq(assignmentSubmissions.isLate, filters.isLate));
       }
-      
+
       if (filters?.submittedAfter) {
         whereConditions.push(gte(assignmentSubmissions.submittedAt, filters.submittedAfter));
       }
-      
+
       if (filters?.submittedBefore) {
         whereConditions.push(lte(assignmentSubmissions.submittedAt, filters.submittedBefore));
       }
 
-      const whereClause = whereConditions.length > 1 
-        ? and(...whereConditions) 
-        : whereConditions[0];
+      const whereClause = whereConditions.length > 1 ? and(...whereConditions) : whereConditions[0];
 
       // Get total count
       const [totalResult] = await this.readDb
         .select({ total: count() })
         .from(assignmentSubmissions)
         .where(whereClause);
-      
+
       const total = totalResult?.total || 0;
 
       // Get paginated results
@@ -475,7 +481,7 @@ export class AssignmentSubmissionRepository implements IAssignmentSubmissionRepo
 
   /**
    * Finds the latest submission for a student and assignment
-   * 
+   *
    * @param assignmentId - Assignment ID
    * @param studentId - Student ID
    * @returns The latest submission if found, null otherwise
@@ -489,7 +495,7 @@ export class AssignmentSubmissionRepository implements IAssignmentSubmissionRepo
       // Check cache first
       const cacheKey = this.getLatestSubmissionCacheKey(assignmentId, studentId);
       const cachedSubmission = await cache.get<AssignmentSubmission>(cacheKey);
-      
+
       if (cachedSubmission) {
         return cachedSubmission;
       }
@@ -526,7 +532,7 @@ export class AssignmentSubmissionRepository implements IAssignmentSubmissionRepo
 
   /**
    * Gets submission summary for a student and assignment
-   * 
+   *
    * @param assignmentId - Assignment ID
    * @param studentId - Student ID
    * @returns Submission summary
@@ -540,7 +546,7 @@ export class AssignmentSubmissionRepository implements IAssignmentSubmissionRepo
       // Check cache first
       const cacheKey = this.getSubmissionSummaryCacheKey(assignmentId, studentId);
       const cachedSummary = await cache.get<StudentSubmissionSummary>(cacheKey);
-      
+
       if (cachedSummary) {
         return cachedSummary;
       }
@@ -563,8 +569,8 @@ export class AssignmentSubmissionRepository implements IAssignmentSubmissionRepo
 
       // Get best score
       const [bestScoreResult] = await this.readDb
-        .select({ 
-          bestScore: sql<number>`MAX(${assignmentSubmissions.pointsAwarded})` 
+        .select({
+          bestScore: sql<number>`MAX(${assignmentSubmissions.pointsAwarded})`,
         })
         .from(assignmentSubmissions)
         .where(
@@ -615,7 +621,7 @@ export class AssignmentSubmissionRepository implements IAssignmentSubmissionRepo
 
   /**
    * Finds all assignment submissions with pagination and filtering
-   * 
+   *
    * @param pagination - Pagination parameters
    * @param filters - Optional filters
    * @returns Paginated assignment submission results
@@ -628,43 +634,44 @@ export class AssignmentSubmissionRepository implements IAssignmentSubmissionRepo
     try {
       // Build where conditions
       const whereConditions = [];
-      
+
       if (filters?.assignmentId) {
         whereConditions.push(eq(assignmentSubmissions.assignmentId, filters.assignmentId));
       }
-      
+
       if (filters?.studentId) {
         whereConditions.push(eq(assignmentSubmissions.studentId, filters.studentId));
       }
-      
+
       if (filters?.gradingStatus) {
         whereConditions.push(eq(assignmentSubmissions.gradingStatus, filters.gradingStatus));
       }
-      
+
       if (filters?.isLate !== undefined) {
         whereConditions.push(eq(assignmentSubmissions.isLate, filters.isLate));
       }
-      
+
       if (filters?.submittedAfter) {
         whereConditions.push(gte(assignmentSubmissions.submittedAt, filters.submittedAfter));
       }
-      
+
       if (filters?.submittedBefore) {
         whereConditions.push(lte(assignmentSubmissions.submittedAt, filters.submittedBefore));
       }
 
-      const whereClause = whereConditions.length > 1 
-        ? and(...whereConditions) 
-        : whereConditions.length === 1 
-        ? whereConditions[0] 
-        : undefined;
+      const whereClause =
+        whereConditions.length > 1
+          ? and(...whereConditions)
+          : whereConditions.length === 1
+            ? whereConditions[0]
+            : undefined;
 
       // Get total count
       const [totalResult] = await this.readDb
         .select({ total: count() })
         .from(assignmentSubmissions)
         .where(whereClause);
-      
+
       const total = totalResult?.total || 0;
 
       // Get paginated results
@@ -697,7 +704,7 @@ export class AssignmentSubmissionRepository implements IAssignmentSubmissionRepo
 
   /**
    * Updates an assignment submission's data
-   * 
+   *
    * @param id - Assignment submission ID
    * @param data - Update data
    * @returns The updated assignment submission
@@ -726,10 +733,7 @@ export class AssignmentSubmissionRepository implements IAssignmentSubmissionRepo
         .returning();
 
       if (!updatedSubmission) {
-        throw new DatabaseError(
-          'Failed to update assignment submission',
-          'update'
-        );
+        throw new DatabaseError('Failed to update assignment submission', 'update');
       }
 
       // Invalidate all cache entries for this submission
@@ -740,10 +744,7 @@ export class AssignmentSubmissionRepository implements IAssignmentSubmissionRepo
       return updatedSubmission;
     } catch (error) {
       // Re-throw known errors
-      if (
-        error instanceof NotFoundError ||
-        error instanceof DatabaseError
-      ) {
+      if (error instanceof NotFoundError || error instanceof DatabaseError) {
         throw error;
       }
 
@@ -759,7 +760,7 @@ export class AssignmentSubmissionRepository implements IAssignmentSubmissionRepo
   /**
    * Deletes an assignment submission from the database
    * This also deletes any child revisions
-   * 
+   *
    * @param id - Assignment submission ID
    * @returns void
    * @throws NotFoundError if assignment submission doesn't exist
@@ -785,10 +786,7 @@ export class AssignmentSubmissionRepository implements IAssignmentSubmissionRepo
         .returning();
 
       if (!result || result.length === 0) {
-        throw new DatabaseError(
-          'Failed to delete assignment submission',
-          'delete'
-        );
+        throw new DatabaseError('Failed to delete assignment submission', 'delete');
       }
 
       // Invalidate all cache entries
@@ -812,7 +810,7 @@ export class AssignmentSubmissionRepository implements IAssignmentSubmissionRepo
 
   /**
    * Checks if an assignment submission exists
-   * 
+   *
    * @param id - Assignment submission ID
    * @returns True if assignment submission exists, false otherwise
    * @throws DatabaseError if database operation fails
@@ -832,7 +830,7 @@ export class AssignmentSubmissionRepository implements IAssignmentSubmissionRepo
 
   /**
    * Gets the revision count for a submission chain
-   * 
+   *
    * @param parentSubmissionId - Parent submission ID (or any submission in the chain)
    * @returns Number of revisions in the chain
    * @throws DatabaseError if database operation fails
@@ -861,7 +859,7 @@ export class AssignmentSubmissionRepository implements IAssignmentSubmissionRepo
 
   /**
    * Finds all revisions for a submission
-   * 
+   *
    * @param parentSubmissionId - Parent submission ID
    * @returns Array of revisions ordered by revision number
    * @throws DatabaseError if database operation fails
@@ -887,7 +885,7 @@ export class AssignmentSubmissionRepository implements IAssignmentSubmissionRepo
   /**
    * Invalidates cache for a specific assignment submission
    * Should be called after any update operation
-   * 
+   *
    * @param id - Assignment submission ID
    * @returns void
    */
@@ -897,7 +895,7 @@ export class AssignmentSubmissionRepository implements IAssignmentSubmissionRepo
         this.getSubmissionCacheKey(id),
         this.getSubmissionWithRevisionsCacheKey(id),
       ];
-      
+
       await cache.deleteMany(cacheKeys);
     } catch (error) {
       // Log error but don't throw - cache invalidation failure shouldn't break the operation
@@ -908,22 +906,37 @@ export class AssignmentSubmissionRepository implements IAssignmentSubmissionRepo
   /**
    * Invalidates cache for assignment submissions by assignment
    * Should be called after operations that affect assignment submission lists
-   * 
+   *
    * @param assignmentId - Assignment ID
    * @returns void
    */
   async invalidateCacheByAssignment(assignmentId: string): Promise<void> {
     try {
       // Invalidate assignment submission list cache entries
-      const assignmentPattern = buildCacheKey(CachePrefix.ASSIGNMENT_SUBMISSION, 'assignment', assignmentId, '*');
+      const assignmentPattern = buildCacheKey(
+        CachePrefix.ASSIGNMENT_SUBMISSION,
+        'assignment',
+        assignmentId,
+        '*'
+      );
       await cache.deletePattern(assignmentPattern);
-      
+
       // Invalidate latest submission cache entries for this assignment
-      const latestPattern = buildCacheKey(CachePrefix.ASSIGNMENT_SUBMISSION, 'latest', assignmentId, '*');
+      const latestPattern = buildCacheKey(
+        CachePrefix.ASSIGNMENT_SUBMISSION,
+        'latest',
+        assignmentId,
+        '*'
+      );
       await cache.deletePattern(latestPattern);
-      
+
       // Invalidate summary cache entries for this assignment
-      const summaryPattern = buildCacheKey(CachePrefix.ASSIGNMENT_SUBMISSION, 'summary', assignmentId, '*');
+      const summaryPattern = buildCacheKey(
+        CachePrefix.ASSIGNMENT_SUBMISSION,
+        'summary',
+        assignmentId,
+        '*'
+      );
       await cache.deletePattern(summaryPattern);
     } catch (error) {
       // Log error but don't throw - cache invalidation failure shouldn't break the operation
@@ -934,22 +947,37 @@ export class AssignmentSubmissionRepository implements IAssignmentSubmissionRepo
   /**
    * Invalidates cache for assignment submissions by student
    * Should be called after operations that affect student submission lists
-   * 
+   *
    * @param studentId - Student ID
    * @returns void
    */
   async invalidateCacheByStudent(studentId: string): Promise<void> {
     try {
       // Invalidate student submission list cache entries
-      const studentPattern = buildCacheKey(CachePrefix.ASSIGNMENT_SUBMISSION, 'student', studentId, '*');
+      const studentPattern = buildCacheKey(
+        CachePrefix.ASSIGNMENT_SUBMISSION,
+        'student',
+        studentId,
+        '*'
+      );
       await cache.deletePattern(studentPattern);
-      
+
       // Invalidate latest submission cache entries for this student
-      const latestPattern = buildCacheKey(CachePrefix.ASSIGNMENT_SUBMISSION, 'latest', '*', studentId);
+      const latestPattern = buildCacheKey(
+        CachePrefix.ASSIGNMENT_SUBMISSION,
+        'latest',
+        '*',
+        studentId
+      );
       await cache.deletePattern(latestPattern);
-      
+
       // Invalidate summary cache entries for this student
-      const summaryPattern = buildCacheKey(CachePrefix.ASSIGNMENT_SUBMISSION, 'summary', '*', studentId);
+      const summaryPattern = buildCacheKey(
+        CachePrefix.ASSIGNMENT_SUBMISSION,
+        'summary',
+        '*',
+        studentId
+      );
       await cache.deletePattern(summaryPattern);
     } catch (error) {
       // Log error but don't throw - cache invalidation failure shouldn't break the operation

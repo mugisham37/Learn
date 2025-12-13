@@ -1,10 +1,10 @@
 /**
  * Assignment Service Interface
- * 
+ *
  * Defines the contract for assignment business operations in the application layer.
  * Orchestrates domain entities and infrastructure repositories to implement
  * assignment management use cases including creation, submission, grading, and revision workflows.
- * 
+ *
  * Requirements: 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7
  */
 
@@ -88,14 +88,14 @@ export interface StudentAssignmentSummary {
 
 /**
  * Assignment Service Interface
- * 
+ *
  * Provides methods for all assignment business operations including creation,
  * submission handling, grading workflows, and revision management.
  */
 export interface IAssignmentService {
   /**
    * Creates a new assignment with validation
-   * 
+   *
    * @param educatorId - ID of the educator creating the assignment
    * @param data - Assignment creation data
    * @returns The created assignment
@@ -107,7 +107,7 @@ export interface IAssignmentService {
 
   /**
    * Submits an assignment with file validation and S3 upload
-   * 
+   *
    * @param data - Assignment submission data
    * @returns Submission result with upload details
    * @throws ValidationError if assignment, student, or enrollment doesn't exist
@@ -119,7 +119,7 @@ export interface IAssignmentService {
 
   /**
    * Grades an assignment submission with rubric support
-   * 
+   *
    * @param data - Grading data
    * @returns Updated submission with grades and feedback
    * @throws ValidationError if submission doesn't exist
@@ -131,7 +131,7 @@ export interface IAssignmentService {
 
   /**
    * Requests revision for an assignment submission
-   * 
+   *
    * @param data - Revision request data
    * @returns Updated submission with revision request
    * @throws ValidationError if submission doesn't exist
@@ -143,7 +143,7 @@ export interface IAssignmentService {
 
   /**
    * Gets assignment by ID with authorization check
-   * 
+   *
    * @param assignmentId - Assignment ID
    * @param userId - User requesting the assignment
    * @param userRole - Role of the requesting user
@@ -156,7 +156,7 @@ export interface IAssignmentService {
 
   /**
    * Gets assignment submission by ID with authorization check
-   * 
+   *
    * @param submissionId - Submission ID
    * @param userId - User requesting the submission
    * @param userRole - Role of the requesting user
@@ -165,22 +165,29 @@ export interface IAssignmentService {
    * @throws AuthorizationError if user doesn't have access
    * @throws DatabaseError if database operation fails
    */
-  getSubmission(submissionId: string, userId: string, userRole: string): Promise<AssignmentSubmission>;
+  getSubmission(
+    submissionId: string,
+    userId: string,
+    userRole: string
+  ): Promise<AssignmentSubmission>;
 
   /**
    * Gets student's assignment summary
-   * 
+   *
    * @param assignmentId - Assignment ID
    * @param studentId - Student ID
    * @returns Assignment summary with submission statistics
    * @throws NotFoundError if assignment doesn't exist
    * @throws DatabaseError if database operation fails
    */
-  getStudentAssignmentSummary(assignmentId: string, studentId: string): Promise<StudentAssignmentSummary>;
+  getStudentAssignmentSummary(
+    assignmentId: string,
+    studentId: string
+  ): Promise<StudentAssignmentSummary>;
 
   /**
    * Checks if a student can submit to an assignment
-   * 
+   *
    * @param assignmentId - Assignment ID
    * @param studentId - Student ID
    * @returns True if student can submit, false otherwise
@@ -192,7 +199,7 @@ export interface IAssignmentService {
   /**
    * Updates progress when assignment grading is completed
    * This method is called internally after grading to update student progress
-   * 
+   *
    * @param submissionId - Submission ID that was graded
    * @returns void
    * @throws DatabaseError if progress update fails

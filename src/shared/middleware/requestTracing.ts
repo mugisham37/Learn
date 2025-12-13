@@ -1,9 +1,9 @@
 /**
  * Request Tracing Middleware
- * 
+ *
  * Integrates request tracing with Fastify request/response cycle.
  * Sets up trace context, generates request IDs, and tracks request flow.
- * 
+ *
  * Requirements: 17.3
  */
 
@@ -19,19 +19,19 @@ export function registerRequestTracing(server: FastifyInstance): void {
   server.addHook('preHandler', async (request: FastifyRequest, reply: FastifyReply) => {
     // Create trace context
     const traceContext = requestTracingService.createTraceContext(request);
-    
+
     // Set context in async local storage
     requestTracingService.setContext(traceContext);
-    
+
     // Add trace headers to response
     const traceHeaders = requestTracingService.injectTraceHeaders(traceContext);
     Object.entries(traceHeaders).forEach(([key, value]) => {
       reply.header(key, value);
     });
-    
+
     // Store trace context in request for later use
     (request as any).traceContext = traceContext;
-    
+
     logger.debug('Request tracing context created', {
       requestId: traceContext.requestId,
       traceId: traceContext.traceId,
@@ -48,14 +48,18 @@ export function registerRequestTracing(server: FastifyInstance): void {
 
     // Finish the request span
     requestTracingService.addSpanTag(traceContext.spanId, 'http.status_code', reply.statusCode);
-    requestTracingService.addSpanTag(traceContext.spanId, 'http.response_size', reply.getResponseTime());
-    
+    requestTracingService.addSpanTag(
+      traceContext.spanId,
+      'http.response_size',
+      reply.getResponseTime()
+    );
+
     const status = reply.statusCode >= 400 ? 'error' : 'ok';
     requestTracingService.finishSpan(traceContext.spanId, status);
-    
+
     // Finish the trace
     requestTracingService.finishTrace(traceContext.traceId);
-    
+
     logger.debug('Request tracing completed', {
       requestId: traceContext.requestId,
       traceId: traceContext.traceId,
@@ -73,7 +77,7 @@ export function registerRequestTracing(server: FastifyInstance): void {
     requestTracingService.addSpanTag(traceContext.spanId, 'error', true);
     requestTracingService.addSpanTag(traceContext.spanId, 'error.message', error.message);
     requestTracingService.addSpanTag(traceContext.spanId, 'error.name', error.name);
-    
+
     requestTracingService.addSpanLog(
       traceContext.spanId,
       'error',
@@ -119,13 +123,13 @@ export function addTraceMetadata(key: string, value: any): void {
  */
 export function createChildSpan(operationName: string, tags?: Record<string, any>) {
   const span = requestTracingService.startSpan(operationName);
-  
+
   if (tags) {
     Object.entries(tags).forEach(([key, value]) => {
       requestTracingService.addSpanTag(span.spanId, key, value);
     });
   }
-  
+
   return {
     spanId: span.spanId,
     finish: (status?: 'ok' | 'error' | 'timeout', error?: Error) => {
@@ -244,7 +248,7 @@ export const tracedLogger = {
       traceId: context?.traceId,
     });
   },
-  
+
   info: (message: string, meta?: Record<string, any>) => {
     const context = requestTracingService.getCurrentContext();
     logger.info(message, {
@@ -253,7 +257,7 @@ export const tracedLogger = {
       traceId: context?.traceId,
     });
   },
-  
+
   warn: (message: string, meta?: Record<string, any>) => {
     const context = requestTracingService.getCurrentContext();
     logger.warn(message, {
@@ -262,7 +266,7 @@ export const tracedLogger = {
       traceId: context?.traceId,
     });
   },
-  
+
   error: (message: string, meta?: Record<string, any>) => {
     const context = requestTracingService.getCurrentContext();
     logger.error(message, {

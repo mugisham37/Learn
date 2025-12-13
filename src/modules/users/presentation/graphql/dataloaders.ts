@@ -1,9 +1,9 @@
 /**
  * DataLoader implementations for Users Module
- * 
+ *
  * Provides efficient batching and caching for GraphQL field resolvers
  * to prevent N+1 query problems.
- * 
+ *
  * Requirements: 21.5
  */
 
@@ -34,12 +34,12 @@ export class UserDataLoaders {
     this.userById = new DataLoader<string, User | null>(
       async (userIds: readonly string[]) => {
         const users = await this.batchLoadUsersByIds([...userIds]);
-        return userIds.map(id => users.get(id) || null);
+        return userIds.map((id) => users.get(id) || null);
       },
       {
         cache: true,
         maxBatchSize: 100,
-        batchScheduleFn: (callback: () => void) => setTimeout(callback, 10)
+        batchScheduleFn: (callback: () => void) => setTimeout(callback, 10),
       }
     );
 
@@ -52,7 +52,7 @@ export class UserDataLoaders {
           userIdArrays.map(async (userIdString) => {
             const userIds = userIdString.split(',');
             const users = await this.batchLoadUsersByIds(userIds);
-            return userIds.map(id => users.get(id)).filter(Boolean) as User[];
+            return userIds.map((id) => users.get(id)).filter(Boolean) as User[];
           })
         );
         return results;
@@ -60,7 +60,7 @@ export class UserDataLoaders {
       {
         cache: true,
         maxBatchSize: 50,
-        batchScheduleFn: (callback: () => void) => setTimeout(callback, 10)
+        batchScheduleFn: (callback: () => void) => setTimeout(callback, 10),
       }
     );
 
@@ -68,12 +68,12 @@ export class UserDataLoaders {
     this.userProfileById = new DataLoader<string, UserProfile | null>(
       async (userIds: readonly string[]) => {
         const profiles = await this.batchLoadUserProfilesByIds([...userIds]);
-        return userIds.map(id => profiles.get(id) || null);
+        return userIds.map((id) => profiles.get(id) || null);
       },
       {
         cache: true,
         maxBatchSize: 100,
-        batchScheduleFn: (callback: () => void) => setTimeout(callback, 10)
+        batchScheduleFn: (callback: () => void) => setTimeout(callback, 10),
       }
     );
   }
@@ -83,9 +83,9 @@ export class UserDataLoaders {
    */
   private async batchLoadUsersByIds(userIds: string[]): Promise<Map<string, User>> {
     const usersMap = new Map<string, User>();
-    
+
     // Load users individually (can be optimized later with batch repository method)
-    const userPromises = userIds.map(async id => {
+    const userPromises = userIds.map(async (id) => {
       try {
         const user = await this.context.userRepository.findById(id);
         return { id, user };
@@ -95,15 +95,15 @@ export class UserDataLoaders {
         return { id, user: null };
       }
     });
-    
+
     const results = await Promise.all(userPromises);
-    
+
     for (const { id, user } of results) {
       if (user) {
         usersMap.set(id, user);
       }
     }
-    
+
     return usersMap;
   }
 
@@ -112,9 +112,9 @@ export class UserDataLoaders {
    */
   private async batchLoadUserProfilesByIds(userIds: string[]): Promise<Map<string, UserProfile>> {
     const profilesMap = new Map<string, UserProfile>();
-    
+
     // Load profiles individually using the service
-    const profilePromises = userIds.map(async userId => {
+    const profilePromises = userIds.map(async (userId) => {
       try {
         const profile = await this.context.userProfileService.getUserProfile(userId);
         return { userId, profile };
@@ -124,15 +124,15 @@ export class UserDataLoaders {
         return { userId, profile: null };
       }
     });
-    
+
     const results = await Promise.all(profilePromises);
-    
+
     for (const { userId, profile } of results) {
       if (profile) {
         profilesMap.set(userId, profile);
       }
     }
-    
+
     return profilesMap;
   }
 

@@ -1,9 +1,9 @@
 /**
  * GraphQL Schema for Enrollments Module
- * 
+ *
  * Defines GraphQL types, inputs, and schema for enrollment management,
  * progress tracking, and certificate generation operations.
- * 
+ *
  * Requirements: 21.1, 21.2
  */
 
@@ -16,7 +16,7 @@ export const enrollmentTypeDefs = gql`
   # Scalar types
   "Custom scalar type for date and time values in ISO 8601 format"
   scalar DateTime
-  
+
   "Custom scalar type for arbitrary JSON data"
   scalar JSON
 
@@ -71,7 +71,7 @@ export const enrollmentTypeDefs = gql`
     createdAt: DateTime!
     "Timestamp when the enrollment was last updated"
     updatedAt: DateTime!
-    
+
     # Computed fields
     "Progress tracking for all lessons in the course"
     lessonProgress: [LessonProgress!]!
@@ -101,7 +101,7 @@ export const enrollmentTypeDefs = gql`
     lastAccessedAt: DateTime
     createdAt: DateTime!
     updatedAt: DateTime!
-    
+
     # Computed fields
     progressPercentage: Float!
   }
@@ -115,7 +115,7 @@ export const enrollmentTypeDefs = gql`
     verificationUrl: String!
     metadata: CertificateMetadata
     createdAt: DateTime!
-    
+
     # Computed fields
     studentName: String!
     courseTitle: String!
@@ -245,7 +245,7 @@ export const enrollmentTypeDefs = gql`
     # Enrollment management
     """
     Enroll student in a course, handling payment if required.
-    
+
     Example:
     mutation {
       enrollInCourse(input: {
@@ -269,14 +269,14 @@ export const enrollmentTypeDefs = gql`
         status
       }
     }
-    
+
     Requirements: 5.1, 5.2
     """
     enrollInCourse(input: EnrollInCourseInput!): Enrollment!
-    
+
     """
     Update progress for a specific lesson including time spent and quiz scores.
-    
+
     Example:
     mutation {
       updateLessonProgress(input: {
@@ -295,14 +295,14 @@ export const enrollmentTypeDefs = gql`
         completedAt
       }
     }
-    
+
     Requirements: 5.4
     """
     updateLessonProgress(input: UpdateLessonProgressInput!): LessonProgress!
-    
+
     """
     Withdraw student from course, updating enrollment status.
-    
+
     Example:
     mutation {
       withdrawEnrollment(input: {
@@ -310,15 +310,15 @@ export const enrollmentTypeDefs = gql`
         reason: "Schedule conflict"
       })
     }
-    
+
     Requirements: 5.7
     """
     withdrawEnrollment(input: WithdrawEnrollmentInput!): Boolean!
-    
+
     # Progress management
     """
     Mark lesson as completed and update overall course progress.
-    
+
     Example:
     mutation {
       completeLesson(enrollmentId: "enrollment-123", lessonId: "lesson-456") {
@@ -330,14 +330,14 @@ export const enrollmentTypeDefs = gql`
         }
       }
     }
-    
+
     Requirements: 5.4, 5.5
     """
     completeLesson(enrollmentId: ID!, lessonId: ID!): LessonProgress!
-    
+
     """
     Reset lesson progress allowing student to retake content.
-    
+
     Example:
     mutation {
       resetLessonProgress(enrollmentId: "enrollment-123", lessonId: "lesson-456") {
@@ -347,15 +347,15 @@ export const enrollmentTypeDefs = gql`
         attemptsCount
       }
     }
-    
+
     Requirements: 5.4
     """
     resetLessonProgress(enrollmentId: ID!, lessonId: ID!): LessonProgress!
-    
+
     # Certificate management
     """
     Regenerate certificate for completed course enrollment.
-    
+
     Example:
     mutation {
       regenerateCertificate(enrollmentId: "enrollment-123") {
@@ -366,7 +366,7 @@ export const enrollmentTypeDefs = gql`
         issuedAt
       }
     }
-    
+
     Requirements: 5.6, 5.7
     """
     regenerateCertificate(enrollmentId: ID!): Certificate!
@@ -376,7 +376,7 @@ export const enrollmentTypeDefs = gql`
   type Query {
     """
     Get current user's enrollments with optional status filtering.
-    
+
     Example:
     query {
       myEnrollments(status: ACTIVE, first: 10) {
@@ -398,18 +398,14 @@ export const enrollmentTypeDefs = gql`
         totalCount
       }
     }
-    
+
     Requirements: 21.2, 21.7
     """
-    myEnrollments(
-      status: EnrollmentStatus
-      first: Int
-      after: String
-    ): EnrollmentsConnection!
-    
+    myEnrollments(status: EnrollmentStatus, first: Int, after: String): EnrollmentsConnection!
+
     """
     Get specific enrollment details by ID.
-    
+
     Example:
     query {
       enrollment(id: "enrollment-123") {
@@ -423,14 +419,14 @@ export const enrollmentTypeDefs = gql`
         }
       }
     }
-    
+
     Requirements: 21.2
     """
     enrollment(id: ID!): Enrollment
-    
+
     """
     Get detailed progress summary for an enrollment.
-    
+
     Example:
     query {
       enrollmentProgress(enrollmentId: "enrollment-123") {
@@ -444,14 +440,14 @@ export const enrollmentTypeDefs = gql`
         strugglingAreas
       }
     }
-    
+
     Requirements: 5.4, 21.2
     """
     enrollmentProgress(enrollmentId: ID!): ProgressSummary!
-    
+
     """
     Verify certificate authenticity using certificate ID.
-    
+
     Example:
     query {
       verifyCertificate(certificateId: "CERT-2024-001234") {
@@ -462,14 +458,14 @@ export const enrollmentTypeDefs = gql`
         isExpired
       }
     }
-    
+
     Requirements: 5.7, 21.2
     """
     verifyCertificate(certificateId: String!): Certificate
-    
+
     """
     Get all certificates earned by the current user.
-    
+
     Example:
     query {
       myCertificates {
@@ -484,14 +480,14 @@ export const enrollmentTypeDefs = gql`
         pdfUrl
       }
     }
-    
+
     Requirements: 5.6, 21.2
     """
     myCertificates: [Certificate!]!
-    
+
     """
     Check if student is eligible to enroll in a specific course.
-    
+
     Example:
     query {
       checkEnrollmentEligibility(
@@ -504,17 +500,14 @@ export const enrollmentTypeDefs = gql`
         paymentAmount
       }
     }
-    
+
     Requirements: 5.1, 21.2
     """
-    checkEnrollmentEligibility(
-      studentId: ID!
-      courseId: ID!
-    ): EnrollmentEligibility!
-    
+    checkEnrollmentEligibility(studentId: ID!, courseId: ID!): EnrollmentEligibility!
+
     """
     Check if student can access a specific lesson based on prerequisites.
-    
+
     Example:
     query {
       checkLessonAccess(
@@ -529,17 +522,14 @@ export const enrollmentTypeDefs = gql`
         }
       }
     }
-    
+
     Requirements: 5.8, 21.2
     """
-    checkLessonAccess(
-      enrollmentId: ID!
-      lessonId: ID!
-    ): LessonAccess!
-    
+    checkLessonAccess(enrollmentId: ID!, lessonId: ID!): LessonAccess!
+
     """
     Get enrollments for a specific course (educator access).
-    
+
     Example:
     query {
       courseEnrollments(
@@ -565,7 +555,7 @@ export const enrollmentTypeDefs = gql`
         totalCount
       }
     }
-    
+
     Requirements: 21.2, 21.3
     """
     courseEnrollments(
@@ -573,10 +563,10 @@ export const enrollmentTypeDefs = gql`
       filters: EnrollmentFiltersInput
       pagination: PaginationInput
     ): EnrollmentsConnection!
-    
+
     """
     Get all enrollments for a specific student (admin access).
-    
+
     Example:
     query {
       studentEnrollments(
@@ -602,7 +592,7 @@ export const enrollmentTypeDefs = gql`
         totalCount
       }
     }
-    
+
     Requirements: 21.2, 21.3
     """
     studentEnrollments(
@@ -617,10 +607,10 @@ export const enrollmentTypeDefs = gql`
     # Progress updates
     enrollmentProgressUpdated(enrollmentId: ID!): ProgressSummary!
     lessonProgressUpdated(enrollmentId: ID!): LessonProgress!
-    
+
     # Certificate updates
     certificateGenerated(enrollmentId: ID!): Certificate!
-    
+
     # Course completion
     courseCompleted(enrollmentId: ID!): Enrollment!
   }

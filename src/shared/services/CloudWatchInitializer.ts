@@ -1,9 +1,9 @@
 /**
  * CloudWatch Initializer
- * 
+ *
  * Handles initial setup of CloudWatch log groups and configuration.
  * Creates required log groups with appropriate retention policies.
- * 
+ *
  * Requirements: 17.4
  */
 
@@ -127,7 +127,9 @@ export class CloudWatchInitializer {
         await cloudWatchService.ensureLogGroupExists(config.cloudwatch.logGroup, 30);
         logger.debug(`Ensured configured log group exists: ${config.cloudwatch.logGroup}`);
       } catch (error) {
-        logger.error(`Failed to create configured log group: ${config.cloudwatch.logGroup}`, { error });
+        logger.error(`Failed to create configured log group: ${config.cloudwatch.logGroup}`, {
+          error,
+        });
       }
     }
   }
@@ -138,7 +140,7 @@ export class CloudWatchInitializer {
   private static async createInitialLogStreams(): Promise<void> {
     const timestamp = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
     const instanceId = process.env['INSTANCE_ID'] || 'default';
-    
+
     const logStreams = [
       {
         logGroup: config.cloudwatch.logGroup || '/aws/learning-platform/application',
@@ -174,7 +176,7 @@ export class CloudWatchInitializer {
 
       // Log rotation is handled automatically by CloudWatch retention policies
       // which were set during log group creation
-      
+
       // Additional rotation logic can be added here if needed
       // For example, creating new log streams daily or weekly
 
@@ -274,8 +276,8 @@ export class CloudWatchInitializer {
 if (config.nodeEnv === 'production') {
   // Initialize CloudWatch asynchronously without blocking startup
   CloudWatchInitializer.initialize().catch((error) => {
-    logger.error('CloudWatch initialization failed during module load', { 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+    logger.error('CloudWatch initialization failed during module load', {
+      error: error instanceof Error ? error.message : 'Unknown error',
     });
   });
 }

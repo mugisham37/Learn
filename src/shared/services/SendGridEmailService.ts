@@ -1,26 +1,28 @@
 /**
  * SendGrid Email Service Implementation
- * 
+ *
  * Implements email sending using SendGrid API
  * Includes retry logic, error handling, and template support
  */
 
 import sgMail from '@sendgrid/mail';
+
 import { config } from '../../config';
-import { secrets } from '../utils/secureConfig';
 import { logger } from '../utils/logger';
-import { 
-  IEmailService, 
-  EmailOptions, 
-  EmailResult, 
-  BulkEmailResult, 
-  EmailTemplateData 
-} from './IEmailService';
+import { secrets } from '../utils/secureConfig';
+
 import { EmailTemplateService } from './EmailTemplateService';
+import {
+  IEmailService,
+  EmailOptions,
+  EmailResult,
+  BulkEmailResult,
+  EmailTemplateData,
+} from './IEmailService';
 
 /**
  * SendGrid email service implementation
- * 
+ *
  * Requirements:
  * - 10.2: Email template system with SendGrid integration
  * - 10.2: Dynamic data population in templates
@@ -68,7 +70,7 @@ export class SendGridEmailService implements IEmailService {
       // If template is specified, render it
       if (options.templateId) {
         const rendered = this.templateService.renderTemplate(
-          options.templateId, 
+          options.templateId,
           options.templateData || {}
         );
 
@@ -78,14 +80,14 @@ export class SendGridEmailService implements IEmailService {
 
         // Validate template data
         const validation = this.templateService.validateTemplateData(
-          options.templateId, 
+          options.templateId,
           options.templateData || {}
         );
 
         if (!validation.valid) {
           logger.warn('Missing template variables', {
             templateId: options.templateId,
-            missingVariables: validation.missingVariables
+            missingVariables: validation.missingVariables,
           });
         }
 
@@ -96,8 +98,8 @@ export class SendGridEmailService implements IEmailService {
         if (!options.subject) {
           throw new Error('Subject is required when not using a template');
         }
-        htmlContent = options.templateData?.content || '';
-        textContent = options.templateData?.textContent;
+        htmlContent = (options.templateData?.['content'] as string) || '';
+        textContent = options.templateData?.['textContent'] as string | undefined;
       }
 
       // Prepare SendGrid message
@@ -105,26 +107,26 @@ export class SendGridEmailService implements IEmailService {
         to: options.to,
         from: {
           email: config.sendgrid.fromEmail,
-          name: config.sendgrid.fromName
+          name: config.sendgrid.fromName,
         },
         subject: subject!,
         html: htmlContent,
         text: textContent,
         replyTo: options.replyTo,
-        attachments: options.attachments?.map(att => ({
+        attachments: options.attachments?.map((att) => ({
           filename: att.filename,
           content: Buffer.isBuffer(att.content) ? att.content.toString('base64') : att.content,
           type: att.contentType,
           disposition: att.disposition,
-          contentId: att.contentId
-        }))
+          contentId: att.contentId,
+        })),
       };
 
       // Set priority headers if specified
       if (options.priority === 'high' || options.priority === 'urgent') {
         message.headers = {
           'X-Priority': options.priority === 'urgent' ? '1' : '2',
-          'X-MSMail-Priority': options.priority === 'urgent' ? 'High' : 'High'
+          'X-MSMail-Priority': options.priority === 'urgent' ? 'High' : 'High',
         };
       }
 
@@ -134,24 +136,23 @@ export class SendGridEmailService implements IEmailService {
       logger.info('Email sent successfully', {
         to: options.to,
         templateId: options.templateId,
-        messageId: result.messageId
+        messageId: result.messageId,
       });
 
       return {
         success: true,
-        messageId: result.messageId
+        messageId: result.messageId,
       };
-
     } catch (error) {
       logger.error('Failed to send email', {
         error: error instanceof Error ? error.message : 'Unknown error',
         to: options.to,
-        templateId: options.templateId
+        templateId: options.templateId,
       });
 
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   }
@@ -160,8 +161,8 @@ export class SendGridEmailService implements IEmailService {
    * Send bulk emails to multiple recipients
    */
   public async sendBulk(
-    recipients: string[], 
-    templateId: string, 
+    recipients: string[],
+    templateId: string,
     templateData: EmailTemplateData
   ): Promise<BulkEmailResult> {
     try {
@@ -181,47 +182,47 @@ export class SendGridEmailService implements IEmailService {
       if (!validation.valid) {
         logger.warn('Missing template variables for bulk email', {
           templateId,
-          missingVariables: validation.missingVariables
+          missingVariables: validation.missingVariables,
         });
       }
 
       // Prepare bulk messages
-      const messages: sgMail.MailDataRequired[] = recipients.map(recipient => ({
+      const messages: sgMail.MailDataRequired[] = recipients.map((recipient) => ({
         to: recipient,
         from: {
           email: config.sendgrid.fromEmail,
-          name: config.sendgrid.fromName
+          name: config.sendgrid.fromName,
         },
         subject: rendered.subject,
         html: rendered.htmlContent,
-        text: rendered.textContent
+        text: rendered.textContent,
       }));
 
       // Send in batches to avoid rate limits
       const batchSize = 100; // SendGrid recommended batch size
       const results: EmailResult[] = [];
-      
+
       for (let i = 0; i < messages.length; i += batchSize) {
         const batch = messages.slice(i, i + batchSize);
-        
+
         try {
           const batchResults = await Promise.allSettled(
-            batch.map(message => this.sendWithRetry(message))
+            batch.map((message) => this.sendWithRetry(message))
           );
 
           // Process batch results
-          batchResults.forEach((result, index) => {
-            const recipient = batch[index].to as string;
-            
+          batchResults.forEach((result, _index) => {
+            // const _recipient = batch[index]?.to as string;
+
             if (result.status === 'fulfilled') {
               results.push({
                 success: true,
-                messageId: result.value.messageId
+                messageId: result.value.messageId,
               });
             } else {
               results.push({
                 success: false,
-                error: result.reason instanceof Error ? result.reason.message : 'Unknown error'
+                error: result.reason instanceof Error ? result.reason.message : 'Unknown error',
               });
             }
           });
@@ -230,58 +231,56 @@ export class SendGridEmailService implements IEmailService {
           if (i + batchSize < messages.length) {
             await this.delay(100); // 100ms delay between batches
           }
-
         } catch (error) {
           // Handle batch failure
           batch.forEach(() => {
             results.push({
               success: false,
-              error: error instanceof Error ? error.message : 'Batch failed'
+              error: error instanceof Error ? error.message : 'Batch failed',
             });
           });
         }
       }
 
       // Calculate summary
-      const successCount = results.filter(r => r.success).length;
+      const successCount = results.filter((r) => r.success).length;
       const failureCount = results.length - successCount;
       const failures = results
         .map((result, index) => ({ result, recipient: recipients[index] }))
         .filter(({ result }) => !result.success)
         .map(({ result, recipient }) => ({
-          email: recipient,
-          error: result.error || 'Unknown error'
+          email: recipient || 'unknown',
+          error: result.error || 'Unknown error',
         }));
 
       logger.info('Bulk email completed', {
         templateId,
         totalRecipients: recipients.length,
         successCount,
-        failureCount
+        failureCount,
       });
 
       return {
         success: failureCount === 0,
         successCount,
         failureCount,
-        failures: failures.length > 0 ? failures : undefined
+        failures: failures.length > 0 ? failures : undefined,
       };
-
     } catch (error) {
       logger.error('Bulk email failed', {
         error: error instanceof Error ? error.message : 'Unknown error',
         templateId,
-        recipientCount: recipients.length
+        recipientCount: recipients.length,
       });
 
       return {
         success: false,
         successCount: 0,
         failureCount: recipients.length,
-        failures: recipients.map(email => ({
+        failures: recipients.map((email) => ({
           email,
-          error: error instanceof Error ? error.message : 'Unknown error'
-        }))
+          error: error instanceof Error ? error.message : 'Unknown error',
+        })),
       };
     }
   }
@@ -290,9 +289,9 @@ export class SendGridEmailService implements IEmailService {
    * Send a simple email without template
    */
   public async sendSimple(
-    to: string, 
-    subject: string, 
-    content: string, 
+    to: string,
+    subject: string,
+    content: string,
     isHtml: boolean = true
   ): Promise<EmailResult> {
     const options: EmailOptions = {
@@ -300,8 +299,8 @@ export class SendGridEmailService implements IEmailService {
       subject,
       templateData: {
         content,
-        textContent: isHtml ? undefined : content
-      }
+        textContent: isHtml ? undefined : content,
+      },
     };
 
     return this.sendTransactional(options);
@@ -322,15 +321,15 @@ export class SendGridEmailService implements IEmailService {
       // This is a minimal request that doesn't send any emails
       const response = await fetch('https://api.sendgrid.com/v3/user/account', {
         headers: {
-          'Authorization': `Bearer ${sendGridConfig.apiKey}`,
-          'Content-Type': 'application/json'
-        }
+          Authorization: `Bearer ${sendGridConfig.apiKey}`,
+          'Content-Type': 'application/json',
+        },
       });
 
       return response.ok;
     } catch (error) {
       logger.error('SendGrid health check failed', {
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
       });
       return false;
     }
@@ -345,22 +344,23 @@ export class SendGridEmailService implements IEmailService {
     for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
       try {
         const [response] = await sgMail.send(message);
-        
+
         // Extract message ID from response headers
-        const messageId = response.headers['x-message-id'] || 
-                         response.headers['X-Message-Id'] || 
-                         `sg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        const headers = response.headers as Record<string, string>;
+        const messageId =
+          headers['x-message-id'] ||
+          headers['X-Message-Id'] ||
+          `sg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-        return { messageId: messageId as string };
-
+        return { messageId: String(messageId) };
       } catch (error) {
         lastError = error instanceof Error ? error : new Error('Unknown error');
-        
+
         logger.warn(`Email send attempt ${attempt} failed`, {
           error: lastError.message,
           to: message.to,
           attempt,
-          maxRetries: this.maxRetries
+          maxRetries: this.maxRetries,
         });
 
         // Don't retry on certain errors
@@ -382,11 +382,11 @@ export class SendGridEmailService implements IEmailService {
   /**
    * Check if error should not be retried
    */
-  private isNonRetryableError(error: any): boolean {
+  private isNonRetryableError(error: unknown): boolean {
     // Don't retry on authentication, validation, or permanent errors
-    if (error?.code) {
+    if (error && typeof error === 'object' && 'code' in error) {
       const nonRetryableCodes = [400, 401, 403, 413, 422];
-      return nonRetryableCodes.includes(error.code);
+      return nonRetryableCodes.includes(Number((error as { code: unknown }).code));
     }
 
     return false;
@@ -396,6 +396,6 @@ export class SendGridEmailService implements IEmailService {
    * Utility function to add delay
    */
   private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }

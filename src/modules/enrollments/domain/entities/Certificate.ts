@@ -1,9 +1,9 @@
 /**
  * Certificate Domain Entity
- * 
+ *
  * Represents a digital certificate issued upon successful course completion.
  * Contains certificate metadata, PDF URL, and verification information.
- * 
+ *
  * Requirements: 5.6, 5.7
  */
 
@@ -38,15 +38,33 @@ export class Certificate {
   }
 
   // Getters
-  get id(): string { return this._props.id; }
-  get enrollmentId(): string { return this._props.enrollmentId; }
-  get certificateId(): string { return this._props.certificateId; }
-  get pdfUrl(): string { return this._props.pdfUrl; }
-  get issuedAt(): Date { return this._props.issuedAt; }
-  get verificationUrl(): string { return this._props.verificationUrl; }
-  get metadata(): CertificateProps['metadata'] { return this._props.metadata; }
-  get createdAt(): Date { return this._props.createdAt; }
-  get domainEvents(): any[] { return [...this._domainEvents]; }
+  get id(): string {
+    return this._props.id;
+  }
+  get enrollmentId(): string {
+    return this._props.enrollmentId;
+  }
+  get certificateId(): string {
+    return this._props.certificateId;
+  }
+  get pdfUrl(): string {
+    return this._props.pdfUrl;
+  }
+  get issuedAt(): Date {
+    return this._props.issuedAt;
+  }
+  get verificationUrl(): string {
+    return this._props.verificationUrl;
+  }
+  get metadata(): CertificateProps['metadata'] {
+    return this._props.metadata;
+  }
+  get createdAt(): Date {
+    return this._props.createdAt;
+  }
+  get domainEvents(): any[] {
+    return [...this._domainEvents];
+  }
 
   // Static factory method for creating new certificate
   static create(props: {
@@ -62,7 +80,7 @@ export class Certificate {
   }): Certificate {
     const now = new Date();
     const certificateId = Certificate.generateCertificateId();
-    
+
     const certificateProps: CertificateProps = {
       id: `certificate-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       enrollmentId: props.enrollmentId,
@@ -82,18 +100,17 @@ export class Certificate {
     };
 
     const certificate = new Certificate(certificateProps);
-    
-    certificate.addDomainEvent(new CertificateGeneratedEvent(
-      certificate.id,
-      {
+
+    certificate.addDomainEvent(
+      new CertificateGeneratedEvent(certificate.id, {
         enrollmentId: props.enrollmentId,
         certificateId: certificate.certificateId,
         studentId: props.studentId,
         courseId: props.courseId,
         issuedAt: certificate.issuedAt,
         verificationUrl: certificate.verificationUrl,
-      }
-    ));
+      })
+    );
 
     return certificate;
   }

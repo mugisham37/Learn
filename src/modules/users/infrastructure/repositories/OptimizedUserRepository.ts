@@ -1,6 +1,6 @@
 /**
  * Optimized User Repository
- * 
+ *
  * Example implementation of optimized repository pattern for users
  * Demonstrates query optimization, caching, and N+1 prevention
  * Requirements: 15.1 - Database query optimization
@@ -9,8 +9,18 @@
 import { eq, and, sql, ilike } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { Redis } from 'ioredis';
-import { users, userProfiles, User, UserProfile } from '../../../../infrastructure/database/schema/users.schema';
-import { OptimizedBaseRepository, CursorPaginationOptions, PaginationResult, QueryOptions } from '../../../../shared/repositories/OptimizedBaseRepository';
+import {
+  users,
+  userProfiles,
+  User,
+  UserProfile,
+} from '../../../../infrastructure/database/schema/users.schema';
+import {
+  OptimizedBaseRepository,
+  CursorPaginationOptions,
+  PaginationResult,
+  QueryOptions,
+} from '../../../../shared/repositories/OptimizedBaseRepository';
 import { logger } from '../../../../shared/utils/logger';
 
 /**
@@ -47,10 +57,7 @@ export class OptimizedUserRepository extends OptimizedBaseRepository<User> {
   /**
    * Find user by email with caching
    */
-  async findByEmail(
-    email: string,
-    options: QueryOptions = {}
-  ): Promise<User | null> {
+  async findByEmail(email: string, options: QueryOptions = {}): Promise<User | null> {
     const cacheKey = `email:${email.toLowerCase()}`;
     const cacheConfig = { ...this.defaultCacheConfig, ...options.cache };
 
@@ -68,10 +75,12 @@ export class OptimizedUserRepository extends OptimizedBaseRepository<User> {
     const [user] = await this.db
       .select()
       .from(users)
-      .where(and(
-        eq(users.email, email.toLowerCase()),
-        sql`deleted_at IS NULL` // Use partial index for active users
-      ))
+      .where(
+        and(
+          eq(users.email, email.toLowerCase()),
+          sql`deleted_at IS NULL` // Use partial index for active users
+        )
+      )
       .limit(1);
 
     const executionTime = Date.now() - startTime;
@@ -141,10 +150,7 @@ export class OptimizedUserRepository extends OptimizedBaseRepository<User> {
       })
       .from(users)
       .leftJoin(userProfiles, eq(users.id, userProfiles.userId))
-      .where(and(
-        eq(users.id, id),
-        sql`users.deleted_at IS NULL`
-      ))
+      .where(and(eq(users.id, id), sql`users.deleted_at IS NULL`))
       .limit(1);
 
     const executionTime = Date.now() - startTime;
@@ -204,7 +210,7 @@ export class OptimizedUserRepository extends OptimizedBaseRepository<User> {
     paginationOptions: CursorPaginationOptions & QueryOptions = {
       limit: 20,
       orderBy: 'createdAt',
-      direction: 'desc'
+      direction: 'desc',
     }
   ): Promise<PaginationResult<UserWithProfile>> {
     const conditions = [sql`users.deleted_at IS NULL`]; // Use partial index
@@ -229,16 +235,17 @@ export class OptimizedUserRepository extends OptimizedBaseRepository<User> {
     const { cursor, limit, orderBy, direction } = paginationOptions;
     if (cursor) {
       const cursorValue = this.parseCursor(cursor);
-      const cursorCondition = direction === 'asc' 
-        ? sql`users.${sql.identifier(orderBy)} > ${cursorValue}`
-        : sql`users.${sql.identifier(orderBy)} < ${cursorValue}`;
+      const cursorCondition =
+        direction === 'asc'
+          ? sql`users.${sql.identifier(orderBy)} > ${cursorValue}`
+          : sql`users.${sql.identifier(orderBy)} < ${cursorValue}`;
       conditions.push(cursorCondition);
     }
 
     // Execute optimized query with JOIN
     const startTime = Date.now();
     const orderDirection = direction === 'asc' ? sql`ASC` : sql`DESC`;
-    
+
     const results = await this.db.execute(sql`
       SELECT 
         users.*,
@@ -262,10 +269,10 @@ export class OptimizedUserRepository extends OptimizedBaseRepository<User> {
     const executionTime = Date.now() - startTime;
 
     if (executionTime > 100) {
-      logger.warn('Slow user search query', { 
-        filters, 
+      logger.warn('Slow user search query', {
+        filters,
         executionTime,
-        resultCount: results.length 
+        resultCount: results.length,
       });
     }
 
@@ -307,9 +314,10 @@ export class OptimizedUserRepository extends OptimizedBaseRepository<User> {
 
     // Determine pagination info
     const hasMore = results.length > limit;
-    const nextCursor = hasMore && items.length > 0
-      ? this.generateCursor(items[items.length - 1], orderBy)
-      : undefined;
+    const nextCursor =
+      hasMore && items.length > 0
+        ? this.generateCursor(items[items.length - 1], orderBy)
+        : undefined;
 
     return {
       items,
@@ -326,14 +334,11 @@ export class OptimizedUserRepository extends OptimizedBaseRepository<User> {
     options: CursorPaginationOptions & QueryOptions = {
       limit: 50,
       orderBy: 'createdAt',
-      direction: 'desc'
+      direction: 'desc',
     }
   ): Promise<PaginationResult<User>> {
     // Use role index for efficient filtering
-    const conditions = [
-      eq(users.role, role),
-      sql`deleted_at IS NULL`
-    ];
+    const conditions = [eq(users.role, role), sql`deleted_at IS NULL`];
 
     return this.findWithCursorPagination(conditions, options);
   }
@@ -346,16 +351,13 @@ export class OptimizedUserRepository extends OptimizedBaseRepository<User> {
     options: CursorPaginationOptions & QueryOptions = {
       limit: 20,
       orderBy: 'lastLogin',
-      direction: 'desc'
+      direction: 'desc',
     }
   ): Promise<PaginationResult<User>> {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - daysSince);
 
-    const conditions = [
-      sql`last_login >= ${cutoffDate}`,
-      sql`deleted_at IS NULL`
-    ];
+    const conditions = [sql`last_login >= ${cutoffDate}`, sql`deleted_at IS NULL`];
 
     return this.findWithCursorPagination(conditions, options);
   }
@@ -366,8 +368,8 @@ export class OptimizedUserRepository extends OptimizedBaseRepository<User> {
   async batchLoadUsers(userIds: string[]): Promise<Map<string, User>> {
     const users = await this.findByIds(userIds);
     const userMap = new Map<string, User>();
-    
-    users.forEach(user => {
+
+    users.forEach((user) => {
       userMap.set(user.id, user);
     });
 
@@ -382,13 +384,13 @@ export class OptimizedUserRepository extends OptimizedBaseRepository<User> {
     await this.invalidateCache(user.id);
     await this.invalidateCache(`email:${user.email.toLowerCase()}`);
     await this.invalidateCache(`with_profile:${user.id}`);
-    
+
     // Invalidate role-based caches
     await this.invalidateCachePattern(`role:${user.role}:*`);
-    
+
     // Invalidate search caches (this could be more sophisticated)
     await this.invalidateCachePattern('search:*');
-    
+
     logger.debug('Invalidated user-related caches', { userId: user.id, email: user.email });
   }
 
@@ -403,7 +405,7 @@ export class OptimizedUserRepository extends OptimizedBaseRepository<User> {
   }> {
     const cacheKey = 'stats:users';
     const cached = await this.getFromCache(cacheKey, 'stats');
-    
+
     if (cached) {
       return cached;
     }
@@ -415,9 +417,9 @@ export class OptimizedUserRepository extends OptimizedBaseRepository<User> {
       .where(sql`deleted_at IS NULL`);
 
     const roleResults = await this.db
-      .select({ 
-        role: users.role, 
-        count: sql<number>`count(*)` 
+      .select({
+        role: users.role,
+        count: sql<number>`count(*)`,
       })
       .from(users)
       .where(sql`deleted_at IS NULL`)
@@ -426,28 +428,25 @@ export class OptimizedUserRepository extends OptimizedBaseRepository<User> {
     const [verifiedResult] = await this.db
       .select({ count: sql<number>`count(*)` })
       .from(users)
-      .where(and(
-        eq(users.emailVerified, true),
-        sql`deleted_at IS NULL`
-      ));
+      .where(and(eq(users.emailVerified, true), sql`deleted_at IS NULL`));
 
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);
-    
+
     const [recentResult] = await this.db
       .select({ count: sql<number>`count(*)` })
       .from(users)
-      .where(and(
-        sql`created_at >= ${weekAgo}`,
-        sql`deleted_at IS NULL`
-      ));
+      .where(and(sql`created_at >= ${weekAgo}`, sql`deleted_at IS NULL`));
 
     const stats = {
       totalUsers: totalResult.count,
-      usersByRole: roleResults.reduce((acc, { role, count }) => {
-        acc[role] = count;
-        return acc;
-      }, {} as Record<string, number>),
+      usersByRole: roleResults.reduce(
+        (acc, { role, count }) => {
+          acc[role] = count;
+          return acc;
+        },
+        {} as Record<string, number>
+      ),
       recentSignups: recentResult.count,
       verifiedUsers: verifiedResult.count,
     };

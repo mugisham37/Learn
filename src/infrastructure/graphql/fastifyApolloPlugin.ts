@@ -1,9 +1,9 @@
 /**
  * Fastify Apollo Server Plugin
- * 
+ *
  * This module integrates Apollo Server with Fastify using the official
  * @apollo/server/plugin/drainHttpServer plugin and custom Fastify integration.
- * 
+ *
  * Requirements: 21.1
  */
 
@@ -92,14 +92,16 @@ const apolloServerPlugin: FastifyPluginAsync<ApolloServerPluginOptions> = async 
           .code(response.status || 200)
           .type('application/json')
           .send(response.body);
-
       } catch (error) {
         logger.error('GraphQL request failed', {
-          error: error instanceof Error ? {
-            name: error.name,
-            message: error.message,
-            stack: error.stack,
-          } : String(error),
+          error:
+            error instanceof Error
+              ? {
+                  name: error.name,
+                  message: error.message,
+                  stack: error.stack,
+                }
+              : String(error),
           requestId: request.id,
           method: request.method,
           url: request.url,
@@ -109,13 +111,15 @@ const apolloServerPlugin: FastifyPluginAsync<ApolloServerPluginOptions> = async 
           .code(500)
           .type('application/json')
           .send({
-            errors: [{
-              message: 'Internal server error',
-              extensions: {
-                code: 'INTERNAL_SERVER_ERROR',
-                requestId: request.id,
+            errors: [
+              {
+                message: 'Internal server error',
+                extensions: {
+                  code: 'INTERNAL_SERVER_ERROR',
+                  requestId: request.id,
+                },
               },
-            }],
+            ],
           });
       }
     },
@@ -127,13 +131,13 @@ const apolloServerPlugin: FastifyPluginAsync<ApolloServerPluginOptions> = async 
   // Graceful shutdown
   fastify.addHook('onClose', async () => {
     logger.info('Stopping Apollo Server...');
-    
+
     // Clean up subscription server first
     if (subscriptionCleanup) {
       await subscriptionCleanup();
       logger.info('Subscription server stopped successfully');
     }
-    
+
     await apolloServer.stop();
     logger.info('Apollo Server stopped successfully');
   });

@@ -1,9 +1,9 @@
 /**
  * GraphQL Error Formatter
- * 
+ *
  * Provides consistent error formatting for GraphQL responses, mapping domain errors
  * to GraphQL errors with proper codes, field-level validation details, and production sanitization.
- * 
+ *
  * Requirements: 21.6
  */
 
@@ -21,7 +21,7 @@ import {
   DatabaseError,
   RateLimitError,
   isOperationalError,
-  sanitizeError
+  sanitizeError,
 } from '../../shared/errors/index.js';
 
 /**
@@ -58,68 +58,68 @@ export interface FormattedGraphQLError {
  */
 const ERROR_CODE_MAP: Record<string, string> = {
   // Authentication & Authorization
-  'AUTHENTICATION_ERROR': 'UNAUTHENTICATED',
-  'AUTHORIZATION_ERROR': 'FORBIDDEN',
-  
+  AUTHENTICATION_ERROR: 'UNAUTHENTICATED',
+  AUTHORIZATION_ERROR: 'FORBIDDEN',
+
   // Validation & Input
-  'VALIDATION_ERROR': 'BAD_USER_INPUT',
-  'BAD_USER_INPUT': 'BAD_USER_INPUT',
-  
+  VALIDATION_ERROR: 'BAD_USER_INPUT',
+  BAD_USER_INPUT: 'BAD_USER_INPUT',
+
   // Resource Management
-  'NOT_FOUND': 'NOT_FOUND',
-  'CONFLICT': 'CONFLICT',
-  
+  NOT_FOUND: 'NOT_FOUND',
+  CONFLICT: 'CONFLICT',
+
   // External Services
-  'EXTERNAL_SERVICE_ERROR': 'EXTERNAL_SERVICE_ERROR',
-  
+  EXTERNAL_SERVICE_ERROR: 'EXTERNAL_SERVICE_ERROR',
+
   // Database & Internal
-  'DATABASE_ERROR': 'INTERNAL_SERVER_ERROR',
-  'INTERNAL_ERROR': 'INTERNAL_SERVER_ERROR',
-  
+  DATABASE_ERROR: 'INTERNAL_SERVER_ERROR',
+  INTERNAL_ERROR: 'INTERNAL_SERVER_ERROR',
+
   // Rate Limiting
-  'RATE_LIMIT_EXCEEDED': 'RATE_LIMITED',
-  
+  RATE_LIMIT_EXCEEDED: 'RATE_LIMITED',
+
   // Default
-  'UNKNOWN_ERROR': 'INTERNAL_SERVER_ERROR'
+  UNKNOWN_ERROR: 'INTERNAL_SERVER_ERROR',
 };
 
 /**
  * Maps domain errors to HTTP status codes for context
  */
 const STATUS_CODE_MAP: Record<string, number> = {
-  'UNAUTHENTICATED': 401,
-  'FORBIDDEN': 403,
-  'BAD_USER_INPUT': 400,
-  'NOT_FOUND': 404,
-  'CONFLICT': 409,
-  'RATE_LIMITED': 429,
-  'EXTERNAL_SERVICE_ERROR': 502,
-  'INTERNAL_SERVER_ERROR': 500
+  UNAUTHENTICATED: 401,
+  FORBIDDEN: 403,
+  BAD_USER_INPUT: 400,
+  NOT_FOUND: 404,
+  CONFLICT: 409,
+  RATE_LIMITED: 429,
+  EXTERNAL_SERVICE_ERROR: 502,
+  INTERNAL_SERVER_ERROR: 500,
 };
 
 /**
  * Creates GraphQL error from domain error
  * Maps domain errors to appropriate GraphQL errors with consistent structure
- * 
+ *
  * @param error - The domain error to convert
  * @param requestId - Request ID for correlation
  * @returns GraphQL error with proper extensions
  */
 export function createGraphQLError(error: Error, requestId?: string): GraphQLError {
   const timestamp = new Date().toISOString();
-  
+
   // Handle AppError instances (our domain errors)
   if (error instanceof AppError) {
     const code = ERROR_CODE_MAP[error.code] || 'INTERNAL_SERVER_ERROR';
     const statusCode = STATUS_CODE_MAP[code] || 500;
-    
+
     const extensions: GraphQLErrorExtensions = {
       code,
       statusCode,
       timestamp: error.timestamp,
-      requestId
+      requestId,
     };
-    
+
     // Add field-level validation details for ValidationError
     if (error instanceof ValidationError && error.fields) {
       extensions.fields = error.fields;
@@ -128,52 +128,52 @@ export function createGraphQLError(error: Error, requestId?: string): GraphQLErr
         extensions.field = error.fields[0].field;
       }
     }
-    
+
     // Add additional details if available
     if (error.details) {
       extensions.details = error.details;
     }
-    
+
     // Add specific error context
     if (error instanceof AuthorizationError) {
       if (error.requiredRole && error.userRole) {
         extensions.details = {
           ...extensions.details,
           requiredRole: error.requiredRole,
-          userRole: error.userRole
+          userRole: error.userRole,
         };
       }
     }
-    
+
     if (error instanceof NotFoundError) {
       extensions.details = {
         ...extensions.details,
         resourceType: error.resourceType,
-        ...(error.resourceId && { resourceId: error.resourceId })
+        ...(error.resourceId && { resourceId: error.resourceId }),
       };
     }
-    
+
     if (error instanceof ConflictError && error.conflictField) {
       extensions.field = error.conflictField;
     }
-    
+
     if (error instanceof ExternalServiceError) {
       extensions.details = {
         ...extensions.details,
-        serviceName: error.serviceName
+        serviceName: error.serviceName,
       };
     }
-    
+
     return new GraphQLError(error.message, {
-      extensions
+      extensions,
     });
   }
-  
+
   // Handle GraphQLError instances (preserve existing structure)
   if (error instanceof GraphQLError) {
     const existingExtensions = error.extensions || {};
     const code = existingExtensions.code || 'INTERNAL_SERVER_ERROR';
-    
+
     return new GraphQLError(error.message, {
       nodes: error.nodes,
       source: error.source,
@@ -185,11 +185,11 @@ export function createGraphQLError(error: Error, requestId?: string): GraphQLErr
         code,
         statusCode: STATUS_CODE_MAP[code] || 500,
         timestamp,
-        requestId
-      }
+        requestId,
+      },
     });
   }
-  
+
   // Handle unknown errors
   const code = 'INTERNAL_SERVER_ERROR';
   return new GraphQLError(
@@ -199,8 +199,8 @@ export function createGraphQLError(error: Error, requestId?: string): GraphQLErr
         code,
         statusCode: 500,
         timestamp,
-        requestId
-      }
+        requestId,
+      },
     }
   );
 }
@@ -208,7 +208,7 @@ export function createGraphQLError(error: Error, requestId?: string): GraphQLErr
 /**
  * Formats GraphQL errors for consistent response structure
  * Implements production sanitization and comprehensive logging
- * 
+ *
  * @param formattedError - The formatted error from GraphQL
  * @param error - The original error
  * @returns Formatted error response
@@ -219,54 +219,54 @@ export function formatGraphQLError(
 ): FormattedGraphQLError {
   const originalError = error instanceof Error ? error : new Error(String(error));
   const requestId = (formattedError.extensions?.requestId as string) || 'unknown';
-  
+
   // Log the error with full context
   logGraphQLError(formattedError, originalError, requestId);
-  
+
   // In production, sanitize non-operational errors
   if (config.nodeEnv === 'production' && !isOperationalError(originalError)) {
     const sanitized = sanitizeError(originalError);
     const sanitizedGraphQLError = createGraphQLError(sanitized, requestId);
-    
+
     return {
       message: sanitizedGraphQLError.message,
       locations: formattedError.locations,
       path: formattedError.path,
-      extensions: sanitizedGraphQLError.extensions as GraphQLErrorExtensions
+      extensions: sanitizedGraphQLError.extensions as GraphQLErrorExtensions,
     };
   }
-  
+
   // Ensure extensions exist and have required properties
   const extensions: GraphQLErrorExtensions = {
     code: (formattedError.extensions?.code as string) || 'INTERNAL_SERVER_ERROR',
     requestId,
     timestamp: (formattedError.extensions?.timestamp as string) || new Date().toISOString(),
-    ...(formattedError.extensions?.statusCode && { 
-      statusCode: formattedError.extensions.statusCode as number 
+    ...(formattedError.extensions?.statusCode && {
+      statusCode: formattedError.extensions.statusCode as number,
     }),
-    ...(formattedError.extensions?.field && { 
-      field: formattedError.extensions.field as string 
+    ...(formattedError.extensions?.field && {
+      field: formattedError.extensions.field as string,
     }),
-    ...(formattedError.extensions?.fields && { 
-      fields: formattedError.extensions.fields as Array<{ field: string; message: string }> 
+    ...(formattedError.extensions?.fields && {
+      fields: formattedError.extensions.fields as Array<{ field: string; message: string }>,
     }),
-    ...(formattedError.extensions?.details && { 
-      details: formattedError.extensions.details as Record<string, unknown> 
-    })
+    ...(formattedError.extensions?.details && {
+      details: formattedError.extensions.details as Record<string, unknown>,
+    }),
   };
-  
+
   return {
     message: formattedError.message,
     locations: formattedError.locations,
     path: formattedError.path,
-    extensions
+    extensions,
   };
 }
 
 /**
  * Logs GraphQL errors with comprehensive context
  * Provides detailed logging for debugging and monitoring
- * 
+ *
  * @param formattedError - The formatted GraphQL error
  * @param originalError - The original error object
  * @param requestId - Request ID for correlation
@@ -285,20 +285,20 @@ function logGraphQLError(
     originalErrorName: originalError.constructor.name,
     originalErrorMessage: originalError.message,
     ...(formattedError.extensions?.statusCode && {
-      statusCode: formattedError.extensions.statusCode
+      statusCode: formattedError.extensions.statusCode,
     }),
     ...(formattedError.extensions?.field && {
-      field: formattedError.extensions.field
+      field: formattedError.extensions.field,
     }),
     ...(formattedError.extensions?.fields && {
-      validationFields: formattedError.extensions.fields
-    })
+      validationFields: formattedError.extensions.fields,
+    }),
   };
-  
+
   // Determine log level based on error type
   const errorCode = formattedError.extensions?.code as string;
   const statusCode = formattedError.extensions?.statusCode as number;
-  
+
   if (errorCode === 'UNAUTHENTICATED' || errorCode === 'FORBIDDEN') {
     // Authentication/authorization errors are warnings
     logger.warn('GraphQL Authentication/Authorization Error', logContext);
@@ -318,7 +318,7 @@ function logGraphQLError(
     // Server errors are errors with stack trace
     logger.error('GraphQL Server Error', {
       ...logContext,
-      stack: originalError.stack
+      stack: originalError.stack,
     });
   } else {
     // Other errors are warnings
@@ -329,7 +329,7 @@ function logGraphQLError(
 /**
  * Creates a validation error with field-level details
  * Helper function for creating consistent validation errors
- * 
+ *
  * @param message - Main error message
  * @param fields - Array of field-level validation errors
  * @param requestId - Request ID for correlation
@@ -347,7 +347,7 @@ export function createValidationError(
 /**
  * Creates an authentication error
  * Helper function for creating consistent authentication errors
- * 
+ *
  * @param message - Error message
  * @param reason - Optional reason for authentication failure
  * @param requestId - Request ID for correlation
@@ -365,7 +365,7 @@ export function createAuthenticationError(
 /**
  * Creates an authorization error
  * Helper function for creating consistent authorization errors
- * 
+ *
  * @param message - Error message
  * @param requiredRole - Required role for the operation
  * @param userRole - Current user's role
@@ -385,7 +385,7 @@ export function createAuthorizationError(
 /**
  * Creates a not found error
  * Helper function for creating consistent not found errors
- * 
+ *
  * @param resourceType - Type of resource that was not found
  * @param resourceId - ID of the resource that was not found
  * @param requestId - Request ID for correlation
@@ -403,7 +403,7 @@ export function createNotFoundError(
 /**
  * Creates a conflict error
  * Helper function for creating consistent conflict errors
- * 
+ *
  * @param message - Error message
  * @param conflictField - Field that caused the conflict
  * @param requestId - Request ID for correlation
