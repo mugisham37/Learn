@@ -287,10 +287,7 @@ export class JobMonitoringService {
     try {
       const queueFactory = this.queueManager.getQueueFactory();
 
-      const jobDetails = (await queueFactory.getJobDetails(queueName, jobId)) as Record<
-        string,
-        unknown
-      >;
+      const jobDetails = await queueFactory.getJobDetails(queueName, jobId);
 
       logger.info('Job details retrieved', {
         queueName,

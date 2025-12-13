@@ -369,7 +369,7 @@ export class CourseAnalyticsRepository implements ICourseAnalyticsRepository {
         .returning();
 
       if (!updatedAnalytics) {
-        throw new NotFoundError('Course analytics not found', 'CourseAnalytics', courseId);
+        throw new NotFoundError('CourseAnalytics', courseId);
       }
 
       // Invalidate cache

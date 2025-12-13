@@ -10,9 +10,9 @@
 
 import type {
   CourseAnalytics,
-  NewCourseAnalytics,
+  // NewCourseAnalytics, // Unused - commented out
   StudentAnalytics,
-  NewStudentAnalytics,
+  // NewStudentAnalytics, // Unused - commented out
   AnalyticsEvent,
   NewAnalyticsEvent,
 } from '../../../../infrastructure/database/schema/analytics.schema.js';
@@ -66,7 +66,7 @@ export interface CourseAnalyticsAggregation {
   averageTimeToCompletionDays?: number;
   dropoutRate: number;
   mostDifficultLessonId?: string;
-  engagementMetrics: Record<string, any>;
+  engagementMetrics: Record<string, unknown>;
 }
 
 /**
@@ -80,8 +80,8 @@ export interface StudentAnalyticsAggregation {
   totalTimeInvestedMinutes: number;
   currentStreakDays: number;
   longestStreakDays: number;
-  badgesEarned: any[];
-  skillRatings: Record<string, any>;
+  badgesEarned: unknown[];
+  skillRatings: Record<string, unknown>;
 }
 
 /**

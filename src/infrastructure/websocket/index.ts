@@ -160,7 +160,7 @@ export async function createSocketServer(fastify: FastifyInstance): Promise<Sock
 
       // Update presence with delay for reconnection
       setTimeout((): void => {
-        void (async () => {
+        void (async (): Promise<void> => {
           try {
             const userSockets = await io?.in(SocketRooms.user(authSocket.userId)).fetchSockets();
             if (!userSockets || userSockets.length === 0) {

@@ -83,7 +83,7 @@ export abstract class OptimizedBaseRepository<T extends Record<string, unknown>>
     const results = await this.db
       .select()
       .from(this.table)
-      .where(eq(this.table[this.primaryKey as keyof typeof this.table] as any, id))
+      .where(eq(this.table[this.primaryKey as keyof typeof this.table] as unknown as any, id))
       .limit(1);
     
     const result = results[0] as T | undefined;
@@ -141,8 +141,8 @@ export abstract class OptimizedBaseRepository<T extends Record<string, unknown>>
       const cursorValue = this.parseCursor(cursor);
       const cursorCondition =
         direction === 'asc'
-          ? gt(this.table[orderBy as keyof typeof this.table] as any, cursorValue)
-          : lt(this.table[orderBy as keyof typeof this.table] as any, cursorValue);
+          ? gt(this.table[orderBy as keyof typeof this.table] as unknown as any, cursorValue)
+          : lt(this.table[orderBy as keyof typeof this.table] as unknown as any, cursorValue);
       conditions.push(cursorCondition);
     }
 
@@ -154,7 +154,7 @@ export abstract class OptimizedBaseRepository<T extends Record<string, unknown>>
       .select()
       .from(this.table)
       .where(conditions.length > 0 ? and(...conditions) : undefined)
-      .orderBy(orderDirection(this.table[orderBy as keyof typeof this.table] as any))
+      .orderBy(orderDirection(this.table[orderBy as keyof typeof this.table] as unknown as any))
       .limit(limit + 1); // Fetch one extra to check if there are more
 
     const executionTime = Date.now() - startTime;
@@ -180,7 +180,7 @@ export abstract class OptimizedBaseRepository<T extends Record<string, unknown>>
         : undefined;
 
     const result: PaginationResult<T> = {
-      items: resultItems as T[],
+      items: resultItems as unknown as T[],
       nextCursor,
       hasMore,
     };
@@ -208,7 +208,7 @@ export abstract class OptimizedBaseRepository<T extends Record<string, unknown>>
       for (const id of ids) {
         const cached = await this.getFromCache(id, cacheConfig.keyPrefix);
         if (cached) {
-          results.push(cached as T);
+          results.push(cached);
         } else {
           uncachedIds.push(id);
         }
@@ -262,7 +262,7 @@ export abstract class OptimizedBaseRepository<T extends Record<string, unknown>>
   ): Promise<T> {
     const startTime = Date.now();
 
-    const [result] = await this.db.insert(this.table).values(data as any).returning();
+    const [result] = await this.db.insert(this.table).values(data as unknown as any).returning();
 
     const executionTime = Date.now() - startTime;
 
@@ -292,8 +292,8 @@ export abstract class OptimizedBaseRepository<T extends Record<string, unknown>>
 
     const [result] = await this.db
       .update(this.table)
-      .set({ ...data, updated_at: new Date() } as any)
-      .where(eq(this.table[this.primaryKey as keyof typeof this.table] as any, id))
+      .set({ ...data, updated_at: new Date() } as unknown as any)
+      .where(eq(this.table[this.primaryKey as keyof typeof this.table] as unknown as any, id))
       .returning();
 
     const executionTime = Date.now() - startTime;
@@ -324,7 +324,7 @@ export abstract class OptimizedBaseRepository<T extends Record<string, unknown>>
 
     const results = await this.db
       .delete(this.table)
-      .where(eq(this.table[this.primaryKey as keyof typeof this.table] as unknown, id))
+      .where(eq(this.table[this.primaryKey as keyof typeof this.table] as unknown as any, id))
       .returning();
     
     const result = results[0];
@@ -357,7 +357,7 @@ export abstract class OptimizedBaseRepository<T extends Record<string, unknown>>
     try {
       const cacheKey = `${prefix}:${key}`;
       const cached = await this.redis.get(cacheKey);
-      return cached ? JSON.parse(cached) : null;
+      return cached ? JSON.parse(cached) as T : null;
     } catch (error) {
       logger.warn('Cache read failed', { key, prefix, error });
       return null;

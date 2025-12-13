@@ -33,7 +33,7 @@ export class RealtimeService implements IRealtimeService {
     data: RealtimeEvents[K]
   ): Promise<void> {
     try {
-      await emitToUser(userId, event, data);
+      emitToUser(userId, event, data);
 
       logger.debug('Real-time event emitted to user', {
         userId,
@@ -59,7 +59,7 @@ export class RealtimeService implements IRealtimeService {
     data: RealtimeEvents[K]
   ): Promise<void> {
     try {
-      await emitToRoom(room, event, data);
+      emitToRoom(room, event, data);
 
       logger.debug('Real-time event emitted to room', {
         room,
@@ -85,7 +85,7 @@ export class RealtimeService implements IRealtimeService {
     data: RealtimeEvents[K]
   ): Promise<void> {
     try {
-      await emitToCourse(courseId, event, data);
+      emitToCourse(courseId, event, data);
 
       logger.debug('Real-time event emitted to course', {
         courseId,

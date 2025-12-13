@@ -222,12 +222,26 @@ export class ElasticsearchClient implements IElasticsearchClient {
             index: item.index ? {
               _id: item.index._id || '',
               status: item.index.status || 0,
-              error: item.index.error
+              error: item.index.error ? {
+                type: String(item.index.error.type || 'unknown'),
+                reason: String(item.index.error.reason || 'Unknown error'),
+                caused_by: item.index.error.caused_by ? {
+                  type: String(item.index.error.caused_by.type || 'unknown'),
+                  reason: String(item.index.error.caused_by.reason || 'Unknown error'),
+                } : undefined,
+              } : undefined,
             } : undefined,
             delete: item.delete ? {
               _id: item.delete._id || '',
               status: item.delete.status || 0,
-              error: item.delete.error
+              error: item.delete.error ? {
+                type: String(item.delete.error.type || 'unknown'),
+                reason: String(item.delete.error.reason || 'Unknown error'),
+                caused_by: item.delete.error.caused_by ? {
+                  type: String(item.delete.error.caused_by.type || 'unknown'),
+                  reason: String(item.delete.error.caused_by.reason || 'Unknown error'),
+                } : undefined,
+              } : undefined,
             } : undefined,
           })),
           errors: response.errors,
@@ -300,8 +314,8 @@ export class ElasticsearchClient implements IElasticsearchClient {
               _index: String(hit._index),
               _id: String(hit._id),
               _score: Number(hit._score),
-              _source: hit._source,
-              highlight: hit.highlight as Record<string, string[]> | undefined,
+              _source: hit._source as T,
+              highlight: hit.highlight ? hit.highlight as Record<string, string[]> : undefined,
             })),
           },
           aggregations: response.aggregations as Record<string, unknown> | undefined,

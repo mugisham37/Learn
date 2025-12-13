@@ -33,6 +33,7 @@ export interface LearningEventData extends EventContext {
   score?: number;
   attemptNumber?: number;
   completionStatus?: 'started' | 'in_progress' | 'completed' | 'failed';
+  [key: string]: unknown;
 }
 
 export interface EngagementEventData extends EventContext {
@@ -40,6 +41,7 @@ export interface EngagementEventData extends EventContext {
   elementId?: string;
   elementType?: string;
   value?: string | number;
+  [key: string]: unknown;
 }
 
 export interface SystemEventData extends EventContext {
@@ -48,6 +50,7 @@ export interface SystemEventData extends EventContext {
   result?: 'success' | 'error' | 'warning';
   errorMessage?: string;
   metadata?: Record<string, unknown>;
+  [key: string]: unknown;
 }
 
 export type EventType =

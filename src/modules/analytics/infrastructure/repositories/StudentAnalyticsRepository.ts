@@ -235,7 +235,7 @@ export class StudentAnalyticsRepository implements IStudentAnalyticsRepository {
       }
 
       // Query database for data and total count
-      const [data, [{ total }]] = await Promise.all([
+      const [data, totalResult] = await Promise.all([
         this.readDb
           .select()
           .from(studentAnalytics)
@@ -244,6 +244,8 @@ export class StudentAnalyticsRepository implements IStudentAnalyticsRepository {
           .offset(offset),
         this.readDb.select({ total: count() }).from(studentAnalytics),
       ]);
+
+      const total = totalResult[0]?.total || 0;
 
       const result: PaginatedResult<StudentAnalytics> = {
         data,
@@ -331,7 +333,7 @@ export class StudentAnalyticsRepository implements IStudentAnalyticsRepository {
         .returning();
 
       if (!updatedAnalytics) {
-        throw new NotFoundError('Student analytics not found', 'StudentAnalytics', userId);
+        throw new NotFoundError('StudentAnalytics', userId);
       }
 
       // Invalidate cache

@@ -1,3 +1,4 @@
+
 /**
  * CourseAnalytics Domain Entity
  *
@@ -32,6 +33,7 @@ export interface EngagementMetrics {
   averageQuizScore: number;
   lessonCompletionVelocity: number;
   studentRetentionRate: number;
+  [key: string]: unknown;
 }
 
 export class CourseAnalytics {

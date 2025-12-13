@@ -461,16 +461,17 @@ export class QueueFactory {
       logger.debug(`Job ${job.id} waiting in queue ${queue.name}`);
     });
 
-    queue.on('stalled', (job) => {
-      const jobId = job?.id || 'unknown';
+    queue.on('stalled', (job: { id?: string; data?: Record<string, unknown> }) => {
+      const jobId: string = job?.id || 'unknown';
       logger.warn(`Job ${jobId} stalled in queue ${queue.name}`);
 
       const listener = this.eventListeners.get(queue.name);
       if (listener?.onJobStalled) {
+        const jobData: Record<string, unknown> | null = job?.data || null;
         const result = listener.onJobStalled({
           jobId,
           queueName: queue.name,
-          jobData: job?.data || null,
+          jobData,
           timestamp: new Date(),
         });
         

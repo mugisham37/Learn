@@ -10,13 +10,13 @@
 
 import { eq, and, gte, lte, count, avg, sum, desc } from 'drizzle-orm';
 
-import {
-  cache,
-  buildCacheKey,
-  CachePrefix,
-  CacheTTL,
-} from '../../../../infrastructure/cache/index.js';
-import { analyticsCacheService } from '../../infrastructure/cache/AnalyticsCacheService.js';
+// Cache utilities are available but not used in current implementation
+// import {
+//   cache,
+//   buildCacheKey,
+//   CachePrefix,
+//   CacheTTL,
+// } from '../../../../infrastructure/cache/index.js';
 import { getReadDb } from '../../../../infrastructure/database/index.js';
 import { quizSubmissions } from '../../../../infrastructure/database/schema/assessments.schema.js';
 import { courses } from '../../../../infrastructure/database/schema/courses.schema.js';
@@ -35,6 +35,7 @@ import {
   type CourseAnalyticsData,
   type StudentAnalyticsData,
 } from '../../domain/entities/index.js';
+import { analyticsCacheService } from '../../infrastructure/cache/AnalyticsCacheService.js';
 import type { IAnalyticsRepository } from '../../infrastructure/repositories/IAnalyticsRepository.js';
 
 // Service interface
@@ -87,7 +88,7 @@ export class AnalyticsService implements IAnalyticsService {
         .limit(1);
 
       if (!course) {
-        throw new NotFoundError('Course not found', 'Course', courseId);
+        throw new NotFoundError('Course', courseId);
       }
 
       // Aggregate enrollment metrics
@@ -213,7 +214,7 @@ export class AnalyticsService implements IAnalyticsService {
         .limit(1);
 
       if (!user) {
-        throw new NotFoundError('User not found', 'User', userId);
+        throw new NotFoundError('User', userId);
       }
 
       // Aggregate course metrics
@@ -324,7 +325,7 @@ export class AnalyticsService implements IAnalyticsService {
         .limit(1);
 
       if (!course) {
-        throw new NotFoundError('Course not found', 'Course', courseId);
+        throw new NotFoundError('Course', courseId);
       }
 
       // Get instructor name
@@ -409,7 +410,7 @@ export class AnalyticsService implements IAnalyticsService {
         .limit(1);
 
       if (!student) {
-        throw new NotFoundError('Student not found', 'User', userId);
+        throw new NotFoundError('Student', userId);
       }
 
       // Generate report sections
@@ -529,9 +530,9 @@ export class AnalyticsService implements IAnalyticsService {
       // Convert back to domain entity
       return new AnalyticsEvent({
         id: createdEvent.id,
-        userId: createdEvent.userId,
+        userId: createdEvent.userId || undefined,
         eventType: createdEvent.eventType,
-        eventData: createdEvent.eventData,
+        eventData: createdEvent.eventData as Record<string, unknown>,
         timestamp: createdEvent.timestamp,
       });
     } catch (error) {
@@ -870,7 +871,7 @@ export class AnalyticsService implements IAnalyticsService {
     };
   }
 
-  private async aggregateEngagementMetrics(_courseId: string): Promise<{
+  private aggregateEngagementMetrics(_courseId: string): Promise<{
     averageSessionDuration: number;
     totalVideoWatchTime: number;
     discussionParticipationRate: number;
@@ -882,7 +883,7 @@ export class AnalyticsService implements IAnalyticsService {
   }> {
     // This is a simplified implementation - in practice, you'd have more complex queries
     // to calculate engagement metrics from various tables
-    return {
+    return Promise.resolve({
       averageSessionDuration: 0,
       totalVideoWatchTime: 0,
       discussionParticipationRate: 0,
@@ -891,17 +892,17 @@ export class AnalyticsService implements IAnalyticsService {
       averageQuizScore: 0,
       lessonCompletionVelocity: 0,
       studentRetentionRate: 0,
-    };
+    });
   }
 
-  private async findMostDifficultLesson(_courseId: string): Promise<string | undefined> {
+  private findMostDifficultLesson(_courseId: string): Promise<string | undefined> {
     // Implementation would analyze lesson progress and quiz scores to identify difficult lessons
-    return undefined;
+    return Promise.resolve(undefined);
   }
 
-  private async calculateAverageTimeToCompletion(_courseId: string): Promise<number | undefined> {
+  private calculateAverageTimeToCompletion(_courseId: string): Promise<number | undefined> {
     // Implementation would calculate average time from enrollment to completion
-    return undefined;
+    return Promise.resolve(undefined);
   }
 
   private async aggregateStudentCourseMetrics(userId: string): Promise<{
@@ -961,25 +962,25 @@ export class AnalyticsService implements IAnalyticsService {
     };
   }
 
-  private async calculateStudentStreak(_userId: string): Promise<{
+  private calculateStudentStreak(_userId: string): Promise<{
     currentStreak: number;
     longestStreak: number;
   }> {
     // Implementation would calculate learning streaks based on activity dates
-    return {
+    return Promise.resolve({
       currentStreak: 0,
       longestStreak: 0,
-    };
+    });
   }
 
-  private async getStudentBadges(_userId: string): Promise<string[]> {
+  private getStudentBadges(_userId: string): Promise<string[]> {
     // Implementation would retrieve earned badges
-    return [];
+    return Promise.resolve([]);
   }
 
-  private async getStudentSkillRatings(_userId: string): Promise<Record<string, number>> {
+  private getStudentSkillRatings(_userId: string): Promise<Record<string, number>> {
     // Implementation would calculate skill ratings based on course completions and scores
-    return {};
+    return Promise.resolve({});
   }
 
   // Additional private helper methods would be implemented here...
@@ -990,9 +991,9 @@ export class AnalyticsService implements IAnalyticsService {
     return Math.round(((current - previous) / previous) * 100 * 100) / 100;
   }
 
-  private async generateStudentDashboard(userId: string): Promise<DashboardMetrics> {
+  private generateStudentDashboard(userId: string): Promise<DashboardMetrics> {
     // Implementation would generate student-specific dashboard metrics
-    return {
+    return Promise.resolve({
       role: 'student',
       userId,
       generatedAt: new Date(),
@@ -1009,12 +1010,12 @@ export class AnalyticsService implements IAnalyticsService {
         recentGrades: [],
         recommendedCourses: [],
       },
-    };
+    });
   }
 
-  private async generateEducatorDashboard(userId: string): Promise<DashboardMetrics> {
+  private generateEducatorDashboard(userId: string): Promise<DashboardMetrics> {
     // Implementation would generate educator-specific dashboard metrics
-    return {
+    return Promise.resolve({
       role: 'educator',
       userId,
       generatedAt: new Date(),
@@ -1029,12 +1030,12 @@ export class AnalyticsService implements IAnalyticsService {
         coursePerformance: [],
         recentActivity: [],
       },
-    };
+    });
   }
 
-  private async generateAdminDashboard(userId: string): Promise<DashboardMetrics> {
+  private generateAdminDashboard(userId: string): Promise<DashboardMetrics> {
     // Implementation would generate admin-specific dashboard metrics
-    return {
+    return Promise.resolve({
       role: 'admin',
       userId,
       generatedAt: new Date(),
@@ -1073,10 +1074,10 @@ export class AnalyticsService implements IAnalyticsService {
           topStudents: [],
         },
       },
-    };
+    });
   }
 
-  private async calculateCurrentPlatformMetrics(_dateRange: DateRange): Promise<{
+  private calculateCurrentPlatformMetrics(_dateRange: DateRange): Promise<{
     totalUsers: number;
     activeUsers: number;
     totalCourses: number;
@@ -1086,7 +1087,7 @@ export class AnalyticsService implements IAnalyticsService {
     averageRating: number;
   }> {
     // Implementation would calculate platform-wide metrics for the given date range
-    return {
+    return Promise.resolve({
       totalUsers: 0,
       activeUsers: 0,
       totalCourses: 0,
@@ -1094,11 +1095,11 @@ export class AnalyticsService implements IAnalyticsService {
       totalRevenue: 0,
       averageCompletionRate: 0,
       averageRating: 0,
-    };
+    });
   }
 
   // Additional helper methods for report generation would be implemented here...
-  private async generateEnrollmentTrends(
+  private generateEnrollmentTrends(
     _courseId: string,
     _dateRange: DateRange
   ): Promise<{
@@ -1109,17 +1110,17 @@ export class AnalyticsService implements IAnalyticsService {
     droppedEnrollments: number;
     enrollmentsByMonth: Array<{ month: string; count: number }>;
   }> {
-    return {
+    return Promise.resolve({
       totalEnrollments: 0,
       newEnrollments: 0,
       activeEnrollments: 0,
       completedEnrollments: 0,
       droppedEnrollments: 0,
       enrollmentsByMonth: [],
-    };
+    });
   }
 
-  private async generatePerformanceMetrics(
+  private generatePerformanceMetrics(
     _courseId: string,
     _dateRange: DateRange
   ): Promise<{
@@ -1129,16 +1130,16 @@ export class AnalyticsService implements IAnalyticsService {
     averageQuizScore: number;
     assignmentSubmissionRate: number;
   }> {
-    return {
+    return Promise.resolve({
       completionRate: 0,
       averageTimeToCompletion: 0,
       dropoutRate: 0,
       averageQuizScore: 0,
       assignmentSubmissionRate: 0,
-    };
+    });
   }
 
-  private async generateEngagementMetrics(
+  private generateEngagementMetrics(
     _courseId: string,
     _dateRange: DateRange
   ): Promise<{
@@ -1148,16 +1149,16 @@ export class AnalyticsService implements IAnalyticsService {
     lessonCompletionVelocity: number;
     studentRetentionRate: number;
   }> {
-    return {
+    return Promise.resolve({
       averageSessionDuration: 0,
       totalVideoWatchTime: 0,
       discussionParticipationRate: 0,
       lessonCompletionVelocity: 0,
       studentRetentionRate: 0,
-    };
+    });
   }
 
-  private async generateRevenueMetrics(
+  private generateRevenueMetrics(
     _courseId: string,
     _dateRange: DateRange
   ): Promise<{
@@ -1165,14 +1166,14 @@ export class AnalyticsService implements IAnalyticsService {
     revenuePerEnrollment: number;
     refundRate: number;
   }> {
-    return {
+    return Promise.resolve({
       totalRevenue: 0,
       revenuePerEnrollment: 0,
       refundRate: 0,
-    };
+    });
   }
 
-  private async generateDifficultContentAnalysis(
+  private generateDifficultContentAnalysis(
     _courseId: string,
     _dateRange: DateRange
   ): Promise<{
@@ -1189,13 +1190,13 @@ export class AnalyticsService implements IAnalyticsService {
       strugglingAreas: string[];
     }>;
   }> {
-    return {
+    return Promise.resolve({
       mostDifficultLessons: [],
       strugglingStudents: [],
-    };
+    });
   }
 
-  private async generateStudentLearningProgress(
+  private generateStudentLearningProgress(
     _userId: string,
     _dateRange: DateRange
   ): Promise<{
@@ -1206,17 +1207,17 @@ export class AnalyticsService implements IAnalyticsService {
     totalTimeInvested: number;
     averageTimePerCourse: number;
   }> {
-    return {
+    return Promise.resolve({
       totalCoursesEnrolled: 0,
       coursesCompleted: 0,
       coursesInProgress: 0,
       completionRate: 0,
       totalTimeInvested: 0,
       averageTimePerCourse: 0,
-    };
+    });
   }
 
-  private async generateStudentPerformanceMetrics(
+  private generateStudentPerformanceMetrics(
     _userId: string,
     _dateRange: DateRange
   ): Promise<{
@@ -1226,16 +1227,16 @@ export class AnalyticsService implements IAnalyticsService {
     averageAssignmentScore: number;
     improvementTrend: 'improving' | 'stable' | 'declining';
   }> {
-    return {
+    return Promise.resolve({
       averageQuizScore: 0,
       totalQuizzesTaken: 0,
       assignmentsSubmitted: 0,
       averageAssignmentScore: 0,
       improvementTrend: 'stable' as const,
-    };
+    });
   }
 
-  private async generateStudentEngagementMetrics(
+  private generateStudentEngagementMetrics(
     _userId: string,
     _dateRange: DateRange
   ): Promise<{
@@ -1245,16 +1246,16 @@ export class AnalyticsService implements IAnalyticsService {
     discussionParticipation: number;
     lastActivityDate: Date;
   }> {
-    return {
+    return Promise.resolve({
       currentStreak: 0,
       longestStreak: 0,
       averageSessionDuration: 0,
       discussionParticipation: 0,
       lastActivityDate: new Date(),
-    };
+    });
   }
 
-  private async generateStudentSkillDevelopment(
+  private generateStudentSkillDevelopment(
     _userId: string,
     _dateRange: DateRange
   ): Promise<{
@@ -1272,22 +1273,22 @@ export class AnalyticsService implements IAnalyticsService {
       category: string;
     }>;
   }> {
-    return {
+    return Promise.resolve({
       skillRatings: {},
       skillProgress: [],
       badgesEarned: [],
-    };
+    });
   }
 
-  private async generateStudentRecommendations(_userId: string): Promise<{
+  private generateStudentRecommendations(_userId: string): Promise<{
     nextCourses: string[];
     skillsToImprove: string[];
     studyScheduleSuggestions: string[];
   }> {
-    return {
+    return Promise.resolve({
       nextCourses: [],
       skillsToImprove: [],
       studyScheduleSuggestions: [],
-    };
+    });
   }
 }
