@@ -5,17 +5,17 @@
  * Handles conversion between plain objects from Drizzle ORM and rich domain objects.
  */
 
+import {
+  Course as CourseSchema,
+  CourseModule as CourseModuleSchema,
+  Lesson as LessonSchema,
+} from '../../../../infrastructure/database/schema/courses.schema.js';
 import { Course as CourseEntity, CourseProps } from '../../domain/entities/Course.js';
 import {
   CourseModule as CourseModuleEntity,
   CourseModuleProps,
 } from '../../domain/entities/CourseModule.js';
 import { Lesson as LessonEntity, LessonProps } from '../../domain/entities/Lesson.js';
-import {
-  Course as CourseSchema,
-  CourseModule as CourseModuleSchema,
-  Lesson as LessonSchema,
-} from '../../../../infrastructure/database/schema/courses.schema.js';
 
 /**
  * Course Mapper
@@ -154,7 +154,7 @@ export class LessonMapper {
       durationMinutes: lessonData.durationMinutes || undefined,
       orderNumber: lessonData.orderNumber,
       isPreview: lessonData.isPreview,
-      metadata: lessonData.metadata as Record<string, any>,
+      metadata: lessonData.metadata as Record<string, unknown>,
       createdAt: lessonData.createdAt,
       updatedAt: lessonData.updatedAt,
     };

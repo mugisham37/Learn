@@ -64,6 +64,7 @@ async function ensureUniqueSlug(
   let slug = baseSlug;
   let counter = 1;
 
+  // eslint-disable-next-line no-constant-condition
   while (true) {
     const whereConditions = excludeId
       ? and(eq(courses.slug, slug), sql`${courses.id} != ${excludeId}`)
@@ -81,6 +82,11 @@ async function ensureUniqueSlug(
 
     slug = `${baseSlug}-${counter}`;
     counter++;
+
+    // Safety mechanism to prevent infinite loops
+    if (counter > 10000) {
+      throw new Error('Unable to generate unique slug after 10000 attempts');
+    }
   }
 }
 

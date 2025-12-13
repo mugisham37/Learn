@@ -1,12 +1,14 @@
-import { CourseModule } from './CourseModule';
 import {
   CourseCreatedEvent,
   CoursePublishedEvent,
   CourseUpdatedEvent,
+  DomainEvent,
   ModuleAddedEvent,
   ModuleRemovedEvent,
   ModulesReorderedEvent,
 } from '../events/CourseEvents';
+
+import { CourseModule } from './CourseModule';
 
 export type CourseStatus = 'draft' | 'pending_review' | 'published' | 'archived';
 export type CourseDifficulty = 'beginner' | 'intermediate' | 'advanced';
@@ -35,7 +37,7 @@ export interface CourseProps {
 export class Course {
   private _props: CourseProps;
   private _modules: CourseModule[] = [];
-  private _domainEvents: any[] = [];
+  private _domainEvents: DomainEvent[] = [];
 
   constructor(props: CourseProps) {
     this.validateProps(props);
@@ -100,7 +102,7 @@ export class Course {
   get modules(): CourseModule[] {
     return [...this._modules];
   }
-  get domainEvents(): any[] {
+  get domainEvents(): DomainEvent[] {
     return [...this._domainEvents];
   }
 
@@ -357,7 +359,7 @@ export class Course {
     }
   }
 
-  private addDomainEvent(event: any): void {
+  private addDomainEvent(event: DomainEvent): void {
     this._domainEvents.push(event);
   }
 }

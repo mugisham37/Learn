@@ -22,7 +22,63 @@ import {
   PaginationParams,
   CourseFilters,
 } from '../../infrastructure/repositories/ICourseRepository.js';
+
 import { CourseDataLoaders } from './dataloaders.js';
+
+/**
+ * Helper function to handle errors in resolvers
+ */
+function handleResolverError(error: unknown, operation: string): never {
+  if (error instanceof GraphQLError) {
+    throw error;
+  }
+
+  if (error instanceof Error) {
+    if (error.message?.includes('not found')) {
+      throw new GraphQLError(`${operation} not found`, {
+        extensions: { code: 'NOT_FOUND' },
+      });
+    }
+    if (error.message?.includes('unauthorized') || error.message?.includes('permission')) {
+      throw new GraphQLError('Unauthorized', {
+        extensions: { code: 'UNAUTHORIZED' },
+      });
+    }
+    if (error.message?.includes('validation')) {
+      throw new GraphQLError(`Validation error: ${error.message}`, {
+        extensions: { code: 'VALIDATION_ERROR' },
+      });
+    }
+    throw new GraphQLError(`${operation} failed: ${error.message}`, {
+      extensions: { code: 'INTERNAL_ERROR' },
+    });
+  }
+
+  throw new GraphQLError(`${operation} failed`, {
+    extensions: { code: 'INTERNAL_ERROR' },
+  });
+}
+
+/**
+ * Helper function to safely get error message from unknown error
+ */
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  if (typeof error === 'string') {
+    return error;
+  }
+  return 'Unknown error occurred';
+}
+
+/**
+ * Helper function to check if error message includes a substring
+ */
+function errorIncludes(error: unknown, substring: string): boolean {
+  const message = getErrorMessage(error);
+  return message.includes(substring);
+}
 
 /**
  * GraphQL context interface
@@ -167,7 +223,7 @@ function mapDifficultyFromGraphQL(
     case 'ADVANCED':
       return 'advanced';
     default:
-      throw new Error(`Unknown difficulty: ${difficulty}`);
+      throw new Error(`Unknown difficulty: ${difficulty as string}`);
   }
 }
 
@@ -230,7 +286,7 @@ function mapLessonTypeFromGraphQL(
     case 'ASSIGNMENT':
       return 'assignment';
     default:
-      throw new Error(`Unknown lesson type: ${type}`);
+      throw new Error(`Unknown lesson type: ${type as string}`);
   }
 }
 
@@ -261,7 +317,7 @@ function convertCourseFilters(input?: CourseFilter): CourseFilters | undefined {
   if (!input) return undefined;
 
   return {
-    status: input.status ? (input.status.toLowerCase() as any) : undefined,
+    status: input.status ? (input.status.toLowerCase() as 'draft' | 'pending_review' | 'published' | 'archived') : undefined,
     category: input.category,
     difficulty: input.difficulty ? mapDifficultyFromGraphQL(input.difficulty) : undefined,
     instructorId: input.instructorId,
@@ -277,7 +333,7 @@ export const courseResolvers = {
      * Get course by ID
      */
     course: async (
-      _parent: any,
+      _parent: unknown,
       args: { id: string },
       context: GraphQLContext
     ): Promise<Course | null> => {
@@ -285,12 +341,7 @@ export const courseResolvers = {
         const course = await context.courseService.getCourseById(args.id);
         return course;
       } catch (error) {
-        throw new GraphQLError('Failed to fetch course', {
-          extensions: {
-            code: 'INTERNAL_ERROR',
-            http: { status: 500 },
-          },
-        });
+        handleResolverError(error, 'Course fetch');
       }
     },
 
@@ -298,7 +349,7 @@ export const courseResolvers = {
      * Get course by slug
      */
     courseBySlug: async (
-      _parent: any,
+      _parent: unknown,
       args: { slug: string },
       context: GraphQLContext
     ): Promise<Course | null> => {
@@ -306,12 +357,7 @@ export const courseResolvers = {
         const course = await context.courseService.getCourseBySlug(args.slug);
         return course;
       } catch (error) {
-        throw new GraphQLError('Failed to fetch course', {
-          extensions: {
-            code: 'INTERNAL_ERROR',
-            http: { status: 500 },
-          },
-        });
+        handleResolverError(error, 'Course fetch by slug');
       }
     },
 
@@ -319,10 +365,19 @@ export const courseResolvers = {
      * Get courses with pagination and filtering
      */
     courses: async (
-      _parent: any,
+      _parent: unknown,
       args: { filter?: CourseFilter; pagination?: PaginationInput },
       context: GraphQLContext
-    ) => {
+    ): Promise<{
+      edges: Array<{ node: Course; cursor: string }>;
+      pageInfo: {
+        hasNextPage: boolean;
+        hasPreviousPage: boolean;
+        startCursor: string | null;
+        endCursor: string | null;
+      };
+      totalCount: number;
+    }> => {
       try {
         const pagination = convertPaginationInput(args.pagination);
         const filters = convertCourseFilters(args.filter);
@@ -361,10 +416,19 @@ export const courseResolvers = {
      * Get current user's courses
      */
     myCourses: async (
-      _parent: any,
+      _parent: unknown,
       args: { filter?: CourseFilter; pagination?: PaginationInput },
       context: GraphQLContext
-    ) => {
+    ): Promise<{
+      edges: Array<{ node: Course; cursor: string }>;
+      pageInfo: {
+        hasNextPage: boolean;
+        hasPreviousPage: boolean;
+        startCursor: string | null;
+        endCursor: string | null;
+      };
+      totalCount: number;
+    }> => {
       const user = requireEducator(context);
 
       try {
@@ -409,7 +473,7 @@ export const courseResolvers = {
      * Validate course publication requirements
      */
     validateCoursePublication: async (
-      _parent: any,
+      _parent: unknown,
       args: { id: string },
       context: GraphQLContext
     ): Promise<PublicationValidationResult> => {
@@ -418,8 +482,8 @@ export const courseResolvers = {
       try {
         const result = await context.courseService.validatePublishRequirements(args.id, user.id);
         return result;
-      } catch (error: any) {
-        if (error.message?.includes('not found')) {
+      } catch (error: unknown) {
+        if (errorIncludes(error, 'not found')) {
           throw new GraphQLError('Course not found', {
             extensions: {
               code: 'NOT_FOUND',
@@ -428,7 +492,7 @@ export const courseResolvers = {
           });
         }
 
-        if (error.message?.includes('permission') || error.message?.includes('authorization')) {
+        if (errorIncludes(error, 'permission') || errorIncludes(error, 'authorization')) {
           throw new GraphQLError('Insufficient permissions', {
             extensions: {
               code: 'FORBIDDEN',
@@ -452,7 +516,7 @@ export const courseResolvers = {
      * Create a new course
      */
     createCourse: async (
-      _parent: any,
+      _parent: unknown,
       args: { input: CreateCourseInput },
       context: GraphQLContext
     ): Promise<Course> => {
@@ -504,12 +568,12 @@ export const courseResolvers = {
 
         const course = await context.courseService.createCourse(user.id, createData);
         return course;
-      } catch (error: any) {
+      } catch (error: unknown) {
         if (error instanceof GraphQLError) {
           throw error;
         }
 
-        if (error.message?.includes('validation') || error.message?.includes('invalid')) {
+        if (errorIncludes(error, 'validation') || errorIncludes(error, 'invalid')) {
           throw new GraphQLError('Invalid course data', {
             extensions: {
               code: 'BAD_USER_INPUT',
@@ -531,7 +595,7 @@ export const courseResolvers = {
      * Update course
      */
     updateCourse: async (
-      _parent: any,
+      _parent: unknown,
       args: { id: string; input: UpdateCourseInput },
       context: GraphQLContext
     ): Promise<Course> => {
@@ -553,8 +617,8 @@ export const courseResolvers = {
 
         const course = await context.courseService.updateCourse(args.id, user.id, updateData);
         return course;
-      } catch (error: any) {
-        if (error.message?.includes('not found')) {
+      } catch (error: unknown) {
+        if (errorIncludes(error, 'not found')) {
           throw new GraphQLError('Course not found', {
             extensions: {
               code: 'NOT_FOUND',
@@ -563,7 +627,7 @@ export const courseResolvers = {
           });
         }
 
-        if (error.message?.includes('permission') || error.message?.includes('authorization')) {
+        if (errorIncludes(error, 'permission') || errorIncludes(error, 'authorization')) {
           throw new GraphQLError('Insufficient permissions to update this course', {
             extensions: {
               code: 'FORBIDDEN',
@@ -572,7 +636,7 @@ export const courseResolvers = {
           });
         }
 
-        if (error.message?.includes('validation') || error.message?.includes('invalid')) {
+        if (errorIncludes(error, 'validation') || errorIncludes(error, 'invalid')) {
           throw new GraphQLError('Invalid course data', {
             extensions: {
               code: 'BAD_USER_INPUT',
@@ -594,7 +658,7 @@ export const courseResolvers = {
      * Publish course
      */
     publishCourse: async (
-      _parent: any,
+      _parent: unknown,
       args: { id: string },
       context: GraphQLContext
     ): Promise<Course> => {
@@ -603,8 +667,8 @@ export const courseResolvers = {
       try {
         const course = await context.courseService.publishCourse(args.id, user.id);
         return course;
-      } catch (error: any) {
-        if (error.message?.includes('not found')) {
+      } catch (error: unknown) {
+        if (errorIncludes(error, 'not found')) {
           throw new GraphQLError('Course not found', {
             extensions: {
               code: 'NOT_FOUND',
@@ -613,7 +677,7 @@ export const courseResolvers = {
           });
         }
 
-        if (error.message?.includes('permission') || error.message?.includes('authorization')) {
+        if (errorIncludes(error, 'permission') || errorIncludes(error, 'authorization')) {
           throw new GraphQLError('Insufficient permissions to publish this course', {
             extensions: {
               code: 'FORBIDDEN',
@@ -622,7 +686,7 @@ export const courseResolvers = {
           });
         }
 
-        if (error.message?.includes('validation') || error.message?.includes('requirements')) {
+        if (errorIncludes(error, 'validation') || errorIncludes(error, 'requirements')) {
           throw new GraphQLError('Course does not meet publication requirements', {
             extensions: {
               code: 'BAD_USER_INPUT',
@@ -644,7 +708,7 @@ export const courseResolvers = {
      * Delete course
      */
     deleteCourse: async (
-      _parent: any,
+      _parent: unknown,
       args: { id: string },
       context: GraphQLContext
     ): Promise<boolean> => {
@@ -653,8 +717,8 @@ export const courseResolvers = {
       try {
         await context.courseService.deleteCourse(args.id, user.id);
         return true;
-      } catch (error: any) {
-        if (error.message?.includes('not found')) {
+      } catch (error: unknown) {
+        if (errorIncludes(error, 'not found')) {
           throw new GraphQLError('Course not found', {
             extensions: {
               code: 'NOT_FOUND',
@@ -663,7 +727,7 @@ export const courseResolvers = {
           });
         }
 
-        if (error.message?.includes('permission') || error.message?.includes('authorization')) {
+        if (errorIncludes(error, 'permission') || errorIncludes(error, 'authorization')) {
           throw new GraphQLError('Insufficient permissions to delete this course', {
             extensions: {
               code: 'FORBIDDEN',
@@ -685,7 +749,7 @@ export const courseResolvers = {
      * Add module to course
      */
     addModule: async (
-      _parent: any,
+      _parent: unknown,
       args: { courseId: string; input: CreateModuleInput },
       context: GraphQLContext
     ): Promise<CourseModule> => {
@@ -722,12 +786,12 @@ export const courseResolvers = {
 
         const module = await context.courseService.addModule(args.courseId, user.id, moduleData);
         return module;
-      } catch (error: any) {
+      } catch (error: unknown) {
         if (error instanceof GraphQLError) {
           throw error;
         }
 
-        if (error.message?.includes('not found')) {
+        if (errorIncludes(error, 'not found')) {
           throw new GraphQLError('Course not found', {
             extensions: {
               code: 'NOT_FOUND',
@@ -736,7 +800,7 @@ export const courseResolvers = {
           });
         }
 
-        if (error.message?.includes('permission') || error.message?.includes('authorization')) {
+        if (errorIncludes(error, 'permission') || errorIncludes(error, 'authorization')) {
           throw new GraphQLError('Insufficient permissions to add module to this course', {
             extensions: {
               code: 'FORBIDDEN',
@@ -745,7 +809,7 @@ export const courseResolvers = {
           });
         }
 
-        if (error.message?.includes('order number') || error.message?.includes('conflict')) {
+        if (errorIncludes(error, 'order number') || errorIncludes(error, 'conflict')) {
           throw new GraphQLError('Module order number already exists', {
             extensions: {
               code: 'CONFLICT',
@@ -767,7 +831,7 @@ export const courseResolvers = {
      * Add lesson to module
      */
     addLesson: async (
-      _parent: any,
+      _parent: unknown,
       args: { moduleId: string; input: CreateLessonInput },
       context: GraphQLContext
     ): Promise<Lesson> => {
@@ -808,12 +872,12 @@ export const courseResolvers = {
 
         const lesson = await context.courseService.addLesson(args.moduleId, user.id, lessonData);
         return lesson;
-      } catch (error: any) {
+      } catch (error: unknown) {
         if (error instanceof GraphQLError) {
           throw error;
         }
 
-        if (error.message?.includes('not found')) {
+        if (errorIncludes(error, 'not found')) {
           throw new GraphQLError('Module not found', {
             extensions: {
               code: 'NOT_FOUND',
@@ -822,7 +886,7 @@ export const courseResolvers = {
           });
         }
 
-        if (error.message?.includes('permission') || error.message?.includes('authorization')) {
+        if (errorIncludes(error, 'permission') || errorIncludes(error, 'authorization')) {
           throw new GraphQLError('Insufficient permissions to add lesson to this module', {
             extensions: {
               code: 'FORBIDDEN',
@@ -831,7 +895,7 @@ export const courseResolvers = {
           });
         }
 
-        if (error.message?.includes('order number') || error.message?.includes('conflict')) {
+        if (errorIncludes(error, 'order number') || errorIncludes(error, 'conflict')) {
           throw new GraphQLError('Lesson order number already exists in module', {
             extensions: {
               code: 'CONFLICT',
@@ -840,7 +904,7 @@ export const courseResolvers = {
           });
         }
 
-        if (error.message?.includes('validation') || error.message?.includes('type')) {
+        if (errorIncludes(error, 'validation') || errorIncludes(error, 'type')) {
           throw new GraphQLError('Invalid lesson data or type validation failed', {
             extensions: {
               code: 'BAD_USER_INPUT',
@@ -862,7 +926,7 @@ export const courseResolvers = {
      * Reorder modules
      */
     reorderModules: async (
-      _parent: any,
+      _parent: unknown,
       args: { courseId: string; input: ReorderModulesInput },
       context: GraphQLContext
     ): Promise<CourseModule[]> => {
@@ -884,12 +948,12 @@ export const courseResolvers = {
           args.input.moduleIds
         );
         return modules;
-      } catch (error: any) {
+      } catch (error: unknown) {
         if (error instanceof GraphQLError) {
           throw error;
         }
 
-        if (error.message?.includes('not found')) {
+        if (errorIncludes(error, 'not found')) {
           throw new GraphQLError('Course or modules not found', {
             extensions: {
               code: 'NOT_FOUND',
@@ -898,7 +962,7 @@ export const courseResolvers = {
           });
         }
 
-        if (error.message?.includes('permission') || error.message?.includes('authorization')) {
+        if (errorIncludes(error, 'permission') || errorIncludes(error, 'authorization')) {
           throw new GraphQLError('Insufficient permissions to reorder modules in this course', {
             extensions: {
               code: 'FORBIDDEN',
@@ -908,9 +972,9 @@ export const courseResolvers = {
         }
 
         if (
-          error.message?.includes('validation') ||
-          error.message?.includes('count') ||
-          error.message?.includes('belong')
+          errorIncludes(error, 'validation') ||
+          errorIncludes(error, 'count') ||
+          errorIncludes(error, 'belong')
         ) {
           throw new GraphQLError('Invalid module IDs or count mismatch', {
             extensions: {
@@ -933,7 +997,7 @@ export const courseResolvers = {
      * Update module
      */
     updateModule: async (
-      _parent: any,
+      _parent: unknown,
       args: { id: string; input: UpdateModuleInput },
       context: GraphQLContext
     ): Promise<CourseModule> => {
@@ -973,12 +1037,12 @@ export const courseResolvers = {
 
         const module = await context.courseService.updateModule(args.id, user.id, updateData);
         return module;
-      } catch (error: any) {
+      } catch (error: unknown) {
         if (error instanceof GraphQLError) {
           throw error;
         }
 
-        if (error.message?.includes('not found')) {
+        if (errorIncludes(error, 'not found')) {
           throw new GraphQLError('Module not found', {
             extensions: {
               code: 'NOT_FOUND',
@@ -987,7 +1051,7 @@ export const courseResolvers = {
           });
         }
 
-        if (error.message?.includes('permission') || error.message?.includes('authorization')) {
+        if (errorIncludes(error, 'permission') || errorIncludes(error, 'authorization')) {
           throw new GraphQLError('Insufficient permissions to update this module', {
             extensions: {
               code: 'FORBIDDEN',
@@ -996,7 +1060,7 @@ export const courseResolvers = {
           });
         }
 
-        if (error.message?.includes('order number') || error.message?.includes('conflict')) {
+        if (errorIncludes(error, 'order number') || errorIncludes(error, 'conflict')) {
           throw new GraphQLError('Module order number already exists', {
             extensions: {
               code: 'CONFLICT',
@@ -1018,7 +1082,7 @@ export const courseResolvers = {
      * Delete module
      */
     deleteModule: async (
-      _parent: any,
+      _parent: unknown,
       args: { id: string },
       context: GraphQLContext
     ): Promise<boolean> => {
@@ -1027,8 +1091,8 @@ export const courseResolvers = {
       try {
         await context.courseService.deleteModule(args.id, user.id);
         return true;
-      } catch (error: any) {
-        if (error.message?.includes('not found')) {
+      } catch (error: unknown) {
+        if (errorIncludes(error, 'not found')) {
           throw new GraphQLError('Module not found', {
             extensions: {
               code: 'NOT_FOUND',
@@ -1037,7 +1101,7 @@ export const courseResolvers = {
           });
         }
 
-        if (error.message?.includes('permission') || error.message?.includes('authorization')) {
+        if (errorIncludes(error, 'permission') || errorIncludes(error, 'authorization')) {
           throw new GraphQLError('Insufficient permissions to delete this module', {
             extensions: {
               code: 'FORBIDDEN',
@@ -1059,7 +1123,7 @@ export const courseResolvers = {
      * Update lesson
      */
     updateLesson: async (
-      _parent: any,
+      _parent: unknown,
       args: { id: string; input: UpdateLessonInput },
       context: GraphQLContext
     ): Promise<Lesson> => {
@@ -1102,12 +1166,12 @@ export const courseResolvers = {
 
         const lesson = await context.courseService.updateLesson(args.id, user.id, updateData);
         return lesson;
-      } catch (error: any) {
+      } catch (error: unknown) {
         if (error instanceof GraphQLError) {
           throw error;
         }
 
-        if (error.message?.includes('not found')) {
+        if (errorIncludes(error, 'not found')) {
           throw new GraphQLError('Lesson not found', {
             extensions: {
               code: 'NOT_FOUND',
@@ -1116,7 +1180,7 @@ export const courseResolvers = {
           });
         }
 
-        if (error.message?.includes('permission') || error.message?.includes('authorization')) {
+        if (errorIncludes(error, 'permission') || errorIncludes(error, 'authorization')) {
           throw new GraphQLError('Insufficient permissions to update this lesson', {
             extensions: {
               code: 'FORBIDDEN',
@@ -1125,7 +1189,7 @@ export const courseResolvers = {
           });
         }
 
-        if (error.message?.includes('order number') || error.message?.includes('conflict')) {
+        if (errorIncludes(error, 'order number') || errorIncludes(error, 'conflict')) {
           throw new GraphQLError('Lesson order number already exists in module', {
             extensions: {
               code: 'CONFLICT',
@@ -1147,7 +1211,7 @@ export const courseResolvers = {
      * Delete lesson
      */
     deleteLesson: async (
-      _parent: any,
+      _parent: unknown,
       args: { id: string },
       context: GraphQLContext
     ): Promise<boolean> => {
@@ -1156,8 +1220,8 @@ export const courseResolvers = {
       try {
         await context.courseService.deleteLesson(args.id, user.id);
         return true;
-      } catch (error: any) {
-        if (error.message?.includes('not found')) {
+      } catch (error: unknown) {
+        if (errorIncludes(error, 'not found')) {
           throw new GraphQLError('Lesson not found', {
             extensions: {
               code: 'NOT_FOUND',
@@ -1166,7 +1230,7 @@ export const courseResolvers = {
           });
         }
 
-        if (error.message?.includes('permission') || error.message?.includes('authorization')) {
+        if (errorIncludes(error, 'permission') || errorIncludes(error, 'authorization')) {
           throw new GraphQLError('Insufficient permissions to delete this lesson', {
             extensions: {
               code: 'FORBIDDEN',
@@ -1188,7 +1252,7 @@ export const courseResolvers = {
      * Reorder lessons
      */
     reorderLessons: async (
-      _parent: any,
+      _parent: unknown,
       args: { moduleId: string; input: ReorderLessonsInput },
       context: GraphQLContext
     ): Promise<Lesson[]> => {
@@ -1210,12 +1274,12 @@ export const courseResolvers = {
           args.input.lessonIds
         );
         return lessons;
-      } catch (error: any) {
+      } catch (error: unknown) {
         if (error instanceof GraphQLError) {
           throw error;
         }
 
-        if (error.message?.includes('not found')) {
+        if (errorIncludes(error, 'not found')) {
           throw new GraphQLError('Module or lessons not found', {
             extensions: {
               code: 'NOT_FOUND',
@@ -1224,7 +1288,7 @@ export const courseResolvers = {
           });
         }
 
-        if (error.message?.includes('permission') || error.message?.includes('authorization')) {
+        if (errorIncludes(error, 'permission') || errorIncludes(error, 'authorization')) {
           throw new GraphQLError('Insufficient permissions to reorder lessons in this module', {
             extensions: {
               code: 'FORBIDDEN',
@@ -1234,9 +1298,9 @@ export const courseResolvers = {
         }
 
         if (
-          error.message?.includes('validation') ||
-          error.message?.includes('count') ||
-          error.message?.includes('belong')
+          errorIncludes(error, 'validation') ||
+          errorIncludes(error, 'count') ||
+          errorIncludes(error, 'belong')
         ) {
           throw new GraphQLError('Invalid lesson IDs or count mismatch', {
             extensions: {
@@ -1263,11 +1327,11 @@ export const courseResolvers = {
     status: (course: Course): 'DRAFT' | 'PENDING_REVIEW' | 'PUBLISHED' | 'ARCHIVED' =>
       mapStatusToGraphQL(course.status),
 
-    instructor: async (
+    instructor: (
       course: Course,
       _args: unknown,
       _context: GraphQLContext
-    ): Promise<{ id: string }> => {
+    ): { id: string } => {
       // Return a placeholder that matches the User type
       // In a full implementation, this would use a UserDataLoader
       return {

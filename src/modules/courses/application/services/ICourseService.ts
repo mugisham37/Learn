@@ -11,16 +11,16 @@ import { Course } from '../../domain/entities/Course.js';
 import { CourseModule } from '../../domain/entities/CourseModule.js';
 import { Lesson } from '../../domain/entities/Lesson.js';
 import {
+  CreateCourseModuleDTO,
+  UpdateCourseModuleDTO,
+} from '../../infrastructure/repositories/ICourseModuleRepository.js';
+import {
   CreateCourseDTO,
   UpdateCourseDTO,
   PaginationParams,
   PaginatedResult,
   CourseFilters,
 } from '../../infrastructure/repositories/ICourseRepository.js';
-import {
-  CreateCourseModuleDTO,
-  UpdateCourseModuleDTO,
-} from '../../infrastructure/repositories/ICourseModuleRepository.js';
 import {
   CreateLessonDTO,
   UpdateLessonDTO,

@@ -12,6 +12,12 @@ import { eq, and, desc, asc, count, sql, max, inArray } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
 import {
+  cache,
+  buildCacheKey,
+  CachePrefix,
+  CacheTTL,
+} from '../../../../infrastructure/cache/index.js';
+import {
   getWriteDb,
   getReadDb,
   withDrizzleTransaction,
@@ -23,17 +29,12 @@ import {
   courseModules,
 } from '../../../../infrastructure/database/schema/courses.schema.js';
 import {
-  cache,
-  buildCacheKey,
-  CachePrefix,
-  CacheTTL,
-} from '../../../../infrastructure/cache/index.js';
-import {
   DatabaseError,
   ConflictError,
   NotFoundError,
   ValidationError,
 } from '../../../../shared/errors/index.js';
+
 import {
   ILessonRepository,
   CreateLessonDTO,

@@ -22,7 +22,7 @@ export interface CreateLessonDTO {
   durationMinutes?: number;
   orderNumber: number;
   isPreview?: boolean;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 /**
@@ -37,7 +37,7 @@ export interface UpdateLessonDTO {
   durationMinutes?: number;
   orderNumber?: number;
   isPreview?: boolean;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 /**
@@ -172,7 +172,7 @@ export interface ILessonRepository {
    * @throws NotFoundError if lesson doesn't exist
    * @throws DatabaseError if database operation fails
    */
-  updateContentUrl(id: string, contentUrl: string, metadata?: Record<string, any>): Promise<Lesson>;
+  updateContentUrl(id: string, contentUrl: string, metadata?: Record<string, unknown>): Promise<Lesson>;
 
   /**
    * Counts lessons by type for a course

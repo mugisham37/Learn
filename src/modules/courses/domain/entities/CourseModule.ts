@@ -1,9 +1,11 @@
-import { Lesson } from './Lesson';
 import {
+  DomainEvent,
   LessonAddedEvent,
   LessonRemovedEvent,
   LessonsReorderedEvent,
 } from '../events/CourseEvents';
+
+import { Lesson } from './Lesson';
 
 export interface CourseModuleProps {
   id: string;
@@ -20,7 +22,7 @@ export interface CourseModuleProps {
 export class CourseModule {
   private _props: CourseModuleProps;
   private _lessons: Lesson[] = [];
-  private _domainEvents: any[] = [];
+  private _domainEvents: DomainEvent[] = [];
 
   constructor(props: CourseModuleProps) {
     this.validateProps(props);
@@ -58,7 +60,7 @@ export class CourseModule {
   get lessons(): Lesson[] {
     return [...this._lessons];
   }
-  get domainEvents(): any[] {
+  get domainEvents(): DomainEvent[] {
     return [...this._domainEvents];
   }
 
@@ -224,7 +226,7 @@ export class CourseModule {
     }
   }
 
-  private addDomainEvent(event: any): void {
+  private addDomainEvent(event: DomainEvent): void {
     this._domainEvents.push(event);
   }
 }

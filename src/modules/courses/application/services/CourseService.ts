@@ -7,11 +7,27 @@
  * Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7
  */
 
+import {
+  cache,
+  CachePrefix,
+  CacheTTL,
+  buildCacheKey,
+} from '../../../../infrastructure/cache/index.js';
+import {
+  NotFoundError,
+  AuthorizationError,
+  ValidationError,
+  ConflictError,
+} from '../../../../shared/errors/index.js';
+import { sanitizeByContentType } from '../../../../shared/utils/sanitization.js';
 import { Course } from '../../domain/entities/Course.js';
 import { CourseModule } from '../../domain/entities/CourseModule.js';
 import { Lesson } from '../../domain/entities/Lesson.js';
-import { ICourseService, PublicationValidationResult } from './ICourseService.js';
-import { CourseMapper, CourseModuleMapper, LessonMapper } from '../mappers/CourseMapper.js';
+import {
+  ICourseModuleRepository,
+  CreateCourseModuleDTO,
+  UpdateCourseModuleDTO,
+} from '../../infrastructure/repositories/ICourseModuleRepository.js';
 import {
   ICourseRepository,
   CreateCourseDTO,
@@ -21,28 +37,13 @@ import {
   CourseFilters,
 } from '../../infrastructure/repositories/ICourseRepository.js';
 import {
-  ICourseModuleRepository,
-  CreateCourseModuleDTO,
-  UpdateCourseModuleDTO,
-} from '../../infrastructure/repositories/ICourseModuleRepository.js';
-import {
   ILessonRepository,
   CreateLessonDTO,
   UpdateLessonDTO,
 } from '../../infrastructure/repositories/ILessonRepository.js';
-import {
-  NotFoundError,
-  AuthorizationError,
-  ValidationError,
-  ConflictError,
-} from '../../../../shared/errors/index.js';
-import { sanitizeByContentType } from '../../../../shared/utils/sanitization.js';
-import {
-  cache,
-  CachePrefix,
-  CacheTTL,
-  buildCacheKey,
-} from '../../../../infrastructure/cache/index.js';
+import { CourseMapper, CourseModuleMapper, LessonMapper } from '../mappers/CourseMapper.js';
+
+import { ICourseService, PublicationValidationResult } from './ICourseService.js';
 
 /**
  * Course Service Implementation

@@ -11,7 +11,7 @@ export interface LessonProps {
   durationMinutes?: number;
   orderNumber: number;
   isPreview: boolean;
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -55,7 +55,7 @@ export class Lesson {
   get isPreview(): boolean {
     return this._props.isPreview;
   }
-  get metadata(): Record<string, any> {
+  get metadata(): Record<string, unknown> {
     return { ...this._props.metadata };
   }
   get createdAt(): Date {
@@ -114,7 +114,7 @@ export class Lesson {
   }
 
   // Update metadata
-  updateMetadata(metadata: Record<string, any>): void {
+  updateMetadata(metadata: Record<string, unknown>): void {
     this._props.metadata = { ...this._props.metadata, ...metadata };
     this._props.updatedAt = new Date();
   }
@@ -160,9 +160,10 @@ export class Lesson {
     switch (this._props.type) {
       case 'video':
         return this._props.contentUrl ? 'Video processed' : 'Video processing...';
-      case 'text':
+      case 'text': {
         const textLength = this._props.contentText?.length || 0;
         return `Text content (${textLength} characters)`;
+      }
       case 'quiz':
         return 'Interactive quiz';
       case 'assignment':
@@ -221,7 +222,7 @@ export class Lesson {
         break;
 
       default:
-        throw new Error(`Invalid lesson type: ${props.type}`);
+        throw new Error(`Invalid lesson type: ${props.type as string}`);
     }
   }
 }

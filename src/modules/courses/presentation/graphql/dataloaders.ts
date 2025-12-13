@@ -7,13 +7,14 @@
  * Requirements: 21.5
  */
 
-import * as DataLoader from 'dataloader';
+import DataLoader from 'dataloader';
+
 import { ICourseService } from '../../application/services/ICourseService.js';
 import { Course } from '../../domain/entities/Course.js';
 import { CourseModule } from '../../domain/entities/CourseModule.js';
 import { Lesson } from '../../domain/entities/Lesson.js';
-import { ICourseRepository } from '../../infrastructure/repositories/ICourseRepository.js';
 import { ICourseModuleRepository } from '../../infrastructure/repositories/ICourseModuleRepository.js';
+import { ICourseRepository } from '../../infrastructure/repositories/ICourseRepository.js';
 import { ILessonRepository } from '../../infrastructure/repositories/ILessonRepository.js';
 
 /**
@@ -47,7 +48,9 @@ export class CourseDataLoaders {
       {
         cache: true,
         maxBatchSize: 100,
-        batchScheduleFn: (callback) => setTimeout(callback, 10),
+        batchScheduleFn: (callback: () => void): void => {
+          setTimeout(callback, 10);
+        },
       }
     );
 
@@ -60,7 +63,9 @@ export class CourseDataLoaders {
       {
         cache: true,
         maxBatchSize: 50,
-        batchScheduleFn: (callback) => setTimeout(callback, 10),
+        batchScheduleFn: (callback: () => void): void => {
+          setTimeout(callback, 10);
+        },
       }
     );
 
@@ -73,7 +78,9 @@ export class CourseDataLoaders {
       {
         cache: true,
         maxBatchSize: 100,
-        batchScheduleFn: (callback) => setTimeout(callback, 10),
+        batchScheduleFn: (callback: () => void): void => {
+          setTimeout(callback, 10);
+        },
       }
     );
 
@@ -86,7 +93,9 @@ export class CourseDataLoaders {
       {
         cache: true,
         maxBatchSize: 100,
-        batchScheduleFn: (callback) => setTimeout(callback, 10),
+        batchScheduleFn: (callback: () => void): void => {
+          setTimeout(callback, 10);
+        },
       }
     );
 
@@ -99,7 +108,9 @@ export class CourseDataLoaders {
       {
         cache: true,
         maxBatchSize: 100,
-        batchScheduleFn: (callback) => setTimeout(callback, 10),
+        batchScheduleFn: (callback: () => void): void => {
+          setTimeout(callback, 10);
+        },
       }
     );
 
@@ -112,7 +123,9 @@ export class CourseDataLoaders {
       {
         cache: true,
         maxBatchSize: 100,
-        batchScheduleFn: (callback) => setTimeout(callback, 10),
+        batchScheduleFn: (callback: () => void): void => {
+          setTimeout(callback, 10);
+        },
       }
     );
   }
@@ -129,8 +142,9 @@ export class CourseDataLoaders {
 
     for (let i = 0; i < courseIds.length; i++) {
       const course = courses[i];
-      if (course) {
-        coursesMap.set(courseIds[i], course);
+      const courseId = courseIds[i];
+      if (course && courseId) {
+        coursesMap.set(courseId, course);
       }
     }
 
@@ -278,7 +292,7 @@ export class CourseDataLoaders {
             durationMinutes: lessonSchema.durationMinutes || undefined,
             orderNumber: lessonSchema.orderNumber,
             isPreview: lessonSchema.isPreview,
-            metadata: lessonSchema.metadata || {},
+            metadata: (lessonSchema.metadata as Record<string, unknown>) || {},
             createdAt: lessonSchema.createdAt,
             updatedAt: lessonSchema.updatedAt,
           })
@@ -316,7 +330,7 @@ export class CourseDataLoaders {
           durationMinutes: lessonSchema.durationMinutes || undefined,
           orderNumber: lessonSchema.orderNumber,
           isPreview: lessonSchema.isPreview,
-          metadata: lessonSchema.metadata || {},
+          metadata: (lessonSchema.metadata as Record<string, unknown>) || {},
           createdAt: lessonSchema.createdAt,
           updatedAt: lessonSchema.updatedAt,
         });

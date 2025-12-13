@@ -11,7 +11,7 @@ export interface DomainEvent {
   eventType: string;
   aggregateId: string;
   aggregateType: string;
-  eventData: any;
+  eventData: Record<string, unknown>;
   occurredAt: Date;
   version: number;
 }
@@ -32,7 +32,7 @@ export class CourseCreatedEvent implements DomainEvent {
     this.occurredAt = new Date();
   }
 
-  get eventData() {
+  get eventData(): Record<string, unknown> {
     return {
       courseId: this.aggregateId,
       instructorId: this.instructorId,
@@ -51,13 +51,13 @@ export class CourseUpdatedEvent implements DomainEvent {
   constructor(
     public readonly aggregateId: string,
     public readonly instructorId: string,
-    public readonly changes?: Record<string, any>
+    public readonly changes?: Record<string, unknown>
   ) {
     this.eventId = crypto.randomUUID();
     this.occurredAt = new Date();
   }
 
-  get eventData() {
+  get eventData(): Record<string, unknown> {
     return {
       courseId: this.aggregateId,
       instructorId: this.instructorId,
@@ -82,7 +82,7 @@ export class CoursePublishedEvent implements DomainEvent {
     this.occurredAt = new Date();
   }
 
-  get eventData() {
+  get eventData(): Record<string, unknown> {
     return {
       courseId: this.aggregateId,
       instructorId: this.instructorId,
@@ -106,7 +106,7 @@ export class CourseArchivedEvent implements DomainEvent {
     this.occurredAt = new Date();
   }
 
-  get eventData() {
+  get eventData(): Record<string, unknown> {
     return {
       courseId: this.aggregateId,
       instructorId: this.instructorId,
@@ -131,7 +131,7 @@ export class ModuleAddedEvent implements DomainEvent {
     this.occurredAt = new Date();
   }
 
-  get eventData() {
+  get eventData(): Record<string, unknown> {
     return {
       courseId: this.aggregateId,
       moduleId: this.moduleId,
@@ -156,7 +156,7 @@ export class ModuleRemovedEvent implements DomainEvent {
     this.occurredAt = new Date();
   }
 
-  get eventData() {
+  get eventData(): Record<string, unknown> {
     return {
       courseId: this.aggregateId,
       moduleId: this.moduleId,
@@ -179,7 +179,7 @@ export class ModulesReorderedEvent implements DomainEvent {
     this.occurredAt = new Date();
   }
 
-  get eventData() {
+  get eventData(): Record<string, unknown> {
     return {
       courseId: this.aggregateId,
       newOrder: this.newOrder,
@@ -206,7 +206,7 @@ export class LessonAddedEvent implements DomainEvent {
     this.occurredAt = new Date();
   }
 
-  get eventData() {
+  get eventData(): Record<string, unknown> {
     return {
       moduleId: this.aggregateId,
       courseId: this.courseId,
@@ -234,7 +234,7 @@ export class LessonRemovedEvent implements DomainEvent {
     this.occurredAt = new Date();
   }
 
-  get eventData() {
+  get eventData(): Record<string, unknown> {
     return {
       moduleId: this.aggregateId,
       courseId: this.courseId,
@@ -259,7 +259,7 @@ export class LessonsReorderedEvent implements DomainEvent {
     this.occurredAt = new Date();
   }
 
-  get eventData() {
+  get eventData(): Record<string, unknown> {
     return {
       moduleId: this.aggregateId,
       courseId: this.courseId,
