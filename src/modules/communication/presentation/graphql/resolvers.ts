@@ -18,6 +18,7 @@ import {
   withFilter,
 } from '../../../../infrastructure/graphql/pubsub.js';
 import { requireSubscriptionAuth } from '../../../../infrastructure/graphql/subscriptionServer.js';
+import type { GraphQLContext } from '../../../../infrastructure/graphql/apolloServer.js';
 import {
   ValidationError,
   AuthorizationError,
@@ -42,6 +43,51 @@ import {
   ConversationResult,
 } from '../../application/services/IMessagingService.js';
 import { VoteType } from '../../domain/entities/DiscussionPost.js';
+
+/**
+ * GraphQL context interface
+ */
+export interface CommunicationGraphQLContext extends GraphQLContext {
+  messagingService: IMessagingService;
+  discussionService: IDiscussionService;
+  announcementService: IAnnouncementService;
+  realtimeService?: IRealtimeService;
+}
+
+/**
+ * GraphQL resolver parent type (unused in most cases)
+ */
+type GraphQLParent = Record<string, unknown>;
+
+/**
+ * GraphQL resolver arguments types
+ */
+interface PaginationInput {
+  limit?: number;
+  offset?: number;
+}
+
+interface MessageInput {
+  content: string;
+  type?: string;
+}
+
+interface CreateThreadInput {
+  category: string;
+  title: string;
+  content: string;
+}
+
+interface ReplyToThreadInput {
+  content: string;
+  parentPostId?: string;
+}
+
+interface AnnouncementInput {
+  title: string;
+  content: string;
+  scheduledFor?: string;
+}
 
 /**
  * GraphQL context interface
@@ -169,11 +215,22 @@ function convertPagination(pagination?: PaginationInput): { limit: number; offse
 /**
  * Helper function to convert service results to GraphQL connection format
  */
+interface Connection<T> {
+  edges: Array<{ node: T; cursor: string }>;
+  pageInfo: {
+    hasNextPage: boolean;
+    hasPreviousPage: boolean;
+    startCursor: string | null;
+    endCursor: string | null;
+  };
+  totalCount: number;
+}
+
 function toConnection<T>(
   items: T[],
   totalCount: number,
   pagination: { limit: number; offset: number }
-): any {
+): Connection<T> {
   const edges = items.map((item, index) => ({
     node: item,
     cursor: (pagination.offset + index).toString(),
@@ -205,10 +262,10 @@ export const communicationResolvers = {
      * Get conversations for the authenticated user
      */
     conversations: async (
-      _parent: any,
+      _parent: GraphQLParent,
       args: { pagination?: PaginationInput },
       context: CommunicationGraphQLContext
-    ): Promise<any> => {
+    ): Promise<Connection<any>> => {
       const user = requireAuth(context);
 
       try {
@@ -237,10 +294,10 @@ export const communicationResolvers = {
      * Get messages in a conversation
      */
     conversationMessages: async (
-      _parent: any,
+      _parent: GraphQLParent,
       args: { conversationId: string; pagination?: PaginationInput },
       context: CommunicationGraphQLContext
-    ): Promise<any> => {
+    ): Promise<Connection<any>> => {
       const user = requireAuth(context);
 
       try {
@@ -275,8 +332,8 @@ export const communicationResolvers = {
      * Get unread message count
      */
     unreadMessageCount: async (
-      _parent: any,
-      _args: any,
+      _parent: GraphQLParent,
+      _args: Record<string, unknown>,
       context: CommunicationGraphQLContext
     ): Promise<number> => {
       const user = requireAuth(context);
@@ -297,7 +354,7 @@ export const communicationResolvers = {
      * Get discussion threads for a course
      */
     discussionThreads: async (
-      _parent: any,
+      _parent: GraphQLParent,
       args: {
         courseId: string;
         filter?: ThreadFilter;
@@ -344,7 +401,7 @@ export const communicationResolvers = {
      * Get a specific discussion thread
      */
     discussionThread: async (
-      _parent: any,
+      _parent: GraphQLParent,
       args: { threadId: string },
       context: CommunicationGraphQLContext
     ): Promise<any> => {
@@ -387,7 +444,7 @@ export const communicationResolvers = {
      * Get posts in a thread
      */
     threadPosts: async (
-      _parent: any,
+      _parent: GraphQLParent,
       args: { threadId: string; pagination?: PaginationInput },
       context: CommunicationGraphQLContext
     ): Promise<any> => {
@@ -434,7 +491,7 @@ export const communicationResolvers = {
      * Get announcements for a course
      */
     announcements: async (
-      _parent: any,
+      _parent: GraphQLParent,
       args: {
         courseId: string;
         filter?: AnnouncementFilter;
@@ -483,7 +540,7 @@ export const communicationResolvers = {
      * Get a specific announcement
      */
     announcement: async (
-      _parent: any,
+      _parent: GraphQLParent,
       args: { announcementId: string },
       context: CommunicationGraphQLContext
     ): Promise<any> => {
@@ -514,7 +571,7 @@ export const communicationResolvers = {
      * Get course presence (online users)
      */
     coursePresence: async (
-      _parent: any,
+      _parent: GraphQLParent,
       args: { courseId: string },
       context: CommunicationGraphQLContext
     ): Promise<any[]> => {
@@ -551,7 +608,7 @@ export const communicationResolvers = {
      * Send a message
      */
     sendMessage: async (
-      _parent: any,
+      _parent: GraphQLParent,
       args: { recipientId: string; input: MessageInput },
       context: CommunicationGraphQLContext
     ): Promise<any> => {
@@ -622,7 +679,7 @@ export const communicationResolvers = {
      * Mark message as read
      */
     markMessageAsRead: async (
-      _parent: any,
+      _parent: GraphQLParent,
       args: { messageId: string },
       context: CommunicationGraphQLContext
     ): Promise<boolean> => {
@@ -663,7 +720,7 @@ export const communicationResolvers = {
      * Mark conversation as read
      */
     markConversationAsRead: async (
-      _parent: any,
+      _parent: GraphQLParent,
       args: { conversationId: string },
       context: CommunicationGraphQLContext
     ): Promise<boolean> => {
@@ -695,7 +752,7 @@ export const communicationResolvers = {
      * Delete message
      */
     deleteMessage: async (
-      _parent: any,
+      _parent: GraphQLParent,
       args: { messageId: string },
       context: CommunicationGraphQLContext
     ): Promise<boolean> => {
@@ -1248,7 +1305,7 @@ export const communicationResolvers = {
      */
     messageReceived: {
       subscribe: withFilter(
-        (_parent: any, _args: any, context: CommunicationGraphQLContext) => {
+        (_parent: GraphQLParent, _args: Record<string, unknown>, context: CommunicationGraphQLContext) => {
           // Require authentication for subscriptions
           requireSubscriptionAuth(context);
           return createAsyncIterator(SUBSCRIPTION_EVENTS.MESSAGE_RECEIVED);
@@ -1266,7 +1323,7 @@ export const communicationResolvers = {
      */
     newDiscussionPost: {
       subscribe: withFilter(
-        (_parent: any, _args: any, context: CommunicationGraphQLContext) => {
+        (_parent: GraphQLParent, _args: Record<string, unknown>, context: CommunicationGraphQLContext) => {
           // Require authentication for subscriptions
           requireSubscriptionAuth(context);
           return createAsyncIterator(SUBSCRIPTION_EVENTS.NEW_DISCUSSION_POST);
@@ -1282,7 +1339,7 @@ export const communicationResolvers = {
      */
     announcementPublished: {
       subscribe: withFilter(
-        (_parent: any, _args: any, context: CommunicationGraphQLContext) => {
+        (_parent: GraphQLParent, _args: Record<string, unknown>, context: CommunicationGraphQLContext) => {
           // Require authentication for subscriptions
           requireSubscriptionAuth(context);
           return createAsyncIterator(SUBSCRIPTION_EVENTS.ANNOUNCEMENT_PUBLISHED);
@@ -1298,7 +1355,7 @@ export const communicationResolvers = {
      */
     userPresence: {
       subscribe: withFilter(
-        (_parent: any, _args: any, context: CommunicationGraphQLContext) => {
+        (_parent: GraphQLParent, _args: Record<string, unknown>, context: CommunicationGraphQLContext) => {
           // Require authentication for subscriptions
           requireSubscriptionAuth(context);
           return createAsyncIterator(SUBSCRIPTION_EVENTS.USER_PRESENCE);
@@ -1314,7 +1371,7 @@ export const communicationResolvers = {
      */
     typingIndicator: {
       subscribe: withFilter(
-        (_parent: any, _args: any, context: CommunicationGraphQLContext) => {
+        (_parent: GraphQLParent, _args: Record<string, unknown>, context: CommunicationGraphQLContext) => {
           // Require authentication for subscriptions
           requireSubscriptionAuth(context);
           return createAsyncIterator(SUBSCRIPTION_EVENTS.TYPING_INDICATOR);

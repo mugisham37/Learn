@@ -2,7 +2,7 @@
  * Communication Repository Exports
  */
 
-export {
+export type {
   IMessagingRepository,
   ConversationSummary,
   MessagePagination,
@@ -11,7 +11,7 @@ export {
   PaginatedResult as MessagingPaginatedResult,
 } from './IMessagingRepository.js';
 export { MessagingRepository } from './MessagingRepository.js';
-export {
+export type {
   IDiscussionRepository,
   ThreadWithDetails,
   PostWithReplies,
@@ -21,5 +21,5 @@ export {
   PaginatedResult as DiscussionPaginatedResult,
 } from './IDiscussionRepository.js';
 export { DiscussionRepository } from './DiscussionRepository.js';
-export { IAnnouncementRepository } from './IAnnouncementRepository.js';
+export type { IAnnouncementRepository } from './IAnnouncementRepository.js';
 export { AnnouncementRepository } from './AnnouncementRepository.js';

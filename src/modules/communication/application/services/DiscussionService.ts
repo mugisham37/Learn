@@ -18,10 +18,10 @@ import {
   NotFoundError,
   ConflictError,
 } from '../../../../shared/errors/index.js';
+import { sanitizeByContentType } from '../../../../shared/utils/sanitization.js';
+
 import type { ICourseRepository } from '../../../courses/infrastructure/repositories/ICourseRepository.js';
 import type { IEnrollmentRepository } from '../../../enrollments/infrastructure/repositories/IEnrollmentRepository.js';
-
-import { sanitizeByContentType } from '../../../../shared/utils/sanitization.js';
 import {
   DiscussionPost,
   CreateDiscussionPostDTO,

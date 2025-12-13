@@ -8,6 +8,7 @@ import { eq, and, desc, asc, lte, isNull, count } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
 import { announcements } from '../../../../infrastructure/database/schema/communication.schema.js';
+
 import type { Announcement, AnnouncementData } from '../../domain/entities/Announcement.js';
 import type { IAnnouncementRepository } from './IAnnouncementRepository.js';
 
@@ -83,7 +84,7 @@ export class AnnouncementRepository implements IAnnouncementRepository {
       .limit(limit)
       .offset(offset);
 
-    return results.map(this.mapToEntity);
+    return results.map((result) => this.mapToEntity(result));
   }
 
   async findScheduledReadyToPublish(): Promise<Announcement[]> {
@@ -95,7 +96,7 @@ export class AnnouncementRepository implements IAnnouncementRepository {
       .where(and(lte(announcements.scheduledFor, now), isNull(announcements.publishedAt)))
       .orderBy(asc(announcements.scheduledFor));
 
-    return results.map(this.mapToEntity);
+    return results.map((result) => this.mapToEntity(result));
   }
 
   async update(id: string, data: Partial<AnnouncementData>): Promise<Announcement> {
@@ -134,20 +135,20 @@ export class AnnouncementRepository implements IAnnouncementRepository {
       .from(announcements)
       .where(eq(announcements.courseId, courseId));
 
-    return result.count;
+    return result?.count ?? 0;
   }
 
-  private mapToEntity(row: unknown): Announcement {
+  private mapToEntity(row: any): Announcement {
     return {
-      id: row.id,
-      courseId: row.courseId,
-      educatorId: row.educatorId,
-      title: row.title,
-      content: row.content,
-      scheduledFor: row.scheduledFor,
-      publishedAt: row.publishedAt,
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
+      id: row.id as string,
+      courseId: row.courseId as string,
+      educatorId: row.educatorId as string,
+      title: row.title as string,
+      content: row.content as string,
+      scheduledFor: row.scheduledFor as Date | null,
+      publishedAt: row.publishedAt as Date | null,
+      createdAt: row.createdAt as Date,
+      updatedAt: row.updatedAt as Date,
     };
   }
 }

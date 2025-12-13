@@ -392,7 +392,7 @@ export class AnalyticsCacheInvalidationService {
         if (!groups[key]) {
           groups[key] = [];
         }
-        groups[key].push(event);
+        groups[key]!.push(event);
         return groups;
       },
       {} as Record<string, CacheInvalidationEventData[]>
