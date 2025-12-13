@@ -12,7 +12,6 @@
  */
 
 import { IContentRepository } from '../../modules/content/infrastructure/repositories/IContentRepository.js';
-
 import { ValidationError, NotFoundError, ExternalServiceError } from '../errors/index.js';
 import { logger } from '../utils/logger.js';
 
@@ -29,7 +28,7 @@ export interface VideoUploadCompletionParams {
   uploadedBy: string;
   originalFileName: string;
   fileSize: number;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 /**
@@ -145,7 +144,7 @@ export class VideoProcessingService {
         processingJobId: processingJob.id,
         processingStatus: 'pending',
         metadata: {
-          ...((videoAsset.metadata as Record<string, any>) || {}),
+          ...((videoAsset.metadata as Record<string, unknown>) || {}),
           outputS3KeyPrefix,
           jobName,
           processingJobId: processingJob.id,
@@ -259,7 +258,7 @@ export class VideoProcessingService {
       // Add outputs if processing is completed
       if (videoAsset.processingStatus === 'completed' && videoAsset.availableResolutions) {
         statusInfo.outputs = Array.isArray(videoAsset.availableResolutions)
-          ? (videoAsset.availableResolutions as any[])
+          ? videoAsset.availableResolutions
           : [];
       }
 
@@ -322,13 +321,13 @@ export class VideoProcessingService {
 
       // Cancel MediaConvert job if exists
       if (processingJob?.jobConfiguration) {
-        const config = processingJob.jobConfiguration as any;
-        if (config.mediaConvertJobId) {
+        const config = processingJob.jobConfiguration as Record<string, unknown>;
+        if (typeof config['mediaConvertJobId'] === 'string') {
           try {
-            await this.mediaConvertService.cancelJob(config.mediaConvertJobId);
+            await this.mediaConvertService.cancelJob(config['mediaConvertJobId']);
           } catch (error) {
             logger.warn('Failed to cancel MediaConvert job', {
-              mediaConvertJobId: config.mediaConvertJobId,
+              mediaConvertJobId: config['mediaConvertJobId'],
               error: error instanceof Error ? error.message : 'Unknown error',
             });
           }
@@ -386,7 +385,7 @@ export class VideoProcessingService {
       }
 
       // Extract original parameters from metadata
-      const metadata = (videoAsset.metadata as any) || {};
+      const metadata = (videoAsset.metadata as Record<string, unknown>) || {};
       const params: VideoUploadCompletionParams = {
         videoAssetId,
         s3Bucket: videoAsset.s3Bucket,

@@ -10,7 +10,7 @@
  * - 4.4: Processing status tracking
  */
 
-import { S3Event, S3Handler, Context } from 'aws-lambda';
+import { S3Event, Context } from 'aws-lambda';
 
 import { logger } from '../utils/logger.js';
 
@@ -83,20 +83,8 @@ export const handler = async (event: S3Event, context: Context): Promise<void> =
     totalRecords: results.length,
     successCount,
     failureCount,
+    results: results.map(r => ({ success: r.success, inputS3Key: r.inputS3Key, error: r.error }))
   });
-
-  return {
-    statusCode: 200,
-    body: JSON.stringify({
-      message: 'Video processing completed',
-      results,
-      summary: {
-        total: results.length,
-        success: successCount,
-        failures: failureCount,
-      },
-    }),
-  };
 };
 
 /**
@@ -253,7 +241,7 @@ function getLambdaConfig(): LambdaConfig {
 /**
  * Sends webhook notification about job status
  */
-async function sendWebhookNotification(webhookUrl: string, payload: any): Promise<void> {
+async function sendWebhookNotification(webhookUrl: string, payload: Record<string, unknown>): Promise<void> {
   try {
     const response = await fetch(webhookUrl, {
       method: 'POST',

@@ -13,9 +13,8 @@
 
 import { Queue, Worker, Job, QueueOptions, WorkerOptions, JobsOptions } from 'bullmq';
 
-import { IContentRepository } from '../../modules/content/infrastructure/repositories/IContentRepository.js';
 import { redis } from '../../infrastructure/cache/index.js';
-
+import { IContentRepository } from '../../modules/content/infrastructure/repositories/IContentRepository.js';
 import { ExternalServiceError, NotFoundError, ValidationError } from '../errors/index.js';
 import { logger } from '../utils/logger.js';
 
@@ -611,7 +610,7 @@ export class VideoProcessingQueue {
 
       // TODO: Send notification to user about failure
       if (job) {
-        this.sendFailureNotification(job.data, error.message);
+        void this.sendFailureNotification(job.data, error.message);
       }
     });
 
@@ -638,7 +637,7 @@ export class VideoProcessingQueue {
    * Sends completion notification to user
    * TODO: Implement actual notification service integration
    */
-  private async sendCompletionNotification(result: JobCompletionData): Promise<void> {
+  private sendCompletionNotification(result: JobCompletionData): void {
     try {
       // This would integrate with the notification service
       logger.info('Sending video processing completion notification', {
@@ -664,10 +663,10 @@ export class VideoProcessingQueue {
    * Sends failure notification to user
    * TODO: Implement actual notification service integration
    */
-  private async sendFailureNotification(
+  private sendFailureNotification(
     jobData: VideoProcessingJobData,
     _errorMessage: string
-  ): Promise<void> {
+  ): void {
     try {
       logger.info('Sending video processing failure notification', {
         videoAssetId: jobData.videoAssetId,

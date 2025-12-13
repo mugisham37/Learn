@@ -98,7 +98,7 @@ export const redis = new Redis(redisOptions);
 /**
  * Get Redis client instance (alias for compatibility)
  */
-export const getRedisClient = () => redis;
+export const getRedisClient = (): Redis => redis;
 
 /**
  * Separate Redis client for session storage

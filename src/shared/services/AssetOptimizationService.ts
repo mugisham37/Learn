@@ -72,7 +72,7 @@ export class AssetOptimizationService {
 
   constructor(
     private readonly cloudFrontService: ICloudFrontService,
-    private readonly imageProcessingService: ImageProcessingService,
+    private readonly _imageProcessingService: ImageProcessingService, // TODO: Use for actual image processing
     private readonly lazyLoadingService: LazyLoadingService,
     config: AssetOptimizationConfig = {}
   ) {

@@ -12,7 +12,6 @@
  */
 
 import { IContentRepository } from '../../modules/content/infrastructure/repositories/IContentRepository.js';
-
 import { logger } from '../utils/logger.js';
 
 import { IMediaConvertService } from './IMediaConvertService.js';
