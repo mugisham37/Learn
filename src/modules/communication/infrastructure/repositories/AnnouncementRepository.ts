@@ -4,13 +4,25 @@
  * Implements data access operations for announcements using Drizzle ORM
  */
 
+/* eslint-disable import/order */
 import { eq, and, desc, asc, lte, isNull, count } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
-
 import { announcements } from '../../../../infrastructure/database/schema/communication.schema.js';
-
 import type { Announcement, AnnouncementData } from '../../domain/entities/Announcement.js';
 import type { IAnnouncementRepository } from './IAnnouncementRepository.js';
+/* eslint-enable import/order */
+
+type AnnouncementRow = {
+  id: string;
+  courseId: string;
+  educatorId: string;
+  title: string;
+  content: string;
+  scheduledFor: Date | null;
+  publishedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
 
 export class AnnouncementRepository implements IAnnouncementRepository {
   constructor(private db: NodePgDatabase<Record<string, never>>) {}
@@ -28,6 +40,9 @@ export class AnnouncementRepository implements IAnnouncementRepository {
       })
       .returning();
 
+    if (!announcement) {
+      throw new Error('Failed to create announcement');
+    }
     return this.mapToEntity(announcement);
   }
 
@@ -109,6 +124,9 @@ export class AnnouncementRepository implements IAnnouncementRepository {
       .where(eq(announcements.id, id))
       .returning();
 
+    if (!announcement) {
+      throw new Error('Failed to update announcement');
+    }
     return this.mapToEntity(announcement);
   }
 
@@ -122,6 +140,9 @@ export class AnnouncementRepository implements IAnnouncementRepository {
       .where(eq(announcements.id, id))
       .returning();
 
+    if (!announcement) {
+      throw new Error('Failed to mark announcement as published');
+    }
     return this.mapToEntity(announcement);
   }
 
@@ -138,17 +159,17 @@ export class AnnouncementRepository implements IAnnouncementRepository {
     return result?.count ?? 0;
   }
 
-  private mapToEntity(row: any): Announcement {
+  private mapToEntity(row: AnnouncementRow): Announcement {
     return {
-      id: row.id as string,
-      courseId: row.courseId as string,
-      educatorId: row.educatorId as string,
-      title: row.title as string,
-      content: row.content as string,
-      scheduledFor: row.scheduledFor as Date | null,
-      publishedAt: row.publishedAt as Date | null,
-      createdAt: row.createdAt as Date,
-      updatedAt: row.updatedAt as Date,
+      id: row.id,
+      courseId: row.courseId,
+      educatorId: row.educatorId,
+      title: row.title,
+      content: row.content,
+      scheduledFor: row.scheduledFor ?? undefined,
+      publishedAt: row.publishedAt ?? undefined,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
     };
   }
 }

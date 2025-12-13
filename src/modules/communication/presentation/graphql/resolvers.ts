@@ -11,6 +11,7 @@
 import { GraphQLError } from 'graphql';
 import { PubSub } from 'graphql-subscriptions';
 
+import type { GraphQLContext } from '../../../../infrastructure/graphql/apolloServer.js';
 import {
   SUBSCRIPTION_EVENTS,
   createAsyncIterator,
@@ -18,7 +19,6 @@ import {
   withFilter,
 } from '../../../../infrastructure/graphql/pubsub.js';
 import { requireSubscriptionAuth } from '../../../../infrastructure/graphql/subscriptionServer.js';
-import type { GraphQLContext } from '../../../../infrastructure/graphql/apolloServer.js';
 import {
   ValidationError,
   AuthorizationError,
@@ -43,16 +43,6 @@ import {
   ConversationResult,
 } from '../../application/services/IMessagingService.js';
 import { VoteType } from '../../domain/entities/DiscussionPost.js';
-
-/**
- * GraphQL context interface
- */
-export interface CommunicationGraphQLContext extends GraphQLContext {
-  messagingService: IMessagingService;
-  discussionService: IDiscussionService;
-  announcementService: IAnnouncementService;
-  realtimeService?: IRealtimeService;
-}
 
 /**
  * GraphQL resolver parent type (unused in most cases)
@@ -92,17 +82,11 @@ interface AnnouncementInput {
 /**
  * GraphQL context interface
  */
-export interface CommunicationGraphQLContext {
-  user?: {
-    id: string;
-    email: string;
-    role: string;
-  };
+export interface CommunicationGraphQLContext extends GraphQLContext {
   messagingService: IMessagingService;
   discussionService: IDiscussionService;
   announcementService: IAnnouncementService;
   realtimeService?: IRealtimeService;
-  pubsub: PubSub;
 }
 
 /**
@@ -265,7 +249,7 @@ export const communicationResolvers = {
       _parent: GraphQLParent,
       args: { pagination?: PaginationInput },
       context: CommunicationGraphQLContext
-    ): Promise<Connection<any>> => {
+    ): Promise<Connection<unknown>> => {
       const user = requireAuth(context);
 
       try {
@@ -297,7 +281,7 @@ export const communicationResolvers = {
       _parent: GraphQLParent,
       args: { conversationId: string; pagination?: PaginationInput },
       context: CommunicationGraphQLContext
-    ): Promise<Connection<any>> => {
+    ): Promise<Connection<unknown>> => {
       const user = requireAuth(context);
 
       try {
@@ -499,7 +483,7 @@ export const communicationResolvers = {
       },
       context: CommunicationGraphQLContext
     ): Promise<any> => {
-      const user = requireAuth(context);
+      requireAuth(context);
 
       try {
         const pagination = convertPagination(args.pagination);
@@ -575,7 +559,7 @@ export const communicationResolvers = {
       args: { courseId: string },
       context: CommunicationGraphQLContext
     ): Promise<any[]> => {
-      const user = requireAuth(context);
+      const _user = requireAuth(context);
 
       try {
         if (!context.realtimeService) {
@@ -793,7 +777,7 @@ export const communicationResolvers = {
      * Create discussion thread
      */
     createDiscussionThread: async (
-      _parent: any,
+      _parent: GraphQLParent,
       args: { courseId: string; input: CreateThreadInput },
       context: CommunicationGraphQLContext
     ): Promise<any> => {
@@ -890,7 +874,7 @@ export const communicationResolvers = {
      * Reply to thread
      */
     replyToThread: async (
-      _parent: any,
+      _parent: GraphQLParent,
       args: { threadId: string; input: ReplyToThreadInput },
       context: CommunicationGraphQLContext
     ): Promise<any> => {
@@ -964,7 +948,7 @@ export const communicationResolvers = {
      * Vote on post
      */
     votePost: async (
-      _parent: any,
+      _parent: GraphQLParent,
       args: { postId: string; voteType: 'UPVOTE' | 'REMOVE_VOTE' },
       context: CommunicationGraphQLContext
     ): Promise<any> => {
@@ -1035,7 +1019,7 @@ export const communicationResolvers = {
      * Mark solution
      */
     markSolution: async (
-      _parent: any,
+      _parent: GraphQLParent,
       args: { postId: string },
       context: CommunicationGraphQLContext
     ): Promise<any> => {
@@ -1089,7 +1073,7 @@ export const communicationResolvers = {
      * Create announcement
      */
     createAnnouncement: async (
-      _parent: any,
+      _parent: GraphQLParent,
       args: { courseId: string; input: AnnouncementInput },
       context: CommunicationGraphQLContext
     ): Promise<any> => {
@@ -1173,7 +1157,7 @@ export const communicationResolvers = {
      * Update presence
      */
     updatePresence: async (
-      _parent: any,
+      _parent: GraphQLParent,
       args: { status: 'ONLINE' | 'OFFLINE' | 'AWAY'; courseId?: string },
       context: CommunicationGraphQLContext
     ): Promise<boolean> => {
@@ -1218,7 +1202,7 @@ export const communicationResolvers = {
      * Start typing indicator
      */
     startTyping: async (
-      _parent: any,
+      _parent: GraphQLParent,
       args: { conversationId?: string; threadId?: string },
       context: CommunicationGraphQLContext
     ): Promise<boolean> => {
@@ -1260,7 +1244,7 @@ export const communicationResolvers = {
      * Stop typing indicator
      */
     stopTyping: async (
-      _parent: any,
+      _parent: GraphQLParent,
       args: { conversationId?: string; threadId?: string },
       context: CommunicationGraphQLContext
     ): Promise<boolean> => {
@@ -1310,7 +1294,7 @@ export const communicationResolvers = {
           requireSubscriptionAuth(context);
           return createAsyncIterator(SUBSCRIPTION_EVENTS.MESSAGE_RECEIVED);
         },
-        (payload: any, variables: any, context: CommunicationGraphQLContext) => {
+        (payload: { userId?: string }, variables: { userId?: string }, context: CommunicationGraphQLContext) => {
           // Users can only subscribe to their own messages
           const user = requireSubscriptionAuth(context);
           return payload.userId === variables.userId && payload.userId === user.id;
@@ -1328,7 +1312,7 @@ export const communicationResolvers = {
           requireSubscriptionAuth(context);
           return createAsyncIterator(SUBSCRIPTION_EVENTS.NEW_DISCUSSION_POST);
         },
-        (payload: any, variables: any) => {
+        (payload: { threadId?: string }, variables: { threadId?: string }) => {
           return payload.threadId === variables.threadId;
         }
       ),
@@ -1344,7 +1328,7 @@ export const communicationResolvers = {
           requireSubscriptionAuth(context);
           return createAsyncIterator(SUBSCRIPTION_EVENTS.ANNOUNCEMENT_PUBLISHED);
         },
-        (payload: any, variables: any) => {
+        (payload: { courseId?: string }, variables: { courseId?: string }) => {
           return payload.courseId === variables.courseId;
         }
       ),
@@ -1360,7 +1344,7 @@ export const communicationResolvers = {
           requireSubscriptionAuth(context);
           return createAsyncIterator(SUBSCRIPTION_EVENTS.USER_PRESENCE);
         },
-        (payload: any, variables: any) => {
+        (payload: { courseId?: string }, variables: { courseId?: string }) => {
           return payload.courseId === variables.courseId;
         }
       ),
@@ -1376,7 +1360,7 @@ export const communicationResolvers = {
           requireSubscriptionAuth(context);
           return createAsyncIterator(SUBSCRIPTION_EVENTS.TYPING_INDICATOR);
         },
-        (payload: any, variables: unknown) => {
+        (payload: { conversationId?: string; threadId?: string }, variables: { conversationId?: string; threadId?: string }) => {
           return (
             (variables.conversationId && payload.conversationId === variables.conversationId) ||
             (variables.threadId && payload.threadId === variables.threadId)
