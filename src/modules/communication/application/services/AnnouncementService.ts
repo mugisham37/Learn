@@ -75,7 +75,8 @@ interface IEmailService {
 export class AnnouncementService implements IAnnouncementService {
   constructor(
     private readonly announcementRepository: IAnnouncementRepository,
-    private readonly enrollmentService?: IEnrollmentService,
+    // @ts-expect-error - Reserved for future enrollment verification implementation
+    private readonly _enrollmentService?: IEnrollmentService,
     private readonly realtimeService?: IRealtimeService,
     private readonly notificationService?: INotificationService,
     private readonly emailService?: IEmailService

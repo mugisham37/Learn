@@ -9,7 +9,6 @@
  */
 
 import { GraphQLError } from 'graphql';
-import { PubSub } from 'graphql-subscriptions';
 
 import type { GraphQLContext } from '../../../../infrastructure/graphql/apolloServer.js';
 import {
@@ -228,8 +227,8 @@ function toConnection<T>(
     pageInfo: {
       hasNextPage,
       hasPreviousPage,
-      startCursor: edges.length > 0 ? edges[0].cursor : null,
-      endCursor: edges.length > 0 ? edges[edges.length - 1].cursor : null,
+      startCursor: edges.length > 0 ? edges[0]?.cursor ?? null : null,
+      endCursor: edges.length > 0 ? edges[edges.length - 1]?.cursor ?? null : null,
     },
     totalCount,
   };
@@ -246,7 +245,7 @@ export const communicationResolvers = {
      * Get conversations for the authenticated user
      */
     conversations: async (
-      _parent: GraphQLParent,
+      _parent: GraphQLParent | undefined,
       args: { pagination?: PaginationInput },
       context: CommunicationGraphQLContext
     ): Promise<Connection<unknown>> => {
@@ -278,7 +277,7 @@ export const communicationResolvers = {
      * Get messages in a conversation
      */
     conversationMessages: async (
-      _parent: GraphQLParent,
+      _parent: GraphQLParent | undefined,
       args: { conversationId: string; pagination?: PaginationInput },
       context: CommunicationGraphQLContext
     ): Promise<Connection<unknown>> => {
@@ -316,7 +315,7 @@ export const communicationResolvers = {
      * Get unread message count
      */
     unreadMessageCount: async (
-      _parent: GraphQLParent,
+      _parent: GraphQLParent | undefined,
       _args: Record<string, unknown>,
       context: CommunicationGraphQLContext
     ): Promise<number> => {
@@ -338,14 +337,14 @@ export const communicationResolvers = {
      * Get discussion threads for a course
      */
     discussionThreads: async (
-      _parent: GraphQLParent,
+      _parent: GraphQLParent | undefined,
       args: {
         courseId: string;
         filter?: ThreadFilter;
         pagination?: PaginationInput;
       },
       context: CommunicationGraphQLContext
-    ): Promise<any> => {
+    ): Promise<Connection<unknown>> => {
       const user = requireAuth(context);
 
       try {
@@ -356,7 +355,7 @@ export const communicationResolvers = {
           args.courseId,
           user.id,
           filter,
-          'lastActivityAt' as any, // Default sort by last activity
+          'lastActivityAt' as never, // Default sort by last activity
           'desc',
           pagination
         );
@@ -385,10 +384,10 @@ export const communicationResolvers = {
      * Get a specific discussion thread
      */
     discussionThread: async (
-      _parent: GraphQLParent,
+      _parent: GraphQLParent | undefined,
       args: { threadId: string },
       context: CommunicationGraphQLContext
-    ): Promise<any> => {
+    ): Promise<unknown> => {
       const user = requireAuth(context);
 
       try {
@@ -428,10 +427,10 @@ export const communicationResolvers = {
      * Get posts in a thread
      */
     threadPosts: async (
-      _parent: GraphQLParent,
+      _parent: GraphQLParent | undefined,
       args: { threadId: string; pagination?: PaginationInput },
       context: CommunicationGraphQLContext
-    ): Promise<any> => {
+    ): Promise<Connection<unknown>> => {
       const user = requireAuth(context);
 
       try {
@@ -475,14 +474,14 @@ export const communicationResolvers = {
      * Get announcements for a course
      */
     announcements: async (
-      _parent: GraphQLParent,
+      _parent: GraphQLParent | undefined,
       args: {
         courseId: string;
         filter?: AnnouncementFilter;
         pagination?: PaginationInput;
       },
       context: CommunicationGraphQLContext
-    ): Promise<any> => {
+    ): Promise<Connection<unknown>> => {
       requireAuth(context);
 
       try {
@@ -524,10 +523,10 @@ export const communicationResolvers = {
      * Get a specific announcement
      */
     announcement: async (
-      _parent: GraphQLParent,
+      _parent: GraphQLParent | undefined,
       args: { announcementId: string },
       context: CommunicationGraphQLContext
-    ): Promise<any> => {
+    ): Promise<unknown> => {
       const user = requireAuth(context);
 
       try {
@@ -555,11 +554,11 @@ export const communicationResolvers = {
      * Get course presence (online users)
      */
     coursePresence: async (
-      _parent: GraphQLParent,
+      _parent: GraphQLParent | undefined,
       args: { courseId: string },
       context: CommunicationGraphQLContext
-    ): Promise<any[]> => {
-      const _user = requireAuth(context);
+    ): Promise<unknown[]> => {
+      requireAuth(context);
 
       try {
         if (!context.realtimeService) {
@@ -592,10 +591,10 @@ export const communicationResolvers = {
      * Send a message
      */
     sendMessage: async (
-      _parent: GraphQLParent,
+      _parent: GraphQLParent | undefined,
       args: { recipientId: string; input: MessageInput },
       context: CommunicationGraphQLContext
-    ): Promise<any> => {
+    ): Promise<unknown> => {
       const user = requireAuth(context);
 
       try {
@@ -663,7 +662,7 @@ export const communicationResolvers = {
      * Mark message as read
      */
     markMessageAsRead: async (
-      _parent: GraphQLParent,
+      _parent: GraphQLParent | undefined,
       args: { messageId: string },
       context: CommunicationGraphQLContext
     ): Promise<boolean> => {
@@ -704,7 +703,7 @@ export const communicationResolvers = {
      * Mark conversation as read
      */
     markConversationAsRead: async (
-      _parent: GraphQLParent,
+      _parent: GraphQLParent | undefined,
       args: { conversationId: string },
       context: CommunicationGraphQLContext
     ): Promise<boolean> => {
@@ -736,7 +735,7 @@ export const communicationResolvers = {
      * Delete message
      */
     deleteMessage: async (
-      _parent: GraphQLParent,
+      _parent: GraphQLParent | undefined,
       args: { messageId: string },
       context: CommunicationGraphQLContext
     ): Promise<boolean> => {
@@ -777,10 +776,10 @@ export const communicationResolvers = {
      * Create discussion thread
      */
     createDiscussionThread: async (
-      _parent: GraphQLParent,
+      _parent: GraphQLParent | undefined,
       args: { courseId: string; input: CreateThreadInput },
       context: CommunicationGraphQLContext
-    ): Promise<any> => {
+    ): Promise<unknown> => {
       const user = requireAuth(context);
 
       try {
@@ -874,10 +873,10 @@ export const communicationResolvers = {
      * Reply to thread
      */
     replyToThread: async (
-      _parent: GraphQLParent,
+      _parent: GraphQLParent | undefined,
       args: { threadId: string; input: ReplyToThreadInput },
       context: CommunicationGraphQLContext
-    ): Promise<any> => {
+    ): Promise<unknown> => {
       const user = requireAuth(context);
 
       try {
@@ -948,10 +947,10 @@ export const communicationResolvers = {
      * Vote on post
      */
     votePost: async (
-      _parent: GraphQLParent,
+      _parent: GraphQLParent | undefined,
       args: { postId: string; voteType: 'UPVOTE' | 'REMOVE_VOTE' },
       context: CommunicationGraphQLContext
-    ): Promise<any> => {
+    ): Promise<unknown> => {
       const user = requireAuth(context);
 
       try {
@@ -1019,10 +1018,10 @@ export const communicationResolvers = {
      * Mark solution
      */
     markSolution: async (
-      _parent: GraphQLParent,
+      _parent: GraphQLParent | undefined,
       args: { postId: string },
       context: CommunicationGraphQLContext
-    ): Promise<any> => {
+    ): Promise<unknown> => {
       const user = requireEducatorRole(context);
 
       try {
@@ -1073,10 +1072,10 @@ export const communicationResolvers = {
      * Create announcement
      */
     createAnnouncement: async (
-      _parent: GraphQLParent,
+      _parent: GraphQLParent | undefined,
       args: { courseId: string; input: AnnouncementInput },
       context: CommunicationGraphQLContext
-    ): Promise<any> => {
+    ): Promise<unknown> => {
       const user = requireEducatorRole(context);
 
       try {
@@ -1157,7 +1156,7 @@ export const communicationResolvers = {
      * Update presence
      */
     updatePresence: async (
-      _parent: GraphQLParent,
+      _parent: GraphQLParent | undefined,
       args: { status: 'ONLINE' | 'OFFLINE' | 'AWAY'; courseId?: string },
       context: CommunicationGraphQLContext
     ): Promise<boolean> => {
@@ -1202,7 +1201,7 @@ export const communicationResolvers = {
      * Start typing indicator
      */
     startTyping: async (
-      _parent: GraphQLParent,
+      _parent: GraphQLParent | undefined,
       args: { conversationId?: string; threadId?: string },
       context: CommunicationGraphQLContext
     ): Promise<boolean> => {
@@ -1244,7 +1243,7 @@ export const communicationResolvers = {
      * Stop typing indicator
      */
     stopTyping: async (
-      _parent: GraphQLParent,
+      _parent: GraphQLParent | undefined,
       args: { conversationId?: string; threadId?: string },
       context: CommunicationGraphQLContext
     ): Promise<boolean> => {
@@ -1289,15 +1288,19 @@ export const communicationResolvers = {
      */
     messageReceived: {
       subscribe: withFilter(
-        (_parent: GraphQLParent, _args: Record<string, unknown>, context: CommunicationGraphQLContext) => {
+        (_parent: GraphQLParent | undefined, _args: Record<string, unknown> | undefined, context: CommunicationGraphQLContext | undefined) => {
           // Require authentication for subscriptions
+          if (!context) throw new GraphQLError('Context required');
           requireSubscriptionAuth(context);
-          return createAsyncIterator(SUBSCRIPTION_EVENTS.MESSAGE_RECEIVED);
+          return createAsyncIterator(SUBSCRIPTION_EVENTS.MESSAGE_RECEIVED) as AsyncIterator<unknown>;
         },
-        (payload: { userId?: string }, variables: { userId?: string }, context: CommunicationGraphQLContext) => {
+        (rootValue: GraphQLParent | undefined, variables: Record<string, unknown> | undefined, context: CommunicationGraphQLContext | undefined) => {
           // Users can only subscribe to their own messages
+          if (!context || !variables) return false;
           const user = requireSubscriptionAuth(context);
-          return payload.userId === variables.userId && payload.userId === user.id;
+          const payload = rootValue as { userId?: string };
+          const vars = variables as { userId?: string };
+          return payload.userId === vars.userId && payload.userId === user.id;
         }
       ),
     },
@@ -1307,13 +1310,17 @@ export const communicationResolvers = {
      */
     newDiscussionPost: {
       subscribe: withFilter(
-        (_parent: GraphQLParent, _args: Record<string, unknown>, context: CommunicationGraphQLContext) => {
+        (_parent: GraphQLParent | undefined, _args: Record<string, unknown> | undefined, context: CommunicationGraphQLContext | undefined) => {
           // Require authentication for subscriptions
+          if (!context) throw new GraphQLError('Context required');
           requireSubscriptionAuth(context);
-          return createAsyncIterator(SUBSCRIPTION_EVENTS.NEW_DISCUSSION_POST);
+          return createAsyncIterator(SUBSCRIPTION_EVENTS.NEW_DISCUSSION_POST) as AsyncIterator<unknown>;
         },
-        (payload: { threadId?: string }, variables: { threadId?: string }) => {
-          return payload.threadId === variables.threadId;
+        (rootValue: GraphQLParent | undefined, variables: Record<string, unknown> | undefined) => {
+          if (!variables) return false;
+          const payload = rootValue as { threadId?: string };
+          const vars = variables as { threadId?: string };
+          return payload.threadId === vars.threadId;
         }
       ),
     },
@@ -1323,13 +1330,17 @@ export const communicationResolvers = {
      */
     announcementPublished: {
       subscribe: withFilter(
-        (_parent: GraphQLParent, _args: Record<string, unknown>, context: CommunicationGraphQLContext) => {
+        (_parent: GraphQLParent | undefined, _args: Record<string, unknown> | undefined, context: CommunicationGraphQLContext | undefined) => {
           // Require authentication for subscriptions
+          if (!context) throw new GraphQLError('Context required');
           requireSubscriptionAuth(context);
-          return createAsyncIterator(SUBSCRIPTION_EVENTS.ANNOUNCEMENT_PUBLISHED);
+          return createAsyncIterator(SUBSCRIPTION_EVENTS.ANNOUNCEMENT_PUBLISHED) as AsyncIterator<unknown>;
         },
-        (payload: { courseId?: string }, variables: { courseId?: string }) => {
-          return payload.courseId === variables.courseId;
+        (rootValue: GraphQLParent | undefined, variables: Record<string, unknown> | undefined) => {
+          if (!variables) return false;
+          const payload = rootValue as { courseId?: string };
+          const vars = variables as { courseId?: string };
+          return payload.courseId === vars.courseId;
         }
       ),
     },
@@ -1339,13 +1350,17 @@ export const communicationResolvers = {
      */
     userPresence: {
       subscribe: withFilter(
-        (_parent: GraphQLParent, _args: Record<string, unknown>, context: CommunicationGraphQLContext) => {
+        (_parent: GraphQLParent | undefined, _args: Record<string, unknown> | undefined, context: CommunicationGraphQLContext | undefined) => {
           // Require authentication for subscriptions
+          if (!context) throw new GraphQLError('Context required');
           requireSubscriptionAuth(context);
-          return createAsyncIterator(SUBSCRIPTION_EVENTS.USER_PRESENCE);
+          return createAsyncIterator(SUBSCRIPTION_EVENTS.USER_PRESENCE) as AsyncIterator<unknown>;
         },
-        (payload: { courseId?: string }, variables: { courseId?: string }) => {
-          return payload.courseId === variables.courseId;
+        (rootValue: GraphQLParent | undefined, variables: Record<string, unknown> | undefined) => {
+          if (!variables) return false;
+          const payload = rootValue as { courseId?: string };
+          const vars = variables as { courseId?: string };
+          return payload.courseId === vars.courseId;
         }
       ),
     },
@@ -1355,15 +1370,19 @@ export const communicationResolvers = {
      */
     typingIndicator: {
       subscribe: withFilter(
-        (_parent: GraphQLParent, _args: Record<string, unknown>, context: CommunicationGraphQLContext) => {
+        (_parent: GraphQLParent | undefined, _args: Record<string, unknown> | undefined, context: CommunicationGraphQLContext | undefined) => {
           // Require authentication for subscriptions
+          if (!context) throw new GraphQLError('Context required');
           requireSubscriptionAuth(context);
-          return createAsyncIterator(SUBSCRIPTION_EVENTS.TYPING_INDICATOR);
+          return createAsyncIterator(SUBSCRIPTION_EVENTS.TYPING_INDICATOR) as AsyncIterator<unknown>;
         },
-        (payload: { conversationId?: string; threadId?: string }, variables: { conversationId?: string; threadId?: string }) => {
-          return (
-            (variables.conversationId && payload.conversationId === variables.conversationId) ||
-            (variables.threadId && payload.threadId === variables.threadId)
+        (rootValue: GraphQLParent | undefined, variables: Record<string, unknown> | undefined) => {
+          if (!variables) return false;
+          const payload = rootValue as { conversationId?: string; threadId?: string };
+          const vars = variables as { conversationId?: string; threadId?: string };
+          return Boolean(
+            (vars.conversationId && payload.conversationId === vars.conversationId) ||
+            (vars.threadId && payload.threadId === vars.threadId)
           );
         }
       ),
