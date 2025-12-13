@@ -53,7 +53,7 @@ const DEFAULT_OPTIONS: Required<CompressionOptions> = {
 /**
  * Checks if content type should be compressed
  */
-function _shouldCompress(contentType: string, allowedTypes: string[]): boolean {
+function shouldCompress(contentType: string, allowedTypes: string[]): boolean {
   if (!contentType) return false;
 
   const type = contentType.toLowerCase().split(';')[0]?.trim() || '';
@@ -138,7 +138,7 @@ export function createCompressionMiddleware(options: CompressionOptions = {}): (
 /**
  * Compresses a payload using the specified compression stream
  */
-async function _compressStream(payload: string | Buffer, compressionStream: NodeJS.ReadWriteStream): Promise<Buffer> {
+async function compressStream(payload: string | Buffer, compressionStream: NodeJS.ReadWriteStream): Promise<Buffer> {
   const chunks: Buffer[] = [];
 
   compressionStream.on('data', (chunk: Buffer) => {

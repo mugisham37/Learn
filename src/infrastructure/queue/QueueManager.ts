@@ -5,12 +5,24 @@
  * graceful shutdown, and lifecycle management.
  */
 
-import { logger } from '../../shared/utils/logger.js';
 import { config } from '../../config/index.js';
+import { logger } from '../../shared/utils/logger.js';
 import { secureConfig } from '../../shared/utils/secureConfig.js';
+
 import { QueueFactory } from './QueueFactory.js';
 import { QueueMonitor } from './QueueMonitor.js';
 import { QueueFactoryOptions, QueueStats } from './types.js';
+
+/**
+ * Alert interface for queue monitoring
+ */
+interface Alert extends Record<string, unknown> {
+  severity: 'info' | 'warning' | 'error' | 'critical';
+  queueName: string;
+  message: string;
+  timestamp: Date;
+  metadata?: Record<string, unknown>;
+}
 
 /**
  * Queue Manager for centralized queue lifecycle management
@@ -43,7 +55,7 @@ export class QueueManager {
   public async initialize(): Promise<void> {
     if (this.isInitialized) {
       logger.warn('Queue manager already initialized');
-      return;
+      return Promise.resolve();
     }
 
     try {
@@ -123,7 +135,7 @@ export class QueueManager {
   public async getHealthStatus(): Promise<{
     healthy: boolean;
     queues: QueueStats[];
-    alerts: any[];
+    alerts: Alert[];
     timestamp: Date;
   }> {
     if (!this.queueFactory || !this.queueMonitor) {
@@ -136,10 +148,19 @@ export class QueueManager {
     }
 
     try {
-      const [queues, alerts] = await Promise.all([
+      const [queues, alertsRaw] = await Promise.all([
         this.queueFactory.getAllQueueStats(),
         Promise.resolve(this.queueMonitor.getAlerts(10)),
       ]);
+
+      // Ensure alerts conform to the expected interface
+      const alerts: Alert[] = alertsRaw.map((alert: any) => ({
+        severity: alert.severity || 'info',
+        queueName: alert.queueName || 'unknown',
+        message: alert.message || 'Unknown alert',
+        timestamp: alert.timestamp || new Date(),
+        metadata: alert.metadata || {},
+      }));
 
       // Determine overall health
       const healthy =
@@ -229,16 +250,17 @@ export class QueueManager {
    * Set up graceful shutdown handlers
    */
   private setupGracefulShutdown(): void {
-    const shutdownHandler = async (signal: string) => {
+    const shutdownHandler = (signal: string): void => {
       logger.info(`Received ${signal}, initiating graceful shutdown...`);
 
-      try {
-        await this.shutdown();
-        process.exit(0);
-      } catch (error) {
-        logger.error('Error during graceful shutdown:', error);
-        process.exit(1);
-      }
+      this.shutdown()
+        .then(() => {
+          process.exit(0);
+        })
+        .catch((error) => {
+          logger.error('Error during graceful shutdown:', error);
+          process.exit(1);
+        });
     };
 
     // Handle various shutdown signals
@@ -247,16 +269,18 @@ export class QueueManager {
     process.on('SIGUSR2', () => shutdownHandler('SIGUSR2')); // nodemon restart
 
     // Handle uncaught exceptions
-    process.on('uncaughtException', async (error) => {
+    process.on('uncaughtException', (error) => {
       logger.error('Uncaught exception:', error);
-      await this.shutdown();
-      process.exit(1);
+      this.shutdown()
+        .then(() => process.exit(1))
+        .catch(() => process.exit(1));
     });
 
-    process.on('unhandledRejection', async (reason, promise) => {
+    process.on('unhandledRejection', (reason, promise) => {
       logger.error('Unhandled rejection at:', promise, 'reason:', reason);
-      await this.shutdown();
-      process.exit(1);
+      this.shutdown()
+        .then(() => process.exit(1))
+        .catch(() => process.exit(1));
     });
 
     logger.info('Graceful shutdown handlers registered');

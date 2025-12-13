@@ -80,11 +80,13 @@ export abstract class OptimizedBaseRepository<T extends Record<string, unknown>>
 
     // Query database
     const startTime = Date.now();
-    const [result] = await this.db
+    const results = await this.db
       .select()
       .from(this.table)
       .where(eq(this.table[this.primaryKey as keyof typeof this.table] as any, id))
       .limit(1);
+    
+    const result = results[0] as T | undefined;
 
     const executionTime = Date.now() - startTime;
 
@@ -102,7 +104,7 @@ export abstract class OptimizedBaseRepository<T extends Record<string, unknown>>
       await this.setCache(id, result, cacheConfig);
     }
 
-    return result || null;
+    return result ?? null;
   }
 
   /**
@@ -127,7 +129,7 @@ export abstract class OptimizedBaseRepository<T extends Record<string, unknown>>
       const cached = await this.getFromCache(cacheKey, cacheConfig.keyPrefix);
       if (cached) {
         logger.debug('Cache hit for pagination', { cacheKey });
-        return cached;
+        return cached as PaginationResult<T>;
       }
     }
 
@@ -206,7 +208,7 @@ export abstract class OptimizedBaseRepository<T extends Record<string, unknown>>
       for (const id of ids) {
         const cached = await this.getFromCache(id, cacheConfig.keyPrefix);
         if (cached) {
-          results.push(cached);
+          results.push(cached as T);
         } else {
           uncachedIds.push(id);
         }
@@ -235,7 +237,7 @@ export abstract class OptimizedBaseRepository<T extends Record<string, unknown>>
         });
       }
 
-      results.push(...dbResults);
+      results.push(...(dbResults as T[]));
 
       // Cache individual results if enabled
       if (cacheConfig.enabled) {
@@ -320,10 +322,12 @@ export abstract class OptimizedBaseRepository<T extends Record<string, unknown>>
   async delete(id: string, _options: QueryOptions = {}): Promise<boolean> {
     const startTime = Date.now();
 
-    const [result] = await this.db
+    const results = await this.db
       .delete(this.table)
-      .where(eq(this.table[this.primaryKey as keyof typeof this.table] as unknown, id))
+      .where(eq(this.table[this.primaryKey as keyof typeof this.table] as any, id))
       .returning();
+    
+    const result = results[0];
 
     const executionTime = Date.now() - startTime;
 

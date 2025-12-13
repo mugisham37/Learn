@@ -7,16 +7,15 @@
  * Requirements: 9.6, 9.7, 9.8
  */
 
+import { createAdapter } from '@socket.io/redis-adapter';
 import { FastifyInstance } from 'fastify';
 import { verify } from 'jsonwebtoken';
 import { Server as SocketIOServer, Socket } from 'socket.io';
-import { createAdapter } from '@socket.io/redis-adapter';
 
 import { config } from '../../config/index.js';
-
-import { redis } from '../cache/index.js';
 import { logger } from '../../shared/utils/logger.js';
 import { secrets } from '../../shared/utils/secureConfig.js';
+import { redis } from '../cache/index.js';
 
 /**
  * Extended Socket interface with authenticated user data
@@ -127,44 +126,54 @@ export async function createSocketServer(fastify: FastifyInstance): Promise<Sock
   });
 
   // Connection event handler
-  io.on('connection', async (socket: AuthenticatedSocket) => {
+  io.on('connection', async (socket) => {
+    const authSocket = socket as AuthenticatedSocket;
     logger.info('Socket connected', {
-      socketId: socket.id,
-      userId: socket.userId,
-      userRole: socket.userRole,
+      socketId: authSocket.id,
+      userId: authSocket.userId,
+      userRole: authSocket.userRole,
     });
 
     // Join user-specific room for private notifications
-    await socket.join(SocketRooms.user(socket.userId));
+    await authSocket.join(SocketRooms.user(authSocket.userId));
 
     // Join course rooms if user is enrolled (requirement 9.7)
-    if (socket.enrolledCourses && socket.enrolledCourses.length > 0) {
-      for (const courseId of socket.enrolledCourses) {
-        await socket.join(SocketRooms.course(courseId));
+    if (authSocket.enrolledCourses && authSocket.enrolledCourses.length > 0) {
+      for (const courseId of authSocket.enrolledCourses) {
+        await authSocket.join(SocketRooms.course(courseId));
       }
     }
 
     // Handle presence updates
-    await handleUserPresence(socket, 'online');
+    await handleUserPresence(authSocket, 'online');
 
     // Set up event handlers
-    setupSocketEventHandlers(socket);
+    setupSocketEventHandlers(authSocket);
 
     // Handle disconnection
-    socket.on('disconnect', async (reason) => {
+    authSocket.on('disconnect', async (reason) => {
       logger.info('Socket disconnected', {
-        socketId: socket.id,
-        userId: socket.userId,
+        socketId: authSocket.id,
+        userId: authSocket.userId,
         reason,
       });
 
       // Update presence with delay for reconnection
-      setTimeout(async () => {
-        const userSockets = await io?.in(SocketRooms.user(socket.userId)).fetchSockets();
-        if (!userSockets || userSockets.length === 0) {
-          // User has no active connections, mark as offline
-          await handleUserPresence(socket, 'offline');
-        }
+      setTimeout(() => {
+        void (async () => {
+          try {
+            const userSockets = await io?.in(SocketRooms.user(authSocket.userId)).fetchSockets();
+            if (!userSockets || userSockets.length === 0) {
+              // User has no active connections, mark as offline
+              await handleUserPresence(authSocket, 'offline');
+            }
+          } catch (error) {
+            logger.error('Error updating user presence on disconnect', {
+              userId: authSocket.userId,
+              error: error instanceof Error ? error.message : String(error),
+            });
+          }
+        })();
       }, 5000); // 5-second delay for reconnection
     });
   });
@@ -181,10 +190,10 @@ export async function createSocketServer(fastify: FastifyInstance): Promise<Sock
  * Authentication middleware for WebSocket connections
  * Validates JWT token and attaches user context to socket
  */
-async function authenticateSocket(socket: any, next: (err?: Error) => void): Promise<void> {
+function authenticateSocket(socket: Socket, next: (err?: Error) => void): void {
   try {
     // Extract token from auth header or query parameter
-    const token = socket.handshake.auth?.token || socket.handshake.query?.token;
+    const token = (socket.handshake.auth as any)?.token || (socket.handshake.query as any)?.token;
 
     if (!token) {
       throw new Error('No authentication token provided');
@@ -198,9 +207,9 @@ async function authenticateSocket(socket: any, next: (err?: Error) => void): Pro
     };
 
     // Attach user data to socket
-    socket.userId = decoded.userId;
-    socket.userRole = decoded.role;
-    socket.enrolledCourses = decoded.enrolledCourses;
+    (socket as any).userId = decoded.userId;
+    (socket as any).userRole = decoded.role;
+    (socket as any).enrolledCourses = decoded.enrolledCourses;
 
     next();
   } catch (error) {
@@ -432,7 +441,7 @@ export function getSocketServer(): SocketIOServer {
 /**
  * Emits an event to a specific user
  */
-export async function emitToUser(userId: string, event: string, data: any): Promise<void> {
+export function emitToUser(userId: string, event: string, data: Record<string, unknown>): void {
   try {
     if (!io) {
       throw new Error('Socket.io server not initialized');
@@ -457,7 +466,7 @@ export async function emitToUser(userId: string, event: string, data: any): Prom
 /**
  * Emits an event to a specific room
  */
-export async function emitToRoom(room: string, event: string, data: any): Promise<void> {
+export function emitToRoom(room: string, event: string, data: Record<string, unknown>): void {
   try {
     if (!io) {
       throw new Error('Socket.io server not initialized');
@@ -482,27 +491,27 @@ export async function emitToRoom(room: string, event: string, data: any): Promis
 /**
  * Emits an event to all users in a course
  */
-export async function emitToCourse(courseId: string, event: string, data: any): Promise<void> {
-  return emitToRoom(SocketRooms.course(courseId), event, data);
+export function emitToCourse(courseId: string, event: string, data: Record<string, unknown>): void {
+  emitToRoom(SocketRooms.course(courseId), event, data);
 }
 
 /**
  * Emits an event to a conversation between two users
  */
-export async function emitToConversation(
+export function emitToConversation(
   userId1: string,
   userId2: string,
   event: string,
-  data: any
-): Promise<void> {
-  return emitToRoom(SocketRooms.conversation(userId1, userId2), event, data);
+  data: Record<string, unknown>
+): void {
+  emitToRoom(SocketRooms.conversation(userId1, userId2), event, data);
 }
 
 /**
  * Emits an event to a discussion thread
  */
-export async function emitToThread(threadId: string, event: string, data: any): Promise<void> {
-  return emitToRoom(SocketRooms.thread(threadId), event, data);
+export function emitToThread(threadId: string, event: string, data: Record<string, unknown>): void {
+  emitToRoom(SocketRooms.thread(threadId), event, data);
 }
 
 /**
@@ -515,7 +524,7 @@ export async function getOnlineUsersInCourse(courseId: string): Promise<string[]
     }
 
     const sockets = await io.in(SocketRooms.course(courseId)).fetchSockets();
-    return sockets.map((socket: unknown) => socket.userId).filter(Boolean);
+    return sockets.map((socket: any) => (socket as AuthenticatedSocket).userId).filter(Boolean);
   } catch (error) {
     logger.error('Error getting online users in course', {
       courseId,

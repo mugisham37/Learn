@@ -57,18 +57,26 @@ function calculateBackoffDelay(attempt: number, config: RetryConfig): number {
 /**
  * Check if an error is retryable
  */
-function isRetryableError(error: any): boolean {
+function isRetryableError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') {
+    return false;
+  }
+
+  const err = error as Record<string, unknown>;
+  
   // Retry on network errors, timeouts, and 5xx server errors
-  if (error.name === 'ConnectionError' || error.name === 'TimeoutError') {
+  if (err.name === 'ConnectionError' || err.name === 'TimeoutError') {
     return true;
   }
 
-  if (error.statusCode >= 500 && error.statusCode < 600) {
+  if (typeof err.statusCode === 'number' && err.statusCode >= 500 && err.statusCode < 600) {
     return true;
   }
 
   // Retry on specific Elasticsearch errors
-  if (error.body?.error?.type === 'cluster_block_exception') {
+  const body = err.body as Record<string, unknown> | undefined;
+  const errorInfo = body?.error as Record<string, unknown> | undefined;
+  if (errorInfo?.type === 'cluster_block_exception') {
     return true;
   }
 
@@ -411,7 +419,7 @@ export class ElasticsearchClient implements IElasticsearchClient {
    */
   async deleteByQuery(
     index: string,
-    query: any
+    query: unknown
   ): Promise<{
     took: number;
     timed_out: boolean;

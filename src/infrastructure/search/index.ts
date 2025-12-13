@@ -10,6 +10,8 @@
 import { Client, ClientOptions } from '@elastic/elasticsearch';
 
 import { config } from '../../config/index.js';
+import { secureConfig } from '../../shared/utils/secureConfig.js';
+
 import type { ISearchRepository } from './ISearchRepository.js';
 
 /**
@@ -60,7 +62,7 @@ const clientOptions: ClientOptions = {
   node: config.elasticsearch.node,
   auth: {
     username: config.elasticsearch.username,
-    password: config.elasticsearch.password,
+    password: secureConfig.getElasticsearchPassword(),
   },
   // Connection configuration
   requestTimeout: 30000,
@@ -69,7 +71,7 @@ const clientOptions: ClientOptions = {
   maxRetries: RETRY_CONFIG.maxRetries,
   resurrectStrategy: 'ping',
   // Compression
-  compression: 'gzip',
+  compression: true,
   // SSL configuration (for production)
   ssl: {
     rejectUnauthorized: config.nodeEnv === 'production',

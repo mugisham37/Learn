@@ -314,7 +314,7 @@ export class AlertingService extends EventEmitter {
       }
 
       const color = this.getSeverityColor(alert.severity);
-      const _payload = {
+      const payload = {
         channel: this.config.slack.channel,
         username: 'Job Monitor',
         icon_emoji: ':warning:',

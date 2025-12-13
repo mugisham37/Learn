@@ -51,26 +51,26 @@ export interface QueueStats {
 export interface JobEventData {
   jobId: string;
   queueName: string;
-  jobData: any;
+  jobData: Record<string, unknown> | null;
   timestamp: Date;
   error?: Error;
-  result?: any;
+  result?: Record<string, unknown>;
 }
 
 /**
  * Queue event listener interface
  */
 export interface QueueEventListener {
-  onJobCompleted?(data: JobEventData): void;
-  onJobFailed?(data: JobEventData): void;
-  onJobStalled?(data: JobEventData): void;
-  onJobProgress?(data: JobEventData & { progress: number }): void;
+  onJobCompleted?(data: JobEventData): void | Promise<void>;
+  onJobFailed?(data: JobEventData): void | Promise<void>;
+  onJobStalled?(data: JobEventData): void | Promise<void>;
+  onJobProgress?(data: JobEventData & { progress: number }): void | Promise<void>;
 }
 
 /**
  * Typed queue interface for type-safe job operations
  */
-export interface TypedQueue<T = any> {
+export interface TypedQueue<T = Record<string, unknown>> {
   add(name: string, data: T, options?: JobsOptions): Promise<void>;
   getStats(): Promise<QueueStats>;
   pause(): Promise<void>;
@@ -82,8 +82,8 @@ export interface TypedQueue<T = any> {
 /**
  * Typed worker interface for type-safe job processing
  */
-export interface TypedWorker<T = any> {
-  process(processor: (job: { data: T }) => Promise<any>): void;
+export interface TypedWorker<T = Record<string, unknown>> {
+  process(processor: (job: { data: T }) => Promise<unknown>): void;
   close(): Promise<void>;
   pause(): Promise<void>;
   resume(): Promise<void>;

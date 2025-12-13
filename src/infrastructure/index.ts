@@ -250,7 +250,7 @@ export async function checkInfrastructureHealth(): Promise<{
     const queueHealth = await queueManager.getHealthStatus();
     components.queues = queueHealth.healthy;
     if (!queueHealth.healthy) {
-      errors.push(`Queues: ${queueHealth.alerts.map((a: { message: string }) => a.message).join(', ')}`);
+      errors.push(`Queues: ${queueHealth.alerts.map((alert: Record<string, unknown>) => String(alert['message'] || 'Unknown alert')).join(', ')}`);
     }
   } catch (error) {
     errors.push(`Queues: ${error instanceof Error ? error.message : 'Unknown error'}`);

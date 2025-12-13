@@ -6,18 +6,18 @@
  */
 
 import { Queue, Worker, QueueOptions, WorkerOptions, JobsOptions } from 'bullmq';
-import { redis } from '../cache/index.js';
+
 import { logger } from '../../shared/utils/logger.js';
+import { redis } from '../cache/index.js';
+
+import { QUEUE_CONFIGURATIONS, DEFAULT_QUEUE_OPTIONS, DEFAULT_WORKER_OPTIONS } from './config.js';
 import {
-  QueueConfig,
   TypedQueue,
   TypedWorker,
   QueueFactoryOptions,
   QueueEventListener,
   QueueStats,
-  JobEventData,
 } from './types.js';
-import { QUEUE_CONFIGURATIONS, DEFAULT_QUEUE_OPTIONS, DEFAULT_WORKER_OPTIONS } from './config.js';
 
 /**
  * Queue Factory for creating typed queues and workers
@@ -30,7 +30,7 @@ export class QueueFactory {
   private queues = new Map<string, Queue>();
   private workers = new Map<string, Worker>();
   private eventListeners = new Map<string, QueueEventListener>();
-  private wrappedQueues = new Map<string, TypedQueue<any>>();
+  private wrappedQueues = new Map<string, TypedQueue<unknown>>();
 
   private constructor(private options: QueueFactoryOptions) {}
 
@@ -50,7 +50,7 @@ export class QueueFactory {
   /**
    * Create a typed queue with predefined configuration
    */
-  public createQueue<T = any>(
+  public createQueue<T = Record<string, unknown>>(
     configKey: keyof typeof QUEUE_CONFIGURATIONS,
     customOptions?: Partial<QueueOptions>
   ): TypedQueue<T> {
@@ -99,9 +99,9 @@ export class QueueFactory {
   /**
    * Create a typed worker with predefined configuration
    */
-  public createWorker<T = any>(
+  public createWorker<T = Record<string, unknown>>(
     configKey: keyof typeof QUEUE_CONFIGURATIONS,
-    processor: (job: { data: T }) => Promise<any>,
+    processor: (job: { data: T }) => Promise<unknown>,
     customOptions?: Partial<WorkerOptions>
   ): TypedWorker<T> {
     const config = QUEUE_CONFIGURATIONS[configKey];
@@ -114,10 +114,10 @@ export class QueueFactory {
     const workerOptions: WorkerOptions = {
       connection: redis,
       concurrency: config.concurrency,
-      maxStalledCount: config.maxStalledCount,
-      stalledInterval: config.stalledInterval,
       ...DEFAULT_WORKER_OPTIONS,
       ...this.options.defaultOptions?.worker,
+      maxStalledCount: config.maxStalledCount,
+      stalledInterval: config.stalledInterval,
       ...customOptions,
     };
 
@@ -191,7 +191,7 @@ export class QueueFactory {
   public async retryFailedJobs(
     queueName: string,
     jobId?: string,
-    maxRetries?: number
+    _maxRetries?: number
   ): Promise<{ retriedCount: number }> {
     const queue = this.queues.get(queueName);
     if (!queue) {
@@ -204,7 +204,7 @@ export class QueueFactory {
       if (jobId) {
         // Retry specific job
         const job = await queue.getJob(jobId);
-        if (job && job.isFailed()) {
+        if (job && await job.isFailed()) {
           await job.retry();
           retriedCount = 1;
           logger.info(`Retried job ${jobId} in queue ${queueName}`);
@@ -258,7 +258,7 @@ export class QueueFactory {
         case 'clear':
           if (jobStatus) {
             // Clear specific job status
-            const statusMap: Record<string, any> = {
+            const statusMap: Record<string, 'waiting' | 'active' | 'completed' | 'failed'> = {
               waiting: 'waiting',
               active: 'active',
               completed: 'completed',
@@ -266,7 +266,7 @@ export class QueueFactory {
             };
             const status = statusMap[jobStatus.toLowerCase()];
             if (status) {
-              await queue.clean(0, status);
+              await queue.clean(0, 0, status);
               logger.info(`Cleared ${jobStatus} jobs from queue ${queueName}`);
               return {
                 success: true,
@@ -278,10 +278,10 @@ export class QueueFactory {
           } else {
             // Clear all jobs
             await Promise.all([
-              queue.clean(0, 'completed'),
-              queue.clean(0, 'failed'),
-              queue.clean(0, 'waiting'),
-              queue.clean(0, 'active'),
+              queue.clean(0, 0, 'completed'),
+              queue.clean(0, 0, 'failed'),
+              queue.clean(0, 0, 'waiting'),
+              queue.clean(0, 0, 'active'),
             ]);
             logger.info(`Cleared all jobs from queue ${queueName}`);
             return { success: true, message: `Cleared all jobs from queue ${queueName}` };
@@ -304,7 +304,7 @@ export class QueueFactory {
   /**
    * Get detailed job information
    */
-  public async getJobDetails(queueName: string, jobId: string): Promise<any> {
+  public async getJobDetails(queueName: string, jobId: string): Promise<Record<string, unknown>> {
     const queue = this.queues.get(queueName);
     if (!queue) {
       throw new Error(`Queue '${queueName}' not found`);
@@ -318,7 +318,7 @@ export class QueueFactory {
     return {
       id: job.id,
       name: job.name,
-      data: job.data,
+      data: job.data as Record<string, unknown>,
       opts: job.opts,
       progress: job.progress,
       delay: job.delay,
@@ -326,7 +326,7 @@ export class QueueFactory {
       attemptsMade: job.attemptsMade,
       failedReason: job.failedReason,
       stacktrace: job.stacktrace,
-      returnvalue: job.returnvalue,
+      returnvalue: job.returnvalue as Record<string, unknown>,
       finishedOn: job.finishedOn,
       processedOn: job.processedOn,
     };
@@ -402,11 +402,11 @@ export class QueueFactory {
       },
 
       async resume(): Promise<void> {
-        await queue.resume();
+        queue.resume();
       },
 
       async clean(grace: number, status: string): Promise<void> {
-        await queue.clean(grace, status as any);
+        await queue.clean(grace, 0, status);
       },
 
       async close(): Promise<void> {
@@ -420,7 +420,7 @@ export class QueueFactory {
    */
   private wrapWorker<T>(worker: Worker): TypedWorker<T> {
     return {
-      process(processor: (job: { data: T }) => Promise<unknown>): void {
+      process(_processor: (job: { data: T }) => Promise<unknown>): void {
         // Worker processor is already set in constructor
       },
 
@@ -450,21 +450,24 @@ export class QueueFactory {
       logger.debug(`Job ${job.id} waiting in queue ${queue.name}`);
     });
 
-    queue.on('stalled', (jobId) => {
+    queue.on('stalled', (job) => {
+      const jobId = typeof job === 'string' ? job : job?.id || 'unknown';
       logger.warn(`Job ${jobId} stalled in queue ${queue.name}`);
 
       const listener = this.eventListeners.get(queue.name);
       if (listener?.onJobStalled) {
-        listener
-          .onJobStalled({
-            jobId,
-            queueName: queue.name,
-            jobData: null,
-            timestamp: new Date(),
-          })
-          .catch((error) => {
+        const result = listener.onJobStalled({
+          jobId,
+          queueName: queue.name,
+          jobData: null,
+          timestamp: new Date(),
+        });
+        
+        if (result && typeof result.catch === 'function') {
+          result.catch((error: Error) => {
             logger.error(`Error in stalled event listener:`, error);
           });
+        }
       }
     });
   }
@@ -480,17 +483,19 @@ export class QueueFactory {
 
       const listener = this.eventListeners.get(worker.name);
       if (listener?.onJobCompleted) {
-        listener
-          .onJobCompleted({
-            jobId: job.id!,
-            queueName: worker.name,
-            jobData: job.data,
-            timestamp: new Date(),
-            result,
-          })
-          .catch((error) => {
+        const listenerResult = listener.onJobCompleted({
+          jobId: job.id!,
+          queueName: worker.name,
+          jobData: job.data as Record<string, unknown>,
+          timestamp: new Date(),
+          result: result as Record<string, unknown>,
+        });
+        
+        if (listenerResult && typeof listenerResult.catch === 'function') {
+          listenerResult.catch((error: Error) => {
             logger.error(`Error in completed event listener:`, error);
           });
+        }
       }
     });
 
@@ -499,36 +504,41 @@ export class QueueFactory {
 
       const listener = this.eventListeners.get(worker.name);
       if (listener?.onJobFailed) {
-        listener
-          .onJobFailed({
-            jobId: job?.id || 'unknown',
-            queueName: worker.name,
-            jobData: job?.data,
-            timestamp: new Date(),
-            error,
-          })
-          .catch((listenerError) => {
+        const listenerResult = listener.onJobFailed({
+          jobId: job?.id || 'unknown',
+          queueName: worker.name,
+          jobData: job?.data as Record<string, unknown>,
+          timestamp: new Date(),
+          error,
+        });
+        
+        if (listenerResult && typeof listenerResult.catch === 'function') {
+          listenerResult.catch((listenerError: Error) => {
             logger.error(`Error in failed event listener:`, listenerError);
           });
+        }
       }
     });
 
     worker.on('progress', (job, progress) => {
-      logger.debug(`Job ${job.id} progress in queue ${worker.name}: ${progress}%`);
+      const progressValue = typeof progress === 'number' ? progress : 0;
+      logger.debug(`Job ${job.id} progress in queue ${worker.name}: ${progressValue}%`);
 
       const listener = this.eventListeners.get(worker.name);
       if (listener?.onJobProgress) {
-        listener
-          .onJobProgress({
-            jobId: job.id!,
-            queueName: worker.name,
-            jobData: job.data,
-            timestamp: new Date(),
-            progress: typeof progress === 'number' ? progress : 0,
-          })
-          .catch((error) => {
+        const listenerResult = listener.onJobProgress({
+          jobId: job.id!,
+          queueName: worker.name,
+          jobData: job.data as Record<string, unknown>,
+          timestamp: new Date(),
+          progress: progressValue,
+        });
+        
+        if (listenerResult && typeof listenerResult.catch === 'function') {
+          listenerResult.catch((error: Error) => {
             logger.error(`Error in progress event listener:`, error);
           });
+        }
       }
     });
 

@@ -5,10 +5,11 @@
  * performance metrics, and failure detection.
  */
 
-import { logger } from '../../shared/utils/logger.js';
 import { EventEmitter } from 'events';
+
 import { AlertingService } from '../../shared/services/AlertingService.js';
 import { JobEventLogger } from '../../shared/services/JobEventLogger.js';
+import { logger } from '../../shared/utils/logger.js';
 
 import { QueueFactory } from './QueueFactory.js';
 import { QueueStats, QueueEventListener, JobEventData } from './types.js';
@@ -157,7 +158,7 @@ export class QueueMonitor extends EventEmitter implements QueueEventListener {
    * Get job completion rates for all queues
    */
   public getCompletionRates(): Map<string, { rate: number; completed: number; failed: number }> {
-    const rates = new Map();
+    const rates = new Map<string, { rate: number; completed: number; failed: number }>();
 
     for (const [queueName, data] of this.completionRates.entries()) {
       const total = data.completed + data.failed;
@@ -496,7 +497,7 @@ export class QueueMonitor extends EventEmitter implements QueueEventListener {
    */
   public onJobCompleted(data: JobEventData): void {
     // Comprehensive job event logging with JobEventLogger
-    this.jobEventLogger.logJobCompleted(data.queueName, data.jobId, data.result);
+    this.jobEventLogger.logJobCompleted(data.queueName, data.jobId, data.result || {});
 
     const metrics = this.metrics.get(data.queueName);
     if (metrics) {
