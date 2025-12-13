@@ -8,7 +8,9 @@
  */
 
 import { FastifyRequest, FastifyReply } from 'fastify';
+
 import { logger } from '../utils/logger.js';
+
 import { ValidationError } from '../errors/index.js';
 import {
   FileUploadSecurityService,
@@ -40,7 +42,7 @@ export interface RequestWithFileValidation extends FastifyRequest {
 export function createFileUploadSecurityMiddleware(
   securityService: FileUploadSecurityService,
   options: FileUploadMiddlewareOptions
-) {
+): (request: RequestWithFileValidation, reply: FastifyReply) => Promise<void> {
   return async (request: RequestWithFileValidation, reply: FastifyReply) => {
     try {
       logger.info('Starting file upload security validation', {
@@ -57,10 +59,9 @@ export function createFileUploadSecurityMiddleware(
 
       if (!hasFile) {
         if (options.required) {
-          throw new ValidationError('File upload is required', {
-            field: options.fieldName || 'file',
-            context: options.context,
-          });
+          throw new ValidationError('File upload is required', [
+            { field: options.fieldName || 'file', message: 'File upload is required' }
+          ]);
         }
         // If file is not required and not present, skip validation
         return;
@@ -70,9 +71,9 @@ export function createFileUploadSecurityMiddleware(
       const fileData = await extractFileData(request, options.fieldName || 'file');
 
       if (!fileData) {
-        throw new ValidationError('Failed to extract file data from request', {
-          field: options.fieldName || 'file',
-        });
+        throw new ValidationError('Failed to extract file data from request', [
+          { field: options.fieldName || 'file', message: 'Failed to extract file data from request' }
+        ]);
       }
 
       // Validate file using security service
@@ -97,12 +98,9 @@ export function createFileUploadSecurityMiddleware(
           userId: (request as any).user?.id,
         });
 
-        throw new ValidationError(`File validation failed: ${validationResult.errors.join(', ')}`, {
-          fileName: fileData.fileName,
-          errors: validationResult.errors,
-          warnings: validationResult.warnings,
-          context: options.context,
-        });
+        throw new ValidationError(`File validation failed: ${validationResult.errors.join(', ')}`, [
+          { field: 'file', message: `File validation failed: ${validationResult.errors.join(', ')}` }
+        ]);
       }
 
       // Log warnings if any
@@ -131,7 +129,7 @@ export function createFileUploadSecurityMiddleware(
       });
 
       if (error instanceof ValidationError) {
-        reply.status(400).send({
+        void reply.status(400).send({
           error: 'File Validation Error',
           message: error.message,
           details: error.details,
@@ -139,7 +137,7 @@ export function createFileUploadSecurityMiddleware(
         return;
       }
 
-      reply.status(500).send({
+      void reply.status(500).send({
         error: 'Internal Server Error',
         message: 'File upload validation failed',
       });
@@ -160,7 +158,7 @@ interface FileData {
 /**
  * Checks if request contains a file
  */
-async function checkForFile(request: FastifyRequest, fieldName: string): Promise<boolean> {
+async function checkForFile(request: FastifyRequest, _fieldName: string): Promise<boolean> {
   // Check if request is multipart
   if (!request.isMultipart()) {
     return false;
@@ -181,7 +179,7 @@ async function checkForFile(request: FastifyRequest, fieldName: string): Promise
  */
 async function extractFileData(
   request: FastifyRequest,
-  fieldName: string
+  _fieldName: string
 ): Promise<FileData | null> {
   try {
     if (!request.isMultipart()) {
@@ -204,7 +202,6 @@ async function extractFileData(
     };
   } catch (error) {
     logger.error('Failed to extract file data from request', {
-      fieldName,
       error: error instanceof Error ? error.message : 'Unknown error',
     });
     return null;
@@ -214,7 +211,7 @@ async function extractFileData(
 /**
  * Helper function to create avatar upload middleware
  */
-export function createAvatarUploadMiddleware(securityService: FileUploadSecurityService) {
+export function createAvatarUploadMiddleware(securityService: FileUploadSecurityService): (request: RequestWithFileValidation, reply: FastifyReply) => Promise<void> {
   return createFileUploadSecurityMiddleware(securityService, {
     context: 'avatar',
     required: true,
@@ -225,7 +222,7 @@ export function createAvatarUploadMiddleware(securityService: FileUploadSecurity
 /**
  * Helper function to create course resource upload middleware
  */
-export function createCourseResourceUploadMiddleware(securityService: FileUploadSecurityService) {
+export function createCourseResourceUploadMiddleware(securityService: FileUploadSecurityService): (request: RequestWithFileValidation, reply: FastifyReply) => Promise<void> {
   return createFileUploadSecurityMiddleware(securityService, {
     context: 'course_resource',
     required: true,
@@ -238,7 +235,7 @@ export function createCourseResourceUploadMiddleware(securityService: FileUpload
  */
 export function createAssignmentSubmissionUploadMiddleware(
   securityService: FileUploadSecurityService
-) {
+): (request: RequestWithFileValidation, reply: FastifyReply) => Promise<void> {
   return createFileUploadSecurityMiddleware(securityService, {
     context: 'assignment_submission',
     required: true,
@@ -249,7 +246,7 @@ export function createAssignmentSubmissionUploadMiddleware(
 /**
  * Helper function to create video content upload middleware
  */
-export function createVideoContentUploadMiddleware(securityService: FileUploadSecurityService) {
+export function createVideoContentUploadMiddleware(securityService: FileUploadSecurityService): (request: RequestWithFileValidation, reply: FastifyReply) => Promise<void> {
   return createFileUploadSecurityMiddleware(securityService, {
     context: 'video_content',
     required: true,
@@ -260,7 +257,7 @@ export function createVideoContentUploadMiddleware(securityService: FileUploadSe
 /**
  * Helper function to create document upload middleware
  */
-export function createDocumentUploadMiddleware(securityService: FileUploadSecurityService) {
+export function createDocumentUploadMiddleware(securityService: FileUploadSecurityService): (request: RequestWithFileValidation, reply: FastifyReply) => Promise<void> {
   return createFileUploadSecurityMiddleware(securityService, {
     context: 'document',
     required: true,

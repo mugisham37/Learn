@@ -8,9 +8,10 @@
  */
 
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+
 import { getAlertingRulesService } from '../services/AlertingRulesService.js';
-import { requireAuth, requireRole } from './index.js';
 import { logger } from '../utils/logger.js';
+import { requireAuth, requireRole } from './index.js';
 
 /**
  * Register alerting management endpoints
@@ -24,7 +25,7 @@ export function registerAlertingEndpoints(server: FastifyInstance): void {
     {
       preHandler: [requireAuth, requireRole(['admin'])],
     },
-    async (request: FastifyRequest, reply: FastifyReply) => {
+    async (_request: FastifyRequest, reply: FastifyReply) => {
       try {
         const rules = alertingRulesService.getRules();
         return reply.send({ rules });
@@ -41,7 +42,7 @@ export function registerAlertingEndpoints(server: FastifyInstance): void {
     {
       preHandler: [requireAuth, requireRole(['admin'])],
     },
-    async (request: FastifyRequest, reply: FastifyReply) => {
+    async (_request: FastifyRequest, reply: FastifyReply) => {
       try {
         const activeAlerts = alertingRulesService.getActiveAlerts();
         return reply.send({ activeAlerts });

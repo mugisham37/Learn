@@ -7,7 +7,7 @@
  * Requirements: 13.1
  */
 
-import { FastifyReply, FastifyRequest, FastifySchema } from 'fastify';
+import { FastifyReply, FastifyRequest, FastifySchema, FastifyInstance } from 'fastify';
 import { ZodSchema, ZodError } from 'zod';
 
 import { ValidationError } from '../errors/index.js';
@@ -17,10 +17,10 @@ import { logger } from '../utils/logger.js';
  * Validation configuration for an endpoint
  */
 export interface ValidationConfig {
-  body?: ZodSchema<any>;
-  querystring?: ZodSchema<any>;
-  params?: ZodSchema<any>;
-  headers?: ZodSchema<any>;
+  body?: ZodSchema<unknown>;
+  querystring?: ZodSchema<unknown>;
+  params?: ZodSchema<unknown>;
+  headers?: ZodSchema<unknown>;
 }
 
 /**
@@ -29,7 +29,7 @@ export interface ValidationConfig {
 export interface ValidationErrorDetail {
   field: string;
   message: string;
-  value?: any;
+  value?: unknown;
   code: string;
 }
 
@@ -40,10 +40,10 @@ export interface ValidationResult {
   success: boolean;
   errors?: ValidationErrorDetail[];
   data?: {
-    body?: any;
-    querystring?: any;
-    params?: any;
-    headers?: any;
+    body?: unknown;
+    querystring?: unknown;
+    params?: unknown;
+    headers?: unknown;
   };
 }
 
@@ -62,7 +62,7 @@ function formatZodErrors(error: ZodError, prefix: string = ''): ValidationErrorD
     return {
       field,
       message: err.message,
-      value: err.path.length > 0 ? undefined : err.received, // Only include value for root-level errors
+      value: err.path.length > 0 ? undefined : (err as { received?: unknown }).received,
       code: err.code,
     };
   });
@@ -77,12 +77,12 @@ function formatZodErrors(error: ZodError, prefix: string = ''): ValidationErrorD
  */
 function validateRequest(request: FastifyRequest, config: ValidationConfig): ValidationResult {
   const errors: ValidationErrorDetail[] = [];
-  const validatedData: any = {};
+  const validatedData: Record<string, unknown> = {};
 
   // Validate request body
   if (config.body) {
     try {
-      validatedData.body = config.body.parse(request.body);
+      validatedData['body'] = config.body.parse(request.body);
     } catch (error) {
       if (error instanceof ZodError) {
         errors.push(...formatZodErrors(error, 'body'));
@@ -99,7 +99,7 @@ function validateRequest(request: FastifyRequest, config: ValidationConfig): Val
   // Validate query parameters
   if (config.querystring) {
     try {
-      validatedData.querystring = config.querystring.parse(request.query);
+      validatedData['querystring'] = config.querystring.parse(request.query);
     } catch (error) {
       if (error instanceof ZodError) {
         errors.push(...formatZodErrors(error, 'query'));
@@ -116,7 +116,7 @@ function validateRequest(request: FastifyRequest, config: ValidationConfig): Val
   // Validate path parameters
   if (config.params) {
     try {
-      validatedData.params = config.params.parse(request.params);
+      validatedData['params'] = config.params.parse(request.params);
     } catch (error) {
       if (error instanceof ZodError) {
         errors.push(...formatZodErrors(error, 'params'));
@@ -133,7 +133,7 @@ function validateRequest(request: FastifyRequest, config: ValidationConfig): Val
   // Validate headers
   if (config.headers) {
     try {
-      validatedData.headers = config.headers.parse(request.headers);
+      validatedData['headers'] = config.headers.parse(request.headers);
     } catch (error) {
       if (error instanceof ZodError) {
         errors.push(...formatZodErrors(error, 'headers'));
@@ -203,23 +203,20 @@ export function createValidationMiddleware(config: ValidationConfig) {
       if (!result.success) {
         const validationTime = Date.now() - startTime;
 
-        logger.warn(
-          {
-            requestId,
-            method: request.method,
-            url: request.url,
-            errors: result.errors,
-            validationTime,
-          },
-          'Request validation failed'
-        );
+        logger.warn('Request validation failed', {
+          requestId,
+          method: request.method,
+          url: request.url,
+          errors: result.errors,
+          validationTime,
+        });
 
         // Create detailed validation error
         const errorMessage = `Validation failed: ${result.errors!.length} error(s)`;
         const validationError = new ValidationError(errorMessage);
 
         // Add validation details to error for better error handling
-        (validationError as any).validationErrors = result.errors;
+        (validationError as ValidationError & { validationErrors?: ValidationErrorDetail[] }).validationErrors = result.errors;
 
         throw validationError;
       }
@@ -228,31 +225,28 @@ export function createValidationMiddleware(config: ValidationConfig) {
       // This ensures handlers receive properly typed and validated data
       if (result.data) {
         if (result.data.body !== undefined) {
-          request.body = result.data.body;
+          (request as FastifyRequest & { body: unknown }).body = result.data.body;
         }
         if (result.data.querystring !== undefined) {
-          request.query = result.data.querystring;
+          (request as FastifyRequest & { query: unknown }).query = result.data.querystring;
         }
         if (result.data.params !== undefined) {
-          request.params = result.data.params;
+          (request as FastifyRequest & { params: unknown }).params = result.data.params;
         }
         if (result.data.headers !== undefined) {
           // Don't replace all headers, just add validated ones
-          (request as any).validatedHeaders = result.data.headers;
+          (request as FastifyRequest & { validatedHeaders: unknown }).validatedHeaders = result.data.headers;
         }
       }
 
       const validationTime = Date.now() - startTime;
 
-      logger.debug(
-        {
-          requestId,
-          method: request.method,
-          url: request.url,
-          validationTime,
-        },
-        'Request validation successful'
-      );
+      logger.debug('Request validation successful', {
+        requestId,
+        method: request.method,
+        url: request.url,
+        validationTime,
+      });
     } catch (error) {
       // If it's already a ValidationError, rethrow it
       if (error instanceof ValidationError) {
@@ -261,17 +255,14 @@ export function createValidationMiddleware(config: ValidationConfig) {
 
       // Log unexpected errors
       const validationTime = Date.now() - startTime;
-      logger.error(
-        {
-          requestId,
-          method: request.method,
-          url: request.url,
-          error: error instanceof Error ? error.message : 'Unknown error',
-          stack: error instanceof Error ? error.stack : undefined,
-          validationTime,
-        },
-        'Unexpected error during request validation'
-      );
+      logger.error('Unexpected error during request validation', {
+        requestId,
+        method: request.method,
+        url: request.url,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        validationTime,
+      });
 
       // Throw generic validation error for unexpected errors
       throw new ValidationError('Request validation failed due to internal error');
@@ -291,7 +282,7 @@ export function createValidationMiddleware(config: ValidationConfig) {
  * Note: This is a simplified implementation. For production use with complex schemas,
  * consider using libraries like zod-to-json-schema for full compatibility.
  */
-export function zodToFastifySchema(zodSchema: ZodSchema<any>): any {
+export function zodToFastifySchema(zodSchema: ZodSchema<unknown>): Record<string, unknown> {
   // This is a basic implementation for common cases
   // For full Zod to JSON Schema conversion, use a dedicated library
 
@@ -407,10 +398,11 @@ export const commonValidationSchemas = {
 export const validationPlugin = {
   name: 'validation',
   version: '1.0.0',
-  register: async function (fastify: any) {
+  register: function (fastify: FastifyInstance): Promise<void> {
     // Add validation helpers to Fastify instance
     fastify.decorate('createValidation', createValidationMiddleware);
     fastify.decorate('createSchema', createFastifySchema);
     fastify.decorate('commonSchemas', commonValidationSchemas);
+    return Promise.resolve();
   },
 };

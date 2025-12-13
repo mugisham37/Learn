@@ -11,12 +11,13 @@
  */
 
 import * as crypto from 'crypto';
+
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 
 import { config } from '../../config/index.js';
-import { secureConfig } from '../utils/secureConfig.js';
-import { AuthenticationError, ValidationError } from '../errors/index.js';
+import { ValidationError } from '../errors/index.js';
 import { logger } from '../utils/logger.js';
+import { secureConfig } from '../utils/secureConfig.js';
 
 /**
  * CSRF token configuration
@@ -112,7 +113,7 @@ function validateReferer(referer: string | undefined): boolean {
  *
  * Requirements: 13.8
  */
-export async function csrfProtection(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+export function csrfProtection(request: FastifyRequest, _reply: FastifyReply): Promise<void> {
   const requestId = request.id;
   const method = request.method;
   const origin = request.headers.origin;
@@ -121,15 +122,15 @@ export async function csrfProtection(request: FastifyRequest, reply: FastifyRepl
   try {
     // Skip CSRF protection for safe methods (GET, HEAD, OPTIONS)
     if (!STATE_CHANGING_METHODS.includes(method)) {
-      logger.debug({ requestId, method }, 'CSRF protection skipped for safe HTTP method');
-      return;
+      logger.debug('CSRF protection skipped for safe HTTP method', { requestId, method });
+      return Promise.resolve();
     }
 
     // Validate origin header
     if (!validateOrigin(origin)) {
       logger.warn(
-        { requestId, method, origin, allowedOrigins: ALLOWED_ORIGINS },
-        'CSRF protection failed: Invalid or missing origin header'
+        'CSRF protection failed: Invalid or missing origin header',
+        { requestId, method, origin, allowedOrigins: ALLOWED_ORIGINS }
       );
       throw new ValidationError('Invalid or missing origin header');
     }
@@ -137,8 +138,8 @@ export async function csrfProtection(request: FastifyRequest, reply: FastifyRepl
     // Validate referer header as additional protection
     if (!validateReferer(referer)) {
       logger.warn(
-        { requestId, method, referer, allowedOrigins: ALLOWED_ORIGINS },
-        'CSRF protection failed: Invalid or missing referer header'
+        'CSRF protection failed: Invalid or missing referer header',
+        { requestId, method, referer, allowedOrigins: ALLOWED_ORIGINS }
       );
       throw new ValidationError('Invalid or missing referer header');
     }
@@ -147,8 +148,8 @@ export async function csrfProtection(request: FastifyRequest, reply: FastifyRepl
     const customHeader = request.headers[CSRF_CUSTOM_HEADER];
     if (!customHeader) {
       logger.warn(
-        { requestId, method, requiredHeader: CSRF_CUSTOM_HEADER },
-        'CSRF protection failed: Missing required custom header'
+        'CSRF protection failed: Missing required custom header',
+        { requestId, method, requiredHeader: CSRF_CUSTOM_HEADER }
       );
       throw new ValidationError(`Missing required header: ${CSRF_CUSTOM_HEADER}`);
     }
@@ -157,8 +158,8 @@ export async function csrfProtection(request: FastifyRequest, reply: FastifyRepl
     const providedToken = request.headers[CSRF_TOKEN_HEADER] as string;
     if (!providedToken) {
       logger.warn(
-        { requestId, method, requiredHeader: CSRF_TOKEN_HEADER },
-        'CSRF protection failed: Missing CSRF token header'
+        'CSRF protection failed: Missing CSRF token header',
+        { requestId, method, requiredHeader: CSRF_TOKEN_HEADER }
       );
       throw new ValidationError(`Missing required header: ${CSRF_TOKEN_HEADER}`);
     }
@@ -167,19 +168,20 @@ export async function csrfProtection(request: FastifyRequest, reply: FastifyRepl
     const cookieToken = request.cookies[CSRF_COOKIE_NAME];
     if (!cookieToken) {
       logger.warn(
-        { requestId, method, cookieName: CSRF_COOKIE_NAME },
-        'CSRF protection failed: Missing CSRF token cookie'
+        'CSRF protection failed: Missing CSRF token cookie',
+        { requestId, method, cookieName: CSRF_COOKIE_NAME }
       );
       throw new ValidationError('Missing CSRF token cookie');
     }
 
     // Validate CSRF token
     if (!validateCSRFToken(providedToken, cookieToken)) {
-      logger.warn({ requestId, method }, 'CSRF protection failed: Invalid CSRF token');
+      logger.warn('CSRF protection failed: Invalid CSRF token', { requestId, method });
       throw new ValidationError('Invalid CSRF token');
     }
 
-    logger.debug({ requestId, method, origin, referer }, 'CSRF protection validation successful');
+    logger.debug('CSRF protection validation successful', { requestId, method, origin, referer });
+    return Promise.resolve();
   } catch (error) {
     // If it's already a ValidationError, rethrow it
     if (error instanceof ValidationError) {
@@ -188,6 +190,7 @@ export async function csrfProtection(request: FastifyRequest, reply: FastifyRepl
 
     // Log unexpected errors
     logger.error(
+      'Unexpected error during CSRF protection',
       {
         requestId,
         method,
@@ -195,8 +198,7 @@ export async function csrfProtection(request: FastifyRequest, reply: FastifyRepl
         referer,
         error: error instanceof Error ? error.message : 'Unknown error',
         stack: error instanceof Error ? error.stack : undefined,
-      },
-      'Unexpected error during CSRF protection'
+      }
     );
 
     // Throw generic validation error for unexpected errors
@@ -213,7 +215,7 @@ export async function csrfProtection(request: FastifyRequest, reply: FastifyRepl
 export function setCSRFTokenCookie(reply: FastifyReply, token: string): void {
   const isProduction = config.nodeEnv === 'production';
 
-  reply.setCookie(CSRF_COOKIE_NAME, token, {
+  void reply.setCookie(CSRF_COOKIE_NAME, token, {
     httpOnly: true,
     secure: isProduction, // Only send over HTTPS in production
     sameSite: 'strict', // Strict SameSite policy for CSRF protection
@@ -230,7 +232,7 @@ export function setCSRFTokenCookie(reply: FastifyReply, token: string): void {
  * @param reply - Fastify reply object
  * @returns CSRF token
  */
-export async function getCSRFToken(
+export function getCSRFToken(
   request: FastifyRequest,
   reply: FastifyReply
 ): Promise<{ csrfToken: string }> {
@@ -239,10 +241,10 @@ export async function getCSRFToken(
   // Set the token in a secure cookie
   setCSRFTokenCookie(reply, token);
 
-  logger.debug({ requestId: request.id }, 'CSRF token generated and set in cookie');
+  logger.debug('CSRF token generated and set in cookie', { requestId: request.id });
 
   // Return the token so frontend can include it in headers
-  return { csrfToken: token };
+  return Promise.resolve({ csrfToken: token });
 }
 
 /**

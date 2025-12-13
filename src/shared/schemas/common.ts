@@ -73,15 +73,15 @@ export const paginationSchema = z.object({
   page: z
     .string()
     .optional()
-    .transform((val) => (val ? parseInt(val, 10) : 1))
-    .pipe(z.number().int().min(1, 'Page must be at least 1'))
-    .default(1),
+    .default('1')
+    .transform((val) => parseInt(val, 10))
+    .pipe(z.number().int().min(1, 'Page must be at least 1')),
   limit: z
     .string()
     .optional()
-    .transform((val) => (val ? parseInt(val, 10) : 20))
-    .pipe(z.number().int().min(1, 'Limit must be at least 1').max(100, 'Limit must be at most 100'))
-    .default(20),
+    .default('20')
+    .transform((val) => parseInt(val, 10))
+    .pipe(z.number().int().min(1, 'Limit must be at least 1').max(100, 'Limit must be at most 100')),
   sort: z.string().optional(),
   order: z.enum(['asc', 'desc']).default('asc'),
 });

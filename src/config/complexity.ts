@@ -87,7 +87,6 @@ export const FIELD_COMPLEXITY = {
   'Mutation.requestRefund': 30,
 
   // Search operations
-  'Query.searchCourses': 50,
   'Query.searchLessons': 40,
   'Query.autocomplete': 20,
 
@@ -115,8 +114,17 @@ export const PAGINATION_LIMITS = {
 /**
  * Get complexity configuration for current environment
  */
-export function getComplexityConfiguration() {
-  const env = (process.env.NODE_ENV || 'development') as keyof typeof COMPLEXITY_LIMITS;
+export function getComplexityConfiguration(): {
+  maximumComplexity: number;
+  maximumDepth: number;
+  logThreshold: number;
+  alertThreshold: number;
+  enableDetailedLogging: boolean;
+  enablePerformanceTracking: boolean;
+  fieldComplexity: typeof FIELD_COMPLEXITY;
+  paginationLimits: typeof PAGINATION_LIMITS;
+} {
+  const env = (process.env['NODE_ENV'] || 'development') as keyof typeof COMPLEXITY_LIMITS;
   const config = COMPLEXITY_LIMITS[env] || COMPLEXITY_LIMITS.development;
 
   return {
@@ -129,11 +137,18 @@ export function getComplexityConfiguration() {
 /**
  * Validate complexity configuration
  */
-export function validateComplexityConfig(config: any): boolean {
+export function validateComplexityConfig(config: {
+  maximumComplexity: number;
+  maximumDepth: number;
+  logThreshold: number;
+  alertThreshold: number;
+  [key: string]: unknown;
+}): boolean {
   const required = ['maximumComplexity', 'maximumDepth', 'logThreshold', 'alertThreshold'];
 
   for (const field of required) {
-    if (typeof config[field] !== 'number' || config[field] <= 0) {
+    const value = config[field];
+    if (typeof value !== 'number' || value <= 0) {
       throw new Error(`Invalid complexity configuration: ${field} must be a positive number`);
     }
   }
@@ -164,37 +179,59 @@ export const COMPLEXITY_ENV_VARS = {
 /**
  * Load complexity configuration from environment variables
  */
-export function loadComplexityConfigFromEnv() {
-  const config = getComplexityConfiguration();
+export function loadComplexityConfigFromEnv(): {
+  maximumComplexity: number;
+  maximumDepth: number;
+  logThreshold: number;
+  alertThreshold: number;
+  enableDetailedLogging: boolean;
+  enablePerformanceTracking: boolean;
+  fieldComplexity: typeof FIELD_COMPLEXITY;
+  paginationLimits: typeof PAGINATION_LIMITS;
+} {
+  const baseConfig = getComplexityConfiguration();
+  
+  // Create a mutable copy for environment variable overrides
+  const config = {
+    maximumComplexity: baseConfig.maximumComplexity,
+    maximumDepth: baseConfig.maximumDepth,
+    logThreshold: baseConfig.logThreshold,
+    alertThreshold: baseConfig.alertThreshold,
+    enableDetailedLogging: baseConfig.enableDetailedLogging,
+    enablePerformanceTracking: baseConfig.enablePerformanceTracking,
+    fieldComplexity: baseConfig.fieldComplexity,
+    paginationLimits: baseConfig.paginationLimits,
+  };
 
   // Override with environment variables if present
-  if (process.env[COMPLEXITY_ENV_VARS.GRAPHQL_MAX_COMPLEXITY]) {
-    config.maximumComplexity = parseInt(
-      process.env[COMPLEXITY_ENV_VARS.GRAPHQL_MAX_COMPLEXITY],
-      10
-    );
+  const maxComplexityEnv = process.env[COMPLEXITY_ENV_VARS.GRAPHQL_MAX_COMPLEXITY];
+  if (maxComplexityEnv) {
+    config.maximumComplexity = parseInt(maxComplexityEnv, 10);
   }
 
-  if (process.env[COMPLEXITY_ENV_VARS.GRAPHQL_MAX_DEPTH]) {
-    config.maximumDepth = parseInt(process.env[COMPLEXITY_ENV_VARS.GRAPHQL_MAX_DEPTH], 10);
+  const maxDepthEnv = process.env[COMPLEXITY_ENV_VARS.GRAPHQL_MAX_DEPTH];
+  if (maxDepthEnv) {
+    config.maximumDepth = parseInt(maxDepthEnv, 10);
   }
 
-  if (process.env[COMPLEXITY_ENV_VARS.GRAPHQL_LOG_THRESHOLD]) {
-    config.logThreshold = parseInt(process.env[COMPLEXITY_ENV_VARS.GRAPHQL_LOG_THRESHOLD], 10);
+  const logThresholdEnv = process.env[COMPLEXITY_ENV_VARS.GRAPHQL_LOG_THRESHOLD];
+  if (logThresholdEnv) {
+    config.logThreshold = parseInt(logThresholdEnv, 10);
   }
 
-  if (process.env[COMPLEXITY_ENV_VARS.GRAPHQL_ALERT_THRESHOLD]) {
-    config.alertThreshold = parseInt(process.env[COMPLEXITY_ENV_VARS.GRAPHQL_ALERT_THRESHOLD], 10);
+  const alertThresholdEnv = process.env[COMPLEXITY_ENV_VARS.GRAPHQL_ALERT_THRESHOLD];
+  if (alertThresholdEnv) {
+    config.alertThreshold = parseInt(alertThresholdEnv, 10);
   }
 
-  if (process.env[COMPLEXITY_ENV_VARS.GRAPHQL_DETAILED_LOGGING]) {
-    config.enableDetailedLogging =
-      process.env[COMPLEXITY_ENV_VARS.GRAPHQL_DETAILED_LOGGING] === 'true';
+  const detailedLoggingEnv = process.env[COMPLEXITY_ENV_VARS.GRAPHQL_DETAILED_LOGGING];
+  if (detailedLoggingEnv) {
+    config.enableDetailedLogging = detailedLoggingEnv === 'true';
   }
 
-  if (process.env[COMPLEXITY_ENV_VARS.GRAPHQL_PERFORMANCE_TRACKING]) {
-    config.enablePerformanceTracking =
-      process.env[COMPLEXITY_ENV_VARS.GRAPHQL_PERFORMANCE_TRACKING] === 'true';
+  const performanceTrackingEnv = process.env[COMPLEXITY_ENV_VARS.GRAPHQL_PERFORMANCE_TRACKING];
+  if (performanceTrackingEnv) {
+    config.enablePerformanceTracking = performanceTrackingEnv === 'true';
   }
 
   // Validate the final configuration

@@ -41,6 +41,7 @@ export interface DateRange {
  */
 export interface UserContext {
   id: string;
+  userId: string; // Add userId for compatibility with AuthenticatedRequest
   email: string;
   role: Role;
 }

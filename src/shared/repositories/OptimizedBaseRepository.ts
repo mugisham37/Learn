@@ -5,10 +5,11 @@
  * Requirements: 15.1 - Database query optimization
  */
 
-import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { SQL, and, asc, desc, eq, gt, lt, sql } from 'drizzle-orm';
+import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { PgTable } from 'drizzle-orm/pg-core';
 import { Redis } from 'ioredis';
+
 import { logger } from '../utils/logger';
 
 /**
@@ -52,12 +53,12 @@ export interface QueryOptions {
 /**
  * Optimized base repository with caching and pagination
  */
-export abstract class OptimizedBaseRepository<T extends Record<string, any>> {
+export abstract class OptimizedBaseRepository<T extends Record<string, unknown>> {
   protected abstract table: PgTable;
   protected abstract primaryKey: string;
 
   constructor(
-    protected db: NodePgDatabase<any>,
+    protected db: NodePgDatabase<Record<string, never>>,
     protected redis: Redis,
     protected defaultCacheConfig: CacheConfig
   ) {}
@@ -82,7 +83,7 @@ export abstract class OptimizedBaseRepository<T extends Record<string, any>> {
     const [result] = await this.db
       .select()
       .from(this.table)
-      .where(eq(this.table[this.primaryKey], id))
+      .where(eq(this.table[this.primaryKey as keyof typeof this.table] as any, id))
       .limit(1);
 
     const executionTime = Date.now() - startTime;
@@ -138,8 +139,8 @@ export abstract class OptimizedBaseRepository<T extends Record<string, any>> {
       const cursorValue = this.parseCursor(cursor);
       const cursorCondition =
         direction === 'asc'
-          ? gt(this.table[orderBy], cursorValue)
-          : lt(this.table[orderBy], cursorValue);
+          ? gt(this.table[orderBy as keyof typeof this.table] as any, cursorValue)
+          : lt(this.table[orderBy as keyof typeof this.table] as any, cursorValue);
       conditions.push(cursorCondition);
     }
 
@@ -151,7 +152,7 @@ export abstract class OptimizedBaseRepository<T extends Record<string, any>> {
       .select()
       .from(this.table)
       .where(conditions.length > 0 ? and(...conditions) : undefined)
-      .orderBy(orderDirection(this.table[orderBy]))
+      .orderBy(orderDirection(this.table[orderBy as keyof typeof this.table] as any))
       .limit(limit + 1); // Fetch one extra to check if there are more
 
     const executionTime = Date.now() - startTime;
@@ -177,7 +178,7 @@ export abstract class OptimizedBaseRepository<T extends Record<string, any>> {
         : undefined;
 
     const result: PaginationResult<T> = {
-      items: resultItems,
+      items: resultItems as T[],
       nextCursor,
       hasMore,
     };
@@ -221,7 +222,7 @@ export abstract class OptimizedBaseRepository<T extends Record<string, any>> {
       const dbResults = await this.db
         .select()
         .from(this.table)
-        .where(sql`${this.table[this.primaryKey]} = ANY(${uncachedIds})`);
+        .where(sql`${this.table[this.primaryKey as keyof typeof this.table]} = ANY(${uncachedIds})`);
 
       const executionTime = Date.now() - startTime;
 
@@ -239,15 +240,15 @@ export abstract class OptimizedBaseRepository<T extends Record<string, any>> {
       // Cache individual results if enabled
       if (cacheConfig.enabled) {
         for (const result of dbResults) {
-          await this.setCache(result[this.primaryKey], result, cacheConfig);
+          await this.setCache((result as Record<string, unknown>)[this.primaryKey] as string, result as T, cacheConfig);
         }
       }
     }
 
     // Return results in the same order as requested IDs
     return ids
-      .map((id) => results.find((result) => result[this.primaryKey] === id))
-      .filter(Boolean);
+      .map((id) => results.find((result) => (result as Record<string, unknown>)[this.primaryKey] === id))
+      .filter((result): result is T => Boolean(result));
   }
 
   /**
@@ -255,11 +256,11 @@ export abstract class OptimizedBaseRepository<T extends Record<string, any>> {
    */
   async create(
     data: Omit<T, 'id' | 'created_at' | 'updated_at'>,
-    options: QueryOptions = {}
+    _options: QueryOptions = {}
   ): Promise<T> {
     const startTime = Date.now();
 
-    const [result] = await this.db.insert(this.table).values(data).returning();
+    const [result] = await this.db.insert(this.table).values(data as any).returning();
 
     const executionTime = Date.now() - startTime;
 
@@ -272,9 +273,9 @@ export abstract class OptimizedBaseRepository<T extends Record<string, any>> {
     }
 
     // Invalidate related caches
-    await this.invalidateRelatedCaches(result);
+    await this.invalidateRelatedCaches(result as T);
 
-    return result;
+    return result as T;
   }
 
   /**
@@ -283,14 +284,14 @@ export abstract class OptimizedBaseRepository<T extends Record<string, any>> {
   async update(
     id: string,
     data: Partial<Omit<T, 'id' | 'created_at'>>,
-    options: QueryOptions = {}
+    _options: QueryOptions = {}
   ): Promise<T | null> {
     const startTime = Date.now();
 
     const [result] = await this.db
       .update(this.table)
-      .set({ ...data, updated_at: new Date() })
-      .where(eq(this.table[this.primaryKey], id))
+      .set({ ...data, updated_at: new Date() } as any)
+      .where(eq(this.table[this.primaryKey as keyof typeof this.table] as any, id))
       .returning();
 
     const executionTime = Date.now() - startTime;
@@ -307,21 +308,21 @@ export abstract class OptimizedBaseRepository<T extends Record<string, any>> {
     if (result) {
       // Invalidate caches
       await this.invalidateCache(id);
-      await this.invalidateRelatedCaches(result);
+      await this.invalidateRelatedCaches(result as T);
     }
 
-    return result || null;
+    return (result as T) || null;
   }
 
   /**
    * Delete record with cache invalidation
    */
-  async delete(id: string, options: QueryOptions = {}): Promise<boolean> {
+  async delete(id: string, _options: QueryOptions = {}): Promise<boolean> {
     const startTime = Date.now();
 
     const [result] = await this.db
       .delete(this.table)
-      .where(eq(this.table[this.primaryKey], id))
+      .where(eq(this.table[this.primaryKey as keyof typeof this.table] as any, id))
       .returning();
 
     const executionTime = Date.now() - startTime;
@@ -338,7 +339,7 @@ export abstract class OptimizedBaseRepository<T extends Record<string, any>> {
     if (result) {
       // Invalidate caches
       await this.invalidateCache(id);
-      await this.invalidateRelatedCaches(result);
+      await this.invalidateRelatedCaches(result as T);
       return true;
     }
 
@@ -392,14 +393,14 @@ export abstract class OptimizedBaseRepository<T extends Record<string, any>> {
    * Cursor utilities
    */
   protected generateCursor(record: T, orderBy: string): string {
-    const value = record[orderBy];
+    const value = (record as Record<string, unknown>)[orderBy];
     if (value instanceof Date) {
       return Buffer.from(value.toISOString()).toString('base64');
     }
     return Buffer.from(String(value)).toString('base64');
   }
 
-  protected parseCursor(cursor: string): any {
+  protected parseCursor(cursor: string): unknown {
     try {
       const decoded = Buffer.from(cursor, 'base64').toString('utf-8');
       // Try to parse as date first
@@ -418,7 +419,7 @@ export abstract class OptimizedBaseRepository<T extends Record<string, any>> {
     conditions: SQL[],
     options: CursorPaginationOptions
   ): string {
-    const conditionsStr = conditions.map((c) => c.toString()).join('|');
+    const conditionsStr = conditions.map((c) => String(c)).join('|');
     const optionsStr = `${options.limit}:${options.orderBy}:${options.direction}`;
     return `pagination:${Buffer.from(`${conditionsStr}:${optionsStr}`).toString('base64')}`;
   }
@@ -431,17 +432,17 @@ export abstract class OptimizedBaseRepository<T extends Record<string, any>> {
   /**
    * Get query execution statistics
    */
-  async getQueryStats(): Promise<{
+  getQueryStats(): Promise<{
     slowQueries: number;
     cacheHitRate: number;
     averageExecutionTime: number;
   }> {
     // This would be implemented with proper metrics collection
     // For now, return placeholder values
-    return {
+    return Promise.resolve({
       slowQueries: 0,
       cacheHitRate: 0,
       averageExecutionTime: 0,
-    };
+    });
   }
 }

@@ -202,6 +202,7 @@ export function validateConfig(): void {
 
   // Note: We can't import logger here due to circular dependency
   // Logger will be initialized after config is loaded
+  // eslint-disable-next-line no-console
   console.log('Configuration validated successfully');
 }
 
@@ -220,12 +221,15 @@ export type EnhancedConfig = typeof config & {
  * Create enhanced configuration with secrets manager
  * This should be called after secrets manager is initialized
  */
-export function createEnhancedConfig(secretsManager: any): EnhancedConfig {
+export function createEnhancedConfig(secretsManager: {
+  getSecret: (name: string) => string | undefined;
+  getRequiredSecret: (name: string) => string;
+}): EnhancedConfig {
   return {
     ...config,
     secrets: {
-      getSecret: (name: string) => secretsManager.getSecret(name),
-      getRequiredSecret: (name: string) => secretsManager.getRequiredSecret(name),
+      getSecret: (name: string): string | undefined => secretsManager.getSecret(name),
+      getRequiredSecret: (name: string): string => secretsManager.getRequiredSecret(name),
     },
   };
 }

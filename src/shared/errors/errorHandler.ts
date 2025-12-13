@@ -7,6 +7,8 @@
 
 import { FastifyError, FastifyReply, FastifyRequest } from 'fastify';
 
+import { logger } from '../utils/logger.js';
+
 import {
   AppError,
   RateLimitError,
@@ -14,7 +16,6 @@ import {
   getStatusCode,
   sanitizeError,
 } from './index.js';
-import { logger } from '../utils/logger.js';
 
 /**
  * Error context for logging
@@ -207,7 +208,7 @@ export async function errorHandler(
   if (error instanceof RateLimitError) {
     const headers = error.getHeaders();
     Object.entries(headers).forEach(([key, value]) => {
-      reply.header(key, value);
+      void reply.header(key, value);
     });
   }
 

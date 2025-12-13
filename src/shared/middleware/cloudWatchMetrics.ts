@@ -7,9 +7,10 @@
  * Requirements: 17.6
  */
 
-import { FastifyRequest, FastifyReply, HookHandlerDoneFunction } from 'fastify';
-import { metrics } from '../services/CloudWatchService.js';
+import { FastifyRequest, FastifyReply, FastifyInstance } from 'fastify';
+
 import { applicationMetricsService } from '../services/ApplicationMetricsService.js';
+import { metrics } from '../services/CloudWatchService.js';
 import { logger } from '../utils/logger.js';
 
 /**
@@ -24,9 +25,9 @@ interface RequestTiming {
 /**
  * CloudWatch metrics middleware for Fastify
  */
-export function registerCloudWatchMetrics(server: any): void {
+export function registerCloudWatchMetrics(server: FastifyInstance): void {
   // Pre-handler hook to record request start time
-  server.addHook('preHandler', async (request: FastifyRequest, reply: FastifyReply) => {
+  server.addHook('preHandler', async (request: FastifyRequest, _reply: FastifyReply) => {
     const timing: RequestTiming = {
       startTime: Date.now(),
       endpoint: getEndpointName(request.url),
@@ -34,7 +35,7 @@ export function registerCloudWatchMetrics(server: any): void {
     };
 
     // Store timing data in request context
-    (request as any).cloudWatchTiming = timing;
+    (request as FastifyRequest & { cloudWatchTiming: RequestTiming }).cloudWatchTiming = timing;
 
     // Record throughput (incoming request)
     try {
@@ -47,7 +48,7 @@ export function registerCloudWatchMetrics(server: any): void {
 
   // On-response hook to record response metrics
   server.addHook('onResponse', async (request: FastifyRequest, reply: FastifyReply) => {
-    const timing = (request as any).cloudWatchTiming as RequestTiming;
+    const timing = (request as FastifyRequest & { cloudWatchTiming?: RequestTiming }).cloudWatchTiming;
 
     if (!timing) {
       return;
@@ -73,8 +74,8 @@ export function registerCloudWatchMetrics(server: any): void {
   });
 
   // On-error hook to record error metrics
-  server.addHook('onError', async (request: FastifyRequest, reply: FastifyReply, error: Error) => {
-    const timing = (request as any).cloudWatchTiming as RequestTiming;
+  server.addHook('onError', async (request: FastifyRequest, _reply: FastifyReply, error: Error) => {
+    const timing = (request as FastifyRequest & { cloudWatchTiming?: RequestTiming }).cloudWatchTiming;
 
     if (!timing) {
       return;
@@ -99,6 +100,10 @@ export function registerCloudWatchMetrics(server: any): void {
 function getEndpointName(url: string): string {
   // Remove query parameters
   const path = url.split('?')[0];
+
+  if (!path) {
+    return '/';
+  }
 
   // Replace dynamic segments with placeholders for better grouping
   return (
@@ -184,12 +189,12 @@ function getErrorTypeFromError(error: Error): string {
  * Database query metrics decorator
  * Use this to wrap database operations and record query performance
  */
-export function recordDatabaseMetrics<T extends (...args: any[]) => Promise<any>>(
+export function recordDatabaseMetrics<T extends (...args: unknown[]) => Promise<unknown>>(
   operation: string,
   table: string,
   fn: T
 ): T {
-  return (async (...args: any[]) => {
+  return (async (...args: unknown[]) => {
     const startTime = Date.now();
 
     try {
@@ -220,7 +225,7 @@ export function recordDatabaseMetrics<T extends (...args: any[]) => Promise<any>
 export async function recordCacheMetrics(
   cacheType: string,
   operation: 'hit' | 'miss' | 'set' | 'delete',
-  key?: string
+  _key?: string
 ): Promise<void> {
   try {
     switch (operation) {
@@ -254,8 +259,6 @@ export async function recordExternalServiceMetrics(
   success: boolean
 ): Promise<void> {
   try {
-    const metricName = success ? 'ExternalServiceSuccess' : 'ExternalServiceError';
-
     await metrics.responseTime(`external/${serviceName}`, operation, duration);
     applicationMetricsService.recordExternalServiceCall(serviceName, operation, duration, success);
 

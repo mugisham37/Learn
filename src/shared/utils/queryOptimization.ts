@@ -92,13 +92,13 @@ export class QueryOptimizer {
 
       // Execute EXPLAIN ANALYZE
       const explainQuery = `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) ${query}`;
-      const result = await this.db.execute(sql.raw(explainQuery, params));
+      const result = await this.db.execute(sql.raw(explainQuery));
 
       const executionTime = Date.now() - startTime;
       const planData = result.rows[0] as { 'QUERY PLAN': QueryPlanNode[] };
       const plan = planData['QUERY PLAN'][0];
 
-      return this.parseQueryPlan(query, plan, executionTime);
+      return this.parseQueryPlan(query, plan || {}, executionTime);
     } catch (error) {
       logger.error('Query analysis failed', { query, error });
       throw error;

@@ -18,24 +18,22 @@ import {
   difficultySchema,
   lessonTypeSchema,
   questionTypeSchema,
-  gradingStatusSchema,
-  enrollmentStatusSchema,
   progressStatusSchema,
-  paymentStatusSchema,
+
   notificationTypeSchema,
-  prioritySchema,
+
   idParamSchema,
   slugParamSchema,
   metadataSchema,
   timezoneSchema,
   languageSchema,
-  currencySchema,
+
   priceSchema,
   phoneSchema,
   socialMediaSchema,
-  addressSchema,
+
   durationSchema,
-  ratingSchema,
+
   tagsSchema,
 } from './common.js';
 

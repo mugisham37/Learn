@@ -8,10 +8,13 @@
  */
 
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+
+import { logger } from '../utils/logger.js';
+
 import { applicationMetricsService } from '../services/ApplicationMetricsService.js';
 import { cloudWatchService } from '../services/CloudWatchService.js';
+
 import { requireAuth, requireRole } from './index.js';
-import { logger } from '../utils/logger.js';
 
 /**
  * Metrics response interface
@@ -74,7 +77,7 @@ interface MetricsResponse {
  */
 export function registerMetricsEndpoints(server: FastifyInstance): void {
   // Public metrics endpoint (basic metrics only)
-  server.get('/metrics', async (request: FastifyRequest, reply: FastifyReply) => {
+  server.get('/metrics', async (_request: FastifyRequest, reply: FastifyReply) => {
     try {
       const metrics = await getBasicMetrics();
       return reply.send(metrics);
@@ -90,7 +93,7 @@ export function registerMetricsEndpoints(server: FastifyInstance): void {
     {
       preHandler: [requireAuth, requireRole(['admin'])],
     },
-    async (request: FastifyRequest, reply: FastifyReply) => {
+    async (_request: FastifyRequest, reply: FastifyReply) => {
       try {
         const metrics = await getDetailedMetrics();
         return reply.send(metrics);
@@ -102,7 +105,7 @@ export function registerMetricsEndpoints(server: FastifyInstance): void {
   );
 
   // Metrics health endpoint
-  server.get('/metrics/health', async (request: FastifyRequest, reply: FastifyReply) => {
+  server.get('/metrics/health', async (_request: FastifyRequest, reply: FastifyReply) => {
     try {
       const health = await getMetricsHealth();
       const statusCode = health.healthy ? 200 : 503;
@@ -117,7 +120,7 @@ export function registerMetricsEndpoints(server: FastifyInstance): void {
   });
 
   // Prometheus-style metrics endpoint
-  server.get('/metrics/prometheus', async (request: FastifyRequest, reply: FastifyReply) => {
+  server.get('/metrics/prometheus', async (_request: FastifyRequest, reply: FastifyReply) => {
     try {
       const prometheusMetrics = await getPrometheusMetrics();
       return reply

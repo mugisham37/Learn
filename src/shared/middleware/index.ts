@@ -9,18 +9,14 @@
 import { FastifyReply, FastifyRequest } from 'fastify';
 
 import { AuthenticationError, AuthorizationError, ValidationError } from '../errors/index.js';
-import { Role } from '../types/index.js';
+import { Role, UserContext } from '../types/index.js';
 import { JWTPayload, verifyToken } from '../utils/auth.js';
 
 /**
  * Extended request interface with authenticated user context
  */
 export interface AuthenticatedRequest extends FastifyRequest {
-  user: {
-    userId: string;
-    email: string;
-    role: Role;
-  };
+  user: UserContext;
 }
 
 /**
@@ -106,6 +102,7 @@ export function requireAuth(request: FastifyRequest, _reply: FastifyReply): void
 
     // Attach user context to request
     (request as AuthenticatedRequest).user = {
+      id: verifiedToken.payload.userId,
       userId: verifiedToken.payload.userId,
       email: verifiedToken.payload.email,
       role: verifiedToken.payload.role,
