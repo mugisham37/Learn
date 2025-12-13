@@ -74,7 +74,7 @@ export interface TypedQueue<T = Record<string, unknown>> {
   add(name: string, data: T, options?: JobsOptions): Promise<void>;
   getStats(): Promise<QueueStats>;
   pause(): Promise<void>;
-  resume(): Promise<void>;
+  resume(): void;
   clean(grace: number, status: string): Promise<void>;
   close(): Promise<void>;
 }
@@ -86,7 +86,7 @@ export interface TypedWorker<T = Record<string, unknown>> {
   process(processor: (job: { data: T }) => Promise<unknown>): void;
   close(): Promise<void>;
   pause(): Promise<void>;
-  resume(): Promise<void>;
+  resume(): void;
 }
 
 /**

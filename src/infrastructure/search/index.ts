@@ -12,7 +12,11 @@ import { Client, ClientOptions } from '@elastic/elasticsearch';
 import { config } from '../../config/index.js';
 import { secureConfig } from '../../shared/utils/secureConfig.js';
 
+import type { IElasticsearchClient } from './IElasticsearchClient.js';
 import type { ISearchRepository } from './ISearchRepository.js';
+import { ElasticsearchClient } from './ElasticsearchClient.js';
+import { ElasticsearchClient } from './ElasticsearchClient.js';
+import { ElasticsearchClient } from './ElasticsearchClient.js';
 
 /**
  * Index names for different document types
@@ -62,7 +66,7 @@ const clientOptions: ClientOptions = {
   node: config.elasticsearch.node,
   auth: {
     username: config.elasticsearch.username,
-    password: secureConfig.getElasticsearchPassword(),
+    password: secureConfig.getElasticsearchPassword() || 'changeme',
   },
   // Connection configuration
   requestTimeout: 30000,
@@ -666,9 +670,6 @@ export { SearchRepository } from './SearchRepository.js';
 // Export Elasticsearch client interface and implementation
 export type { IElasticsearchClient } from './IElasticsearchClient.js';
 export { ElasticsearchClient } from './ElasticsearchClient.js';
-import { ElasticsearchClient } from './ElasticsearchClient.js';
-import { IElasticsearchClient } from './IElasticsearchClient.js';
-import { IElasticsearchClient } from './IElasticsearchClient.js';
 
 /**
  * Create a search repository instance

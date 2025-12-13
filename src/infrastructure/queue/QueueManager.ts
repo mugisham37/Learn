@@ -142,7 +142,12 @@ export class QueueManager {
       return {
         healthy: false,
         queues: [],
-        alerts: [{ message: 'Queue manager not initialized' }],
+        alerts: [{
+          severity: 'error' as const,
+          queueName: 'system',
+          message: 'Queue manager not initialized',
+          timestamp: new Date(),
+        }],
         timestamp: new Date(),
       };
     }
@@ -154,12 +159,12 @@ export class QueueManager {
       ]);
 
       // Ensure alerts conform to the expected interface
-      const alerts: Alert[] = alertsRaw.map((alert: any) => ({
-        severity: alert.severity || 'info',
-        queueName: alert.queueName || 'unknown',
-        message: alert.message || 'Unknown alert',
-        timestamp: alert.timestamp || new Date(),
-        metadata: alert.metadata || {},
+      const alerts: Alert[] = alertsRaw.map((alert: Alert) => ({
+        severity: alert['severity'] || 'info',
+        queueName: String(alert['queueName'] || 'unknown'),
+        message: String(alert['message'] || 'Unknown alert'),
+        timestamp: alert['timestamp'] || new Date(),
+        metadata: alert['metadata'] || {},
       }));
 
       // Determine overall health
@@ -180,8 +185,13 @@ export class QueueManager {
         queues: [],
         alerts: [
           {
+            severity: 'error' as const,
+            queueName: 'system',
             message: 'Health check failed',
-            error: error instanceof Error ? error.message : String(error),
+            timestamp: new Date(),
+            metadata: {
+              error: error instanceof Error ? error.message : String(error),
+            },
           },
         ],
         timestamp: new Date(),

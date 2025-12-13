@@ -401,8 +401,8 @@ export class QueueFactory {
         await queue.pause();
       },
 
-      async resume(): Promise<void> {
-        queue.resume();
+      resume(): void {
+        void queue.resume();
       },
 
       async clean(grace: number, status: string): Promise<void> {
@@ -432,8 +432,8 @@ export class QueueFactory {
         await worker.pause();
       },
 
-      async resume(): Promise<void> {
-        await worker.resume();
+      resume(): void {
+        worker.resume();
       },
     };
   }
@@ -450,8 +450,8 @@ export class QueueFactory {
       logger.debug(`Job ${job.id} waiting in queue ${queue.name}`);
     });
 
-    queue.on('stalled', (job) => {
-      const jobId = typeof job === 'string' ? job : job?.id || 'unknown';
+    queue.on('stalled', (job: unknown) => {
+      const jobId = typeof job === 'string' ? job : (job?.id as string) || 'unknown';
       logger.warn(`Job ${jobId} stalled in queue ${queue.name}`);
 
       const listener = this.eventListeners.get(queue.name);

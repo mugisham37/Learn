@@ -113,9 +113,9 @@ export async function createSocketServer(fastify: FastifyInstance): Promise<Sock
   io.adapter(redisAdapter);
 
   // Authentication middleware (requirement 9.6)
-  io.use(async (socket, next) => {
+  io.use((socket, next) => {
     try {
-      await authenticateSocket(socket, next);
+      authenticateSocket(socket, next);
     } catch (error) {
       logger.error('Socket authentication error', {
         error: error instanceof Error ? error.message : String(error),
@@ -148,10 +148,10 @@ export async function createSocketServer(fastify: FastifyInstance): Promise<Sock
     await handleUserPresence(authSocket, 'online');
 
     // Set up event handlers
-    setupSocketEventHandlers(authSocket);
+    void setupSocketEventHandlers(authSocket);
 
     // Handle disconnection
-    authSocket.on('disconnect', async (reason) => {
+    authSocket.on('disconnect', (reason: string) => {
       logger.info('Socket disconnected', {
         socketId: authSocket.id,
         userId: authSocket.userId,
@@ -193,14 +193,16 @@ export async function createSocketServer(fastify: FastifyInstance): Promise<Sock
 function authenticateSocket(socket: Socket, next: (err?: Error) => void): void {
   try {
     // Extract token from auth header or query parameter
-    const token = (socket.handshake.auth as any)?.token || (socket.handshake.query as any)?.token;
+    const auth = socket.handshake.auth as Record<string, unknown>;
+    const query = socket.handshake.query as Record<string, unknown>;
+    const token = auth?.token || query?.token;
 
     if (!token) {
       throw new Error('No authentication token provided');
     }
 
     // Verify JWT token
-    const decoded = verify(token, secrets.getJwtConfig().secret) as {
+    const decoded = verify(String(token), secrets.getJwtConfig().secret) as {
       userId: string;
       role: 'student' | 'educator' | 'admin';
       enrolledCourses?: string[];
@@ -222,7 +224,8 @@ function authenticateSocket(socket: Socket, next: (err?: Error) => void): void {
  */
 function setupSocketEventHandlers(socket: AuthenticatedSocket): void {
   // Join course room (for educators creating courses or students enrolling)
-  socket.on('join-course', async (courseId: string) => {
+  socket.on('join-course', (courseId: string) => {
+    void (async () => {
     try {
       // TODO: Validate user has access to course
       await socket.join(SocketRooms.course(courseId));
@@ -243,10 +246,12 @@ function setupSocketEventHandlers(socket: AuthenticatedSocket): void {
 
       socket.emit('error', { message: 'Failed to join course room' });
     }
+    })();
   });
 
   // Leave course room
-  socket.on('leave-course', async (courseId: string) => {
+  socket.on('leave-course', (courseId: string) => {
+    void (async () => {
     try {
       await socket.leave(SocketRooms.course(courseId));
 
@@ -264,6 +269,7 @@ function setupSocketEventHandlers(socket: AuthenticatedSocket): void {
         error: error instanceof Error ? error.message : String(error),
       });
     }
+    })();
   });
 
   // Join conversation room
@@ -524,7 +530,7 @@ export async function getOnlineUsersInCourse(courseId: string): Promise<string[]
     }
 
     const sockets = await io.in(SocketRooms.course(courseId)).fetchSockets();
-    return sockets.map((socket: any) => (socket as AuthenticatedSocket).userId).filter(Boolean);
+    return sockets.map((socket: unknown) => (socket as AuthenticatedSocket).userId).filter(Boolean);
   } catch (error) {
     logger.error('Error getting online users in course', {
       courseId,

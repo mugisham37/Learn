@@ -324,7 +324,7 @@ export abstract class OptimizedBaseRepository<T extends Record<string, unknown>>
 
     const results = await this.db
       .delete(this.table)
-      .where(eq(this.table[this.primaryKey as keyof typeof this.table] as any, id))
+      .where(eq(this.table[this.primaryKey as keyof typeof this.table] as unknown, id))
       .returning();
     
     const result = results[0];
