@@ -314,7 +314,7 @@ export class AlertingService extends EventEmitter {
       }
 
       const color = this.getSeverityColor(alert.severity);
-      const _payload = {
+      const payload = {
         channel: this.config.slack.channel,
         username: 'Job Monitor',
         icon_emoji: ':warning:',
@@ -346,6 +346,7 @@ export class AlertingService extends EventEmitter {
 
       // This would make an HTTP request to Slack webhook
       // In a real implementation, you would use the payload here
+      logger.debug('Slack payload prepared', { payload });
 
       // This would make an HTTP request to Slack webhook
       logger.info('Slack alert sent', {

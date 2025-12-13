@@ -72,7 +72,7 @@ export class AssetOptimizationService {
 
   constructor(
     private readonly cloudFrontService: ICloudFrontService,
-    private readonly imageProcessingService: ImageProcessingService, // TODO: Use for actual image processing
+    private readonly imageProcessingService: ImageProcessingService,
     private readonly lazyLoadingService: LazyLoadingService,
     config: AssetOptimizationConfig = {}
   ) {
@@ -373,6 +373,40 @@ export class AssetOptimizationService {
     }
 
     return 'image'; // Default fallback
+  }
+
+  /**
+   * Process image for optimization
+   */
+  async processImageAsset(
+    buffer: Buffer,
+    options: {
+      width?: number;
+      height?: number;
+      quality?: number;
+      format?: 'jpeg' | 'png' | 'webp';
+    } = {}
+  ): Promise<{
+    buffer: Buffer;
+    format: string;
+    width: number;
+    height: number;
+    size: number;
+  }> {
+    if (!this.config.enableImageOptimization) {
+      throw new Error('Image optimization is disabled');
+    }
+
+    const processedBuffer = await this.imageProcessingService.processImage(buffer, options);
+    
+    // Return processed image with metadata
+    return {
+      buffer: processedBuffer,
+      format: options.format || 'jpeg',
+      width: options.width || 0,
+      height: options.height || 0,
+      size: processedBuffer.length,
+    };
   }
 
   /**

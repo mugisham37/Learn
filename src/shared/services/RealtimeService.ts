@@ -27,7 +27,7 @@ export class RealtimeService implements IRealtimeService {
   /**
    * Emits an event to a specific user
    */
-  async emitToUser<K extends keyof RealtimeEvents>(
+  emitToUser<K extends keyof RealtimeEvents>(
     userId: string,
     event: K,
     data: RealtimeEvents[K]
@@ -40,20 +40,22 @@ export class RealtimeService implements IRealtimeService {
         event,
         dataKeys: Object.keys(data || {}),
       });
+      
+      return Promise.resolve();
     } catch (error) {
       logger.error('Failed to emit real-time event to user', {
         userId,
         event,
         error: error instanceof Error ? error.message : String(error),
       });
-      throw error;
+      return Promise.reject(error);
     }
   }
 
   /**
    * Emits an event to a specific room
    */
-  async emitToRoom<K extends keyof RealtimeEvents>(
+  emitToRoom<K extends keyof RealtimeEvents>(
     room: string,
     event: K,
     data: RealtimeEvents[K]
@@ -66,20 +68,22 @@ export class RealtimeService implements IRealtimeService {
         event,
         dataKeys: Object.keys(data || {}),
       });
+      
+      return Promise.resolve();
     } catch (error) {
       logger.error('Failed to emit real-time event to room', {
         room,
         event,
         error: error instanceof Error ? error.message : String(error),
       });
-      throw error;
+      return Promise.reject(error);
     }
   }
 
   /**
    * Emits an event to all users in a course
    */
-  async emitToCourse<K extends keyof RealtimeEvents>(
+  emitToCourse<K extends keyof RealtimeEvents>(
     courseId: string,
     event: K,
     data: RealtimeEvents[K]
@@ -92,27 +96,29 @@ export class RealtimeService implements IRealtimeService {
         event,
         dataKeys: Object.keys(data || {}),
       });
+      
+      return Promise.resolve();
     } catch (error) {
       logger.error('Failed to emit real-time event to course', {
         courseId,
         event,
         error: error instanceof Error ? error.message : String(error),
       });
-      throw error;
+      return Promise.reject(error);
     }
   }
 
   /**
    * Emits an event to a conversation between two users
    */
-  async emitToConversation<K extends keyof RealtimeEvents>(
+  emitToConversation<K extends keyof RealtimeEvents>(
     userId1: string,
     userId2: string,
     event: K,
     data: RealtimeEvents[K]
   ): Promise<void> {
     try {
-      await emitToConversation(userId1, userId2, event, data);
+      emitToConversation(userId1, userId2, event, data);
 
       logger.debug('Real-time event emitted to conversation', {
         userId1,
@@ -120,6 +126,8 @@ export class RealtimeService implements IRealtimeService {
         event,
         dataKeys: Object.keys(data || {}),
       });
+      
+      return Promise.resolve();
     } catch (error) {
       logger.error('Failed to emit real-time event to conversation', {
         userId1,
@@ -127,33 +135,35 @@ export class RealtimeService implements IRealtimeService {
         event,
         error: error instanceof Error ? error.message : String(error),
       });
-      throw error;
+      return Promise.reject(error);
     }
   }
 
   /**
    * Emits an event to a discussion thread
    */
-  async emitToThread<K extends keyof RealtimeEvents>(
+  emitToThread<K extends keyof RealtimeEvents>(
     threadId: string,
     event: K,
     data: RealtimeEvents[K]
   ): Promise<void> {
     try {
-      await emitToThread(threadId, event, data);
+      emitToThread(threadId, event, data);
 
       logger.debug('Real-time event emitted to thread', {
         threadId,
         event,
         dataKeys: Object.keys(data || {}),
       });
+      
+      return Promise.resolve();
     } catch (error) {
       logger.error('Failed to emit real-time event to thread', {
         threadId,
         event,
         error: error instanceof Error ? error.message : String(error),
       });
-      throw error;
+      return Promise.reject(error);
     }
   }
 

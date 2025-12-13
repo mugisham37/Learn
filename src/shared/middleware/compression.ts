@@ -52,6 +52,7 @@ const DEFAULT_OPTIONS: Required<CompressionOptions> = {
 
 /**
  * Checks if content type should be compressed
+ * Available for future use when implementing content-type based compression
  */
 function _shouldCompress(contentType: string, allowedTypes: string[]): boolean {
   if (!contentType) return false;
@@ -137,6 +138,7 @@ export function createCompressionMiddleware(options: CompressionOptions = {}): (
 
 /**
  * Compresses a payload using the specified compression stream
+ * Available for future use when implementing actual compression
  */
 async function _compressStream(payload: string | Buffer, compressionStream: NodeJS.ReadWriteStream): Promise<Buffer> {
   const chunks: Buffer[] = [];
