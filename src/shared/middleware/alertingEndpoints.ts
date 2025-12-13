@@ -11,6 +11,7 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 
 import { getAlertingRulesService } from '../services/AlertingRulesService.js';
 import { logger } from '../utils/logger.js';
+
 import { requireAuth, requireRole } from './index.js';
 
 /**

@@ -8,8 +8,7 @@
  */
 
 import { FastifyRequest, FastifyReply } from 'fastify';
-
-import { logger } from '../utils/logger.js';
+import { MultipartFile } from '@fastify/multipart';
 
 import { ValidationError } from '../errors/index.js';
 import {
@@ -17,6 +16,13 @@ import {
   FileUploadContext,
   FileValidationResult,
 } from '../services/FileUploadSecurityService.js';
+import { logger } from '../utils/logger.js';
+import { 
+  ExtendedFastifyRequest, 
+  MultipartFile, 
+  isMultipartRequest,
+  isAuthenticatedRequest 
+} from '../types/fastify.js';
 
 /**
  * File upload middleware options
@@ -31,7 +37,7 @@ export interface FileUploadMiddlewareOptions {
 /**
  * Extended request with file validation result
  */
-export interface RequestWithFileValidation extends FastifyRequest {
+export interface RequestWithFileValidation extends ExtendedFastifyRequest {
   fileValidation?: FileValidationResult;
   securityService?: FileUploadSecurityService;
 }
@@ -45,10 +51,12 @@ export function createFileUploadSecurityMiddleware(
 ): (request: RequestWithFileValidation, reply: FastifyReply) => Promise<void> {
   return async (request: RequestWithFileValidation, reply: FastifyReply) => {
     try {
+      const userId = isAuthenticatedRequest(request) ? request.user.id : undefined;
+      
       logger.info('Starting file upload security validation', {
         context: options.context,
         fieldName: options.fieldName || 'file',
-        userId: (request as any).user?.id,
+        userId,
       });
 
       // Attach security service to request for later use
@@ -82,7 +90,7 @@ export function createFileUploadSecurityMiddleware(
         fileBuffer: fileData.buffer,
         declaredMimeType: fileData.mimeType,
         context: options.context,
-        userId: (request as any).user?.id || 'anonymous',
+        userId: userId || 'anonymous',
         maxSizeOverride: options.maxSizeOverride,
       });
 
@@ -95,7 +103,7 @@ export function createFileUploadSecurityMiddleware(
           fileName: fileData.fileName,
           context: options.context,
           errors: validationResult.errors,
-          userId: (request as any).user?.id,
+          userId,
         });
 
         throw new ValidationError(`File validation failed: ${validationResult.errors.join(', ')}`, [

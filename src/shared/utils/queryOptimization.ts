@@ -86,7 +86,7 @@ export class QueryOptimizer {
   /**
    * Analyze query performance using EXPLAIN ANALYZE
    */
-  async analyzeQuery(query: string, params: unknown[] = []): Promise<QueryAnalysis> {
+  async analyzeQuery(query: string, _params: unknown[] = []): Promise<QueryAnalysis> {
     try {
       const startTime = Date.now();
 
@@ -98,7 +98,7 @@ export class QueryOptimizer {
       const planData = result.rows[0] as { 'QUERY PLAN': QueryPlanNode[] };
       const plan = planData['QUERY PLAN'][0];
 
-      return this.parseQueryPlan(query, plan || {}, executionTime);
+      return this.parseQueryPlan(query, plan || {} as QueryPlanNode, executionTime);
     } catch (error) {
       logger.error('Query analysis failed', { query, error });
       throw error;
