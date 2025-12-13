@@ -13,7 +13,6 @@ import * as QRCode from 'qrcode';
 import { ValidationError, ExternalServiceError } from '../../../../shared/errors/index.js';
 import { IS3Service } from '../../../../shared/services/IS3Service.js';
 import { logger } from '../../../../shared/utils/logger.js';
-
 import { Certificate } from '../../domain/entities/Certificate.js';
 import { Enrollment } from '../../domain/entities/Enrollment.js';
 

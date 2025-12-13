@@ -23,14 +23,14 @@ import {
   withDrizzleTransaction,
 } from '../../../../infrastructure/database/index.js';
 import {
+  lessons,
+  courseModules,
+} from '../../../../infrastructure/database/schema/courses.schema.js';
+import {
   lessonProgress,
   LessonProgress,
   NewLessonProgress,
 } from '../../../../infrastructure/database/schema/enrollments.schema.js';
-import {
-  lessons,
-  courseModules,
-} from '../../../../infrastructure/database/schema/courses.schema.js';
 import { DatabaseError, ConflictError, NotFoundError } from '../../../../shared/errors/index.js';
 
 import {

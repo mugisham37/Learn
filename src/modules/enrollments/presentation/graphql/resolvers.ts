@@ -9,6 +9,7 @@
 
 import { GraphQLError } from 'graphql';
 
+import { GraphQLContext } from '../../../../infrastructure/graphql/apolloServer.js';
 import {
   SUBSCRIPTION_EVENTS,
   createAsyncIterator,
@@ -35,12 +36,7 @@ import { ILessonProgressRepository } from '../../infrastructure/repositories/ILe
 /**
  * GraphQL context interface for enrollments module
  */
-export interface EnrollmentGraphQLContext {
-  user?: {
-    id: string;
-    email: string;
-    role: string;
-  };
+export interface EnrollmentGraphQLContext extends GraphQLContext {
   enrollmentService: IEnrollmentService;
   certificateRepository: ICertificateRepository;
   enrollmentRepository: IEnrollmentRepository;
@@ -90,24 +86,7 @@ interface PaginationInput {
   before?: string;
 }
 
-/**
- * Helper function to require authentication
- */
-function requireEnrollmentAuth(context: EnrollmentGraphQLContext): {
-  id: string;
-  email: string;
-  role: string;
-} {
-  if (!context.user) {
-    throw new GraphQLError('Authentication required', {
-      extensions: {
-        code: 'UNAUTHENTICATED',
-        http: { status: 401 },
-      },
-    });
-  }
-  return context.user;
-}
+
 
 /**
  * Helper function to check if user is a student
@@ -129,26 +108,7 @@ function requireStudent(context: EnrollmentGraphQLContext): {
   return user;
 }
 
-/**
- * Helper function to check if user is an educator
- * Currently unused but kept for future use
- */
-function _requireEducator(context: EnrollmentGraphQLContext): {
-  id: string;
-  email: string;
-  role: string;
-} {
-  const user = requireAuth(context);
-  if (user.role !== 'educator') {
-    throw new GraphQLError('Educator role required', {
-      extensions: {
-        code: 'FORBIDDEN',
-        http: { status: 403 },
-      },
-    });
-  }
-  return user;
-}
+
 
 /**
  * Helper function to check if user is an admin
@@ -1572,15 +1532,16 @@ export const enrollmentResolvers = {
      */
     enrollmentProgressUpdated: {
       subscribe: withFilter(
-        (_parent: unknown, _args: unknown, context: EnrollmentGraphQLContext) => {
+        (_parent: unknown, _args: unknown, context?: EnrollmentGraphQLContext) => {
           // Require authentication for subscriptions
           if (!context) {
             throw new GraphQLError('Context is required');
           }
           requireAuth(context);
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-return
           return createAsyncIterator(SUBSCRIPTION_EVENTS.ENROLLMENT_PROGRESS_UPDATED);
         },
-        (payload: unknown, variables: unknown, context: EnrollmentGraphQLContext) => {
+        (payload: unknown, variables: unknown, context?: EnrollmentGraphQLContext): boolean => {
           // Users can only subscribe to their own enrollment progress
           if (!context) {
             return false;
@@ -1598,15 +1559,16 @@ export const enrollmentResolvers = {
      */
     lessonProgressUpdated: {
       subscribe: withFilter(
-        (_parent: unknown, _args: unknown, context: EnrollmentGraphQLContext) => {
+        (_parent: unknown, _args: unknown, context?: EnrollmentGraphQLContext) => {
           // Require authentication for subscriptions
           if (!context) {
             throw new GraphQLError('Context is required');
           }
           requireAuth(context);
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-return
           return createAsyncIterator(SUBSCRIPTION_EVENTS.LESSON_PROGRESS_UPDATED);
         },
-        (payload: unknown, variables: unknown, context: EnrollmentGraphQLContext) => {
+        (payload: unknown, variables: unknown, context?: EnrollmentGraphQLContext): boolean => {
           // Users can only subscribe to their own lesson progress
           if (!context) {
             return false;
@@ -1624,15 +1586,16 @@ export const enrollmentResolvers = {
      */
     certificateGenerated: {
       subscribe: withFilter(
-        (_parent: unknown, _args: unknown, context: EnrollmentGraphQLContext) => {
+        (_parent: unknown, _args: unknown, context?: EnrollmentGraphQLContext) => {
           // Require authentication for subscriptions
           if (!context) {
             throw new GraphQLError('Context is required');
           }
           requireAuth(context);
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-return
           return createAsyncIterator(SUBSCRIPTION_EVENTS.CERTIFICATE_GENERATED);
         },
-        (payload: unknown, variables: unknown, context: EnrollmentGraphQLContext) => {
+        (payload: unknown, variables: unknown, context?: EnrollmentGraphQLContext): boolean => {
           // Users can only subscribe to their own certificates
           if (!context) {
             return false;
@@ -1650,15 +1613,16 @@ export const enrollmentResolvers = {
      */
     courseCompleted: {
       subscribe: withFilter(
-        (_parent: unknown, _args: unknown, context: EnrollmentGraphQLContext) => {
+        (_parent: unknown, _args: unknown, context?: EnrollmentGraphQLContext) => {
           // Require authentication for subscriptions
           if (!context) {
             throw new GraphQLError('Context is required');
           }
           requireAuth(context);
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-return
           return createAsyncIterator(SUBSCRIPTION_EVENTS.COURSE_COMPLETED);
         },
-        (payload: unknown, variables: unknown, context: EnrollmentGraphQLContext) => {
+        (payload: unknown, variables: unknown, context?: EnrollmentGraphQLContext): boolean => {
           // Users can only subscribe to their own course completions
           if (!context) {
             return false;

@@ -26,7 +26,9 @@ import {
   enrollments,
 } from '../../../../infrastructure/database/schema/enrollments.schema.js';
 import { users, userProfiles } from '../../../../infrastructure/database/schema/users.schema.js';
+// eslint-disable-next-line import/order
 import { DatabaseError, ConflictError, NotFoundError } from '../../../../shared/errors/index.js';
+
 import {
   ICertificateRepository,
   CreateCertificateDTO,
@@ -85,7 +87,7 @@ export class CertificateRepository implements ICertificateRepository {
   /**
    * Builds WHERE conditions from filters
    */
-  private buildWhereConditions(filters?: CertificateFilterDTO) {
+  private buildWhereConditions(filters?: CertificateFilterDTO): unknown[] {
     const conditions = [];
 
     if (filters?.enrollmentId) {

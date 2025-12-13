@@ -108,7 +108,7 @@ export class EnrollmentRepository implements IEnrollmentRepository {
   /**
    * Builds WHERE conditions from filters
    */
-  private buildWhereConditions(filters?: EnrollmentFilterDTO) {
+  private buildWhereConditions(filters?: EnrollmentFilterDTO): ReturnType<typeof eq>[] {
     const conditions = [];
 
     if (filters?.status) {

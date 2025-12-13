@@ -8,20 +8,17 @@
  */
 
 import { NotFoundError, ValidationError } from '../../../../shared/errors/index.js';
-
 import { ILessonRepository } from '../../../courses/infrastructure/repositories/ILessonRepository.js';
-
 import { Enrollment } from '../../domain/entities/Enrollment.js';
-
-import { IEnrollmentRepository } from '../../infrastructure/repositories/IEnrollmentRepository.js';
 import { ILessonProgressRepository } from '../../infrastructure/repositories/ILessonProgressRepository.js';
+
 import {
   IProgressCalculator,
   StrugglingArea,
   ProgressCalculationResult,
   TimeEstimationResult,
 } from './IProgressCalculator.js';
-import { LessonProgressRecord, LessonData, LessonTypeMultipliers, DefaultLessonDurations } from './types/progress.types.js';
+import { LessonProgressRecord, LessonData, LessonTypeMultipliers, DefaultLessonDurations, CompletedLessonRecord } from './types/progress.types.js';
 
 /**
  * Progress Calculator Service Implementation
@@ -32,8 +29,7 @@ import { LessonProgressRecord, LessonData, LessonTypeMultipliers, DefaultLessonD
 export class ProgressCalculatorService implements IProgressCalculator {
   constructor(
     private readonly lessonProgressRepository: ILessonProgressRepository,
-    private readonly lessonRepository: ILessonRepository,
-    private readonly _enrollmentRepository: IEnrollmentRepository
+    private readonly lessonRepository: ILessonRepository
   ) {}
 
   /**
@@ -125,7 +121,7 @@ export class ProgressCalculatorService implements IProgressCalculator {
     const remainingLessons = progressRecords.filter((p) => p.status !== 'completed').length;
 
     // Apply lesson type weighting
-    const weightedEstimate = await this.applyLessonTypeWeighting(
+    const weightedEstimate = this.applyLessonTypeWeighting(
       remainingLessons,
       averageTimePerLesson,
       progressRecords,
@@ -227,7 +223,7 @@ export class ProgressCalculatorService implements IProgressCalculator {
     const velocityTrend = this.calculateVelocityTrend(completedLessons);
 
     // Compare to course average (simplified - would use historical data in production)
-    const courseAverageVelocity = await this.getCourseAverageVelocity(enrollment.courseId);
+    const courseAverageVelocity = this.getCourseAverageVelocity(enrollment.courseId);
     const comparedToAverage =
       lessonsPerWeek > courseAverageVelocity * 1.2
         ? 'faster'
@@ -359,7 +355,7 @@ export class ProgressCalculatorService implements IProgressCalculator {
   private estimateFromLessonDurations(
     progressRecords: LessonProgressRecord[],
     lessons: LessonData[]
-  ): Promise<TimeEstimationResult> {
+  ): TimeEstimationResult {
     const remainingLessons = progressRecords.filter((p) => p.status !== 'completed');
 
     // Use lesson duration metadata if available
@@ -388,7 +384,7 @@ export class ProgressCalculatorService implements IProgressCalculator {
     averageTimePerLesson: number,
     progressRecords: LessonProgressRecord[],
     lessons: LessonData[]
-  ): Promise<number> {
+  ): number {
     let weightedTime = 0;
 
     const remainingProgress = progressRecords.filter((p) => p.status !== 'completed');
@@ -447,14 +443,15 @@ export class ProgressCalculatorService implements IProgressCalculator {
 
     const quizScores = progressRecords
       .filter((p) => p.quizScore !== undefined && p.quizScore !== null)
-      .map((p) => p.quizScore);
+      .map((p) => p.quizScore!)
+      .filter((score): score is number => score !== null && score !== undefined);
 
     if (quizScores.length === 0) {
       return areas;
     }
 
-    const averageScore = quizScores.reduce((sum, score) => (sum || 0) + (score || 0), 0) / quizScores.length;
-    const lowScores = quizScores.filter((score) => (score || 0) < 70).length;
+    const averageScore = quizScores.reduce((sum, score) => sum + score, 0) / quizScores.length;
+    const lowScores = quizScores.filter((score) => score < 70).length;
     const lowScoreRatio = lowScores / quizScores.length;
 
     if (averageScore < 70) {
@@ -580,7 +577,7 @@ export class ProgressCalculatorService implements IProgressCalculator {
   private analyzeEngagementPatterns(
     progressRecords: LessonProgressRecord[],
     enrollment: Enrollment
-  ): Promise<StrugglingArea[]> {
+  ): StrugglingArea[] {
     const areas: StrugglingArea[] = [];
 
     // Check for long gaps in activity
@@ -601,14 +598,14 @@ export class ProgressCalculatorService implements IProgressCalculator {
     return areas;
   }
 
-  private calculateVelocityTrend(completedLessons: any[]): 'increasing' | 'stable' | 'decreasing' {
+  private calculateVelocityTrend(completedLessons: LessonProgressRecord[]): 'increasing' | 'stable' | 'decreasing' {
     if (completedLessons.length < 4) {
       return 'stable';
     }
 
     // Sort by completion date
     const sorted = completedLessons
-      .filter((l) => l.completedAt)
+      .filter((l): l is CompletedLessonRecord => l.status === 'completed' && l.completedAt !== null && l.completedAt !== undefined)
       .sort((a, b) => new Date(a.completedAt).getTime() - new Date(b.completedAt).getTime());
 
     const midpoint = Math.floor(sorted.length / 2);
@@ -637,7 +634,7 @@ export class ProgressCalculatorService implements IProgressCalculator {
     }
   }
 
-  private calculateDaySpan(lessons: any[]): number {
+  private calculateDaySpan(lessons: CompletedLessonRecord[]): number {
     if (lessons.length === 0) return 1;
 
     const dates = lessons.map((l) => new Date(l.completedAt).getTime());
@@ -647,7 +644,7 @@ export class ProgressCalculatorService implements IProgressCalculator {
     return Math.max(1, Math.ceil((maxDate - minDate) / (1000 * 60 * 60 * 24)));
   }
 
-  private async getCourseAverageVelocity(_courseId: string): Promise<number> {
+  private getCourseAverageVelocity(_courseId: string): number {
     // In a real implementation, this would query historical data
     // For now, return a reasonable default
     return 2.5; // 2.5 lessons per week average
@@ -665,11 +662,12 @@ export class ProgressCalculatorService implements IProgressCalculator {
   private calculateAverageQuizScore(progressRecords: LessonProgressRecord[]): number {
     const scores = progressRecords
       .filter((p) => p.quizScore !== undefined && p.quizScore !== null)
-      .map((p) => p.quizScore);
+      .map((p) => p.quizScore!)
+      .filter((score): score is number => score !== null && score !== undefined);
 
     if (scores.length === 0) return 0;
 
-    return scores.reduce((sum, score) => (sum || 0) + (score || 0), 0) / scores.length;
+    return scores.reduce((sum, score) => sum + score, 0) / scores.length;
   }
 
   private analyzeStudyPatterns(progressRecords: LessonProgressRecord[]): {
