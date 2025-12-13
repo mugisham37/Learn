@@ -4,29 +4,48 @@
  * Factory for creating service instances with proper dependency injection.
  */
 
-import { IEmailService } from './IEmailService.js';
+import { logger } from '../utils/logger.js';
+
+import { IEmailService, EmailOptions, EmailResult, BulkEmailResult, EmailTemplateData } from './IEmailService.js';
 
 /**
  * Mock Email Service implementation
  */
 class MockEmailService implements IEmailService {
-  async sendTransactional(params: {
-    to: string;
-    templateId: string;
-    templateData: Record<string, unknown>;
-    priority?: string;
-  }): Promise<void> {
+  sendTransactional(options: EmailOptions): Promise<EmailResult> {
     // Mock implementation - would integrate with real email service
-    console.log('Mock email sent:', params);
+    logger.info('Mock email sent:', {
+      to: options.to,
+      templateId: options.templateId,
+      subject: options.subject,
+    });
+    
+    return Promise.resolve({
+      success: true,
+      messageId: `mock-${Date.now()}`,
+    });
   }
 
-  async sendBulk(params: {
-    recipients: string[];
-    templateId: string;
-    templateData: Record<string, unknown>;
-  }): Promise<void> {
+  sendBulk(
+    recipients: string[],
+    templateId: string,
+    _templateData: EmailTemplateData
+  ): Promise<BulkEmailResult> {
     // Mock implementation
-    console.log('Mock bulk email sent:', params);
+    logger.info('Mock bulk email sent:', {
+      recipientCount: recipients.length,
+      templateId,
+    });
+    
+    return Promise.resolve({
+      success: true,
+      successCount: recipients.length,
+      failureCount: 0,
+    });
+  }
+
+  healthCheck(): Promise<boolean> {
+    return Promise.resolve(true);
   }
 }
 

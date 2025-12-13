@@ -11,7 +11,6 @@
 import { promises as fs } from 'fs';
 import { join } from 'path';
 
-import { config } from '../../config/index.js';
 import { logger } from '../utils/logger.js';
 
 /**
@@ -320,8 +319,8 @@ export class LogPruningService {
 
       // Calculate statistics
       stats.totalLogSizeMB = logFiles.reduce((total, file) => total + file.size, 0) / (1024 * 1024);
-      stats.oldestLogDate = logFiles[0].createdAt;
-      stats.newestLogDate = logFiles[logFiles.length - 1].createdAt;
+      stats.oldestLogDate = logFiles[0]?.createdAt ?? null;
+      stats.newestLogDate = logFiles[logFiles.length - 1]?.createdAt ?? null;
       stats.compressedFiles = logFiles.filter(file => file.isCompressed).length;
       stats.uncompressedFiles = logFiles.filter(file => !file.isCompressed).length;
 

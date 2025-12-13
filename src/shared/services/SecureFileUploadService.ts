@@ -7,8 +7,9 @@
  * Requirements: 13.4
  */
 
-import { logger } from '../utils/logger.js';
 import { ValidationError, ExternalServiceError } from '../errors/index.js';
+import { logger } from '../utils/logger.js';
+
 import { IContentService, ContentUploadParams, ContentUploadResult } from './IContentService.js';
 import { 
   IFileUploadSecurityService, 

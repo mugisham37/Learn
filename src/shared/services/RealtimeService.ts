@@ -7,7 +7,6 @@
  * Requirements: 9.6, 9.7, 9.8
  */
 
-import { IRealtimeService, RealtimeEvents, PresenceStatus } from './IRealtimeService.js';
 import {
   emitToUser,
   emitToRoom,
@@ -16,9 +15,10 @@ import {
   emitToThread,
   getOnlineUsersInCourse,
   getUserPresence,
-  SocketRooms,
 } from '../../infrastructure/websocket/index.js';
 import { logger } from '../utils/logger.js';
+
+import { IRealtimeService, RealtimeEvents, PresenceStatus } from './IRealtimeService.js';
 
 /**
  * Real-time service implementation using Socket.io

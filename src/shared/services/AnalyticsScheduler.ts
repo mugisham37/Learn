@@ -15,12 +15,10 @@ import * as cron from 'node-cron';
 
 import { AnalyticsService } from '../../modules/analytics/application/services/AnalyticsService.js';
 import { MetricsCalculator } from '../../modules/analytics/application/services/MetricsCalculator.js';
-
-import { getAnalyticsQueue, initializeAnalyticsQueue } from './AnalyticsQueue.js';
-
+import type { DateRange } from '../types/index.js';
 import { logger } from '../utils/logger.js';
 
-import type { DateRange } from '../types/index.js';
+import { getAnalyticsQueue, initializeAnalyticsQueue } from './AnalyticsQueue.js';
 
 /**
  * Scheduler configuration interface

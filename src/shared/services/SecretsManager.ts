@@ -11,6 +11,7 @@
  */
 
 import { SecretsManagerClient, GetSecretValueCommand, UpdateSecretCommand } from '@aws-sdk/client-secrets-manager';
+
 import { config } from '../../config/index.js';
 import { logger } from '../utils/logger.js';
 
@@ -171,8 +172,8 @@ export class SecretsManager {
     // Initialize AWS Secrets Manager client for production
     if (this.isProduction) {
       // Use environment variables for initial AWS credentials to bootstrap secrets manager
-      const awsAccessKeyId = process.env.AWS_ACCESS_KEY_ID;
-      const awsSecretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
+      const awsAccessKeyId = process.env['AWS_ACCESS_KEY_ID'];
+      const awsSecretAccessKey = process.env['AWS_SECRET_ACCESS_KEY'];
       
       this.awsClient = new SecretsManagerClient({
         region: config.aws.region,

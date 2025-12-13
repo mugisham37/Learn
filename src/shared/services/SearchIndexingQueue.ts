@@ -8,12 +8,13 @@
  */
 
 import { Queue, Worker, Job, QueueOptions, WorkerOptions, JobsOptions } from 'bullmq';
-import { redis } from '../../infrastructure/cache/index.js';
-import { logger } from '../utils/logger.js';
-import { ExternalServiceError, NotFoundError, ValidationError } from '../errors/index.js';
-import type { ISearchService } from '../../modules/search/application/services/ISearchService.js';
+
 import type { Course } from '../../modules/courses/domain/entities/Course.js';
 import type { Lesson } from '../../modules/courses/domain/entities/Lesson.js';
+import type { ISearchService } from '../../modules/search/application/services/ISearchService.js';
+import { redis } from '../../infrastructure/cache/index.js';
+import { ExternalServiceError, NotFoundError, ValidationError } from '../errors/index.js';
+import { logger } from '../utils/logger.js';
 
 /**
  * Search indexing job types
@@ -736,7 +737,7 @@ export class SearchIndexingQueue {
         break;
       
       default:
-        throw new ValidationError(`Invalid job type: ${(data as any).type}`);
+        throw new ValidationError(`Invalid job type: ${(data as unknown).type}`);
     }
   }
 

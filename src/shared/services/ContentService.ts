@@ -6,10 +6,10 @@
  */
 
 import { randomUUID } from 'crypto';
-import { extname } from 'path';
-import { logger } from '../utils/logger.js';
+
 import { ExternalServiceError } from '../errors/index.js';
-import { IS3Service } from './IS3Service.js';
+import { logger } from '../utils/logger.js';
+
 import { ICloudFrontService } from './ICloudFrontService.js';
 import { 
   IContentService,
@@ -19,6 +19,7 @@ import {
   StreamingUrlResult,
   ContentDeleteParams
 } from './IContentService.js';
+import { IS3Service } from './IS3Service.js';
 
 /**
  * Content Service Implementation
@@ -234,7 +235,6 @@ export class ContentService implements IContentService {
   generateContentKey(userId: string, fileName: string, fileType: string): string {
     const timestamp = Date.now();
     const uuid = randomUUID();
-    const extension = extname(fileName).toLowerCase();
     const sanitizedFileName = fileName
       .replace(/[^a-zA-Z0-9.-]/g, '_')
       .replace(/_{2,}/g, '_')

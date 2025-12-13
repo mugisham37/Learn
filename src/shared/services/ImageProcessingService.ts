@@ -15,27 +15,28 @@ export class ImageProcessingService {
   /**
    * Process image with given options
    */
-  async processImage(
+  processImage(
     imageBuffer: Buffer,
-    options: ImageProcessingOptions = {}
+    _options: ImageProcessingOptions = {}
   ): Promise<Buffer> {
     // This would integrate with a real image processing library like Sharp
     // For now, return the original buffer
-    return imageBuffer;
+    return Promise.resolve(imageBuffer);
   }
 
   /**
    * Generate responsive image variants
    */
-  async generateResponsiveVariants(
+  generateResponsiveVariants(
     imageBuffer: Buffer,
     breakpoints: Array<{ width: number; suffix: string }>
   ): Promise<Array<{ buffer: Buffer; width: number; suffix: string }>> {
     // This would generate multiple sizes of the image
-    return breakpoints.map(breakpoint => ({
+    const variants = breakpoints.map(breakpoint => ({
       buffer: imageBuffer, // In reality, this would be resized
       width: breakpoint.width,
       suffix: breakpoint.suffix,
     }));
+    return Promise.resolve(variants);
   }
 }

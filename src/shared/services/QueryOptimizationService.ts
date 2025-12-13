@@ -5,10 +5,13 @@
  * Implements requirement 15.1 for database query optimization
  */
 
+import { inArray } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { Redis } from 'ioredis';
-import { logger } from '../utils/logger';
-import { QueryOptimizer, QueryCache, CursorPaginationOptions, CursorPaginationResult } from '../utils/queryOptimization';
+
+import * as schema from '../../infrastructure/database/schema/index.js';
+import { logger } from '../utils/logger.js';
+import { QueryOptimizer, QueryCache, CursorPaginationOptions, CursorPaginationResult } from '../utils/queryOptimization.js';
 
 /**
  * Batch loading configuration
@@ -22,18 +25,26 @@ interface BatchLoaderConfig<K, V> {
 }
 
 /**
+ * Promise with resolver functions attached
+ */
+interface PromiseWithResolvers<T> extends Promise<T> {
+  _resolve?: (value: T | PromiseLike<T>) => void;
+  _reject?: (reason?: unknown) => void;
+}
+
+/**
  * Query optimization service
  */
 export class QueryOptimizationService {
   private queryOptimizer: QueryOptimizer;
   private queryCache: QueryCache;
-  private batchLoaders = new Map<string, BatchLoader<any, any>>();
+  private batchLoaders = new Map<string, BatchLoader<unknown, unknown>>();
 
   constructor(
-    private db: NodePgDatabase<any>,
+    private readonly db: NodePgDatabase<typeof schema>,
     private redis: Redis
   ) {
-    this.queryOptimizer = new QueryOptimizer(db);
+    this.queryOptimizer = new QueryOptimizer(db as NodePgDatabase<Record<string, never>>);
     this.queryCache = new QueryCache();
   }
 
@@ -49,7 +60,7 @@ export class QueryOptimizationService {
       enableAnalysis?: boolean;
     } = {}
   ): Promise<T> {
-    const { enableCaching = false, cacheTTL = 300000, enableAnalysis = false } = options;
+    const { enableCaching = false, cacheTTL = 300000, enableAnalysis: _enableAnalysis = false } = options;
 
     // Check cache first if enabled
     if (enableCaching) {
@@ -97,11 +108,11 @@ export class QueryOptimizationService {
     config: BatchLoaderConfig<K, V>
   ): BatchLoader<K, V> {
     if (this.batchLoaders.has(name)) {
-      return this.batchLoaders.get(name)!;
+      return this.batchLoaders.get(name) as BatchLoader<K, V>;
     }
 
     const loader = new BatchLoader<K, V>(config, this.redis);
-    this.batchLoaders.set(name, loader);
+    this.batchLoaders.set(name, loader as BatchLoader<unknown, unknown>);
     return loader;
   }
 
@@ -109,7 +120,8 @@ export class QueryOptimizationService {
    * Get batch loader by name
    */
   getBatchLoader<K, V>(name: string): BatchLoader<K, V> | null {
-    return this.batchLoaders.get(name) || null;
+    const loader = this.batchLoaders.get(name);
+    return loader ? (loader as BatchLoader<K, V>) : null;
   }
 
   /**
@@ -120,7 +132,7 @@ export class QueryOptimizationService {
     queryFn: (options: CursorPaginationOptions) => Promise<T[]>,
     options: CursorPaginationOptions
   ): Promise<CursorPaginationResult<T>> {
-    const { cursor, limit, orderBy, direction } = options;
+    const { cursor: _cursor, limit, orderBy, direction: _direction } = options;
 
     // Execute paginated query
     const items = await this.executeOptimizedQuery(
@@ -132,7 +144,7 @@ export class QueryOptimizationService {
     // Generate next cursor if we have more items
     const hasMore = items.length === limit;
     const nextCursor = hasMore && items.length > 0 
-      ? this.generateCursor(items[items.length - 1], orderBy)
+      ? this.generateCursor(items[items.length - 1] as Record<string, unknown>, orderBy)
       : undefined;
 
     return {
@@ -160,12 +172,12 @@ export class QueryOptimizationService {
   /**
    * Get query performance analytics
    */
-  async getPerformanceAnalytics(): Promise<{
+  getPerformanceAnalytics(): {
     slowQueries: number;
     cacheHitRate: number;
     averageQueryTime: number;
-    batchLoaderStats: Record<string, any>;
-  }> {
+    batchLoaderStats: Record<string, unknown>;
+  } {
     // This would be implemented with proper metrics collection
     return {
       slowQueries: 0,
@@ -178,7 +190,7 @@ export class QueryOptimizationService {
   /**
    * Analyze query performance
    */
-  async analyzeQuery(query: string, params: any[] = []) {
+  async analyzeQuery(query: string, params: unknown[] = []): Promise<unknown> {
     return this.queryOptimizer.analyzeQuery(query, params);
   }
 
@@ -188,7 +200,7 @@ export class QueryOptimizationService {
   private async getCachedResult<T>(key: string): Promise<T | null> {
     try {
       const cached = await this.redis.get(key);
-      return cached ? JSON.parse(cached) : null;
+      return cached ? (JSON.parse(cached) as T) : null;
     } catch (error) {
       logger.warn('Cache read failed', { key, error });
       return null;
@@ -203,7 +215,7 @@ export class QueryOptimizationService {
     }
   }
 
-  private generateCursor(record: any, orderBy: string): string {
+  private generateCursor(record: Record<string, unknown>, orderBy: string): string {
     const value = record[orderBy];
     if (value instanceof Date) {
       return Buffer.from(value.toISOString()).toString('base64');
@@ -217,7 +229,7 @@ export class QueryOptimizationService {
  */
 export class BatchLoader<K, V> {
   private pendingKeys = new Set<K>();
-  private pendingPromises = new Map<K, Promise<V | null>>();
+  private pendingPromises = new Map<K, PromiseWithResolvers<V | null>>();
   private batchTimeout: NodeJS.Timeout | null = null;
 
   constructor(
@@ -252,8 +264,8 @@ export class BatchLoader<K, V> {
       }
 
       // Store resolver for later
-      (promise as any)._resolve = resolve;
-      (promise as any)._reject = reject;
+      (promise as PromiseWithResolvers<V | null>)._resolve = resolve;
+      (promise as PromiseWithResolvers<V | null>)._reject = reject;
     });
 
     this.pendingPromises.set(key, promise);
@@ -299,13 +311,13 @@ export class BatchLoader<K, V> {
       // Resolve promises
       promises.forEach((promise, index) => {
         const result = results[index] || null;
-        (promise as any)._resolve(result);
+        (promise as PromiseWithResolvers<V | null>)._resolve?.(result);
       });
 
     } catch (error) {
       // Reject all promises
       promises.forEach(promise => {
-        (promise as any)._reject(error);
+        (promise as PromiseWithResolvers<V | null>)._reject?.(error);
       });
     }
   }
@@ -317,7 +329,7 @@ export class BatchLoader<K, V> {
     try {
       const cacheKey = `${this.config.cacheKeyPrefix}:${String(key)}`;
       const cached = await this.redis.get(cacheKey);
-      return cached ? JSON.parse(cached) : null;
+      return cached ? (JSON.parse(cached) as V) : null;
     } catch {
       return null;
     }
@@ -350,14 +362,14 @@ export class BatchLoader<K, V> {
  */
 export class BatchLoadersFactory {
   constructor(
-    private db: NodePgDatabase<any>,
+    private db: NodePgDatabase<typeof schema>,
     private optimizationService: QueryOptimizationService
   ) {}
 
   /**
    * Create user batch loader
    */
-  createUserLoader() {
+  createUserLoader(): BatchLoader<string, typeof schema.users.$inferSelect | null> {
     return this.optimizationService.createBatchLoader('users', {
       batchSize: 100,
       maxBatchDelay: 10,
@@ -365,9 +377,9 @@ export class BatchLoadersFactory {
       cacheTTL: 300000, // 5 minutes
       loader: async (userIds: string[]) => {
         // Implementation would use proper Drizzle query
-        const users = await this.db.query.users.findMany({
-          where: (users, { inArray }) => inArray(users.id, userIds),
-        });
+        const users = await this.db.select().from(schema.users).where(
+          inArray(schema.users.id, userIds)
+        );
         
         // Return results in same order as requested keys
         return userIds.map(id => users.find(user => user.id === id) || null);
@@ -378,16 +390,16 @@ export class BatchLoadersFactory {
   /**
    * Create course batch loader
    */
-  createCourseLoader() {
+  createCourseLoader(): BatchLoader<string, typeof schema.courses.$inferSelect | null> {
     return this.optimizationService.createBatchLoader('courses', {
       batchSize: 50,
       maxBatchDelay: 10,
       cacheKeyPrefix: 'course',
       cacheTTL: 600000, // 10 minutes
       loader: async (courseIds: string[]) => {
-        const courses = await this.db.query.courses.findMany({
-          where: (courses, { inArray }) => inArray(courses.id, courseIds),
-        });
+        const courses = await this.db.select().from(schema.courses).where(
+          inArray(schema.courses.id, courseIds)
+        );
         
         return courseIds.map(id => courses.find(course => course.id === id) || null);
       },
@@ -397,16 +409,16 @@ export class BatchLoadersFactory {
   /**
    * Create enrollment batch loader
    */
-  createEnrollmentLoader() {
+  createEnrollmentLoader(): BatchLoader<string, typeof schema.enrollments.$inferSelect | null> {
     return this.optimizationService.createBatchLoader('enrollments', {
       batchSize: 100,
       maxBatchDelay: 10,
       cacheKeyPrefix: 'enrollment',
       cacheTTL: 180000, // 3 minutes
       loader: async (enrollmentIds: string[]) => {
-        const enrollments = await this.db.query.enrollments.findMany({
-          where: (enrollments, { inArray }) => inArray(enrollments.id, enrollmentIds),
-        });
+        const enrollments = await this.db.select().from(schema.enrollments).where(
+          inArray(schema.enrollments.id, enrollmentIds)
+        );
         
         return enrollmentIds.map(id => enrollments.find(enrollment => enrollment.id === id) || null);
       },
@@ -422,21 +434,21 @@ export function withQueryOptimization<T extends object>(
   optimizationService: QueryOptimizationService
 ): T {
   return new Proxy(repository, {
-    get(target, prop, receiver) {
+    get(target, prop, receiver): unknown {
       const originalMethod = Reflect.get(target, prop, receiver);
       
       if (typeof originalMethod === 'function' && typeof prop === 'string') {
         // Wrap repository methods with optimization
-        return function(...args: any[]) {
+        return function(this: T, ...args: unknown[]): unknown {
           const methodName = `${target.constructor.name}.${prop}`;
           
           return optimizationService.executeOptimizedQuery(
             methodName,
-            () => originalMethod.apply(this, args),
+            () => (originalMethod as (...args: unknown[]) => unknown).apply(this, args),
             {
               enableCaching: prop.startsWith('find') || prop.startsWith('get'),
               cacheTTL: 300000, // 5 minutes default
-              enableAnalysis: process.env.NODE_ENV === 'development',
+              enableAnalysis: process.env['NODE_ENV'] === 'development',
             }
           );
         };

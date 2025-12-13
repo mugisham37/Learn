@@ -8,12 +8,14 @@
  */
 
 import cron from 'node-cron';
+
+import { config } from '../../config/index.js';
+import { logger } from '../utils/logger.js';
+
+import { getAnalyticsScheduler } from './AnalyticsScheduler.js';
+import { getLogPruningService } from './LogPruningService.js';
 import { secretRotationService } from './SecretRotationService.js';
 import { getSessionCleanupService } from './SessionCleanupService.js';
-import { getLogPruningService } from './LogPruningService.js';
-import { getAnalyticsScheduler } from './AnalyticsScheduler.js';
-import { logger } from '../utils/logger.js';
-import { config } from '../../config/index.js';
 
 /**
  * Cron job configuration
@@ -32,11 +34,16 @@ export interface CronJobConfig {
 }
 
 /**
+ * Cron task type
+ */
+type CronTask = ReturnType<typeof cron.schedule>;
+
+/**
  * Cron Job Service
  */
 export class CronJobService {
   private static instance: CronJobService;
-  private jobs = new Map<string, cron.ScheduledTask>();
+  private jobs = new Map<string, CronTask>();
   private isEnabled: boolean;
 
   private constructor() {
@@ -85,13 +92,12 @@ export class CronJobService {
           }
         },
         {
-          scheduled: false,
           timezone: jobConfig.timezone || 'UTC',
         }
       );
 
       this.jobs.set(jobConfig.name, task);
-      task.start();
+      void task.start();
 
       logger.info('Cron job scheduled', {
         jobName: jobConfig.name,
@@ -188,7 +194,7 @@ export class CronJobService {
   public stopJob(jobName: string): void {
     const job = this.jobs.get(jobName);
     if (job) {
-      job.stop();
+      void job.stop();
       this.jobs.delete(jobName);
       logger.info('Cron job stopped', { jobName });
     }
@@ -199,7 +205,7 @@ export class CronJobService {
    */
   public stopAllJobs(): void {
     for (const [jobName, job] of this.jobs) {
-      job.stop();
+      void job.stop();
       logger.info('Cron job stopped', { jobName });
     }
     this.jobs.clear();

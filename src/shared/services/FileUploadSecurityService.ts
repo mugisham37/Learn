@@ -9,8 +9,9 @@
 
 import { createHash, randomUUID } from 'crypto';
 import { extname } from 'path';
-import { logger } from '../utils/logger.js';
+
 import { ExternalServiceError } from '../errors/index.js';
+import { logger } from '../utils/logger.js';
 import { 
   validateFileType, 
   validateFileSize, 
@@ -217,11 +218,13 @@ export class FileUploadSecurityService {
    */
   private sanitizeFileName(fileName: string): string {
     // Remove path traversal attempts
-    const baseName = fileName.replace(/^.*[\\\/]/, '');
+    const baseName = fileName.replace(/^.*[\\/]/, '');
     
     // Replace dangerous characters with underscores
     const sanitized = baseName
-      .replace(/[<>:"/\\|?*\x00-\x1f]/g, '_')
+      .replace(/[<>:"/\\|?*]/g, '_')
+      // eslint-disable-next-line no-control-regex
+      .replace(/[\x00-\x1f]/g, '_')
       .replace(/^\.+/, '') // Remove leading dots
       .replace(/\.+$/, '') // Remove trailing dots
       .replace(/\s+/g, '_') // Replace spaces with underscores
@@ -262,33 +265,33 @@ export class FileUploadSecurityService {
   /**
    * Validates file content by detecting actual MIME type
    */
-  private async validateFileContent(buffer: Buffer, declaredMimeType: string): Promise<ContentValidationResult> {
+  private validateFileContent(buffer: Buffer, declaredMimeType: string): Promise<ContentValidationResult> {
     try {
       const detectedMimeType = this.detectMimeType(buffer);
       
       // Check if detected type matches declared type or is compatible
       const isCompatible = this.isMimeTypeCompatible(declaredMimeType, detectedMimeType);
       
-      return {
+      return Promise.resolve({
         valid: isCompatible,
         detectedMimeType,
         confidence: 0.9, // High confidence for magic number detection
         errors: isCompatible ? [] : [
           `File content does not match declared type. Expected: ${declaredMimeType}, Detected: ${detectedMimeType}`
         ],
-      };
+      });
     } catch (error) {
       logger.error('File content validation failed', {
         declaredMimeType,
         error: error instanceof Error ? error.message : 'Unknown error',
       });
 
-      return {
+      return Promise.resolve({
         valid: false,
         detectedMimeType: 'application/octet-stream',
         confidence: 0,
         errors: ['Failed to validate file content'],
-      };
+      });
     }
   }
 
@@ -450,7 +453,7 @@ export class FileUploadSecurityService {
   /**
    * Scans file using AWS GuardDuty Malware Protection
    */
-  private async scanWithAWSGuardDuty(buffer: Buffer, fileName: string): Promise<MalwareScanResult> {
+  private scanWithAWSGuardDuty(buffer: Buffer, fileName: string): Promise<MalwareScanResult> {
     // Note: This is a placeholder implementation
     // In a real implementation, you would:
     // 1. Upload file to a temporary S3 bucket configured for GuardDuty scanning
@@ -463,26 +466,26 @@ export class FileUploadSecurityService {
     // For testing purposes, perform basic signature checks
     const signatures = this.checkForKnownMalwareSignatures(buffer);
     if (signatures.length > 0) {
-      return {
+      return Promise.resolve({
         clean: false,
         threat: `Known malware signatures: ${signatures.join(', ')}`,
         scanEngine: 'AWS GuardDuty (placeholder)',
         scanTime: new Date(),
-      };
+      });
     }
     
     // For now, return a clean result if no signatures found
-    return {
+    return Promise.resolve({
       clean: true,
       scanEngine: 'AWS GuardDuty (placeholder)',
       scanTime: new Date(),
-    };
+    });
   }
 
   /**
    * Scans file using ClamAV
    */
-  private async scanWithClamAV(buffer: Buffer, fileName: string): Promise<MalwareScanResult> {
+  private scanWithClamAV(buffer: Buffer, fileName: string): Promise<MalwareScanResult> {
     try {
       // Check for known malware signatures in the buffer
       const malwareSignatures = this.checkForKnownMalwareSignatures(buffer);
@@ -493,12 +496,12 @@ export class FileUploadSecurityService {
           signatures: malwareSignatures 
         });
         
-        return {
+        return Promise.resolve({
           clean: false,
           threat: `Known malware signatures: ${malwareSignatures.join(', ')}`,
           scanEngine: 'ClamAV (signature-based)',
           scanTime: new Date(),
-        };
+        });
       }
 
       // In a real implementation, you would connect to ClamAV daemon
@@ -510,23 +513,23 @@ export class FileUploadSecurityService {
         clean: heuristicResult.clean 
       });
       
-      return {
+      return Promise.resolve({
         clean: heuristicResult.clean,
         threat: heuristicResult.threat,
         scanEngine: 'ClamAV (heuristic)',
         scanTime: new Date(),
-      };
+      });
     } catch (error) {
       logger.error('ClamAV scanning failed', {
         fileName,
         error: error instanceof Error ? error.message : 'Unknown error',
       });
       
-      throw new ExternalServiceError(
+      return Promise.reject(new ExternalServiceError(
         'ClamAV',
         'Malware scanning failed',
         error instanceof Error ? error : new Error('Unknown error')
-      );
+      ));
     }
   }
 

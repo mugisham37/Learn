@@ -53,3 +53,7 @@ declare module 'fastify' {
     user?: UserContext;
   }
 }
+
+// Export additional type modules
+export * from './aws.js';
+export * from './database.js';

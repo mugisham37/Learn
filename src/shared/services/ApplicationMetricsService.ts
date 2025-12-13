@@ -12,6 +12,7 @@ import { EventEmitter } from 'events';
 import * as os from 'os';
 
 import { logger } from '../utils/logger.js';
+
 import { cloudWatchService } from './CloudWatchService.js';
 
 /**

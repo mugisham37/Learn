@@ -23,7 +23,7 @@ export interface EmailTemplate {
  * Template data for variable substitution
  */
 export interface TemplateData {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 /**
@@ -445,8 +445,9 @@ export class EmailTemplateService {
    * Replaces {{variableName}} with actual values
    */
   private substituteVariables(template: string, data: TemplateData): string {
-    return template.replace(/\{\{(\w+)\}\}/g, (match, variableName) => {
-      return data[variableName] !== undefined ? String(data[variableName]) : match;
+    return template.replace(/\{\{(\w+)\}\}/g, (match, variableName: string) => {
+      const value = data[variableName];
+      return value !== undefined ? String(value) : match;
     });
   }
 

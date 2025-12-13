@@ -10,10 +10,10 @@
 
 import { EventEmitter } from 'events';
 
-import { applicationMetricsService } from './ApplicationMetricsService.js';
-import { Alert, AlertSeverity, AlertingService } from './AlertingService.js';
-
 import { logger } from '../utils/logger.js';
+
+import { Alert, AlertSeverity, AlertingService } from './AlertingService.js';
+import { applicationMetricsService } from './ApplicationMetricsService.js';
 
 /**
  * Alert rule configuration
@@ -188,7 +188,7 @@ export class AlertingRulesService extends EventEmitter implements IAlertingRules
    */
   async checkRules(): Promise<void> {
     try {
-      const metrics = this.collectSystemMetrics();
+      const metrics = await Promise.resolve(this.collectSystemMetrics());
       
       for (const [ruleId, rule] of this.rules.entries()) {
         if (!rule.enabled) {
@@ -198,7 +198,7 @@ export class AlertingRulesService extends EventEmitter implements IAlertingRules
         const state = this.alertStates.get(ruleId)!;
         const isTriggered = this.evaluateRule(rule, metrics);
         
-        await this.processRuleState(rule, state, isTriggered);
+        this.processRuleState(rule, state, isTriggered);
       }
     } catch (error) {
       logger.error('Error checking alert rules', { error });
@@ -476,7 +476,7 @@ export class AlertingRulesService extends EventEmitter implements IAlertingRules
   /**
    * Process rule state and trigger alerts if necessary
    */
-  private async processRuleState(rule: AlertRule, state: AlertState, isTriggered: boolean): Promise<void> {
+  private processRuleState(rule: AlertRule, state: AlertState, isTriggered: boolean): void {
     const now = Date.now();
 
     if (isTriggered) {
@@ -493,14 +493,14 @@ export class AlertingRulesService extends EventEmitter implements IAlertingRules
       const cooldownPassed = (now - state.lastNotified) >= (rule.cooldown * 1000);
 
       if (durationMet && (cooldownPassed || !state.triggered)) {
-        await this.triggerAlert(rule, state);
+        this.triggerAlert(rule, state);
         state.triggered = true;
         state.lastNotified = now;
       }
     } else {
       // Condition is no longer met
       if (state.triggered) {
-        await this.resolveAlert(rule, state);
+        this.resolveAlert(rule, state);
         state.triggered = false;
       }
       
@@ -512,7 +512,7 @@ export class AlertingRulesService extends EventEmitter implements IAlertingRules
   /**
    * Trigger an alert
    */
-  private async triggerAlert(rule: AlertRule, state: AlertState): Promise<void> {
+  private triggerAlert(rule: AlertRule, state: AlertState): void {
     const alert: Alert = {
       id: `${rule.id}_${Date.now()}`,
       title: rule.name,
@@ -531,7 +531,7 @@ export class AlertingRulesService extends EventEmitter implements IAlertingRules
 
     try {
       // Send alert through AlertingService
-      await this.alertingService.createAlert(
+      this.alertingService.createAlert(
         alert.severity,
         alert.title,
         alert.message,
@@ -554,7 +554,7 @@ export class AlertingRulesService extends EventEmitter implements IAlertingRules
   /**
    * Resolve an alert
    */
-  private async resolveAlert(rule: AlertRule, state: AlertState): Promise<void> {
+  private resolveAlert(rule: AlertRule, state: AlertState): void {
     const alert: Alert = {
       id: `${rule.id}_resolved_${Date.now()}`,
       title: `RESOLVED: ${rule.name}`,
@@ -572,7 +572,7 @@ export class AlertingRulesService extends EventEmitter implements IAlertingRules
 
     try {
       // Send alert resolution through AlertingService
-      await this.alertingService.createAlert(
+      this.alertingService.createAlert(
         alert.severity,
         alert.title,
         alert.message,

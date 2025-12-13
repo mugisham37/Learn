@@ -8,9 +8,11 @@
  * Requirements: 17.3
  */
 
-import { randomUUID } from 'crypto';
 import { AsyncLocalStorage } from 'async_hooks';
-import { FastifyRequest, FastifyReply } from 'fastify';
+import { randomUUID } from 'crypto';
+
+import { FastifyRequest } from 'fastify';
+
 import { logger } from '../utils/logger.js';
 
 /**
@@ -28,7 +30,7 @@ export interface RequestTraceContext {
   method?: string;
   url?: string;
   startTime: number;
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
 }
 
 /**
@@ -41,12 +43,12 @@ export interface TraceSpan {
   startTime: number;
   endTime?: number;
   duration?: number;
-  tags: Record<string, any>;
+  tags: Record<string, unknown>;
   logs: Array<{
     timestamp: number;
     level: string;
     message: string;
-    fields?: Record<string, any>;
+    fields?: Record<string, unknown>;
   }>;
   status: 'ok' | 'error' | 'timeout';
   error?: Error;
@@ -62,7 +64,7 @@ export interface RequestTrace {
   startTime: number;
   endTime?: number;
   duration?: number;
-  metadata: Record<string, any>;
+  metadata: Record<string, unknown>;
 }
 
 /**
@@ -77,8 +79,8 @@ export interface IRequestTracingService {
   // Span management
   startSpan(operationName: string, parentSpanId?: string): TraceSpan;
   finishSpan(spanId: string, status?: 'ok' | 'error' | 'timeout', error?: Error): void;
-  addSpanTag(spanId: string, key: string, value: any): void;
-  addSpanLog(spanId: string, level: string, message: string, fields?: Record<string, any>): void;
+  addSpanTag(spanId: string, key: string, value: unknown): void;
+  addSpanLog(spanId: string, level: string, message: string, fields?: Record<string, unknown>): void;
   
   // Trace management
   getTrace(traceId: string): RequestTrace | undefined;
@@ -90,7 +92,7 @@ export interface IRequestTracingService {
   generateSpanId(): string;
   
   // Middleware integration
-  extractTraceHeaders(headers: Record<string, any>): Partial<RequestTraceContext>;
+  extractTraceHeaders(headers: Record<string, unknown>): Partial<RequestTraceContext>;
   injectTraceHeaders(context: RequestTraceContext): Record<string, string>;
 }
 
@@ -123,14 +125,14 @@ export class RequestTracingService implements IRequestTracingService {
     const spanId = this.generateSpanId();
 
     // Extract user context if available
-    const user = 'user' in request ? (request.user as any) : undefined;
+    const user = 'user' in request ? request.user : undefined;
 
     const context: RequestTraceContext = {
       requestId,
       traceId,
       spanId,
       parentSpanId: existingContext.parentSpanId,
-      userId: user?.userId || user?.id,
+      userId: user?.id,
       sessionId: existingContext.sessionId,
       userAgent: request.headers['user-agent'],
       ip: request.ip,
@@ -215,9 +217,9 @@ export class RequestTracingService implements IRequestTracingService {
     
     if (error) {
       span.error = error;
-      span.tags.error = true;
-      span.tags.errorMessage = error.message;
-      span.tags.errorName = error.name;
+      span.tags['error'] = true;
+      span.tags['errorMessage'] = error.message;
+      span.tags['errorName'] = error.name;
     }
 
     logger.debug('Finished span', {
@@ -232,7 +234,7 @@ export class RequestTracingService implements IRequestTracingService {
   /**
    * Add tag to span
    */
-  addSpanTag(spanId: string, key: string, value: any): void {
+  addSpanTag(spanId: string, key: string, value: unknown): void {
     const context = this.getCurrentContext();
     if (!context) return;
 
@@ -248,7 +250,7 @@ export class RequestTracingService implements IRequestTracingService {
   /**
    * Add log entry to span
    */
-  addSpanLog(spanId: string, level: string, message: string, fields?: Record<string, any>): void {
+  addSpanLog(spanId: string, level: string, message: string, fields?: Record<string, unknown>): void {
     const context = this.getCurrentContext();
     if (!context) return;
 
@@ -308,39 +310,39 @@ export class RequestTracingService implements IRequestTracingService {
    * Generate unique span ID
    */
   generateSpanId(): string {
-    return Math.random().toString(16).substr(2, 16);
+    return Math.random().toString(16).substring(2, 18);
   }
 
   /**
    * Extract trace context from headers
    */
-  extractTraceHeaders(headers: Record<string, any>): Partial<RequestTraceContext> {
+  extractTraceHeaders(headers: Record<string, unknown>): Partial<RequestTraceContext> {
     const context: Partial<RequestTraceContext> = {};
 
     // Standard trace headers
-    if (headers['x-trace-id']) {
+    if (headers['x-trace-id'] && typeof headers['x-trace-id'] === 'string') {
       context.traceId = headers['x-trace-id'];
     }
 
-    if (headers['x-span-id']) {
+    if (headers['x-span-id'] && typeof headers['x-span-id'] === 'string') {
       context.parentSpanId = headers['x-span-id'];
     }
 
-    if (headers['x-session-id']) {
+    if (headers['x-session-id'] && typeof headers['x-session-id'] === 'string') {
       context.sessionId = headers['x-session-id'];
     }
 
     // B3 tracing headers (Zipkin)
-    if (headers['x-b3-traceid']) {
+    if (headers['x-b3-traceid'] && typeof headers['x-b3-traceid'] === 'string') {
       context.traceId = headers['x-b3-traceid'];
     }
 
-    if (headers['x-b3-spanid']) {
+    if (headers['x-b3-spanid'] && typeof headers['x-b3-spanid'] === 'string') {
       context.parentSpanId = headers['x-b3-spanid'];
     }
 
     // Jaeger tracing headers
-    if (headers['uber-trace-id']) {
+    if (headers['uber-trace-id'] && typeof headers['uber-trace-id'] === 'string') {
       const parts = headers['uber-trace-id'].split(':');
       if (parts.length >= 2) {
         context.traceId = parts[0];
@@ -431,10 +433,10 @@ export const requestTracingService = new RequestTracingService();
  * Trace decorator for functions
  */
 export function trace(operationName: string) {
-  return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
-    const originalMethod = descriptor.value;
+  return function (_target: unknown, _propertyKey: string, descriptor: PropertyDescriptor): PropertyDescriptor {
+    const originalMethod = descriptor.value as (...args: unknown[]) => Promise<unknown>;
 
-    descriptor.value = async function (...args: any[]) {
+    descriptor.value = async function (this: unknown, ...args: unknown[]): Promise<unknown> {
       const span = requestTracingService.startSpan(operationName);
       
       try {
@@ -457,7 +459,7 @@ export function trace(operationName: string) {
 export async function traceAsync<T>(
   operationName: string,
   operation: () => Promise<T>,
-  tags?: Record<string, any>
+  tags?: Record<string, unknown>
 ): Promise<T> {
   const span = requestTracingService.startSpan(operationName);
   

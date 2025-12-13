@@ -5,8 +5,9 @@
  * event correlation, and performance tracking.
  */
 
-import { logger } from '../utils/logger.js';
 import { EventEmitter } from 'events';
+
+import { logger } from '../utils/logger.js';
 
 /**
  * Job event types
@@ -41,6 +42,7 @@ export interface JobEvent {
     duration?: number;
     attempt?: number;
     progress?: number;
+    workerId?: string;
     error?: {
       message: string;
       stack?: string;
@@ -108,7 +110,7 @@ export class JobEventLogger extends EventEmitter {
     data?: Record<string, unknown>,
     metadata?: JobEvent['metadata']
   ): JobEvent {
-    const eventId = `${type}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const eventId = `${type}-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
     
     const event: JobEvent = {
       id: eventId,
@@ -165,7 +167,7 @@ export class JobEventLogger extends EventEmitter {
   /**
    * Log job creation
    */
-  public logJobCreated(queueName: string, jobId: string, jobData: any): JobEvent {
+  public logJobCreated(queueName: string, jobId: string, jobData: Record<string, unknown>): JobEvent {
     return this.logEvent('job:created', queueName, jobId, jobData);
   }
   
@@ -186,7 +188,7 @@ export class JobEventLogger extends EventEmitter {
   /**
    * Log job completion
    */
-  public logJobCompleted(queueName: string, jobId: string, result?: any): JobEvent {
+  public logJobCompleted(queueName: string, jobId: string, result?: Record<string, unknown>): JobEvent {
     return this.logEvent('job:completed', queueName, jobId, { result });
   }
   
@@ -199,7 +201,7 @@ export class JobEventLogger extends EventEmitter {
       error: {
         message: error.message,
         stack: error.stack,
-        code: (error as any).code
+        code: (error as Error & { code?: string }).code
       }
     });
   }
@@ -311,7 +313,7 @@ export class JobEventLogger extends EventEmitter {
     });
     
     const actualTimeRange = timeRange || {
-      start: events.length > 0 ? events[0].timestamp : new Date(),
+      start: events.length > 0 ? events[0]?.timestamp ?? new Date() : new Date(),
       end: new Date()
     };
     

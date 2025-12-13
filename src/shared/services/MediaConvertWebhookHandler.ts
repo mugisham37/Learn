@@ -11,10 +11,12 @@
  */
 
 import { FastifyRequest, FastifyReply } from 'fastify';
-import { logger } from '../utils/logger.js';
+
 import { 
   ValidationError
 } from '../errors/index.js';
+import { MediaConvertWebhookPayload } from '../types/aws.js';
+import { logger } from '../utils/logger.js';
 
 /**
  * MediaConvert webhook event types
@@ -26,40 +28,7 @@ export type MediaConvertEventType =
   | 'JOB_SUBMITTED'
   | 'JOB_CANCELED';
 
-/**
- * MediaConvert webhook payload structure
- */
-export interface MediaConvertWebhookPayload {
-  version: string;
-  id: string;
-  'detail-type': string;
-  source: string;
-  account: string;
-  time: string;
-  region: string;
-  detail: {
-    status: string;
-    jobId: string;
-    queue: string;
-    userMetadata?: Record<string, string>;
-    outputGroupDetails?: Array<{
-      outputDetails: Array<{
-        outputFilePaths: string[];
-        durationInMs?: number;
-        videoDetails?: {
-          widthInPx: number;
-          heightInPx: number;
-        };
-      }>;
-    }>;
-    errorMessage?: string;
-    errorCode?: number;
-    warnings?: Array<{
-      code: number;
-      count: number;
-    }>;
-  };
-}
+// Using MediaConvertWebhookPayload from aws.ts types
 
 /**
  * Processed webhook data for application use
@@ -118,7 +87,7 @@ export class MediaConvertWebhookHandler {
       }
 
       // Parse and validate payload
-      const payload = this.parseWebhookPayload(request.body);
+      const payload = this.parseWebhookPayload(request.body as Record<string, unknown>);
       const processedData = this.processWebhookPayload(payload);
 
       logger.info('Processing MediaConvert webhook', {
@@ -132,7 +101,7 @@ export class MediaConvertWebhookHandler {
       await this.handleWebhookEvent(processedData);
 
       // Send success response
-      reply.code(200).send({
+      await reply.code(200).send({
         success: true,
         message: 'Webhook processed successfully',
         jobId: processedData.jobId,
@@ -150,13 +119,13 @@ export class MediaConvertWebhookHandler {
       });
 
       if (error instanceof ValidationError) {
-        reply.code(400).send({
+        await reply.code(400).send({
           success: false,
           error: 'Invalid webhook payload',
           message: error.message,
         });
       } else {
-        reply.code(500).send({
+        await reply.code(500).send({
           success: false,
           error: 'Internal server error',
           message: 'Failed to process webhook',
@@ -191,35 +160,36 @@ export class MediaConvertWebhookHandler {
   /**
    * Parses and validates the webhook payload
    */
-  private parseWebhookPayload(body: any): MediaConvertWebhookPayload {
+  private parseWebhookPayload(body: Record<string, unknown>): MediaConvertWebhookPayload {
     if (!body) {
       throw new ValidationError('Empty webhook payload');
     }
 
     // Handle SNS message wrapper
     let payload = body;
-    if (body.Type === 'Notification' && body.Message) {
+    if (body['Type'] === 'Notification' && typeof body['Message'] === 'string') {
       try {
-        payload = JSON.parse(body.Message);
+        payload = JSON.parse(body['Message']) as Record<string, unknown>;
       } catch (error) {
         throw new ValidationError('Invalid SNS message format');
       }
     }
 
     // Validate required fields
-    if (!payload.detail || !payload.detail.jobId) {
+    const detail = payload['detail'] as Record<string, unknown>;
+    if (!detail || typeof detail['jobId'] !== 'string') {
       throw new ValidationError('Missing required field: detail.jobId');
     }
 
-    if (!payload.detail.status) {
+    if (!detail['status']) {
       throw new ValidationError('Missing required field: detail.status');
     }
 
-    if (!payload.source || payload.source !== 'aws.mediaconvert') {
+    if (!payload['source'] || payload['source'] !== 'aws.mediaconvert') {
       throw new ValidationError('Invalid webhook source');
     }
 
-    return payload as MediaConvertWebhookPayload;
+    return payload as unknown as MediaConvertWebhookPayload;
   }
 
   /**
@@ -234,9 +204,9 @@ export class MediaConvertWebhookHandler {
       status,
       eventType,
       userMetadata: payload.detail.userMetadata,
-      errorMessage: payload.detail.errorMessage,
-      errorCode: payload.detail.errorCode,
-      warnings: payload.detail.warnings,
+      errorMessage: payload.detail.errorMessage || undefined,
+      errorCode: payload.detail.errorCode || undefined,
+      warnings: payload.detail.warnings || undefined,
     };
 
     // Process outputs for completed jobs
@@ -379,10 +349,10 @@ export class MediaConvertWebhookHandler {
 /**
  * Creates a Fastify route handler for MediaConvert webhooks
  */
-export function createWebhookRoute(webhookHandler: IWebhookHandler) {
+export function createWebhookRoute(webhookHandler: IWebhookHandler): (request: FastifyRequest, reply: FastifyReply) => Promise<void> {
   const handler = new MediaConvertWebhookHandler(webhookHandler);
 
-  return async (request: FastifyRequest, reply: FastifyReply) => {
+  return async (request: FastifyRequest, reply: FastifyReply): Promise<void> => {
     await handler.handleWebhook(request, reply);
   };
 }

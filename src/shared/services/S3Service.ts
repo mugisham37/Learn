@@ -13,10 +13,12 @@ import {
   PutObjectCommandInput 
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+
 import { config } from '../../config/index.js';
-import { secrets } from '../utils/secureConfig.js';
 import { ExternalServiceError } from '../errors/index.js';
 import { logger } from '../utils/logger.js';
+import { secrets } from '../utils/secureConfig.js';
+
 import { 
   IS3Service, 
   UploadFileParams, 
@@ -178,8 +180,9 @@ export class S3Service implements IS3Service {
 
       await this.client.send(command);
       return true;
-    } catch (error: any) {
-      if (error.name === 'NotFound' || error.$metadata?.httpStatusCode === 404) {
+    } catch (error: unknown) {
+      const errorObj = error as { name?: string; $metadata?: { httpStatusCode?: number } };
+      if (errorObj.name === 'NotFound' || errorObj.$metadata?.httpStatusCode === 404) {
         return false;
       }
 
@@ -234,16 +237,17 @@ export class S3Service implements IS3Service {
         latencyMs,
         bucketAccessible: true,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       const latencyMs = Date.now() - startTime;
       
       // Check if it's a permissions issue vs connectivity issue
-      const isPermissionError = error.name === 'AccessDenied' || 
-                               error.name === 'Forbidden' ||
-                               error.$metadata?.httpStatusCode === 403;
+      const errorObj = error as { name?: string; $metadata?: { httpStatusCode?: number } };
+      const isPermissionError = errorObj.name === 'AccessDenied' || 
+                               errorObj.name === 'Forbidden' ||
+                               errorObj.$metadata?.httpStatusCode === 403;
       
-      const isNotFoundError = error.name === 'NoSuchBucket' ||
-                             error.$metadata?.httpStatusCode === 404;
+      const isNotFoundError = errorObj.name === 'NoSuchBucket' ||
+                             errorObj.$metadata?.httpStatusCode === 404;
 
       let errorMessage = 'S3 health check failed';
       if (isPermissionError) {

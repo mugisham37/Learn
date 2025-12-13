@@ -6,8 +6,9 @@
  */
 
 import { config } from '../../config';
-import { secrets } from '../utils/secureConfig';
 import { logger } from '../utils/logger';
+import { secrets } from '../utils/secureConfig';
+
 import { IEmailService } from './IEmailService';
 import { SendGridEmailService } from './SendGridEmailService';
 import { SESEmailService } from './SESEmailService';
@@ -62,9 +63,9 @@ export class EmailServiceFactory {
    */
   private static determineProvider(): EmailProvider {
     // Check for explicit provider configuration
-    const explicitProvider = process.env.EMAIL_PROVIDER as EmailProvider;
+    const explicitProvider = process.env['EMAIL_PROVIDER'];
     if (explicitProvider && ['sendgrid', 'ses'].includes(explicitProvider)) {
-      return explicitProvider;
+      return explicitProvider as EmailProvider;
     }
 
     // Auto-detect based on available configuration
@@ -74,7 +75,7 @@ export class EmailServiceFactory {
     const hasSendGridConfig = Boolean(sendGridConfig.apiKey);
     const hasSESConfig = Boolean(
       awsConfig.accessKeyId && awsConfig.secretAccessKey
-    ) || Boolean(process.env.AWS_PROFILE); // AWS profile or IAM role
+    ) || Boolean(process.env['AWS_PROFILE']); // AWS profile or IAM role
 
     // Prefer SendGrid if both are configured
     if (hasSendGridConfig) {
@@ -100,7 +101,8 @@ export class EmailServiceFactory {
       case 'ses':
         return new SESEmailService();
       default:
-        throw new Error(`Unsupported email provider: ${provider}`);
+        // This should never happen with proper typing, but handle it gracefully
+        throw new Error(`Unsupported email provider: ${String(provider)}`);
     }
   }
 
@@ -120,7 +122,6 @@ export class EmailServiceFactory {
     healthy?: boolean;
   } {
     const provider = this.determineProvider();
-    const service = this.getInstance();
     
     return {
       provider,
@@ -142,14 +143,16 @@ export class EmailServiceFactory {
 
     try {
       switch (provider) {
-        case 'sendgrid':
-          if (!config.sendgrid.apiKey) {
+        case 'sendgrid': {
+          const sendGridConfig = secrets.getSendGridConfig();
+          if (!sendGridConfig.apiKey) {
             errors.push('SendGrid API key is required');
           }
           if (!config.sendgrid.fromEmail) {
             errors.push('SendGrid from email is required');
           }
           break;
+        }
 
         case 'ses':
           if (!config.ses.fromEmail) {
@@ -165,10 +168,12 @@ export class EmailServiceFactory {
       // Test service health if no configuration errors
       if (errors.length === 0) {
         const service = this.createSpecificService(provider);
-        const healthy = await service.healthCheck();
-        
-        if (!healthy) {
-          errors.push(`${provider.toUpperCase()} service health check failed`);
+        if (service.healthCheck) {
+          const healthy = await service.healthCheck();
+          
+          if (!healthy) {
+            errors.push(`${provider.toUpperCase()} service health check failed`);
+          }
         }
       }
 

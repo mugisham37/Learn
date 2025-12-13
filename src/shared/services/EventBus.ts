@@ -8,6 +8,7 @@
  */
 
 import { EventEmitter } from 'events';
+
 import { logger } from '../utils/logger.js';
 
 /**
@@ -18,7 +19,7 @@ export interface DomainEvent {
   eventType: string;
   aggregateId: string;
   aggregateType: string;
-  eventData: any;
+  eventData: Record<string, unknown>;
   occurredAt: Date;
   version: number;
 }
@@ -274,7 +275,7 @@ export class EventBus {
   /**
    * Gracefully shuts down the event bus
    */
-  async shutdown(): Promise<void> {
+  shutdown(): Promise<void> {
     try {
       logger.info('Shutting down event bus...');
       
@@ -282,10 +283,12 @@ export class EventBus {
       this.clear();
       
       logger.info('Event bus shut down successfully');
+      return Promise.resolve();
     } catch (error) {
       logger.error('Error during event bus shutdown', {
         error: error instanceof Error ? error.message : 'Unknown error',
       });
+      return Promise.reject(error);
     }
   }
 }

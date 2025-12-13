@@ -26,17 +26,18 @@ import {
   VideoCodecSettings,
   AudioCodecSettings,
   ContainerSettings,
-
   HlsGroupSettings,
 } from '@aws-sdk/client-mediaconvert';
-import { logger } from '../utils/logger.js';
+
 import { config } from '../../config/index.js';
-import { secrets } from '../utils/secureConfig.js';
 import {
   ExternalServiceError,
   NotFoundError,
   ValidationError,
 } from '../errors/index.js';
+import { logger } from '../utils/logger.js';
+import { secrets } from '../utils/secureConfig.js';
+
 import {
   IMediaConvertService,
   TranscodingJobInput,
@@ -596,7 +597,7 @@ export class MediaConvertService implements IMediaConvertService {
       errorMessage: job.ErrorMessage,
       errorCode: job.ErrorCode?.toString(),
       createdAt: job.CreatedAt,
-      completedAt: (job as any).CompletedAt || undefined,
+      completedAt: (job as Job & { CompletedAt?: Date }).CompletedAt || undefined,
       outputs,
     };
   }

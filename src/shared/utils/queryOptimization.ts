@@ -10,7 +10,7 @@
 import { sql } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
-import { logger } from './logger';
+import { logger } from './logger.js';
 
 /**
  * Query Performance Analysis Result
@@ -38,403 +38,215 @@ const PERFORMANCE_THRESHOLDS = {
 } as const;
 
 /**
+ * Query plan node interface
+ */
+interface QueryPlanNode {
+  'Node Type': string;
+  'Startup Cost': number;
+  'Total Cost': number;
+  'Plan Rows': number;
+  'Plan Width': number;
+  'Actual Startup Time': number;
+  'Actual Total Time': number;
+  'Actual Rows': number;
+  'Actual Loops': number;
+  'Index Name'?: string;
+  'Relation Name'?: string;
+  'Plans'?: QueryPlanNode[];
+}
+
+/**
+ * Cursor pagination options
+ */
+export interface CursorPaginationOptions {
+  cursor?: string;
+  limit: number;
+  orderBy: string;
+  direction?: 'asc' | 'desc';
+}
+
+/**
+ * Cursor pagination result
+ */
+export interface CursorPaginationResult<T> {
+  items: T[];
+  nextCursor?: string;
+  hasMore: boolean;
+}
+
+/**
  * Query Optimization Analyzer
  * 
  * Analyzes database queries using EXPLAIN ANALYZE and provides
  * optimization recommendations
  */
-/**
- * Query plan node interface
- */
-interface QueryPlanNode {
-  'Node Type': string;
-  'Total Cost'?: number;
-  'Actual Rows'?: number;
-  'Plan Rows'?: number;
-  'Index Name'?: string;
-  Plans?: QueryPlanNode[];
-}
-
-/**
- * Query plan result interface
- */
-interface QueryPlanResult {
-  'QUERY PLAN': Array<{
-    Plan: QueryPlanNode;
-    'Execution Time': number;
-    'Planning Time': number;
-  }>;
-}
-
 export class QueryOptimizer {
   constructor(private db: NodePgDatabase<Record<string, never>>) {}
 
   /**
    * Analyze query performance using EXPLAIN ANALYZE
    */
-  async analyzeQuery(query: string, _params: unknown[] = []): Promise<QueryAnalysis> {
+  async analyzeQuery(query: string, params: unknown[] = []): Promise<QueryAnalysis> {
     try {
+      const startTime = Date.now();
+      
       // Execute EXPLAIN ANALYZE
       const explainQuery = `EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) ${query}`;
-      const result = await this.db.execute(sql.raw(explainQuery)) as unknown as QueryPlanResult[];
+      const result = await this.db.execute(sql.raw(explainQuery, params));
       
-      const planData = result[0]?.['QUERY PLAN']?.[0];
-      if (!planData) {
-        throw new Error('Failed to get query plan');
-      }
+      const executionTime = Date.now() - startTime;
+      const planData = result.rows[0] as { 'QUERY PLAN': QueryPlanNode[] };
+      const plan = planData['QUERY PLAN'][0];
 
-      // Extract performance metrics
-      const executionTime = planData['Execution Time'] || 0;
-      const planningTime = planData['Planning Time'] || 0;
-      const totalCost = planData.Plan?.['Total Cost'] || 0;
-      const actualRows = planData.Plan?.['Actual Rows'] || 0;
-      const estimatedRows = planData.Plan?.['Plan Rows'] || 0;
-
-      // Extract indexes used
-      const indexesUsed = this.extractIndexesFromPlan(planData.Plan);
-
-      // Generate recommendations
-      const recommendations = this.generateRecommendations({
-        executionTime,
-        planningTime,
-        totalCost,
-        actualRows,
-        estimatedRows,
-        indexesUsed,
-        plan: planData.Plan,
-      });
-
-      const analysis: QueryAnalysis = {
-        query,
-        executionTime,
-        planningTime,
-        totalCost,
-        actualRows,
-        estimatedRows,
-        indexesUsed,
-        recommendations,
-        needsOptimization: this.needsOptimization(executionTime, totalCost, recommendations),
-      };
-
-      // Log slow queries
-      if (executionTime > PERFORMANCE_THRESHOLDS.SLOW_QUERY_MS) {
-        logger.warn('Slow query detected', {
-          query: query.substring(0, 200),
-          executionTime,
-          totalCost,
-          recommendations: recommendations.slice(0, 3),
-        });
-      }
-
-      return analysis;
+      return this.parseQueryPlan(query, plan, executionTime);
     } catch (error) {
-      logger.error('Query analysis failed', { error, query: query.substring(0, 200) });
+      logger.error('Query analysis failed', { query, error });
       throw error;
     }
   }
 
   /**
-   * Extract indexes used from query plan
+   * Parse query execution plan
    */
-  private extractIndexesFromPlan(plan: QueryPlanNode): string[] {
+  private parseQueryPlan(query: string, plan: QueryPlanNode, executionTime: number): QueryAnalysis {
+    const indexesUsed = this.extractIndexesUsed(plan);
+    const recommendations = this.generateRecommendations(plan, executionTime);
+    
+    return {
+      query,
+      executionTime,
+      planningTime: plan['Actual Startup Time'] || 0,
+      totalCost: plan['Total Cost'] || 0,
+      actualRows: plan['Actual Rows'] || 0,
+      estimatedRows: plan['Plan Rows'] || 0,
+      indexesUsed,
+      recommendations,
+      needsOptimization: this.needsOptimization(plan, executionTime),
+    };
+  }
+
+  /**
+   * Extract indexes used in query plan
+   */
+  private extractIndexesUsed(plan: QueryPlanNode): string[] {
     const indexes: string[] = [];
     
     const extractFromNode = (node: QueryPlanNode): void => {
-      if (node['Node Type'] === 'Index Scan' || node['Node Type'] === 'Index Only Scan') {
-        if (node['Index Name']) {
-          indexes.push(node['Index Name']);
-        }
+      if (node['Index Name']) {
+        indexes.push(node['Index Name']);
       }
       
       if (node.Plans) {
         node.Plans.forEach(extractFromNode);
       }
     };
-
+    
     extractFromNode(plan);
-    return [...new Set(indexes)]; // Remove duplicates
+    return [...new Set(indexes)];
   }
 
   /**
    * Generate optimization recommendations
    */
-  private generateRecommendations(metrics: {
-    executionTime: number;
-    planningTime: number;
-    totalCost: number;
-    actualRows: number;
-    estimatedRows: number;
-    indexesUsed: string[];
-    plan: QueryPlanNode;
-  }): string[] {
+  private generateRecommendations(plan: QueryPlanNode, executionTime: number): string[] {
     const recommendations: string[] = [];
-
-    // Check execution time
-    if (metrics.executionTime > PERFORMANCE_THRESHOLDS.VERY_SLOW_QUERY_MS) {
-      recommendations.push('Query execution time is very high - consider adding indexes or rewriting query');
-    } else if (metrics.executionTime > PERFORMANCE_THRESHOLDS.SLOW_QUERY_MS) {
-      recommendations.push('Query execution time is elevated - review for optimization opportunities');
+    
+    if (executionTime > PERFORMANCE_THRESHOLDS.SLOW_QUERY_MS) {
+      recommendations.push('Query execution time exceeds threshold - consider optimization');
     }
-
-    // Check cost
-    if (metrics.totalCost > PERFORMANCE_THRESHOLDS.HIGH_COST) {
-      recommendations.push('Query cost is high - consider adding strategic indexes');
+    
+    if (plan['Total Cost'] > PERFORMANCE_THRESHOLDS.HIGH_COST) {
+      recommendations.push('High query cost detected - review query structure');
     }
-
-    // Check row estimation accuracy
-    const estimationVariance = Math.abs(metrics.actualRows - metrics.estimatedRows) / Math.max(metrics.estimatedRows, 1);
-    if (estimationVariance > PERFORMANCE_THRESHOLDS.ROW_ESTIMATION_VARIANCE && metrics.estimatedRows > 0) {
-      recommendations.push('Row estimation is inaccurate - consider updating table statistics');
+    
+    const estimationVariance = Math.abs(plan['Actual Rows'] - plan['Plan Rows']) / plan['Plan Rows'];
+    if (estimationVariance > PERFORMANCE_THRESHOLDS.ROW_ESTIMATION_VARIANCE) {
+      recommendations.push('Row estimation variance high - update table statistics');
     }
-
-    // Check for sequential scans
-    if (this.hasSequentialScan(metrics.plan)) {
-      recommendations.push('Sequential scan detected - consider adding appropriate indexes');
+    
+    if (this.hasSequentialScans(plan)) {
+      recommendations.push('Sequential scans detected - consider adding indexes');
     }
-
-    // Check for nested loops with high cost
-    if (this.hasExpensiveNestedLoop(metrics.plan)) {
-      recommendations.push('Expensive nested loop detected - consider adding join indexes');
-    }
-
-    // Check if no indexes are used
-    if (metrics.indexesUsed.length === 0 && metrics.actualRows > 100) {
-      recommendations.push('No indexes used for large result set - add appropriate indexes');
-    }
-
+    
     return recommendations;
   }
 
   /**
-   * Check if query plan contains sequential scans
+   * Check if query needs optimization
    */
-  private hasSequentialScan(plan: QueryPlanNode): boolean {
-    const checkNode = (node: QueryPlanNode): boolean => {
-      if (node['Node Type'] === 'Seq Scan') {
-        return true;
-      }
-      if (node.Plans) {
-        return node.Plans.some(checkNode);
-      }
-      return false;
-    };
-
-    return checkNode(plan);
-  }
-
-  /**
-   * Check if query plan has expensive nested loops
-   */
-  private hasExpensiveNestedLoop(plan: QueryPlanNode): boolean {
-    const checkNode = (node: QueryPlanNode): boolean => {
-      if (node['Node Type'] === 'Nested Loop' && (node['Total Cost'] || 0) > 500) {
-        return true;
-      }
-      if (node.Plans) {
-        return node.Plans.some(checkNode);
-      }
-      return false;
-    };
-
-    return checkNode(plan);
-  }
-
-  /**
-   * Determine if query needs optimization
-   */
-  private needsOptimization(executionTime: number, totalCost: number, recommendations: string[]): boolean {
+  private needsOptimization(plan: QueryPlanNode, executionTime: number): boolean {
     return (
       executionTime > PERFORMANCE_THRESHOLDS.SLOW_QUERY_MS ||
-      totalCost > PERFORMANCE_THRESHOLDS.HIGH_COST ||
-      recommendations.length > 0
+      plan['Total Cost'] > PERFORMANCE_THRESHOLDS.HIGH_COST ||
+      this.hasSequentialScans(plan)
     );
   }
 
   /**
-   * Batch analyze multiple queries
+   * Check for sequential scans in query plan
    */
-  async batchAnalyze(queries: Array<{ query: string; params?: unknown[] }>): Promise<QueryAnalysis[]> {
-    const results: QueryAnalysis[] = [];
-    
-    for (const { query, params = [] } of queries) {
-      try {
-        const analysis = await this.analyzeQuery(query, params);
-        results.push(analysis);
-      } catch (error) {
-        logger.error('Failed to analyze query in batch', { error, query: query.substring(0, 100) });
-      }
+  private hasSequentialScans(plan: QueryPlanNode): boolean {
+    if (plan['Node Type'] === 'Seq Scan') {
+      return true;
     }
-
-    return results;
-  }
-
-  /**
-   * Generate optimization report
-   */
-  generateOptimizationReport(analyses: QueryAnalysis[]): {
-    totalQueries: number;
-    slowQueries: number;
-    averageExecutionTime: number;
-    topRecommendations: string[];
-    criticalQueries: QueryAnalysis[];
-  } {
-    const slowQueries = analyses.filter(a => a.executionTime > PERFORMANCE_THRESHOLDS.SLOW_QUERY_MS);
-    const averageExecutionTime = analyses.reduce((sum, a) => sum + a.executionTime, 0) / analyses.length;
     
-    // Aggregate recommendations
-    const recommendationCounts = new Map<string, number>();
-    analyses.forEach(a => {
-      a.recommendations.forEach(rec => {
-        recommendationCounts.set(rec, (recommendationCounts.get(rec) || 0) + 1);
-      });
-    });
-
-    const topRecommendations = Array.from(recommendationCounts.entries())
-      .sort(([, a], [, b]) => b - a)
-      .slice(0, 5)
-      .map(([rec]) => rec);
-
-    const criticalQueries = analyses
-      .filter(a => a.executionTime > PERFORMANCE_THRESHOLDS.VERY_SLOW_QUERY_MS)
-      .sort((a, b) => b.executionTime - a.executionTime)
-      .slice(0, 10);
-
-    return {
-      totalQueries: analyses.length,
-      slowQueries: slowQueries.length,
-      averageExecutionTime,
-      topRecommendations,
-      criticalQueries,
-    };
+    if (plan.Plans) {
+      return plan.Plans.some(subPlan => this.hasSequentialScans(subPlan));
+    }
+    
+    return false;
   }
 }
 
 /**
- * Query caching utilities for expensive queries
+ * Query Cache Implementation
  */
 export class QueryCache {
-  private cache = new Map<string, { result: unknown; timestamp: number; ttl: number }>();
+  private cache = new Map<string, { data: unknown; timestamp: number; ttl: number }>();
+  private readonly defaultTTL = 300000; // 5 minutes
 
   /**
-   * Get cached query result
+   * Get cached result
    */
-  get(key: string): unknown {
-    const cached = this.cache.get(key);
-    if (!cached) return null;
-
-    if (Date.now() - cached.timestamp > cached.ttl) {
+  get<T>(key: string): T | null {
+    const entry = this.cache.get(key);
+    if (!entry) return null;
+    
+    if (Date.now() - entry.timestamp > entry.ttl) {
       this.cache.delete(key);
       return null;
     }
-
-    return cached.result;
+    
+    return entry.data as T;
   }
 
   /**
-   * Set cached query result
+   * Set cached result
    */
-  set(key: string, result: unknown, ttlMs: number = 300000): void { // 5 minutes default
+  set<T>(key: string, data: T, ttl: number = this.defaultTTL): void {
     this.cache.set(key, {
-      result,
+      data,
       timestamp: Date.now(),
-      ttl: ttlMs,
+      ttl,
     });
   }
 
   /**
-   * Generate cache key from query and parameters
-   */
-  generateKey(query: string, params: unknown[] = []): string {
-    const normalizedQuery = query.replace(/\s+/g, ' ').trim();
-    const paramsStr = JSON.stringify(params);
-    return `${normalizedQuery}:${paramsStr}`;
-  }
-
-  /**
-   * Clear expired entries
-   */
-  cleanup(): void {
-    const now = Date.now();
-    for (const [key, cached] of this.cache.entries()) {
-      if (now - cached.timestamp > cached.ttl) {
-        this.cache.delete(key);
-      }
-    }
-  }
-
-  /**
-   * Clear all cached entries
+   * Clear cache
    */
   clear(): void {
     this.cache.clear();
   }
 
   /**
-   * Get cache statistics
+   * Remove expired entries
    */
-  getStats(): { size: number; hitRate: number } {
-    // This would need hit/miss tracking in a real implementation
-    return {
-      size: this.cache.size,
-      hitRate: 0, // Placeholder
-    };
+  cleanup(): void {
+    const now = Date.now();
+    for (const [key, entry] of this.cache.entries()) {
+      if (now - entry.timestamp > entry.ttl) {
+        this.cache.delete(key);
+      }
+    }
   }
-}
-
-/**
- * Cursor-based pagination utilities
- */
-export interface CursorPaginationOptions {
-  cursor?: string;
-  limit: number;
-  orderBy: string;
-  direction: 'asc' | 'desc';
-}
-
-export interface CursorPaginationResult<T> {
-  items: T[];
-  nextCursor?: string;
-  hasMore: boolean;
-  totalCount?: number;
-}
-
-/**
- * Generate cursor from record
- */
-export function generateCursor(record: Record<string, unknown>, orderBy: string): string {
-  const value = record[orderBy];
-  if (value instanceof Date) {
-    return Buffer.from(value.toISOString()).toString('base64');
-  }
-  return Buffer.from(String(value)).toString('base64');
-}
-
-/**
- * Parse cursor value
- */
-export function parseCursor(cursor: string): string {
-  try {
-    return Buffer.from(cursor, 'base64').toString('utf-8');
-  } catch {
-    throw new Error('Invalid cursor format');
-  }
-}
-
-/**
- * Build cursor-based where condition
- */
-export function buildCursorCondition(
-  cursor: string | undefined,
-  orderBy: string,
-  direction: 'asc' | 'desc'
-): ReturnType<typeof sql> | undefined {
-  if (!cursor) return undefined;
-
-  const cursorValue = parseCursor(cursor);
-  
-  // This would need to be implemented with proper Drizzle operators
-  // based on the specific column type and direction
-  return direction === 'asc' 
-    ? sql`${sql.identifier(orderBy)} > ${cursorValue}`
-    : sql`${sql.identifier(orderBy)} < ${cursorValue}`;
 }

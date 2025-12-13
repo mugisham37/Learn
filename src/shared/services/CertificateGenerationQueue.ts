@@ -35,17 +35,15 @@ import {
 import { 
   IUserRepository 
 } from '../../modules/users/infrastructure/repositories/IUserRepository.js';
-
 import { 
   ExternalServiceError, 
   NotFoundError, 
   ValidationError 
 } from '../errors/index.js';
+import { logger } from '../utils/logger.js';
 
 import { IEmailService } from './IEmailService.js';
 import { ServiceFactory } from './ServiceFactory.js';
-
-import { logger } from '../utils/logger.js';
 
 /**
  * Certificate generation job data interface
@@ -412,6 +410,9 @@ export class CertificateGenerationQueue {
       const enrollmentEntity = Enrollment.fromDatabase({
         ...enrollment,
         completedAt: enrollment.completedAt ?? undefined,
+        lastAccessedAt: enrollment.lastAccessedAt ?? undefined,
+        paymentId: enrollment.paymentId ?? undefined,
+        certificateId: enrollment.certificateId ?? undefined,
         progressPercentage: parseFloat(enrollment.progressPercentage),
       });
       

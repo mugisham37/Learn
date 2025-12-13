@@ -12,9 +12,8 @@
  * Requirements: 15.2, 15.3, 15.4
  */
 
-import { cache, buildCacheKey, CachePrefix, CacheTTL } from '../../infrastructure/cache/index.js';
+import { cache, buildCacheKey, CachePrefix } from '../../infrastructure/cache/index.js';
 import { analyticsCacheService } from '../../modules/analytics/infrastructure/cache/index.js';
-import type { Role } from '../types/index.js';
 
 /**
  * Cache TTL configuration for different data types
@@ -48,37 +47,37 @@ export const ComprehensiveCacheTTL = {
  */
 export const ComprehensiveCacheKeys = {
   // User profile caching
-  userProfile: (userId: string) => 
+  userProfile: (userId: string): string => 
     buildCacheKey(CachePrefix.USER, 'profile', userId),
   
-  userPreferences: (userId: string) => 
+  userPreferences: (userId: string): string => 
     buildCacheKey(CachePrefix.USER, 'preferences', userId),
   
   // Course catalog caching
-  courseCatalog: (page: number, limit: number, filters?: string) => 
+  courseCatalog: (page: number, limit: number, filters?: string): string => 
     buildCacheKey(CachePrefix.COURSE, 'catalog', page, limit, filters || 'all'),
   
-  courseDetails: (courseId: string) => 
+  courseDetails: (courseId: string): string => 
     buildCacheKey(CachePrefix.COURSE, 'details', courseId),
   
-  coursesByInstructor: (instructorId: string, page: number, limit: number) => 
+  coursesByInstructor: (instructorId: string, page: number, limit: number): string => 
     buildCacheKey(CachePrefix.COURSE, 'instructor', instructorId, page, limit),
   
   // Search results caching
-  searchResults: (query: string, filters?: string, page?: number) => 
+  searchResults: (query: string, filters?: string, page?: number): string => 
     buildCacheKey(CachePrefix.SEARCH, 'results', query, filters || 'all', page || 1),
   
-  searchAutocomplete: (query: string) => 
+  searchAutocomplete: (query: string): string => 
     buildCacheKey(CachePrefix.SEARCH, 'autocomplete', query),
   
-  searchTrending: () => 
+  searchTrending: (): string => 
     buildCacheKey(CachePrefix.SEARCH, 'trending'),
   
   // Cache warming and stampede prevention locks
-  warmingLock: (key: string) => 
+  warmingLock: (key: string): string => 
     buildCacheKey(CachePrefix.ANALYTICS, 'warming-lock', key),
   
-  stampedeLock: (key: string) => 
+  stampedeLock: (key: string): string => 
     buildCacheKey(CachePrefix.ANALYTICS, 'stampede-lock', key),
 };
 
@@ -140,7 +139,7 @@ export class ComprehensiveCacheService {
   /**
    * Cache user profile with 5-minute TTL
    */
-  async cacheUserProfile(userId: string, profile: any): Promise<void> {
+  async cacheUserProfile(userId: string, profile: Record<string, unknown>): Promise<void> {
     const cacheKey = ComprehensiveCacheKeys.userProfile(userId);
     await cache.set(cacheKey, profile, ComprehensiveCacheTTL.USER_PROFILES);
   }
@@ -170,7 +169,7 @@ export class ComprehensiveCacheService {
     page: number, 
     limit: number, 
     filters: string | undefined, 
-    catalog: any
+    catalog: Record<string, unknown>
   ): Promise<void> {
     const cacheKey = ComprehensiveCacheKeys.courseCatalog(page, limit, filters);
     await cache.set(cacheKey, catalog, ComprehensiveCacheTTL.COURSE_CATALOGS);
@@ -191,7 +190,7 @@ export class ComprehensiveCacheService {
   /**
    * Cache course details with 10-minute TTL
    */
-  async cacheCourseDetails(courseId: string, course: any): Promise<void> {
+  async cacheCourseDetails(courseId: string, course: Record<string, unknown>): Promise<void> {
     const cacheKey = ComprehensiveCacheKeys.courseDetails(courseId);
     await cache.set(cacheKey, course, ComprehensiveCacheTTL.COURSE_DETAILS);
   }
@@ -229,7 +228,7 @@ export class ComprehensiveCacheService {
     query: string, 
     filters: string | undefined, 
     page: number, 
-    results: any
+    results: Record<string, unknown>
   ): Promise<void> {
     const cacheKey = ComprehensiveCacheKeys.searchResults(query, filters, page);
     await cache.set(cacheKey, results, ComprehensiveCacheTTL.SEARCH_RESULTS);
@@ -355,7 +354,6 @@ export class ComprehensiveCacheService {
     duration: number;
   }> {
     if (!this.config.enabled) {
-      console.log('Cache warming is disabled');
       return { warmed: 0, failed: 0, duration: 0 };
     }
 
@@ -364,8 +362,6 @@ export class ComprehensiveCacheService {
     let failed = 0;
 
     try {
-      console.log('Starting comprehensive cache warming...');
-
       const warmingTasks: Promise<{ warmed: number; failed: number }>[] = [];
 
       // Warm user profiles
@@ -397,18 +393,15 @@ export class ComprehensiveCacheService {
           warmed += result.value.warmed;
           failed += result.value.failed;
         } else {
-          console.error('Cache warming task failed:', result.reason);
           failed++;
         }
       }
 
       const duration = Date.now() - startTime;
-      console.log(`Comprehensive cache warming completed: ${warmed} warmed, ${failed} failed, ${duration}ms`);
 
       return { warmed, failed, duration };
     } catch (error) {
       const duration = Date.now() - startTime;
-      console.error('Comprehensive cache warming failed:', error);
       return { warmed, failed: failed + 1, duration };
     }
   }
@@ -423,8 +416,6 @@ export class ComprehensiveCacheService {
     try {
       // Get active user IDs (this would be implemented by user service)
       const activeUserIds = await this.getActiveUserIds();
-      
-      console.log(`Warming user profile caches for ${activeUserIds.length} users...`);
 
       // Process in batches
       for (let i = 0; i < activeUserIds.length; i += this.config.userBatchSize) {
@@ -442,16 +433,13 @@ export class ComprehensiveCacheService {
               warmed++;
             }
           } catch (error) {
-            console.error(`Failed to warm user profile cache for ${userId}:`, error);
             failed++;
           }
         }));
       }
 
-      console.log(`User profile cache warming completed: ${warmed} warmed, ${failed} failed`);
       return { warmed, failed };
     } catch (error) {
-      console.error('User profile cache warming failed:', error);
       return { warmed, failed: failed + 1 };
     }
   }
@@ -464,8 +452,6 @@ export class ComprehensiveCacheService {
     let failed = 0;
 
     try {
-      console.log('Warming course catalog caches...');
-
       // Warm first few pages of course catalog
       const pagesToWarm = [1, 2, 3];
       const limitsToWarm = [20, 50];
@@ -485,17 +471,14 @@ export class ComprehensiveCacheService {
                 warmed++;
               }
             } catch (error) {
-              console.error(`Failed to warm course catalog cache for page ${page}, limit ${limit}, filter ${filter}:`, error);
               failed++;
             }
           }
         }
       }
 
-      console.log(`Course catalog cache warming completed: ${warmed} warmed, ${failed} failed`);
       return { warmed, failed };
     } catch (error) {
-      console.error('Course catalog cache warming failed:', error);
       return { warmed, failed: failed + 1 };
     }
   }
@@ -508,8 +491,6 @@ export class ComprehensiveCacheService {
     let failed = 0;
 
     try {
-      console.log('Warming search caches...');
-
       // Popular search queries to warm
       const popularQueries = [
         'javascript',
@@ -546,7 +527,6 @@ export class ComprehensiveCacheService {
             warmed++;
           }
         } catch (error) {
-          console.error(`Failed to warm search cache for query "${query}":`, error);
           failed++;
         }
       }
@@ -561,14 +541,11 @@ export class ComprehensiveCacheService {
           warmed++;
         }
       } catch (error) {
-        console.error('Failed to warm trending searches cache:', error);
         failed++;
       }
 
-      console.log(`Search cache warming completed: ${warmed} warmed, ${failed} failed`);
       return { warmed, failed };
     } catch (error) {
-      console.error('Search cache warming failed:', error);
       return { warmed, failed: failed + 1 };
     }
   }
@@ -578,18 +555,19 @@ export class ComprehensiveCacheService {
    */
   private async warmAnalyticsCaches(): Promise<{ warmed: number; failed: number }> {
     try {
-      console.log('Warming analytics caches...');
-      
       // Delegate to the analytics cache warming service
       const result = await analyticsCacheService.warmDashboardCaches(
         await this.getActiveUserIds(),
         ['student', 'educator', 'admin']
       );
 
-      console.log(`Analytics cache warming completed: ${result.warmed} warmed, ${result.failed} failed`);
-      return result;
+      // Ensure we return the expected format
+      if (result !== undefined && result !== null && typeof result === 'object' && 'warmed' in result && 'failed' in result) {
+        return result as { warmed: number; failed: number };
+      }
+      
+      return { warmed: 0, failed: 0 };
     } catch (error) {
-      console.error('Analytics cache warming failed:', error);
       return { warmed: 0, failed: 1 };
     }
   }
@@ -600,14 +578,14 @@ export class ComprehensiveCacheService {
    * Get active user IDs for cache warming
    * This would be implemented by calling the user service
    */
-  private async getActiveUserIds(): Promise<string[]> {
+  private getActiveUserIds(): Promise<string[]> {
     // This is a placeholder - in real implementation, this would:
     // 1. Query the database for recently active users
     // 2. Limit to maxUsersToWarm
     // 3. Return their IDs
     
     // For now, return empty array
-    return [];
+    return Promise.resolve([]);
   }
 
   /**
@@ -647,7 +625,6 @@ export class ComprehensiveCacheService {
         moduleBreakdown,
       };
     } catch (error) {
-      console.error('Failed to get cache statistics:', error);
       return {
         totalKeys: 0,
         memoryUsage: 'unknown',
@@ -665,13 +642,7 @@ export class ComprehensiveCacheService {
    * Clear all caches (use with caution)
    */
   async clearAllCaches(): Promise<void> {
-    try {
-      await cache.clear();
-      console.log('All caches cleared successfully');
-    } catch (error) {
-      console.error('Failed to clear all caches:', error);
-      throw error;
-    }
+    await cache.clear();
   }
 }
 
@@ -685,14 +656,9 @@ export const comprehensiveCacheService = new ComprehensiveCacheService();
  */
 export async function initializeComprehensiveCaching(): Promise<void> {
   try {
-    console.log('Initializing comprehensive caching...');
-    
     // Warm caches on startup
-    const result = await comprehensiveCacheService.warmAllCaches();
-    
-    console.log(`Comprehensive caching initialized: ${result.warmed} caches warmed, ${result.failed} failed`);
+    await comprehensiveCacheService.warmAllCaches();
   } catch (error) {
-    console.error('Failed to initialize comprehensive caching:', error);
     // Don't throw - caching failures shouldn't prevent app startup
   }
 }

@@ -19,10 +19,8 @@ import { courses } from '../../infrastructure/database/schema/courses.schema.js'
 import { users } from '../../infrastructure/database/schema/users.schema.js';
 import { AnalyticsService } from '../../modules/analytics/application/services/AnalyticsService.js';
 import { MetricsCalculator } from '../../modules/analytics/application/services/MetricsCalculator.js';
-
-import { logger } from '../utils/logger.js';
-
 import type { DateRange } from '../types/index.js';
+import { logger } from '../utils/logger.js';
 
 /**
  * Analytics job data interfaces

@@ -143,7 +143,13 @@ export class JobMonitoringService {
           overallHealthScore
         },
         queues: enrichedQueues,
-        alerts: healthStatus.alerts,
+        alerts: (healthStatus.alerts || []) as Array<{
+          severity: 'info' | 'warning' | 'error' | 'critical';
+          queueName: string;
+          message: string;
+          timestamp: Date;
+          metadata?: Record<string, unknown>;
+        }>,
         metrics: {
           completionRates,
           queueDepths
@@ -268,11 +274,11 @@ export class JobMonitoringService {
   /**
    * Get detailed job information
    */
-  public async getJobDetails(queueName: string, jobId: string): Promise<any> {
+  public async getJobDetails(queueName: string, jobId: string): Promise<Record<string, unknown>> {
     try {
       const queueFactory = this.queueManager.getQueueFactory();
       
-      const jobDetails = await queueFactory.getJobDetails(queueName, jobId);
+      const jobDetails = await queueFactory.getJobDetails(queueName, jobId) as Record<string, unknown>;
       
       logger.info('Job details retrieved', {
         queueName,
@@ -290,7 +296,7 @@ export class JobMonitoringService {
   /**
    * Export monitoring data for analysis
    */
-  public async exportMonitoringData(startDate: Date, endDate: Date): Promise<{
+  public exportMonitoringData(startDate: Date, endDate: Date): Promise<{
     exportId: string;
     downloadUrl: string;
   }> {
@@ -311,14 +317,14 @@ export class JobMonitoringService {
       // 3. Upload to S3
       // 4. Return signed download URL
       
-      return {
+      return Promise.resolve({
         exportId,
         downloadUrl: `/api/admin/monitoring/exports/${exportId}`
-      };
+      });
       
     } catch (error) {
       logger.error('Failed to export monitoring data:', error);
-      throw new Error('Failed to export monitoring data');
+      return Promise.reject(new Error('Failed to export monitoring data'));
     }
   }
 }

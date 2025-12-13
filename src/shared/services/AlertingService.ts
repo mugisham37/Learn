@@ -113,13 +113,13 @@ export class AlertingService extends EventEmitter {
   /**
    * Create and send an alert
    */
-  public async createAlert(
+  public createAlert(
     severity: AlertSeverity,
     title: string,
     message: string,
     source: string,
     metadata?: Record<string, unknown>
-  ): Promise<Alert> {
+  ): Alert {
     const alertId = `${source}-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
     
     const alert: Alert = {
@@ -334,6 +334,9 @@ export class AlertingService extends EventEmitter {
           ]
         }]
       };
+      
+      // This would make an HTTP request to Slack webhook
+      // In a real implementation, you would use the payload here
       
       // This would make an HTTP request to Slack webhook
       logger.info('Slack alert sent', {

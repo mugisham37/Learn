@@ -10,10 +10,12 @@
  */
 
 import { Queue, Worker, Job, QueueOptions, WorkerOptions, JobsOptions } from 'bullmq';
+
 import { redis } from '../../infrastructure/cache/index.js';
 import { logger } from '../utils/logger.js';
-import { ServiceFactory } from './ServiceFactory.js';
+
 import { IEmailService, EmailOptions, EmailResult, BulkEmailResult, EmailTemplateData } from './IEmailService.js';
+import { ServiceFactory } from './ServiceFactory.js';
 
 /**
  * Email job data interface
@@ -133,9 +135,10 @@ export class EmailQueue {
         result,
       });
 
+      const messageId = 'messageId' in result ? result.messageId : undefined;
       this.updateDeliveryStatus(job.id!, {
         status: 'completed',
-        messageId: 'messageId' in result ? result.messageId : undefined,
+        messageId,
         deliveredAt: new Date(),
         lastAttemptAt: new Date(),
         attempts: job.attemptsMade + 1,
@@ -191,7 +194,11 @@ export class EmailQueue {
       if (type === 'single' && options) {
         return await this.emailService.sendTransactional(options);
       } else if (type === 'bulk' && recipients && templateId) {
-        return await this.emailService.sendBulk(recipients, templateId, templateData || {});
+        return await this.emailService.sendBulk(
+          recipients,
+          templateId,
+          templateData || {}
+        );
       } else {
         throw new Error('Invalid email job data');
       }
@@ -485,15 +492,15 @@ export class EmailQueue {
    * Find job ID by message ID (for webhook handling)
    * In production, this should be stored in a database or Redis
    */
-  private async findJobByMessageId(messageId: string): Promise<string | null> {
+  private findJobByMessageId(messageId: string): Promise<string | null> {
     // This is a simplified implementation
     // In production, you would store message ID -> job ID mapping in Redis or database
     for (const [jobId, status] of Array.from(this.deliveryStatuses.entries())) {
       if (status.messageId === messageId) {
-        return jobId;
+        return Promise.resolve(jobId);
       }
     }
-    return null;
+    return Promise.resolve(null);
   }
 }
 

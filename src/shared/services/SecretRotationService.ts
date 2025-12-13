@@ -7,9 +7,12 @@
  * Requirements: 13.7
  */
 
-import { secretsManager } from './SecretsManager.js';
-import { logger } from '../utils/logger.js';
+import { randomBytes } from 'crypto';
+
 import { config } from '../../config/index.js';
+import { logger } from '../utils/logger.js';
+
+import { secretsManager } from './SecretsManager.js';
 
 /**
  * Rotation schedule configuration
@@ -133,15 +136,15 @@ export class SecretRotationService {
    * This is a basic implementation - in production, you might want more sophisticated generation
    */
   private generateNewSecret(secretName: string): string {
-    const crypto = require('crypto');
+    // Using imported randomBytes function
     
     // Different generation strategies based on secret type
     if (secretName.includes('jwt') || secretName.includes('session')) {
       // Generate a strong random string for JWT/session secrets
-      return crypto.randomBytes(64).toString('hex');
+      return randomBytes(64).toString('hex');
     } else if (secretName.includes('api_key')) {
       // Generate API key format
-      return `sk_${crypto.randomBytes(32).toString('hex')}`;
+      return `sk_${randomBytes(32).toString('hex')}`;
     } else if (secretName.includes('password')) {
       // Generate a strong password
       const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
@@ -152,7 +155,7 @@ export class SecretRotationService {
       return password;
     } else {
       // Default: random hex string
-      return crypto.randomBytes(32).toString('hex');
+      return randomBytes(32).toString('hex');
     }
   }
 

@@ -6,11 +6,31 @@
  * Requirements: 13.4
  */
 
-import { 
-  FileUploadContext, 
-  FileValidationResult, 
-  FileUploadParams 
-} from './FileUploadSecurityService.js';
+/**
+ * File upload context types
+ */
+export type FileUploadContext = 'avatar' | 'course_thumbnail' | 'lesson_video' | 'assignment_submission' | 'general';
+
+/**
+ * File upload parameters
+ */
+export interface FileUploadParams {
+  fileName: string;
+  fileBuffer: Buffer;
+  context: FileUploadContext;
+  userId: string;
+}
+
+/**
+ * File validation result
+ */
+export interface FileValidationResult {
+  isValid: boolean;
+  errors: Array<{ field: string; message: string; fileName?: string }>;
+  sanitizedFileName?: string;
+  detectedMimeType?: string;
+  fileSize?: number;
+}
 
 /**
  * File Upload Security Service Interface

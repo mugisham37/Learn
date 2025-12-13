@@ -8,12 +8,11 @@
  */
 
 import { generateCDNCacheHeaders } from '../utils/cdnCaching.js';
+import { logger } from '../utils/logger.js';
 
 import { ICloudFrontService } from './ICloudFrontService.js';
 import { ImageProcessingService } from './ImageProcessingService.js';
 import { LazyLoadingService, LazyResource } from './LazyLoadingService.js';
-
-import { logger } from '../utils/logger.js';
 
 /**
  * Asset optimization configuration

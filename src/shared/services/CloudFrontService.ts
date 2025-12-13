@@ -10,9 +10,7 @@ import { readFileSync } from 'fs';
 import { getSignedUrl } from '@aws-sdk/cloudfront-signer';
 
 import { config } from '../../config/index.js';
-
 import { ExternalServiceError } from '../errors/index.js';
-
 import { logger } from '../utils/logger.js';
 import { secrets } from '../utils/secureConfig.js';
 
@@ -73,13 +71,14 @@ export class CloudFrontService implements ICloudFrontService {
 
       const expirationTime = new Date(Date.now() + params.expiresIn * 1000);
 
-      const signedUrl = getSignedUrl({
+      // Simulate async operation for CloudFront URL generation
+      const signedUrl = await Promise.resolve(getSignedUrl({
         url: params.url,
         keyPairId: this.keyPairId,
         privateKey: this.privateKey,
         dateLessThan: expirationTime.toISOString(),
         ipAddress: params.ipAddress,
-      });
+      }));
 
       logger.info('CloudFront signed URL generated successfully', {
         url: params.url,

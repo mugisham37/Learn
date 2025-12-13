@@ -9,11 +9,11 @@
  * - 4.6: Notification on processing completion/failure
  */
 
-import { logger } from '../utils/logger.js';
+import { IContentRepository } from '../../modules/content/infrastructure/repositories/IContentRepository.js';
 import { 
   ValidationError
 } from '../errors/index.js';
-import { IContentRepository } from '../../modules/content/infrastructure/repositories/IContentRepository.js';
+import { logger } from '../utils/logger.js';
 
 /**
  * MediaConvert webhook event data

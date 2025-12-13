@@ -9,7 +9,6 @@
  * - 14.3: Analytics aggregation queue setup
  */
 
-import { logger } from '../utils/logger.js';
 import { AnalyticsService } from '../../modules/analytics/application/services/AnalyticsService.js';
 import { MetricsCalculator } from '../../modules/analytics/application/services/MetricsCalculator.js';
 import { 
@@ -17,6 +16,8 @@ import {
   CourseAnalyticsRepository,
   StudentAnalyticsRepository
 } from '../../modules/analytics/infrastructure/repositories/index.js';
+import { logger } from '../utils/logger.js';
+
 import { initializeAnalyticsScheduler, type SchedulerConfig } from './AnalyticsScheduler.js';
 
 /**

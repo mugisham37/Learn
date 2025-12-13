@@ -11,14 +11,15 @@
 import {
   CloudWatchClient,
   PutDashboardCommand,
-  GetDashboardCommand,
   DeleteDashboardCommand,
   ListDashboardsCommand,
+  ListDashboardsCommandOutput,
+  DashboardEntry,
 } from '@aws-sdk/client-cloudwatch';
 
 import { config } from '../../config/index.js';
-import { secrets } from '../utils/secureConfig.js';
 import { logger } from '../utils/logger.js';
+import { secrets } from '../utils/secureConfig.js';
 
 /**
  * Dashboard widget configuration
@@ -71,7 +72,7 @@ export interface IMonitoringDashboardService {
   createCustomDashboard(config: DashboardConfig): Promise<void>;
   deleteDashboard(name: string): Promise<void>;
   listDashboards(): Promise<string[]>;
-  isEnabled(): boolean;
+  getIsEnabled(): boolean;
 }
 
 /**
@@ -84,7 +85,7 @@ export class MonitoringDashboardService implements IMonitoringDashboardService {
   private readonly isEnabled: boolean;
 
   constructor() {
-    this.region = process.env.AWS_REGION || 'us-east-1';
+    this.region = process.env['AWS_REGION'] || 'us-east-1';
     this.isEnabled = config.nodeEnv === 'production' && this.initializeClient();
   }
 
@@ -199,9 +200,9 @@ export class MonitoringDashboardService implements IMonitoringDashboardService {
           properties: {
             title: 'Memory Usage (MB)',
             metrics: [
-              [this.namespace, 'MemoryUsageHeapUsed', { stat: 'Average' }],
-              [this.namespace, 'MemoryUsageHeapTotal', { stat: 'Average' }],
-              [this.namespace, 'MemoryUsageRSS', { stat: 'Average' }],
+              [this.namespace, 'MemoryUsageHeapUsed'],
+              [this.namespace, 'MemoryUsageHeapTotal'],
+              [this.namespace, 'MemoryUsageRSS'],
             ],
             period: 300,
             stat: 'Average',
@@ -648,9 +649,9 @@ export class MonitoringDashboardService implements IMonitoringDashboardService {
 
     try {
       const command = new ListDashboardsCommand({});
-      const response = await this.cloudWatchClient.send(command);
+      const response: ListDashboardsCommandOutput = await this.cloudWatchClient.send(command);
       
-      return response.DashboardEntries?.map(entry => entry.DashboardName || '') || [];
+      return response.DashboardEntries?.map((entry: DashboardEntry) => entry.DashboardName || '') || [];
     } catch (error) {
       logger.error('Failed to list dashboards', { error });
       return [];
@@ -660,7 +661,7 @@ export class MonitoringDashboardService implements IMonitoringDashboardService {
   /**
    * Check if service is enabled
    */
-  isEnabled(): boolean {
+  getIsEnabled(): boolean {
     return this.isEnabled;
   }
 }
@@ -674,7 +675,7 @@ export const monitoringDashboardService = new MonitoringDashboardService();
  * Initialize all monitoring dashboards
  */
 export async function initializeMonitoringDashboards(): Promise<void> {
-  if (!monitoringDashboardService.isEnabled()) {
+  if (!monitoringDashboardService.getIsEnabled()) {
     logger.info('Monitoring dashboards initialization skipped (CloudWatch not enabled)');
     return;
   }

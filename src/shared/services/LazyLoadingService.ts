@@ -38,7 +38,9 @@ export class LazyLoadingService {
    */
   private generatePlaceholder(resource: LazyResource): string {
     if (resource.type === 'image') {
-      const { width = 300, height = 200 } = resource.dimensions || {};
+      const dimensions = resource.dimensions || { width: 300, height: 200 };
+      const width = dimensions.width || 300;
+      const height = dimensions.height || 200;
       return `data:image/svg+xml;base64,${Buffer.from(
         `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
           <rect width="100%" height="100%" fill="#f0f0f0"/>
@@ -64,10 +66,15 @@ export class LazyLoadingService {
     }
 
     if (resource.dimensions) {
-      attributes.width = resource.dimensions.width.toString();
-      attributes.height = resource.dimensions.height.toString();
+      attributes['width'] = resource.dimensions.width?.toString() || '';
+      attributes['height'] = resource.dimensions.height?.toString() || '';
     }
 
     return attributes;
   }
 }
+
+/**
+ * Singleton instance of LazyLoadingService
+ */
+export const lazyLoadingService = new LazyLoadingService();
