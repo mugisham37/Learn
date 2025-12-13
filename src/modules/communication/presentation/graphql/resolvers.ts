@@ -9,6 +9,8 @@
  */
 
 import { GraphQLError } from 'graphql';
+import { PubSub } from 'graphql-subscriptions';
+
 import {
   SUBSCRIPTION_EVENTS,
   createAsyncIterator,
@@ -16,7 +18,6 @@ import {
   withFilter,
 } from '../../../../infrastructure/graphql/pubsub.js';
 import { requireSubscriptionAuth } from '../../../../infrastructure/graphql/subscriptionServer.js';
-
 import {
   ValidationError,
   AuthorizationError,
@@ -1318,7 +1319,7 @@ export const communicationResolvers = {
           requireSubscriptionAuth(context);
           return createAsyncIterator(SUBSCRIPTION_EVENTS.TYPING_INDICATOR);
         },
-        (payload: any, variables: any) => {
+        (payload: any, variables: unknown) => {
           return (
             (variables.conversationId && payload.conversationId === variables.conversationId) ||
             (variables.threadId && payload.threadId === variables.threadId)

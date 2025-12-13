@@ -671,18 +671,13 @@ export const assessmentResolvers = {
     ): never => {
       requireEducator(context);
 
-      try {
-        // TODO: Implement quiz update in service
-        throw new GraphQLError('Quiz update not yet implemented', {
-          extensions: {
-            code: 'NOT_IMPLEMENTED',
-            http: { status: 501 },
-          },
-        });
-      } catch (error) {
-        handleServiceError(error);
-        return null;
-      }
+      // TODO: Implement quiz update in service
+      throw new GraphQLError('Quiz update not yet implemented', {
+        extensions: {
+          code: 'NOT_IMPLEMENTED',
+          http: { status: 501 },
+        },
+      });
     },
 
     /**
@@ -695,18 +690,13 @@ export const assessmentResolvers = {
     ): never => {
       requireEducator(context);
 
-      try {
-        // TODO: Implement quiz deletion in service
-        throw new GraphQLError('Quiz deletion not yet implemented', {
-          extensions: {
-            code: 'NOT_IMPLEMENTED',
-            http: { status: 501 },
-          },
-        });
-      } catch (error) {
-        handleServiceError(error);
-        return false;
-      }
+      // TODO: Implement quiz deletion in service
+      throw new GraphQLError('Quiz deletion not yet implemented', {
+        extensions: {
+          code: 'NOT_IMPLEMENTED',
+          http: { status: 501 },
+        },
+      });
     },
 
     /**
@@ -748,18 +738,13 @@ export const assessmentResolvers = {
     ): never => {
       requireEducator(context);
 
-      try {
-        // TODO: Implement question update in service
-        throw new GraphQLError('Question update not yet implemented', {
-          extensions: {
-            code: 'NOT_IMPLEMENTED',
-            http: { status: 501 },
-          },
-        });
-      } catch (error) {
-        handleServiceError(error);
-        return null;
-      }
+      // TODO: Implement question update in service
+      throw new GraphQLError('Question update not yet implemented', {
+        extensions: {
+          code: 'NOT_IMPLEMENTED',
+          http: { status: 501 },
+        },
+      });
     },
 
     /**
@@ -772,18 +757,13 @@ export const assessmentResolvers = {
     ): never => {
       requireEducator(context);
 
-      try {
-        // TODO: Implement question deletion in service
-        throw new GraphQLError('Question deletion not yet implemented', {
-          extensions: {
-            code: 'NOT_IMPLEMENTED',
-            http: { status: 501 },
-          },
-        });
-      } catch (error) {
-        handleServiceError(error);
-        return false;
-      }
+      // TODO: Implement question deletion in service
+      throw new GraphQLError('Question deletion not yet implemented', {
+        extensions: {
+          code: 'NOT_IMPLEMENTED',
+          http: { status: 501 },
+        },
+      });
     },
 
     /**
@@ -928,18 +908,13 @@ export const assessmentResolvers = {
     ): never => {
       requireEducator(context);
 
-      try {
-        // TODO: Implement assignment update in service
-        throw new GraphQLError('Assignment update not yet implemented', {
-          extensions: {
-            code: 'NOT_IMPLEMENTED',
-            http: { status: 501 },
-          },
-        });
-      } catch (error) {
-        handleServiceError(error);
-        return null;
-      }
+      // TODO: Implement assignment update in service
+      throw new GraphQLError('Assignment update not yet implemented', {
+        extensions: {
+          code: 'NOT_IMPLEMENTED',
+          http: { status: 501 },
+        },
+      });
     },
 
     /**
@@ -952,18 +927,13 @@ export const assessmentResolvers = {
     ): never => {
       requireEducator(context);
 
-      try {
-        // TODO: Implement assignment deletion in service
-        throw new GraphQLError('Assignment deletion not yet implemented', {
-          extensions: {
-            code: 'NOT_IMPLEMENTED',
-            http: { status: 501 },
-          },
-        });
-      } catch (error) {
-        handleServiceError(error);
-        return false;
-      }
+      // TODO: Implement assignment deletion in service
+      throw new GraphQLError('Assignment deletion not yet implemented', {
+        extensions: {
+          code: 'NOT_IMPLEMENTED',
+          http: { status: 501 },
+        },
+      });
     },
 
     /**

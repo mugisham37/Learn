@@ -35,8 +35,8 @@ import {
   lessonProgress,
 } from '../../../../infrastructure/database/schema/enrollments.schema.js';
 import { NotFoundError, DatabaseError, ValidationError } from '../../../../shared/errors/index.js';
-
 import type { DateRange } from '../../../../shared/types/index.js';
+
 import type { IMetricsCalculator, TrendData, EngagementComponents } from './IMetricsCalculator.js';
 
 /**

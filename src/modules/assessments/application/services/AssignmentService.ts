@@ -422,7 +422,7 @@ export class AssignmentService implements IAssignmentService {
 
       // Update submission in repository with sanitized feedback
       const updatedSubmission = await this.submissionRepository.update(data.submissionId, {
-        pointsAwarded: (finalScore ?? data.pointsAwarded).toString(),
+        pointsAwarded: (finalScore !== null && finalScore !== undefined ? finalScore : data.pointsAwarded).toString(),
         feedback: sanitizeByContentType(data.feedback, 'feedback'),
         gradingStatus: 'graded',
         gradedAt: new Date(),

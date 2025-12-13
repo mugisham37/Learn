@@ -7,21 +7,17 @@
 
 import type {
   DiscussionThread,
-  NewDiscussionThread,
   DiscussionPost,
-  NewDiscussionPost,
-  PostVote,
-  NewPostVote,
 } from '../../../../infrastructure/database/schema/communication.schema.js';
-import type {
-  CreateDiscussionThreadDTO,
-  UpdateDiscussionThreadDTO,
-} from '../../domain/entities/DiscussionThread.js';
 import type {
   CreateDiscussionPostDTO,
   UpdateDiscussionPostDTO,
   VoteType,
 } from '../../domain/entities/DiscussionPost.js';
+import type {
+  CreateDiscussionThreadDTO,
+  UpdateDiscussionThreadDTO,
+} from '../../domain/entities/DiscussionThread.js';
 
 /**
  * Pagination parameters for discussion queries

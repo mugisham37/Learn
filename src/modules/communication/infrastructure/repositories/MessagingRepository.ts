@@ -7,12 +7,14 @@
 
 import { eq, and, or, desc, count, isNull, sql } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+
 import {
   messages,
   Message,
   NewMessage,
 } from '../../../../infrastructure/database/schema/communication.schema.js';
 import { users } from '../../../../infrastructure/database/schema/users.schema.js';
+
 import {
   IMessagingRepository,
   ConversationSummary,
@@ -32,7 +34,7 @@ import {
  * - 9.1: Direct messaging with real-time delivery and notifications
  */
 export class MessagingRepository implements IMessagingRepository {
-  constructor(private db: NodePgDatabase<any>) {}
+  constructor(private db: NodePgDatabase) {}
 
   /**
    * Create a new message
@@ -54,18 +56,22 @@ export class MessagingRepository implements IMessagingRepository {
       updatedAt: new Date(),
     };
 
-    const [message] = await this.db.insert(messages).values(messageData).returning();
+    const result = await this.db.insert(messages).values(messageData).returning();
+    
+    if (!result[0]) {
+      throw new Error('Failed to create message');
+    }
 
-    return message;
+    return result[0];
   }
 
   /**
    * Find message by ID
    */
   async findById(id: string): Promise<Message | null> {
-    const [message] = await this.db.select().from(messages).where(eq(messages.id, id)).limit(1);
-
-    return message || null;
+    const result = await this.db.select().from(messages).where(eq(messages.id, id)).limit(1);
+    
+    return result[0] || null;
   }
 
   /**
@@ -91,10 +97,12 @@ export class MessagingRepository implements IMessagingRepository {
     );
 
     // Get total count
-    const [{ totalCount }] = await this.db
+    const totalCountResult = await this.db
       .select({ totalCount: count() })
       .from(messages)
       .where(whereCondition);
+    
+    const totalCount = totalCountResult[0]?.totalCount || 0;
 
     // Get messages with pagination (newest first)
     const messageList = await this.db
@@ -109,7 +117,7 @@ export class MessagingRepository implements IMessagingRepository {
       items: messageList,
       totalCount: Number(totalCount),
       hasMore: pagination.offset + messageList.length < Number(totalCount),
-      nextCursor: messageList.length > 0 ? messageList[messageList.length - 1].id : undefined,
+      nextCursor: messageList.length > 0 ? messageList[messageList.length - 1]?.id : undefined,
     };
   }
 
@@ -191,7 +199,7 @@ export class MessagingRepository implements IMessagingRepository {
       if (!otherUser) continue;
 
       // Get unread count for this conversation (messages sent to this user that are unread)
-      const [{ unreadCount }] = await this.db
+      const unreadCountResult = await this.db
         .select({ unreadCount: count() })
         .from(messages)
         .where(
@@ -202,9 +210,11 @@ export class MessagingRepository implements IMessagingRepository {
             isNull(messages.deletedByRecipient)
           )
         );
+      
+      const unreadCount = unreadCountResult[0]?.unreadCount || 0;
 
       // Get total message count for this conversation
-      const [{ totalMessages }] = await this.db
+      const totalMessagesResult = await this.db
         .select({ totalMessages: count() })
         .from(messages)
         .where(
@@ -216,12 +226,14 @@ export class MessagingRepository implements IMessagingRepository {
             )
           )
         );
+      
+      const totalMessages = totalMessagesResult[0]?.totalMessages || 0;
 
       conversationSummaries.push({
         conversationId,
         otherUserId,
         otherUserName: otherUser.fullName,
-        otherUserAvatarUrl: otherUser.avatarUrl,
+        otherUserAvatarUrl: otherUser.avatarUrl || undefined,
         lastMessage: {
           id: latestMessage.id,
           content: latestMessage.content,
@@ -251,7 +263,7 @@ export class MessagingRepository implements IMessagingRepository {
       hasMore: pagination.offset + paginatedSummaries.length < conversationSummaries.length,
       nextCursor:
         paginatedSummaries.length > 0
-          ? paginatedSummaries[paginatedSummaries.length - 1].conversationId
+          ? paginatedSummaries[paginatedSummaries.length - 1]?.conversationId
           : undefined,
     };
   }
@@ -265,13 +277,17 @@ export class MessagingRepository implements IMessagingRepository {
       updatedAt: new Date(),
     };
 
-    const [message] = await this.db
+    const result = await this.db
       .update(messages)
       .set(updateData)
       .where(eq(messages.id, id))
       .returning();
 
-    return message;
+    if (!result[0]) {
+      throw new Error('Failed to update message');
+    }
+
+    return result[0];
   }
 
   /**
@@ -312,7 +328,7 @@ export class MessagingRepository implements IMessagingRepository {
    * Get unread message count for a user
    */
   async getUnreadCount(userId: string): Promise<number> {
-    const [{ unreadCount }] = await this.db
+    const unreadCountResult = await this.db
       .select({ unreadCount: count() })
       .from(messages)
       .where(
@@ -323,7 +339,7 @@ export class MessagingRepository implements IMessagingRepository {
         )
       );
 
-    return Number(unreadCount);
+    return Number(unreadCountResult[0]?.unreadCount || 0);
   }
 
   /**

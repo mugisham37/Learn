@@ -9,7 +9,6 @@
  */
 
 import { QuizSubmission } from '../../../../infrastructure/database/schema/assessments.schema.js';
-
 import { Question } from '../../domain/entities/Question.js';
 import { Quiz } from '../../domain/entities/Quiz.js';
 

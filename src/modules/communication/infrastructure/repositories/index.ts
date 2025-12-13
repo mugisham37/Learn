@@ -2,9 +2,24 @@
  * Communication Repository Exports
  */
 
-export * from './IMessagingRepository.js';
-export * from './MessagingRepository.js';
-export * from './IDiscussionRepository.js';
-export * from './DiscussionRepository.js';
-export * from './IAnnouncementRepository.js';
-export * from './AnnouncementRepository.js';
+export {
+  IMessagingRepository,
+  ConversationSummary,
+  MessagePagination,
+  CreateMessageDTO,
+  UpdateMessageDTO,
+  PaginatedResult as MessagingPaginatedResult,
+} from './IMessagingRepository.js';
+export { MessagingRepository } from './MessagingRepository.js';
+export {
+  IDiscussionRepository,
+  ThreadWithDetails,
+  PostWithReplies,
+  DiscussionPagination,
+  ThreadFilter,
+  ThreadSortBy,
+  PaginatedResult as DiscussionPaginatedResult,
+} from './IDiscussionRepository.js';
+export { DiscussionRepository } from './DiscussionRepository.js';
+export { IAnnouncementRepository } from './IAnnouncementRepository.js';
+export { AnnouncementRepository } from './AnnouncementRepository.js';

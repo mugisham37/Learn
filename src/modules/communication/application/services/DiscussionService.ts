@@ -18,20 +18,19 @@ import {
   NotFoundError,
   ConflictError,
 } from '../../../../shared/errors/index.js';
+import type { ICourseRepository } from '../../../courses/infrastructure/repositories/ICourseRepository.js';
+import type { IEnrollmentRepository } from '../../../enrollments/infrastructure/repositories/IEnrollmentRepository.js';
+
 import { sanitizeByContentType } from '../../../../shared/utils/sanitization.js';
-import {
-  DiscussionThread,
-  CreateDiscussionThreadDTO,
-} from '../../domain/entities/DiscussionThread.js';
 import {
   DiscussionPost,
   CreateDiscussionPostDTO,
   VoteType,
 } from '../../domain/entities/DiscussionPost.js';
-
-import type { ICourseRepository } from '../../../courses/infrastructure/repositories/ICourseRepository.js';
-import type { IEnrollmentRepository } from '../../../enrollments/infrastructure/repositories/IEnrollmentRepository.js';
-
+import {
+  DiscussionThread,
+  CreateDiscussionThreadDTO,
+} from '../../domain/entities/DiscussionThread.js';
 import type {
   IDiscussionRepository,
   ThreadWithDetails,
@@ -41,6 +40,7 @@ import type {
   ThreadFilter,
   ThreadSortBy,
 } from '../../infrastructure/repositories/IDiscussionRepository.js';
+
 import type {
   IDiscussionService,
   CreateThreadDTO,

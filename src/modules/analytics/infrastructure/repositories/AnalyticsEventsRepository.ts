@@ -49,7 +49,7 @@ export class AnalyticsEventsRepository implements IAnalyticsEventsRepository {
   /**
    * Builds WHERE conditions for event filters
    */
-  private buildFilterConditions(filters?: EventFilters) {
+  private buildFilterConditions(filters?: EventFilters): ReturnType<typeof and> | undefined {
     const conditions = [];
 
     if (filters?.userId) {

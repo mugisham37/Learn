@@ -10,6 +10,7 @@
 import { Client, ClientOptions } from '@elastic/elasticsearch';
 
 import { config } from '../../config/index.js';
+import { logger } from '../../shared/utils/logger.js';
 import { secureConfig } from '../../shared/utils/secureConfig.js';
 
 import { ElasticsearchClient } from './ElasticsearchClient.js';
@@ -279,7 +280,7 @@ export const indexSettings = {
  * Initialize Elasticsearch indices with mappings and aliases
  */
 export async function initializeElasticsearchIndices(): Promise<void> {
-  console.log('Initializing Elasticsearch indices...');
+  logger.info('Initializing Elasticsearch indices...');
 
   try {
     // Create courses index
@@ -302,9 +303,9 @@ export async function initializeElasticsearchIndices(): Promise<void> {
       ElasticsearchAlias.LESSONS
     );
 
-    console.log('Elasticsearch indices initialized successfully');
+    logger.info('Elasticsearch indices initialized successfully');
   } catch (error) {
-    console.error('Failed to initialize Elasticsearch indices:', error);
+    logger.error('Failed to initialize Elasticsearch indices:', error);
     throw error;
   }
 }
@@ -331,7 +332,7 @@ async function createIndexWithRetry(
           body: indexConfig,
         });
 
-        console.log(`Created Elasticsearch index: ${indexName}`);
+        logger.info(`Created Elasticsearch index: ${indexName}`);
       }
 
       // Check if alias exists
@@ -346,7 +347,7 @@ async function createIndexWithRetry(
           name: aliasName,
         });
 
-        console.log(`Created Elasticsearch alias: ${aliasName} -> ${indexName}`);
+        logger.info(`Created Elasticsearch alias: ${aliasName} -> ${indexName}`);
       }
 
       return;
@@ -354,7 +355,7 @@ async function createIndexWithRetry(
       const isLastAttempt = attempt === RETRY_CONFIG.maxRetries - 1;
 
       if (isLastAttempt) {
-        console.error(
+        logger.error(
           `Failed to create index ${indexName} after ${RETRY_CONFIG.maxRetries} attempts:`,
           error
         );
@@ -362,7 +363,7 @@ async function createIndexWithRetry(
       }
 
       const delay = calculateBackoffDelay(attempt);
-      console.warn(
+      logger.warn(
         `Index creation attempt ${attempt + 1} failed for ${indexName}. Retrying in ${delay}ms...`,
         error instanceof Error ? error.message : error
       );
@@ -439,7 +440,7 @@ export async function reindexWithZeroDowntime(
   targetIndexName: string,
   indexConfig: Record<string, unknown>
 ): Promise<void> {
-  console.log(`Starting zero-downtime reindex from ${sourceAlias} to ${targetIndexName}`);
+  logger.info(`Starting zero-downtime reindex from ${sourceAlias} to ${targetIndexName}`);
 
   try {
     // Create new index with timestamp suffix
@@ -452,7 +453,7 @@ export async function reindexWithZeroDowntime(
       body: indexConfig,
     });
 
-    console.log(`Created new index: ${newIndexName}`);
+    logger.info(`Created new index: ${newIndexName}`);
 
     // Reindex data from source to new index
     const reindexResponse = await elasticsearch.reindex({
@@ -468,7 +469,7 @@ export async function reindexWithZeroDowntime(
       refresh: true,
     });
 
-    console.log(`Reindexed ${reindexResponse.total} documents to ${newIndexName}`);
+    logger.info(`Reindexed ${reindexResponse.total} documents to ${newIndexName}`);
 
     // Get current indices behind the alias
     const aliasResponse = await elasticsearch.indices.getAlias({
@@ -501,7 +502,7 @@ export async function reindexWithZeroDowntime(
       },
     });
 
-    console.log(`Switched alias ${sourceAlias} to ${newIndexName}`);
+    logger.info(`Switched alias ${sourceAlias} to ${newIndexName}`);
 
     // Delete old indices after a delay (optional, for safety)
     setTimeout((): void => {
@@ -511,17 +512,17 @@ export async function reindexWithZeroDowntime(
             await elasticsearch.indices.delete({
               index: oldIndex,
             });
-            console.log(`Deleted old index: ${oldIndex}`);
+            logger.info(`Deleted old index: ${oldIndex}`);
           }
         } catch (error) {
-          console.error('Error deleting old indices:', error);
+          logger.error('Error deleting old indices:', error);
         }
       })();
     }, 60000); // 1 minute delay
 
     
   } catch (error) {
-    console.error('Zero-downtime reindex failed:', error);
+    logger.error('Zero-downtime reindex failed:', error);
     throw error;
   }
 }
@@ -568,7 +569,7 @@ export async function bulkIndex(
       errors,
     };
   } catch (error) {
-    console.error('Bulk index operation failed:', error);
+    logger.error('Bulk index operation failed:', error);
     return {
       success: false,
       indexed: 0,
@@ -619,7 +620,7 @@ export async function refreshIndices(indices?: string[]): Promise<void> {
       index: indices?.join(',') || '_all',
     });
   } catch (error) {
-    console.error('Failed to refresh indices:', error);
+    logger.error('Failed to refresh indices:', error);
     throw error;
   }
 }
@@ -652,7 +653,7 @@ export async function getIndexStats(indexName: string): Promise<{
       searchRate: indexStats.total?.search?.query_total || 0,
     };
   } catch (error) {
-    console.error(`Failed to get stats for index ${indexName}:`, error);
+    logger.error(`Failed to get stats for index ${indexName}:`, error);
     return {
       documentCount: 0,
       storeSize: '0MB',
@@ -669,7 +670,7 @@ export async function closeElasticsearchConnection(): Promise<void> {
   try {
     await elasticsearch.close();
   } catch (error) {
-    console.error('Error closing Elasticsearch connection:', error);
+    logger.error('Error closing Elasticsearch connection:', error);
   }
 }
 

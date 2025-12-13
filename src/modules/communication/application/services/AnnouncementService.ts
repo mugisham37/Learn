@@ -17,7 +17,6 @@ import {
   type CreateAnnouncementData,
   type AnnouncementData,
 } from '../../domain/entities/Announcement.js';
-
 import type { IAnnouncementRepository } from '../../infrastructure/repositories/IAnnouncementRepository.js';
 
 import {

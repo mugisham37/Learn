@@ -8,9 +8,7 @@ import { eq, and, desc, asc, lte, isNull, count } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
 import { announcements } from '../../../../infrastructure/database/schema/communication.schema.js';
-
 import type { Announcement, AnnouncementData } from '../../domain/entities/Announcement.js';
-
 import type { IAnnouncementRepository } from './IAnnouncementRepository.js';
 
 export class AnnouncementRepository implements IAnnouncementRepository {
@@ -139,7 +137,7 @@ export class AnnouncementRepository implements IAnnouncementRepository {
     return result.count;
   }
 
-  private mapToEntity(row: any): Announcement {
+  private mapToEntity(row: unknown): Announcement {
     return {
       id: row.id,
       courseId: row.courseId,

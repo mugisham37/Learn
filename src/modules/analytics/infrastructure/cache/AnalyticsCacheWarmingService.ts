@@ -7,11 +7,12 @@
  * Requirements: 12.6, 15.2
  */
 
-import type { IAnalyticsService } from '../../application/services/IAnalyticsService.js';
 import type { Role, DateRange } from '../../../../shared/types/index.js';
-
 import { logger } from '../../../../shared/utils/logger.js';
+import type { IAnalyticsService } from '../../application/services/IAnalyticsService.js';
+
 import { analyticsCacheService } from './AnalyticsCacheService.js';
+
 
 /**
  * Cache warming configuration

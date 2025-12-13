@@ -8,6 +8,7 @@
  * Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8
  */
 
+import { QuizSubmission } from '../../../../infrastructure/database/schema/assessments.schema.js';
 import {
   ValidationError,
   AuthorizationError,
@@ -17,12 +18,8 @@ import {
 } from '../../../../shared/errors/index.js';
 import { logger } from '../../../../shared/utils/logger.js';
 import { sanitizeByContentType } from '../../../../shared/utils/sanitization.js';
-
-import { QuizSubmission } from '../../../../infrastructure/database/schema/assessments.schema.js';
-
 import { Question } from '../../domain/entities/Question.js';
 import { Quiz } from '../../domain/entities/Quiz.js';
-
 import { IQuestionRepository } from '../../infrastructure/repositories/IQuestionRepository.js';
 import { IQuizRepository } from '../../infrastructure/repositories/IQuizRepository.js';
 import { IQuizSubmissionRepository } from '../../infrastructure/repositories/IQuizSubmissionRepository.js';
@@ -415,7 +412,7 @@ export class QuizService implements IQuizService {
       );
 
       // Auto-grade objective questions
-      const gradingResult = await this.autoGradeSubmission(submission, questions);
+      const gradingResult = this.autoGradeSubmission(submission, questions);
 
       // Determine grading status
       const hasSubjectiveQuestions = questions.some(

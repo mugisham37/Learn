@@ -7,7 +7,6 @@
 
 import type {
   Message,
-  NewMessage,
 } from '../../../../infrastructure/database/schema/communication.schema.js';
 
 /**
@@ -56,7 +55,7 @@ export interface CreateMessageDTO {
   recipientId: string;
   subject?: string;
   content: string;
-  attachments?: any[];
+  attachments?: unknown[];
   parentMessageId?: string;
 }
 

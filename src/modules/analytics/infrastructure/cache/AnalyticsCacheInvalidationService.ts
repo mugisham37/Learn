@@ -9,6 +9,7 @@
 
 import { buildCacheKey, CachePrefix } from '../../../../infrastructure/cache/index.js';
 import { logger } from '../../../../shared/utils/logger.js';
+
 import { analyticsCacheService, AnalyticsCacheKeys } from './AnalyticsCacheService.js';
 
 /**
@@ -391,10 +392,10 @@ export class AnalyticsCacheInvalidationService {
         if (!groups[key]) {
           groups[key] = [];
         }
-        groups[key]!.push(event);
+        groups[key].push(event);
         return groups;
       },
-{}
+      {} as Record<string, CacheInvalidationEventData[]>
     );
   }
 
