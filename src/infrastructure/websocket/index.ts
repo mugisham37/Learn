@@ -7,15 +7,16 @@
  * Requirements: 9.6, 9.7, 9.8
  */
 
-import { Server as SocketIOServer, Socket } from 'socket.io';
-import { createAdapter } from '@socket.io/redis-adapter';
 import { FastifyInstance } from 'fastify';
 import { verify } from 'jsonwebtoken';
+import { Server as SocketIOServer, Socket } from 'socket.io';
+import { createAdapter } from '@socket.io/redis-adapter';
 
 import { config } from '../../config/index.js';
-import { secrets } from '../../shared/utils/secureConfig.js';
+
 import { redis } from '../cache/index.js';
 import { logger } from '../../shared/utils/logger.js';
+import { secrets } from '../../shared/utils/secureConfig.js';
 
 /**
  * Extended Socket interface with authenticated user data

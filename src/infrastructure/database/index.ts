@@ -12,6 +12,7 @@ import { Pool, PoolClient, PoolConfig } from 'pg';
 
 import { config } from '../../config/index.js';
 import { logger } from '../../shared/utils/logger.js';
+
 import { connectionMonitor, ConnectionMonitor } from './ConnectionMonitor.js';
 
 /**

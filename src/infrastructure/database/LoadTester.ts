@@ -11,6 +11,8 @@ import { performance } from 'perf_hooks';
 
 import { Pool } from 'pg';
 
+import { simpleLogger } from '../../shared/utils/simpleLogger.js';
+
 export interface LoadTestConfig {
   // Test parameters
   concurrentConnections: number;
@@ -76,9 +78,7 @@ export class DatabaseLoadTester {
    * Run a comprehensive load test
    */
   public async runLoadTest(config: LoadTestConfig): Promise<LoadTestResult> {
-    console.log(
-      `Starting load test with ${config.concurrentConnections} concurrent connections for ${config.testDurationMs}ms`
-    );
+    simpleLogger.info(`Starting load test with ${config.concurrentConnections} concurrent connections for ${config.testDurationMs}ms`);
 
     const result: LoadTestResult = {
       config,
@@ -150,10 +150,10 @@ export class DatabaseLoadTester {
     if (queryTimes.length > 0) {
       queryTimes.sort((a, b) => a - b);
       result.averageQueryTime = queryTimes.reduce((sum, time) => sum + time, 0) / queryTimes.length;
-      result.medianQueryTime = queryTimes[Math.floor(queryTimes.length * 0.5)];
-      result.p95QueryTime = queryTimes[Math.floor(queryTimes.length * 0.95)];
-      result.p99QueryTime = queryTimes[Math.floor(queryTimes.length * 0.99)];
-      result.maxQueryTime = queryTimes[queryTimes.length - 1];
+      result.medianQueryTime = queryTimes[Math.floor(queryTimes.length * 0.5)] ?? 0;
+      result.p95QueryTime = queryTimes[Math.floor(queryTimes.length * 0.95)] ?? 0;
+      result.p99QueryTime = queryTimes[Math.floor(queryTimes.length * 0.99)] ?? 0;
+      result.maxQueryTime = queryTimes[queryTimes.length - 1] ?? 0;
     }
 
     // Calculate pool utilization metrics
@@ -182,9 +182,7 @@ export class DatabaseLoadTester {
     // Generate recommendations
     result.recommendations = this.generateRecommendations(result);
 
-    console.log(
-      `Load test completed: ${result.totalQueries} queries, ${result.queriesPerSecond.toFixed(2)} QPS, ${result.failedQueries} failures`
-    );
+    simpleLogger.info(`Load test completed: ${result.totalQueries} queries, ${result.queriesPerSecond.toFixed(2)} QPS, ${result.failedQueries} failures`);
 
     return result;
   }
@@ -205,6 +203,7 @@ export class DatabaseLoadTester {
         const isReadQuery = Math.random() < config.readWriteRatio;
         const queries = isReadQuery ? config.readQueries : config.writeQueries;
         const query = queries[Math.floor(Math.random() * queries.length)];
+        if (!query) continue; // Skip if no query available
         const pool = isReadQuery ? this.readPool : this.writePool;
 
         const startTime = performance.now();
@@ -212,7 +211,7 @@ export class DatabaseLoadTester {
         try {
           const client = await pool.connect();
           try {
-            await client.query(query);
+            void client.query(query);
             result.successfulQueries++;
           } finally {
             client.release();
@@ -241,7 +240,7 @@ export class DatabaseLoadTester {
           await new Promise((resolve) => setTimeout(resolve, config.queryInterval));
         }
       } catch (error) {
-        console.error(`Worker ${workerId} error:`, error);
+        simpleLogger.error(`Worker ${workerId} error:`, { error: error instanceof Error ? error.message : String(error) });
         break;
       }
     }
@@ -320,7 +319,7 @@ export class DatabaseLoadTester {
     connectionEstablishmentTime: number;
     poolExhaustionPoint: number;
   }> {
-    console.log('Running quick stress test...');
+    simpleLogger.info('Running quick stress test...');
 
     const results = {
       maxConcurrentConnections: 0,
@@ -335,12 +334,12 @@ export class DatabaseLoadTester {
     client.release();
 
     // Test pool exhaustion point
-    const connections: any[] = [];
+    const connections: Array<{ release: () => void }> = [];
     try {
       for (let i = 0; i < 100; i++) {
         const client = await Promise.race([
           this.writePool.connect(),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 1000)),
+          new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 1000)),
         ]);
         connections.push(client);
         results.maxConcurrentConnections = i + 1;
@@ -349,12 +348,16 @@ export class DatabaseLoadTester {
       results.poolExhaustionPoint = results.maxConcurrentConnections;
     } finally {
       // Release all connections
-      connections.forEach((client) => client.release());
+      connections.forEach((client) => {
+        try {
+          client.release();
+        } catch (error) {
+          // Ignore release errors
+        }
+      });
     }
 
-    console.log(
-      `Stress test completed: ${results.maxConcurrentConnections} max connections, ${results.connectionEstablishmentTime.toFixed(2)}ms establishment time`
-    );
+    simpleLogger.info(`Stress test completed: ${results.maxConcurrentConnections} max connections, ${results.connectionEstablishmentTime.toFixed(2)}ms establishment time`);
 
     return results;
   }

@@ -9,13 +9,15 @@
  */
 
 import { Client } from '@elastic/elasticsearch';
+
+import { ExternalServiceError } from '../../shared/errors/index.js';
+
 import type {
   IElasticsearchClient,
   SearchResponse,
   BulkOperationResult,
   IndexConfiguration,
 } from './IElasticsearchClient.js';
-import { ExternalServiceError } from '../../shared/errors/index.js';
 
 /**
  * Retry configuration for Elasticsearch operations

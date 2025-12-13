@@ -7,6 +7,7 @@
 
 import { sql } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+
 import { logger } from '../../../shared/utils/logger';
 
 /**
@@ -343,7 +344,7 @@ const OPTIMIZATION_INDEXES: IndexDefinition[] = [
 /**
  * Create optimization indexes
  */
-export async function createOptimizationIndexes(db: NodePgDatabase<any>): Promise<void> {
+export async function createOptimizationIndexes(db: NodePgDatabase<Record<string, never>>): Promise<void> {
   logger.info('Creating database optimization indexes...');
 
   for (const index of OPTIMIZATION_INDEXES) {
@@ -366,7 +367,7 @@ export async function createOptimizationIndexes(db: NodePgDatabase<any>): Promis
 /**
  * Create a single index
  */
-async function createIndex(db: NodePgDatabase<any>, index: IndexDefinition): Promise<void> {
+async function createIndex(db: NodePgDatabase<Record<string, never>>, index: IndexDefinition): Promise<void> {
   let indexSql: string;
 
   if (index.type === 'partial' && index.condition) {
@@ -384,7 +385,7 @@ async function createIndex(db: NodePgDatabase<any>, index: IndexDefinition): Pro
 /**
  * Drop optimization indexes (for rollback)
  */
-export async function dropOptimizationIndexes(db: NodePgDatabase<any>): Promise<void> {
+export async function dropOptimizationIndexes(db: NodePgDatabase<Record<string, never>>): Promise<void> {
   logger.info('Dropping database optimization indexes...');
 
   for (const index of OPTIMIZATION_INDEXES) {
@@ -402,7 +403,7 @@ export async function dropOptimizationIndexes(db: NodePgDatabase<any>): Promise<
 /**
  * Analyze index usage and effectiveness
  */
-export async function analyzeIndexUsage(db: NodePgDatabase<any>): Promise<{
+export async function analyzeIndexUsage(db: NodePgDatabase<Record<string, never>>): Promise<{
   unusedIndexes: string[];
   heavilyUsedIndexes: string[];
   indexSizes: Array<{ name: string; size: string; table: string }>;
@@ -456,12 +457,12 @@ export async function analyzeIndexUsage(db: NodePgDatabase<any>): Promise<{
     );
 
     return {
-      unusedIndexes: unusedResult.map((row: any) => row.indexname),
-      heavilyUsedIndexes: heavyUsageResult.map((row: any) => row.indexname),
-      indexSizes: sizeResult.map((row: any) => ({
-        name: row.indexname,
-        size: row.size,
-        table: row.tablename,
+      unusedIndexes: unusedResult.rows.map((row: Record<string, unknown>) => String(row.indexname)),
+      heavilyUsedIndexes: heavyUsageResult.rows.map((row: Record<string, unknown>) => String(row.indexname)),
+      indexSizes: sizeResult.rows.map((row: Record<string, unknown>) => ({
+        name: String(row.indexname),
+        size: String(row.size),
+        table: String(row.tablename),
       })),
     };
   } catch (error) {

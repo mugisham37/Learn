@@ -8,7 +8,7 @@
  * Requirements: 8.1, 8.7
  */
 
-import type { Course, Lesson } from '../database/schema/courses.schema.js';
+// Types are defined inline to avoid unused imports
 
 /**
  * Search document for courses with enriched data for search

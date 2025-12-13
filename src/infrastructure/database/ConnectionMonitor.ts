@@ -11,6 +11,8 @@ import { EventEmitter } from 'events';
 
 import { Pool } from 'pg';
 
+import { simpleLogger } from '../../shared/utils/simpleLogger.js';
+
 export interface ConnectionMetrics {
   timestamp: Date;
   totalConnections: number;
@@ -73,7 +75,7 @@ export class ConnectionMonitor extends EventEmitter {
     this.metricsHistory.set('write', []);
     this.metricsHistory.set('read', []);
 
-    // Connection monitor initialized - using logger would require import
+    simpleLogger.info('Connection monitor initialized');
   }
 
   /**
@@ -95,7 +97,7 @@ export class ConnectionMonitor extends EventEmitter {
       this.collectMetrics();
     }, this.config.metricsCollectionInterval);
 
-    // Connection monitoring started - using logger would require import
+    simpleLogger.info(`Connection monitoring started with ${this.config.metricsCollectionInterval}ms interval`);
   }
 
   /**
@@ -108,7 +110,7 @@ export class ConnectionMonitor extends EventEmitter {
     }
 
     this.isMonitoring = false;
-    // Connection monitoring stopped - using logger would require import
+    simpleLogger.info('Connection monitoring stopped');
   }
 
   /**
@@ -137,7 +139,7 @@ export class ConnectionMonitor extends EventEmitter {
   /**
    * Get metrics for a specific pool
    */
-  private getPoolMetrics(pool: Pool, poolName: string): ConnectionMetrics {
+  private getPoolMetrics(pool: Pool, _poolName: string): ConnectionMetrics {
     const totalConnections = pool.totalCount;
     const idleConnections = pool.idleCount;
     const waitingClients = pool.waitingCount;
@@ -252,8 +254,7 @@ export class ConnectionMonitor extends EventEmitter {
     this.lastAlerts.set(alertType, now);
     this.emit('alert', alert);
 
-    // Log alert
-    console.warn(`[Connection Monitor Alert] ${alert.message}`);
+    simpleLogger.warn(`[Connection Monitor Alert] ${alert.message}`);
   }
 
   /**
@@ -319,7 +320,7 @@ export class ConnectionMonitor extends EventEmitter {
       peakUtilization,
       totalAlerts: recentAlerts.length,
       lastAlert:
-        recentAlerts.length > 0 ? (Math.max(...recentAlerts.map((d) => d.getTime())) as any) : null,
+        recentAlerts.length > 0 ? new Date(Math.max(...recentAlerts.map((d) => d.getTime()))) : null,
     };
   }
 

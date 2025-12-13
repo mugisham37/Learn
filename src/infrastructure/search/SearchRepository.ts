@@ -8,14 +8,6 @@
  * Requirements: 8.1, 8.7
  */
 
-import type {
-  ISearchRepository,
-  CourseSearchDocument,
-  LessonSearchDocument,
-  BulkIndexResult,
-  SearchResult,
-  IndexStats,
-} from './ISearchRepository.js';
 import {
   elasticsearch,
   ElasticsearchIndex,
@@ -26,8 +18,18 @@ import {
   getIndexStats,
   checkElasticsearchHealth,
 } from './index.js';
+
 import { ExternalServiceError } from '../../shared/errors/index.js';
 import { createSearchQueryBuilder } from '../../modules/search/infrastructure/query/SearchQueryBuilder.js';
+
+import type {
+  ISearchRepository,
+  CourseSearchDocument,
+  LessonSearchDocument,
+  BulkIndexResult,
+  SearchResult,
+  IndexStats,
+} from './ISearchRepository.js';
 
 /**
  * Search Repository Implementation

@@ -8,7 +8,9 @@
  */
 
 import { Client, ClientOptions } from '@elastic/elasticsearch';
+
 import { config } from '../../config/index.js';
+
 import type { ISearchRepository } from './ISearchRepository.js';
 
 /**

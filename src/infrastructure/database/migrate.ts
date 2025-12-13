@@ -5,25 +5,26 @@
  */
 
 import dotenv from 'dotenv';
-
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
 import { Pool } from 'pg';
+
+import { simpleLogger } from '../../shared/utils/simpleLogger.js';
 
 dotenv.config();
 
 async function runMigrations(): Promise<void> {
   const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
+    connectionString: process.env['DATABASE_URL'],
   });
 
   const db = drizzle(pool);
 
-  console.log('Running migrations...');
+  simpleLogger.info('Running migrations...');
 
   try {
     await migrate(db, { migrationsFolder: './migrations' });
-    console.log('Migrations completed successfully');
+    simpleLogger.info('Migrations completed successfully');
   } catch (error) {
     console.error('Migration failed:', error);
     process.exit(1);
