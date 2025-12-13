@@ -242,7 +242,7 @@ export class CourseAnalyticsRepository implements ICourseAnalyticsRepository {
       }
 
       // Query database for data and total count
-      const [data, [{ total }]] = await Promise.all([
+      const [data, totalResult] = await Promise.all([
         this.readDb
           .select()
           .from(courseAnalytics)
@@ -251,6 +251,8 @@ export class CourseAnalyticsRepository implements ICourseAnalyticsRepository {
           .offset(offset),
         this.readDb.select({ total: count() }).from(courseAnalytics),
       ]);
+
+      const total = totalResult[0]?.total || 0;
 
       const result: PaginatedResult<CourseAnalytics> = {
         data,
@@ -299,7 +301,7 @@ export class CourseAnalyticsRepository implements ICourseAnalyticsRepository {
       }
 
       // Query database with join to courses table
-      const [data, [{ total }]] = await Promise.all([
+      const [data, totalResult] = await Promise.all([
         this.readDb
           .select({
             courseId: courseAnalytics.courseId,
@@ -327,6 +329,8 @@ export class CourseAnalyticsRepository implements ICourseAnalyticsRepository {
           .innerJoin(courses, eq(courseAnalytics.courseId, courses.id))
           .where(eq(courses.instructorId, instructorId)),
       ]);
+
+      const total = totalResult[0]?.total || 0;
 
       const result: PaginatedResult<CourseAnalytics> = {
         data,

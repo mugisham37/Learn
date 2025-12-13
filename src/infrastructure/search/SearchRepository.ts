@@ -9,8 +9,8 @@
  */
 
 import { createSearchQueryBuilder } from '../../modules/search/infrastructure/query/SearchQueryBuilder.js';
-
 import { ExternalServiceError } from '../../shared/errors/index.js';
+
 import type {
   ISearchRepository,
   CourseSearchDocument,
@@ -19,6 +19,7 @@ import type {
   SearchResult,
   IndexStats,
 } from './ISearchRepository.js';
+
 import {
   elasticsearch,
   ElasticsearchIndex as _ElasticsearchIndex,
@@ -94,7 +95,7 @@ export class SearchRepository implements ISearchRepository {
     try {
       const bulkDocs = documents.map((doc) => ({
         id: doc.id,
-        body: doc as Record<string, unknown>,
+        body: doc as unknown as Record<string, unknown>,
       }));
 
       const result = await bulkIndex(ElasticsearchAlias.COURSES, bulkDocs);
@@ -109,14 +110,11 @@ export class SearchRepository implements ISearchRepository {
       };
     } catch (error) {
       console.error('Failed to bulk index courses:', error);
-      const errorDetails = {
-        documentCount: documents.length,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      };
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       throw new ExternalServiceError(
         'Failed to bulk index course documents',
         'ELASTICSEARCH_BULK_INDEX_ERROR',
-        errorDetails
+        new Error(`Document count: ${documents.length}, Error: ${errorMessage}`)
       );
     }
   }
@@ -128,7 +126,7 @@ export class SearchRepository implements ISearchRepository {
     try {
       const bulkDocs = documents.map((doc) => ({
         id: doc.id,
-        body: doc as Record<string, unknown>,
+        body: doc as unknown as Record<string, unknown>,
       }));
 
       const result = await bulkIndex(ElasticsearchAlias.LESSONS, bulkDocs);
@@ -143,14 +141,11 @@ export class SearchRepository implements ISearchRepository {
       };
     } catch (error) {
       console.error('Failed to bulk index lessons:', error);
-      const errorDetails = {
-        documentCount: documents.length,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      };
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       throw new ExternalServiceError(
         'Failed to bulk index lesson documents',
         'ELASTICSEARCH_BULK_INDEX_ERROR',
-        errorDetails
+        new Error(`Document count: ${documents.length}, Error: ${errorMessage}`)
       );
     }
   }
@@ -300,11 +295,11 @@ export class SearchRepository implements ISearchRepository {
       };
     } catch (error) {
       console.error('Failed to search courses:', error);
-      const errorDetails = { query, options, error: error instanceof Error ? error.message : 'Unknown error' };
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       throw new ExternalServiceError(
         'Failed to search course documents',
         'ELASTICSEARCH_SEARCH_ERROR',
-        errorDetails
+        new Error(`Query: ${query}, Error: ${errorMessage}`)
       );
     }
   }
@@ -422,11 +417,11 @@ export class SearchRepository implements ISearchRepository {
       };
     } catch (error) {
       console.error('Failed to search lessons:', error);
-      const errorDetails = { query, options, error: error instanceof Error ? error.message : 'Unknown error' };
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       throw new ExternalServiceError(
         'Failed to search lesson documents',
         'ELASTICSEARCH_SEARCH_ERROR',
-        errorDetails
+        new Error(`Query: ${query}, Error: ${errorMessage}`)
       );
     }
   }
@@ -456,11 +451,11 @@ export class SearchRepository implements ISearchRepository {
       }
 
       console.error('Failed to delete course:', error);
-      const errorDetails = { courseId, error: error instanceof Error ? error.message : 'Unknown error' };
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       throw new ExternalServiceError(
         'Failed to delete course document',
         'ELASTICSEARCH_DELETE_ERROR',
-        errorDetails
+        new Error(`Course ID: ${courseId}, Error: ${errorMessage}`)
       );
     }
   }
@@ -488,11 +483,11 @@ export class SearchRepository implements ISearchRepository {
       }
 
       console.error('Failed to delete lesson:', error);
-      const errorDetails = { lessonId, error: error instanceof Error ? error.message : 'Unknown error' };
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       throw new ExternalServiceError(
         'Failed to delete lesson document',
         'ELASTICSEARCH_DELETE_ERROR',
-        errorDetails
+        new Error(`Lesson ID: ${lessonId}, Error: ${errorMessage}`)
       );
     }
   }
@@ -513,11 +508,11 @@ export class SearchRepository implements ISearchRepository {
       return result.deleted;
     } catch (error) {
       console.error('Failed to delete lessons by course:', error);
-      const errorDetails = { courseId, error: error instanceof Error ? error.message : 'Unknown error' };
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       throw new ExternalServiceError(
         'Failed to delete lessons for course',
         'ELASTICSEARCH_DELETE_ERROR',
-        errorDetails
+        new Error(`Course ID: ${courseId}, Error: ${errorMessage}`)
       );
     }
   }
@@ -532,11 +527,11 @@ export class SearchRepository implements ISearchRepository {
       await refreshIndices(indices);
     } catch (error) {
       console.error('Failed to refresh indices:', error);
-      const errorDetails = { indices, error: error instanceof Error ? error.message : 'Unknown error' };
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       throw new ExternalServiceError(
         'Failed to refresh search indices',
         'ELASTICSEARCH_REFRESH_ERROR',
-        errorDetails
+        new Error(`Indices: ${indices?.join(', ') || 'all'}, Error: ${errorMessage}`)
       );
     }
   }
@@ -549,11 +544,11 @@ export class SearchRepository implements ISearchRepository {
       return await getIndexStats(indexName);
     } catch (error) {
       console.error('Failed to get index stats:', error);
-      const errorDetails = { indexName, error: error instanceof Error ? error.message : 'Unknown error' };
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       throw new ExternalServiceError(
         'Failed to get index statistics',
         'ELASTICSEARCH_STATS_ERROR',
-        errorDetails
+        new Error(`Index: ${indexName}, Error: ${errorMessage}`)
       );
     }
   }
@@ -763,11 +758,11 @@ export class SearchRepository implements ISearchRepository {
       };
     } catch (error) {
       console.error('Failed to search courses with facets:', error);
-      const errorDetails = { query, options, error: error instanceof Error ? error.message : 'Unknown error' };
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       throw new ExternalServiceError(
         'Failed to search course documents with facets',
         'ELASTICSEARCH_SEARCH_ERROR',
-        errorDetails
+        new Error(`Query: ${query}, Error: ${errorMessage}`)
       );
     }
   }

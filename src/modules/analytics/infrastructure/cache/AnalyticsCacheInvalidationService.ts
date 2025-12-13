@@ -7,8 +7,9 @@
  * Requirements: 12.6, 15.2
  */
 
-import { analyticsCacheService, AnalyticsCacheKeys } from './AnalyticsCacheService.js';
 import { buildCacheKey, CachePrefix } from '../../../../infrastructure/cache/index.js';
+
+import { analyticsCacheService, AnalyticsCacheKeys } from './AnalyticsCacheService.js';
 
 /**
  * Event types that trigger cache invalidation
@@ -136,7 +137,7 @@ export class AnalyticsCacheInvalidationService {
           break;
 
         default:
-          console.warn(`Unknown cache invalidation event type: ${eventData.eventType}`);
+          console.warn(`Unknown cache invalidation event type: ${eventData.eventType as string}`);
       }
 
       console.log(`Cache invalidation completed for event: ${eventData.eventType}`);
@@ -390,7 +391,7 @@ export class AnalyticsCacheInvalidationService {
         if (!groups[key]) {
           groups[key] = [];
         }
-        groups[key].push(event);
+        groups[key]!.push(event);
         return groups;
       },
       {} as Record<string, CacheInvalidationEventData[]>

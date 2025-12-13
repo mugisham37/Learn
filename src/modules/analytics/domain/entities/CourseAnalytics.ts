@@ -19,7 +19,7 @@ export interface CourseAnalyticsData {
   averageTimeToCompletionDays?: number;
   dropoutRate: number;
   mostDifficultLessonId?: string;
-  engagementMetrics: Record<string, any>;
+  engagementMetrics: Record<string, unknown>;
   lastUpdated: Date;
 }
 
@@ -272,16 +272,16 @@ export class CourseAnalytics {
     }
   }
 
-  private parseEngagementMetrics(metrics: Record<string, any>): EngagementMetrics {
+  private parseEngagementMetrics(metrics: Record<string, unknown>): EngagementMetrics {
     return {
-      averageSessionDuration: metrics.averageSessionDuration || 0,
-      totalVideoWatchTime: metrics.totalVideoWatchTime || 0,
-      discussionParticipationRate: metrics.discussionParticipationRate || 0,
-      assignmentSubmissionRate: metrics.assignmentSubmissionRate || 0,
-      quizAttemptRate: metrics.quizAttemptRate || 0,
-      averageQuizScore: metrics.averageQuizScore || 0,
-      lessonCompletionVelocity: metrics.lessonCompletionVelocity || 0,
-      studentRetentionRate: metrics.studentRetentionRate || 0,
+      averageSessionDuration: (metrics['averageSessionDuration'] as number) || 0,
+      totalVideoWatchTime: (metrics['totalVideoWatchTime'] as number) || 0,
+      discussionParticipationRate: (metrics['discussionParticipationRate'] as number) || 0,
+      assignmentSubmissionRate: (metrics['assignmentSubmissionRate'] as number) || 0,
+      quizAttemptRate: (metrics['quizAttemptRate'] as number) || 0,
+      averageQuizScore: (metrics['averageQuizScore'] as number) || 0,
+      lessonCompletionVelocity: (metrics['lessonCompletionVelocity'] as number) || 0,
+      studentRetentionRate: (metrics['studentRetentionRate'] as number) || 0,
     };
   }
 

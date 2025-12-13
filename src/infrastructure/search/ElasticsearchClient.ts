@@ -136,9 +136,6 @@ export class ElasticsearchClient implements IElasticsearchClient {
 
     // All retries exhausted, throw the last error
     const errorMessage = lastError instanceof Error ? lastError.message : String(lastError);
-    const statusCode = lastError && typeof lastError === 'object' && 'statusCode' in lastError 
-      ? (lastError as { statusCode: unknown }).statusCode 
-      : undefined;
 
     console.error(`${operationName} failed after ${this.retryConfig.maxRetries} attempts:`, {
       error: errorMessage,
@@ -221,7 +218,18 @@ export class ElasticsearchClient implements IElasticsearchClient {
 
         return {
           success: !response.errors,
-          items: response.items,
+          items: response.items.map((item) => ({
+            index: item.index ? {
+              _id: item.index._id || '',
+              status: item.index.status || 0,
+              error: item.index.error
+            } : undefined,
+            delete: item.delete ? {
+              _id: item.delete._id || '',
+              status: item.delete.status || 0,
+              error: item.delete.error
+            } : undefined,
+          })),
           errors: response.errors,
           took: response.took,
         };
@@ -292,7 +300,7 @@ export class ElasticsearchClient implements IElasticsearchClient {
               _index: String(hit._index),
               _id: String(hit._id),
               _score: Number(hit._score),
-              _source: hit._source as T,
+              _source: hit._source,
               highlight: hit.highlight as Record<string, string[]> | undefined,
             })),
           },

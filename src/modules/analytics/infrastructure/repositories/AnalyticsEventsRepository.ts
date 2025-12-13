@@ -166,7 +166,7 @@ export class AnalyticsEventsRepository implements IAnalyticsEventsRepository {
       });
 
       // Query database for data and total count
-      const [data, [{ total }]] = await Promise.all([
+      const [data, totalResult] = await Promise.all([
         this.readDb
           .select()
           .from(analyticsEvents)
@@ -179,10 +179,10 @@ export class AnalyticsEventsRepository implements IAnalyticsEventsRepository {
 
       return {
         data,
-        total: Number(total),
+        total: Number(totalResult[0]?.total || 0),
         page,
         limit,
-        totalPages: Math.ceil(Number(total) / limit),
+        totalPages: Math.ceil(Number(totalResult[0]?.total || 0) / limit),
       };
     } catch (error) {
       throw new DatabaseError(
@@ -217,7 +217,7 @@ export class AnalyticsEventsRepository implements IAnalyticsEventsRepository {
       });
 
       // Query database for data and total count
-      const [data, [{ total }]] = await Promise.all([
+      const [data, totalResult] = await Promise.all([
         this.readDb
           .select()
           .from(analyticsEvents)
@@ -230,10 +230,10 @@ export class AnalyticsEventsRepository implements IAnalyticsEventsRepository {
 
       return {
         data,
-        total: Number(total),
+        total: Number(totalResult[0]?.total || 0),
         page,
         limit,
-        totalPages: Math.ceil(Number(total) / limit),
+        totalPages: Math.ceil(Number(totalResult[0]?.total || 0) / limit),
       };
     } catch (error) {
       throw new DatabaseError(
@@ -268,7 +268,7 @@ export class AnalyticsEventsRepository implements IAnalyticsEventsRepository {
       });
 
       // Query database for data and total count
-      const [data, [{ total }]] = await Promise.all([
+      const [data, totalResult] = await Promise.all([
         this.readDb
           .select()
           .from(analyticsEvents)
@@ -281,10 +281,10 @@ export class AnalyticsEventsRepository implements IAnalyticsEventsRepository {
 
       return {
         data,
-        total: Number(total),
+        total: Number(totalResult[0]?.total || 0),
         page,
         limit,
-        totalPages: Math.ceil(Number(total) / limit),
+        totalPages: Math.ceil(Number(totalResult[0]?.total || 0) / limit),
       };
     } catch (error) {
       throw new DatabaseError(
@@ -313,11 +313,12 @@ export class AnalyticsEventsRepository implements IAnalyticsEventsRepository {
         );
       }
 
-      const [{ total }] = await this.readDb
+      const result = await this.readDb
         .select({ total: count() })
         .from(analyticsEvents)
         .where(and(...conditions));
 
+      const total = result[0]?.total || 0;
       return Number(total);
     } catch (error) {
       throw new DatabaseError(
@@ -346,11 +347,12 @@ export class AnalyticsEventsRepository implements IAnalyticsEventsRepository {
         );
       }
 
-      const [{ total }] = await this.readDb
+      const result = await this.readDb
         .select({ total: count() })
         .from(analyticsEvents)
         .where(and(...conditions));
 
+      const total = result[0]?.total || 0;
       return Number(total);
     } catch (error) {
       throw new DatabaseError(
@@ -372,23 +374,25 @@ export class AnalyticsEventsRepository implements IAnalyticsEventsRepository {
    */
   async getEventTypeDistribution(dateRange?: DateRange): Promise<Record<string, number>> {
     try {
-      let query = this.readDb
+      const conditions = [];
+      if (dateRange) {
+        conditions.push(
+          gte(analyticsEvents.timestamp, dateRange.startDate),
+          lte(analyticsEvents.timestamp, dateRange.endDate)
+        );
+      }
+
+      const query = this.readDb
         .select({
           eventType: analyticsEvents.eventType,
           count: count(),
         })
-        .from(analyticsEvents);
+        .from(analyticsEvents)
+        .where(conditions.length > 0 ? and(...conditions) : undefined)
+        .groupBy(analyticsEvents.eventType)
+        .orderBy(desc(count()));
 
-      if (dateRange) {
-        query = query.where(
-          and(
-            gte(analyticsEvents.timestamp, dateRange.startDate),
-            lte(analyticsEvents.timestamp, dateRange.endDate)
-          )
-        );
-      }
-
-      const results = await query.groupBy(analyticsEvents.eventType).orderBy(desc(count()));
+      const results = await query;
 
       // Convert to object format
       const distribution: Record<string, number> = {};
@@ -488,7 +492,8 @@ export class AnalyticsEventsRepository implements IAnalyticsEventsRepository {
 
       // Extract the number of affected rows from the result
       // Note: The exact property name may vary depending on the database driver
-      const deletedCount = (result as any).rowCount || (result as any).changes || 0;
+      const deletedCount = (result as { rowCount?: number; changes?: number }).rowCount || 
+                           (result as { rowCount?: number; changes?: number }).changes || 0;
 
       return Number(deletedCount);
     } catch (error) {

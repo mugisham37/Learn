@@ -15,7 +15,7 @@ import {
   cache,
   buildCacheKey,
   CachePrefix,
-  CacheTTL,
+
   redis,
 } from '../../../../infrastructure/cache/index.js';
 import type { Role, DateRange } from '../../../../shared/types/index.js';
@@ -220,7 +220,7 @@ export class AnalyticsCacheService {
   /**
    * Gets cached platform metrics or returns null if not cached
    */
-  async getPlatformMetrics(dateRange: DateRange): Promise<any | null> {
+  async getPlatformMetrics(dateRange: DateRange): Promise<unknown | null> {
     const key = AnalyticsCacheKeys.platformMetrics(
       dateRange.startDate.toISOString(),
       dateRange.endDate.toISOString()
@@ -231,7 +231,7 @@ export class AnalyticsCacheService {
   /**
    * Caches platform metrics with appropriate TTL
    */
-  async setPlatformMetrics(dateRange: DateRange, metrics: any): Promise<void> {
+  async setPlatformMetrics(dateRange: DateRange, metrics: unknown): Promise<void> {
     const key = AnalyticsCacheKeys.platformMetrics(
       dateRange.startDate.toISOString(),
       dateRange.endDate.toISOString()
@@ -467,7 +467,7 @@ export class AnalyticsCacheService {
    * Should be called periodically to ensure fast dashboard loading
    */
   async warmDashboardCaches(userIds: string[], roles: Role[]): Promise<void> {
-    const warmingPromises: Promise<any>[] = [];
+    const warmingPromises: Promise<unknown>[] = [];
 
     for (const userId of userIds) {
       for (const role of roles) {
@@ -482,7 +482,7 @@ export class AnalyticsCacheService {
               async () => {
                 // This would call the actual dashboard metrics generation
                 // For now, return a placeholder
-                return { role, userId, generatedAt: new Date(), overview: {} };
+                return Promise.resolve({ role, userId, generatedAt: new Date(), overview: {} });
               },
               AnalyticsCacheTTL.DASHBOARD_METRICS
             )

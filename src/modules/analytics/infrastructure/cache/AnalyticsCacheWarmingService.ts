@@ -7,10 +7,11 @@
  * Requirements: 12.6, 15.2
  */
 
-import { analyticsCacheService, AnalyticsCacheKeys } from './AnalyticsCacheService.js';
 import type { IAnalyticsService } from '../../application/services/IAnalyticsService.js';
 import type { Role, DateRange } from '../../../../shared/types/index.js';
-import { DatabaseError } from '../../../../shared/errors/index.js';
+
+
+import { analyticsCacheService } from './AnalyticsCacheService.js';
 
 /**
  * Cache warming configuration
@@ -468,30 +469,30 @@ export class AnalyticsCacheWarmingService {
    * Gets active user IDs for dashboard warming
    * In a real implementation, this would query the user service
    */
-  private async getActiveUserIds(limit: number): Promise<string[]> {
+  private async getActiveUserIds(_limit: number): Promise<string[]> {
     // Placeholder implementation - in reality, this would query the database
     // for users who have been active recently
-    return [];
+    return Promise.resolve([]);
   }
 
   /**
    * Gets popular course IDs for analytics warming
    * In a real implementation, this would query based on enrollment counts
    */
-  private async getPopularCourseIds(limit: number): Promise<string[]> {
+  private async getPopularCourseIds(_limit: number): Promise<string[]> {
     // Placeholder implementation - in reality, this would query the database
     // for courses with the highest enrollment counts or activity
-    return [];
+    return Promise.resolve([]);
   }
 
   /**
    * Gets active student IDs for analytics warming
    * In a real implementation, this would query based on recent activity
    */
-  private async getActiveStudentIds(limit: number): Promise<string[]> {
+  private async getActiveStudentIds(_limit: number): Promise<string[]> {
     // Placeholder implementation - in reality, this would query the database
     // for students who have been active recently
-    return [];
+    return Promise.resolve([]);
   }
 
   /**

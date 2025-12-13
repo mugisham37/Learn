@@ -12,7 +12,7 @@ export interface AnalyticsEventData {
   id?: string;
   userId?: string;
   eventType: string;
-  eventData: Record<string, any>;
+  eventData: Record<string, unknown>;
   timestamp: Date;
 }
 
@@ -47,7 +47,7 @@ export interface SystemEventData extends EventContext {
   action?: string;
   result?: 'success' | 'error' | 'warning';
   errorMessage?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export type EventType =
@@ -89,7 +89,7 @@ export class AnalyticsEvent {
   private readonly _id?: string;
   private readonly _userId?: string;
   private readonly _eventType: EventType;
-  private readonly _eventData: Record<string, any>;
+  private readonly _eventData: Record<string, unknown>;
   private readonly _timestamp: Date;
 
   constructor(data: AnalyticsEventData) {
@@ -115,7 +115,7 @@ export class AnalyticsEvent {
     return this._eventType;
   }
 
-  get eventData(): Record<string, any> {
+  get eventData(): Record<string, unknown> {
     return { ...this._eventData };
   }
 
@@ -195,7 +195,7 @@ export class AnalyticsEvent {
    */
   public getSeverity(): 'info' | 'warning' | 'error' | 'critical' {
     if (this._eventType === 'error_occurred') {
-      const errorLevel = this._eventData.errorLevel;
+      const errorLevel = this._eventData['errorLevel'];
       if (errorLevel === 'critical') return 'critical';
       if (errorLevel === 'error') return 'error';
       if (errorLevel === 'warning') return 'warning';
@@ -213,10 +213,10 @@ export class AnalyticsEvent {
     enrollmentId?: string;
   } {
     return {
-      courseId: this._eventData.courseId,
-      moduleId: this._eventData.moduleId,
-      lessonId: this._eventData.lessonId,
-      enrollmentId: this._eventData.enrollmentId,
+      courseId: this._eventData['courseId'] as string | undefined,
+      moduleId: this._eventData['moduleId'] as string | undefined,
+      lessonId: this._eventData['lessonId'] as string | undefined,
+      enrollmentId: this._eventData['enrollmentId'] as string | undefined,
     };
   }
 
@@ -230,10 +230,10 @@ export class AnalyticsEvent {
     referrer?: string;
   } {
     return {
-      sessionId: this._eventData.sessionId,
-      userAgent: this._eventData.userAgent,
-      ipAddress: this._eventData.ipAddress,
-      referrer: this._eventData.referrer,
+      sessionId: this._eventData['sessionId'] as string | undefined,
+      userAgent: this._eventData['userAgent'] as string | undefined,
+      ipAddress: this._eventData['ipAddress'] as string | undefined,
+      referrer: this._eventData['referrer'] as string | undefined,
     };
   }
 
@@ -241,21 +241,21 @@ export class AnalyticsEvent {
    * Get duration if available (for time-based events)
    */
   public getDuration(): number | undefined {
-    return this._eventData.duration;
+    return this._eventData['duration'] as number | undefined;
   }
 
   /**
    * Get progress if available (for progress-based events)
    */
   public getProgress(): number | undefined {
-    return this._eventData.progress;
+    return this._eventData['progress'] as number | undefined;
   }
 
   /**
    * Get score if available (for assessment events)
    */
   public getScore(): number | undefined {
-    return this._eventData.score;
+    return this._eventData['score'] as number | undefined;
   }
 
   /**
@@ -308,18 +308,19 @@ export class AnalyticsEvent {
     const sanitizedEventData = { ...this._eventData };
 
     // Remove sensitive fields
-    delete sanitizedEventData.password;
-    delete sanitizedEventData.token;
-    delete sanitizedEventData.apiKey;
-    delete sanitizedEventData.creditCard;
-    delete sanitizedEventData.ssn;
-    delete sanitizedEventData.personalInfo;
+    delete sanitizedEventData['password'];
+    delete sanitizedEventData['token'];
+    delete sanitizedEventData['apiKey'];
+    delete sanitizedEventData['creditCard'];
+    delete sanitizedEventData['ssn'];
+    delete sanitizedEventData['personalInfo'];
 
     // Mask IP address (keep first 3 octets)
-    if (sanitizedEventData.ipAddress) {
-      const parts = sanitizedEventData.ipAddress.split('.');
+    if (sanitizedEventData['ipAddress']) {
+      const ipAddress = sanitizedEventData['ipAddress'] as string;
+      const parts = ipAddress.split('.');
       if (parts.length === 4) {
-        sanitizedEventData.ipAddress = `${parts[0]}.${parts[1]}.${parts[2]}.xxx`;
+        sanitizedEventData['ipAddress'] = `${parts[0]}.${parts[1]}.${parts[2]}.xxx`;
       }
     }
 
@@ -454,18 +455,18 @@ export class AnalyticsEvent {
     }
 
     // Validate numeric fields
-    if (this._eventData.duration !== undefined && this._eventData.duration < 0) {
+    const duration = this._eventData['duration'] as number | undefined;
+    if (duration !== undefined && duration < 0) {
       throw new Error('AnalyticsEvent: duration cannot be negative');
     }
 
-    if (
-      this._eventData.progress !== undefined &&
-      (this._eventData.progress < 0 || this._eventData.progress > 100)
-    ) {
+    const progress = this._eventData['progress'] as number | undefined;
+    if (progress !== undefined && (progress < 0 || progress > 100)) {
       throw new Error('AnalyticsEvent: progress must be between 0 and 100');
     }
 
-    if (this._eventData.score !== undefined && this._eventData.score < 0) {
+    const score = this._eventData['score'] as number | undefined;
+    if (score !== undefined && score < 0) {
       throw new Error('AnalyticsEvent: score cannot be negative');
     }
   }
