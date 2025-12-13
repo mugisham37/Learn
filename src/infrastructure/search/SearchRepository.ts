@@ -11,6 +11,14 @@
 import { createSearchQueryBuilder } from '../../modules/search/infrastructure/query/SearchQueryBuilder.js';
 
 import { ExternalServiceError } from '../../shared/errors/index.js';
+import type {
+  ISearchRepository,
+  CourseSearchDocument,
+  LessonSearchDocument,
+  BulkIndexResult,
+  SearchResult,
+  IndexStats,
+} from './ISearchRepository.js';
 import {
   elasticsearch,
   ElasticsearchIndex as _ElasticsearchIndex,
@@ -21,15 +29,6 @@ import {
   getIndexStats,
   checkElasticsearchHealth,
 } from './index.js';
-
-import type {
-  ISearchRepository,
-  CourseSearchDocument,
-  LessonSearchDocument,
-  BulkIndexResult,
-  SearchResult,
-  IndexStats,
-} from './ISearchRepository.js';
 
 /**
  * Search Repository Implementation
@@ -56,9 +55,10 @@ export class SearchRepository implements ISearchRepository {
     } catch (error) {
       console.error('Failed to index course:', error);
       throw new ExternalServiceError(
-        'Failed to index course document',
-        'ELASTICSEARCH_INDEX_ERROR',
-        { courseId: document.id, error: error instanceof Error ? error.message : 'Unknown error' }
+        'Elasticsearch',
+        `Failed to index course document ${document.id}`,
+        error instanceof Error ? error : new Error('Unknown error'),
+        502
       );
     }
   }
@@ -79,9 +79,10 @@ export class SearchRepository implements ISearchRepository {
     } catch (error) {
       console.error('Failed to index lesson:', error);
       throw new ExternalServiceError(
-        'Failed to index lesson document',
-        'ELASTICSEARCH_INDEX_ERROR',
-        { lessonId: document.id, error: error instanceof Error ? error.message : 'Unknown error' }
+        'Elasticsearch',
+        `Failed to index lesson document ${document.id}`,
+        error instanceof Error ? error : new Error('Unknown error'),
+        502
       );
     }
   }
@@ -93,7 +94,7 @@ export class SearchRepository implements ISearchRepository {
     try {
       const bulkDocs = documents.map((doc) => ({
         id: doc.id,
-        body: doc,
+        body: doc as Record<string, unknown>,
       }));
 
       const result = await bulkIndex(ElasticsearchAlias.COURSES, bulkDocs);
@@ -108,13 +109,14 @@ export class SearchRepository implements ISearchRepository {
       };
     } catch (error) {
       console.error('Failed to bulk index courses:', error);
+      const errorDetails = {
+        documentCount: documents.length,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
       throw new ExternalServiceError(
         'Failed to bulk index course documents',
         'ELASTICSEARCH_BULK_INDEX_ERROR',
-        {
-          documentCount: documents.length,
-          error: error instanceof Error ? error.message : 'Unknown error',
-        }
+        errorDetails
       );
     }
   }
@@ -126,7 +128,7 @@ export class SearchRepository implements ISearchRepository {
     try {
       const bulkDocs = documents.map((doc) => ({
         id: doc.id,
-        body: doc,
+        body: doc as Record<string, unknown>,
       }));
 
       const result = await bulkIndex(ElasticsearchAlias.LESSONS, bulkDocs);
@@ -141,13 +143,14 @@ export class SearchRepository implements ISearchRepository {
       };
     } catch (error) {
       console.error('Failed to bulk index lessons:', error);
+      const errorDetails = {
+        documentCount: documents.length,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
       throw new ExternalServiceError(
         'Failed to bulk index lesson documents',
         'ELASTICSEARCH_BULK_INDEX_ERROR',
-        {
-          documentCount: documents.length,
-          error: error instanceof Error ? error.message : 'Unknown error',
-        }
+        errorDetails
       );
     }
   }
@@ -281,8 +284,8 @@ export class SearchRepository implements ISearchRepository {
       });
 
       // Process results
-      const documents = response.hits.hits.map((hit: any) => ({
-        ...hit._source,
+      const documents = response.hits.hits.map((hit) => ({
+        ...(hit._source as CourseSearchDocument),
         _highlight: hit.highlight,
       }));
 
@@ -293,14 +296,15 @@ export class SearchRepository implements ISearchRepository {
             ? response.hits.total
             : response.hits.total?.value || 0,
         took: response.took,
-        maxScore: response.hits.max_score,
+        maxScore: response.hits.max_score ?? undefined,
       };
     } catch (error) {
       console.error('Failed to search courses:', error);
+      const errorDetails = { query, options, error: error instanceof Error ? error.message : 'Unknown error' };
       throw new ExternalServiceError(
         'Failed to search course documents',
         'ELASTICSEARCH_SEARCH_ERROR',
-        { query, options, error: error instanceof Error ? error.message : 'Unknown error' }
+        errorDetails
       );
     }
   }
@@ -402,8 +406,8 @@ export class SearchRepository implements ISearchRepository {
       });
 
       // Process results
-      const documents = response.hits.hits.map((hit: any) => ({
-        ...hit._source,
+      const documents = response.hits.hits.map((hit) => ({
+        ...(hit._source as LessonSearchDocument),
         _highlight: hit.highlight,
       }));
 
@@ -414,14 +418,15 @@ export class SearchRepository implements ISearchRepository {
             ? response.hits.total
             : response.hits.total?.value || 0,
         took: response.took,
-        maxScore: response.hits.max_score,
+        maxScore: response.hits.max_score ?? undefined,
       };
     } catch (error) {
       console.error('Failed to search lessons:', error);
+      const errorDetails = { query, options, error: error instanceof Error ? error.message : 'Unknown error' };
       throw new ExternalServiceError(
         'Failed to search lesson documents',
         'ELASTICSEARCH_SEARCH_ERROR',
-        { query, options, error: error instanceof Error ? error.message : 'Unknown error' }
+        errorDetails
       );
     }
   }
@@ -440,17 +445,22 @@ export class SearchRepository implements ISearchRepository {
       });
 
       return response.result === 'deleted';
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Handle case where document doesn't exist
-      if (error.statusCode === 404) {
+      const statusCode = error && typeof error === 'object' && 'statusCode' in error 
+        ? (error as { statusCode: unknown }).statusCode 
+        : undefined;
+        
+      if (statusCode === 404) {
         return false;
       }
 
       console.error('Failed to delete course:', error);
+      const errorDetails = { courseId, error: error instanceof Error ? error.message : 'Unknown error' };
       throw new ExternalServiceError(
         'Failed to delete course document',
         'ELASTICSEARCH_DELETE_ERROR',
-        { courseId, error: error instanceof Error ? error.message : 'Unknown error' }
+        errorDetails
       );
     }
   }
@@ -467,17 +477,22 @@ export class SearchRepository implements ISearchRepository {
       });
 
       return response.result === 'deleted';
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Handle case where document doesn't exist
-      if (error.statusCode === 404) {
+      const statusCode = error && typeof error === 'object' && 'statusCode' in error 
+        ? (error as { statusCode: unknown }).statusCode 
+        : undefined;
+        
+      if (statusCode === 404) {
         return false;
       }
 
       console.error('Failed to delete lesson:', error);
+      const errorDetails = { lessonId, error: error instanceof Error ? error.message : 'Unknown error' };
       throw new ExternalServiceError(
         'Failed to delete lesson document',
         'ELASTICSEARCH_DELETE_ERROR',
-        { lessonId, error: error instanceof Error ? error.message : 'Unknown error' }
+        errorDetails
       );
     }
   }
@@ -498,10 +513,11 @@ export class SearchRepository implements ISearchRepository {
       return result.deleted;
     } catch (error) {
       console.error('Failed to delete lessons by course:', error);
+      const errorDetails = { courseId, error: error instanceof Error ? error.message : 'Unknown error' };
       throw new ExternalServiceError(
         'Failed to delete lessons for course',
         'ELASTICSEARCH_DELETE_ERROR',
-        { courseId, error: error instanceof Error ? error.message : 'Unknown error' }
+        errorDetails
       );
     }
   }
@@ -516,10 +532,11 @@ export class SearchRepository implements ISearchRepository {
       await refreshIndices(indices);
     } catch (error) {
       console.error('Failed to refresh indices:', error);
+      const errorDetails = { indices, error: error instanceof Error ? error.message : 'Unknown error' };
       throw new ExternalServiceError(
         'Failed to refresh search indices',
         'ELASTICSEARCH_REFRESH_ERROR',
-        { indices, error: error instanceof Error ? error.message : 'Unknown error' }
+        errorDetails
       );
     }
   }
@@ -532,10 +549,11 @@ export class SearchRepository implements ISearchRepository {
       return await getIndexStats(indexName);
     } catch (error) {
       console.error('Failed to get index stats:', error);
+      const errorDetails = { indexName, error: error instanceof Error ? error.message : 'Unknown error' };
       throw new ExternalServiceError(
         'Failed to get index statistics',
         'ELASTICSEARCH_STATS_ERROR',
-        { indexName, error: error instanceof Error ? error.message : 'Unknown error' }
+        errorDetails
       );
     }
   }
@@ -720,17 +738,17 @@ export class SearchRepository implements ISearchRepository {
       });
 
       // Process results
-      const documents = response.hits.hits.map((hit: any) => ({
-        ...hit._source,
+      const documents = response.hits.hits.map((hit) => ({
+        ...(hit._source as CourseSearchDocument),
         _highlight: hit.highlight,
       }));
 
       // Process facets from aggregations
       const facets = {
-        categories: this.processFacetAggregation(response.aggregations?.categories),
-        difficulties: this.processFacetAggregation(response.aggregations?.difficulties),
-        priceRanges: this.processRangeFacetAggregation(response.aggregations?.priceRanges),
-        ratings: this.processRangeFacetAggregation(response.aggregations?.ratings),
+        categories: this.processFacetAggregation(response.aggregations?.['categories']),
+        difficulties: this.processFacetAggregation(response.aggregations?.['difficulties']),
+        priceRanges: this.processRangeFacetAggregation(response.aggregations?.['priceRanges']),
+        ratings: this.processRangeFacetAggregation(response.aggregations?.['ratings']),
       };
 
       return {
@@ -740,15 +758,16 @@ export class SearchRepository implements ISearchRepository {
             ? response.hits.total
             : response.hits.total?.value || 0,
         took: response.took,
-        maxScore: response.hits.max_score,
+        maxScore: response.hits.max_score ?? undefined,
         facets,
       };
     } catch (error) {
       console.error('Failed to search courses with facets:', error);
+      const errorDetails = { query, options, error: error instanceof Error ? error.message : 'Unknown error' };
       throw new ExternalServiceError(
         'Failed to search course documents with facets',
         'ELASTICSEARCH_SEARCH_ERROR',
-        { query, options, error: error instanceof Error ? error.message : 'Unknown error' }
+        errorDetails
       );
     }
   }
@@ -756,14 +775,23 @@ export class SearchRepository implements ISearchRepository {
   /**
    * Process terms aggregation into facet format
    */
-  private processFacetAggregation(aggregation: any): Array<{ key: string; count: number }> {
-    if (!aggregation?.buckets) {
+  private processFacetAggregation(aggregation: unknown): Array<{ key: string; count: number }> {
+    if (!aggregation || typeof aggregation !== 'object' || !('buckets' in aggregation)) {
       return [];
     }
 
-    return aggregation.buckets.map((bucket: any) => ({
-      key: bucket.key,
-      count: bucket.doc_count,
+    const buckets = (aggregation as { buckets: unknown }).buckets;
+    if (!Array.isArray(buckets)) {
+      return [];
+    }
+
+    return buckets.map((bucket: unknown) => ({
+      key: bucket && typeof bucket === 'object' && 'key' in bucket 
+        ? String((bucket as { key: unknown }).key) 
+        : 'unknown',
+      count: bucket && typeof bucket === 'object' && 'doc_count' in bucket 
+        ? Number((bucket as { doc_count: unknown }).doc_count) || 0
+        : 0,
     }));
   }
 
@@ -771,34 +799,43 @@ export class SearchRepository implements ISearchRepository {
    * Process range aggregation into facet format
    */
   private processRangeFacetAggregation(
-    aggregation: any
+    aggregation: unknown
   ): Array<{ key: string; count: number; from?: number; to?: number }> {
-    if (!aggregation?.buckets) {
+    if (!aggregation || typeof aggregation !== 'object' || !('buckets' in aggregation)) {
       return [];
     }
 
-    return aggregation.buckets.map((bucket: unknown) => ({
-      key: bucket.key,
-      count: bucket.doc_count,
-      from: bucket.from,
-      to: bucket.to,
-    }));
+    const buckets = (aggregation as { buckets: unknown }).buckets;
+    if (!Array.isArray(buckets)) {
+      return [];
+    }
+
+    return buckets.map((bucket: unknown) => {
+      const bucketObj = bucket && typeof bucket === 'object' ? bucket as Record<string, unknown> : {};
+      
+      return {
+        key: 'key' in bucketObj ? String(bucketObj['key']) : 'unknown',
+        count: 'doc_count' in bucketObj ? Number(bucketObj['doc_count']) || 0 : 0,
+        from: 'from' in bucketObj ? Number(bucketObj['from']) : undefined,
+        to: 'to' in bucketObj ? Number(bucketObj['to']) : undefined,
+      };
+    });
   }
 
   /**
    * Perform bulk reindexing for initial data load
    */
-  async bulkReindex(type: 'courses' | 'lessons' | 'all'): Promise<{
+  bulkReindex(type: 'courses' | 'lessons' | 'all'): Promise<{
     success: boolean;
     coursesIndexed?: number;
     lessonsIndexed?: number;
     errors: string[];
   }> {
     const errors: string[] = [];
-    let coursesIndexed = 0;
-    let lessonsIndexed = 0;
+    const coursesIndexed = 0;
+    const lessonsIndexed = 0;
 
-    try {
+    return Promise.resolve().then(() => {
       // This is a placeholder implementation
       // In a real implementation, this would:
       // 1. Query the database for all courses/lessons
@@ -806,25 +843,13 @@ export class SearchRepository implements ISearchRepository {
       // 3. Bulk index them in batches
       // 4. Handle errors and retries
 
-      console.log(`Starting bulk reindex for: ${type}`);
-
       if (type === 'courses' || type === 'all') {
         // TODO: Implement course reindexing
-        // This would typically involve:
-        // - Querying all published courses from database
-        // - Transforming to CourseSearchDocument format
-        // - Bulk indexing in batches of 100-500 documents
-        console.log('Course reindexing not yet implemented');
         errors.push('Course reindexing not yet implemented');
       }
 
       if (type === 'lessons' || type === 'all') {
         // TODO: Implement lesson reindexing
-        // This would typically involve:
-        // - Querying all lessons from database with course context
-        // - Transforming to LessonSearchDocument format
-        // - Bulk indexing in batches of 100-500 documents
-        console.log('Lesson reindexing not yet implemented');
         errors.push('Lesson reindexing not yet implemented');
       }
 
@@ -834,9 +859,8 @@ export class SearchRepository implements ISearchRepository {
         lessonsIndexed,
         errors,
       };
-    } catch (error) {
+    }).catch((error) => {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error('Bulk reindex failed:', error);
       errors.push(errorMessage);
 
       return {
@@ -845,6 +869,6 @@ export class SearchRepository implements ISearchRepository {
         lessonsIndexed,
         errors,
       };
-    }
+    });
   }
 }

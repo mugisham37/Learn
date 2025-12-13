@@ -257,13 +257,19 @@ export class QueueFactory {
 
         case 'clear':
           if (jobStatus) {
-            // Clear specific job status
-            const statusMap: Record<string, 'waiting' | 'active' | 'completed' | 'failed'> = {
+            // Clear specific job status - use valid BullMQ status types
+            const validStatuses = ['waiting', 'active', 'completed', 'failed', 'delayed', 'paused'] as const;
+            type ValidStatus = typeof validStatuses[number];
+            
+            const statusMap: Record<string, ValidStatus> = {
               waiting: 'waiting',
               active: 'active',
               completed: 'completed',
               failed: 'failed',
+              delayed: 'delayed',
+              paused: 'paused',
             };
+            
             const status = statusMap[jobStatus.toLowerCase()];
             if (status) {
               await queue.clean(0, 0, status);
@@ -273,7 +279,7 @@ export class QueueFactory {
                 message: `Cleared ${jobStatus} jobs from queue ${queueName}`,
               };
             } else {
-              throw new Error(`Invalid job status: ${jobStatus}`);
+              throw new Error(`Invalid job status: ${jobStatus}. Valid statuses: ${validStatuses.join(', ')}`);
             }
           } else {
             // Clear all jobs
@@ -406,7 +412,12 @@ export class QueueFactory {
       },
 
       async clean(grace: number, status: string): Promise<void> {
-        await queue.clean(grace, 0, status);
+        // Validate status is a valid BullMQ clean status
+        const validStatuses = ['completed', 'waiting', 'active', 'delayed', 'failed', 'paused'] as const;
+        if (!validStatuses.includes(status as typeof validStatuses[number])) {
+          throw new Error(`Invalid clean status: ${status}. Valid statuses: ${validStatuses.join(', ')}`);
+        }
+        await queue.clean(grace, 0, status as 'completed' | 'waiting' | 'active' | 'delayed' | 'failed' | 'paused');
       },
 
       async close(): Promise<void> {
@@ -450,8 +461,7 @@ export class QueueFactory {
       logger.debug(`Job ${job.id} waiting in queue ${queue.name}`);
     });
 
-    queue.on('stalled', (job: unknown) => {
-      const jobId = typeof job === 'string' ? job : (job?.id as string) || 'unknown';
+    queue.on('stalled', (jobId: string) => {
       logger.warn(`Job ${jobId} stalled in queue ${queue.name}`);
 
       const listener = this.eventListeners.get(queue.name);

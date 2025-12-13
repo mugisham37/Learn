@@ -9,9 +9,25 @@
  */
 
 /**
+ * Generic document type for search operations
+ */
+export type SearchDocument = Record<string, unknown>;
+
+/**
+ * Elasticsearch search hit structure
+ */
+export interface SearchHit<T = SearchDocument> {
+  _index: string;
+  _id: string;
+  _score: number;
+  _source: T;
+  highlight?: Record<string, string[]>;
+}
+
+/**
  * Elasticsearch search response structure
  */
-export interface SearchResponse {
+export interface SearchResponse<T = SearchDocument> {
   took: number;
   timed_out: boolean;
   hits: {
@@ -22,15 +38,25 @@ export interface SearchResponse {
         }
       | number;
     max_score: number | null;
-    hits: Array<{
-      _index: string;
-      _id: string;
-      _score: number;
-      _source: any;
-      highlight?: Record<string, string[]>;
-    }>;
+    hits: Array<SearchHit<T>>;
   };
-  aggregations?: Record<string, any>;
+  aggregations?: Record<string, unknown>;
+}
+
+/**
+ * Bulk operation item result
+ */
+export interface BulkOperationItem {
+  _id: string;
+  status: number;
+  error?: {
+    type: string;
+    reason: string;
+    caused_by?: {
+      type: string;
+      reason: string;
+    };
+  };
 }
 
 /**
@@ -39,19 +65,22 @@ export interface SearchResponse {
 export interface BulkOperationResult {
   success: boolean;
   items: Array<{
-    index?: {
-      _id: string;
-      status: number;
-      error?: any;
-    };
-    delete?: {
-      _id: string;
-      status: number;
-      error?: any;
-    };
+    index?: BulkOperationItem;
+    delete?: BulkOperationItem;
   }>;
   errors: boolean;
   took: number;
+}
+
+/**
+ * Elasticsearch field mapping
+ */
+export interface FieldMapping {
+  type: string;
+  analyzer?: string;
+  fields?: Record<string, FieldMapping>;
+  properties?: Record<string, FieldMapping>;
+  [key: string]: unknown;
 }
 
 /**
@@ -61,15 +90,19 @@ export interface IndexConfiguration {
   settings?: {
     number_of_shards?: number;
     number_of_replicas?: number;
-    analysis?: any;
+    analysis?: {
+      analyzer?: Record<string, unknown>;
+      tokenizer?: Record<string, unknown>;
+      filter?: Record<string, unknown>;
+    };
     refresh_interval?: string;
-    [key: string]: any;
+    [key: string]: unknown;
   };
   mappings?: {
-    properties: Record<string, any>;
-    [key: string]: any;
+    properties: Record<string, FieldMapping>;
+    [key: string]: unknown;
   };
-  aliases?: Record<string, any>;
+  aliases?: Record<string, unknown>;
 }
 
 /**
@@ -89,10 +122,10 @@ export interface IElasticsearchClient {
    * @returns Promise resolving when document is indexed
    * @throws ExternalServiceError if operation fails
    */
-  index(
+  index<T = SearchDocument>(
     index: string,
     id: string,
-    document: any,
+    document: T,
     options?: {
       refresh?: 'true' | 'false' | 'wait_for';
       routing?: string;
@@ -113,11 +146,11 @@ export interface IElasticsearchClient {
    * @returns Promise resolving to bulk operation result
    * @throws ExternalServiceError if operation fails
    */
-  bulkIndex(
+  bulkIndex<T = SearchDocument>(
     operations: Array<{
       index: string;
       id: string;
-      document: any;
+      document: T;
     }>
   ): Promise<BulkOperationResult>;
 
@@ -130,19 +163,19 @@ export interface IElasticsearchClient {
    * @returns Promise resolving to search response
    * @throws ExternalServiceError if operation fails
    */
-  search(
+  search<T = SearchDocument>(
     index: string,
-    query: any,
+    query: Record<string, unknown>,
     options?: {
       from?: number;
       size?: number;
-      sort?: any[];
-      highlight?: any;
-      aggregations?: any;
+      sort?: Array<Record<string, unknown>>;
+      highlight?: Record<string, unknown>;
+      aggregations?: Record<string, unknown>;
       source?: string[] | boolean;
       timeout?: string;
     }
-  ): Promise<SearchResponse>;
+  ): Promise<SearchResponse<T>>;
 
   /**
    * Delete an index
@@ -214,13 +247,13 @@ export interface IElasticsearchClient {
    */
   deleteByQuery(
     index: string,
-    query: any
+    query: Record<string, unknown>
   ): Promise<{
     took: number;
     timed_out: boolean;
     total: number;
     deleted: number;
-    failures: any[];
+    failures: unknown[];
   }>;
 
   /**

@@ -113,7 +113,7 @@ export async function createSocketServer(fastify: FastifyInstance): Promise<Sock
   io.adapter(redisAdapter);
 
   // Authentication middleware (requirement 9.6)
-  io.use((socket, next) => {
+  io.use((socket, next): void => {
     try {
       authenticateSocket(socket, next);
     } catch (error) {
@@ -195,7 +195,7 @@ function authenticateSocket(socket: Socket, next: (err?: Error) => void): void {
     // Extract token from auth header or query parameter
     const auth = socket.handshake.auth as Record<string, unknown>;
     const query = socket.handshake.query as Record<string, unknown>;
-    const token = auth?.token || query?.token;
+    const token = auth?.['token'] || query?.['token'];
 
     if (!token) {
       throw new Error('No authentication token provided');
@@ -209,9 +209,9 @@ function authenticateSocket(socket: Socket, next: (err?: Error) => void): void {
     };
 
     // Attach user data to socket
-    (socket as any).userId = decoded.userId;
-    (socket as any).userRole = decoded.role;
-    (socket as any).enrolledCourses = decoded.enrolledCourses;
+    (socket as AuthenticatedSocket).userId = decoded.userId;
+    (socket as AuthenticatedSocket).userRole = decoded.role;
+    (socket as AuthenticatedSocket).enrolledCourses = decoded.enrolledCourses;
 
     next();
   } catch (error) {
@@ -224,8 +224,8 @@ function authenticateSocket(socket: Socket, next: (err?: Error) => void): void {
  */
 function setupSocketEventHandlers(socket: AuthenticatedSocket): void {
   // Join course room (for educators creating courses or students enrolling)
-  socket.on('join-course', (courseId: string) => {
-    void (async () => {
+  socket.on('join-course', (courseId: string): void => {
+    void (async (): Promise<void> => {
     try {
       // TODO: Validate user has access to course
       await socket.join(SocketRooms.course(courseId));
@@ -250,8 +250,8 @@ function setupSocketEventHandlers(socket: AuthenticatedSocket): void {
   });
 
   // Leave course room
-  socket.on('leave-course', (courseId: string) => {
-    void (async () => {
+  socket.on('leave-course', (courseId: string): void => {
+    void (async (): Promise<void> => {
     try {
       await socket.leave(SocketRooms.course(courseId));
 
@@ -555,7 +555,10 @@ export async function getUserPresence(userId: string): Promise<{
       return { status: 'offline' };
     }
 
-    return JSON.parse(presence);
+    return JSON.parse(presence) as {
+      status: 'online' | 'offline';
+      lastSeen?: string;
+    };
   } catch (error) {
     logger.error('Error getting user presence', {
       userId,
@@ -572,8 +575,12 @@ export async function closeSocketServer(): Promise<void> {
   try {
     if (io) {
       await new Promise<void>((resolve) => {
-        io!.close(() => {
-          logger.info('Socket.io server closed successfully');
+        void io!.close((err?: Error) => {
+          if (err) {
+            logger.error('Error closing Socket.io server:', err);
+          } else {
+            logger.info('Socket.io server closed successfully');
+          }
           resolve();
         });
       });

@@ -12,11 +12,9 @@ import { Client, ClientOptions } from '@elastic/elasticsearch';
 import { config } from '../../config/index.js';
 import { secureConfig } from '../../shared/utils/secureConfig.js';
 
+import { ElasticsearchClient } from './ElasticsearchClient.js';
 import type { IElasticsearchClient } from './IElasticsearchClient.js';
 import type { ISearchRepository } from './ISearchRepository.js';
-import { ElasticsearchClient } from './ElasticsearchClient.js';
-import { ElasticsearchClient } from './ElasticsearchClient.js';
-import { ElasticsearchClient } from './ElasticsearchClient.js';
 
 /**
  * Index names for different document types
@@ -76,8 +74,8 @@ const clientOptions: ClientOptions = {
   resurrectStrategy: 'ping',
   // Compression
   compression: true,
-  // SSL configuration (for production)
-  ssl: {
+  // TLS configuration (for production)
+  tls: {
     rejectUnauthorized: config.nodeEnv === 'production',
   },
 };
@@ -316,7 +314,7 @@ export async function initializeElasticsearchIndices(): Promise<void> {
  */
 async function createIndexWithRetry(
   indexName: string,
-  indexConfig: any,
+  indexConfig: Record<string, unknown>,
   aliasName: string
 ): Promise<void> {
   for (let attempt = 0; attempt < RETRY_CONFIG.maxRetries; attempt++) {
@@ -439,7 +437,7 @@ export async function checkElasticsearchHealth(): Promise<{
 export async function reindexWithZeroDowntime(
   sourceAlias: string,
   targetIndexName: string,
-  indexConfig: any
+  indexConfig: Record<string, unknown>
 ): Promise<void> {
   console.log(`Starting zero-downtime reindex from ${sourceAlias} to ${targetIndexName}`);
 
@@ -506,17 +504,19 @@ export async function reindexWithZeroDowntime(
     console.log(`Switched alias ${sourceAlias} to ${newIndexName}`);
 
     // Delete old indices after a delay (optional, for safety)
-    setTimeout(async () => {
-      try {
-        for (const oldIndex of oldIndices) {
-          await elasticsearch.indices.delete({
-            index: oldIndex,
-          });
-          console.log(`Deleted old index: ${oldIndex}`);
+    setTimeout((): void => {
+      void (async (): Promise<void> => {
+        try {
+          for (const oldIndex of oldIndices) {
+            await elasticsearch.indices.delete({
+              index: oldIndex,
+            });
+            console.log(`Deleted old index: ${oldIndex}`);
+          }
+        } catch (error) {
+          console.error('Error deleting old indices:', error);
         }
-      } catch (error) {
-        console.error('Error deleting old indices:', error);
-      }
+      })();
     }, 60000); // 1 minute delay
 
     
@@ -531,14 +531,14 @@ export async function reindexWithZeroDowntime(
  */
 export async function bulkIndex(
   indexName: string,
-  documents: Array<{ id: string; body: any }>
+  documents: Array<{ id: string; body: Record<string, unknown> }>
 ): Promise<{
   success: boolean;
   indexed: number;
-  errors: any[];
+  errors: unknown[];
 }> {
   try {
-    const body = documents.flatMap((doc) => [
+    const body: Array<Record<string, unknown>> = documents.flatMap((doc) => [
       { index: { _index: indexName, _id: doc.id } },
       doc.body,
     ]);
@@ -549,8 +549,18 @@ export async function bulkIndex(
     });
 
     const errors = response.items
-      .filter((item: any) => item.index?.error)
-      .map((item: any) => item.index.error);
+      .filter((item: unknown) => {
+        const indexItem = item && typeof item === 'object' && 'index' in item 
+          ? (item as { index: unknown }).index 
+          : null;
+        return indexItem && typeof indexItem === 'object' && 'error' in indexItem;
+      })
+      .map((item: unknown) => {
+        const indexItem = item && typeof item === 'object' && 'index' in item 
+          ? (item as { index: { error: unknown } }).index 
+          : null;
+        return indexItem?.error;
+      });
 
     return {
       success: !response.errors,
@@ -572,7 +582,7 @@ export async function bulkIndex(
  */
 export async function deleteByQuery(
   indexName: string,
-  query: any
+  query: Record<string, unknown>
 ): Promise<{
   success: boolean;
   deleted: number;

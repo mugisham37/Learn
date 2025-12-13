@@ -15,6 +15,7 @@ import { ExternalServiceError } from '../../shared/errors/index.js';
 import type {
   IElasticsearchClient,
   SearchResponse,
+  SearchDocument,
   BulkOperationResult,
   IndexConfiguration,
 } from './IElasticsearchClient.js';
@@ -65,18 +66,18 @@ function isRetryableError(error: unknown): boolean {
   const err = error as Record<string, unknown>;
   
   // Retry on network errors, timeouts, and 5xx server errors
-  if (err.name === 'ConnectionError' || err.name === 'TimeoutError') {
+  if (err['name'] === 'ConnectionError' || err['name'] === 'TimeoutError') {
     return true;
   }
 
-  if (typeof err.statusCode === 'number' && err.statusCode >= 500 && err.statusCode < 600) {
+  if (typeof err['statusCode'] === 'number' && err['statusCode'] >= 500 && err['statusCode'] < 600) {
     return true;
   }
 
   // Retry on specific Elasticsearch errors
-  const body = err.body as Record<string, unknown> | undefined;
-  const errorInfo = body?.error as Record<string, unknown> | undefined;
-  if (errorInfo?.type === 'cluster_block_exception') {
+  const body = err['body'] as Record<string, unknown> | undefined;
+  const errorInfo = body?.['error'] as Record<string, unknown> | undefined;
+  if (errorInfo?.['type'] === 'cluster_block_exception') {
     return true;
   }
 
@@ -104,9 +105,9 @@ export class ElasticsearchClient implements IElasticsearchClient {
   private async executeWithRetry<T>(
     operation: () => Promise<T>,
     operationName: string,
-    context: Record<string, any> = {}
+    context: Record<string, unknown> = {}
   ): Promise<T> {
-    let lastError: any;
+    let lastError: unknown;
 
     for (let attempt = 0; attempt < this.retryConfig.maxRetries; attempt++) {
       try {
@@ -121,8 +122,9 @@ export class ElasticsearchClient implements IElasticsearchClient {
         }
 
         const delay = calculateBackoffDelay(attempt, this.retryConfig);
+        const errorMessage = error instanceof Error ? error.message : String(error);
         console.warn(`${operationName} attempt ${attempt + 1} failed. Retrying in ${delay}ms...`, {
-          error: error.message,
+          error: errorMessage,
           context,
           attempt: attempt + 1,
           maxRetries: this.retryConfig.maxRetries,
@@ -133,31 +135,31 @@ export class ElasticsearchClient implements IElasticsearchClient {
     }
 
     // All retries exhausted, throw the last error
+    const errorMessage = lastError instanceof Error ? lastError.message : String(lastError);
+    const statusCode = lastError && typeof lastError === 'object' && 'statusCode' in lastError 
+      ? (lastError as { statusCode: unknown }).statusCode 
+      : undefined;
+
     console.error(`${operationName} failed after ${this.retryConfig.maxRetries} attempts:`, {
-      error: lastError.message,
+      error: errorMessage,
       context,
     });
 
     throw new ExternalServiceError(
-      `Elasticsearch ${operationName} operation failed`,
-      'ELASTICSEARCH_OPERATION_ERROR',
-      {
-        operation: operationName,
-        context,
-        error: lastError.message,
-        statusCode: lastError.statusCode,
-        attempts: this.retryConfig.maxRetries,
-      }
+      'Elasticsearch',
+      `${operationName} operation failed: ${errorMessage}`,
+      lastError instanceof Error ? lastError : new Error(errorMessage),
+      502
     );
   }
 
   /**
    * Index a single document
    */
-  async index(
+  async index<T = SearchDocument>(
     index: string,
     id: string,
-    document: any,
+    document: T,
     options: {
       refresh?: 'true' | 'false' | 'wait_for';
       routing?: string;
@@ -175,7 +177,7 @@ export class ElasticsearchClient implements IElasticsearchClient {
         const response = await this.client.index({
           index,
           id,
-          body: document,
+          body: document as Record<string, unknown>,
           refresh: options.refresh,
           routing: options.routing,
           version: options.version,
@@ -197,19 +199,19 @@ export class ElasticsearchClient implements IElasticsearchClient {
   /**
    * Bulk index multiple documents
    */
-  async bulkIndex(
+  async bulkIndex<T = SearchDocument>(
     operations: Array<{
       index: string;
       id: string;
-      document: any;
+      document: T;
     }>
   ): Promise<BulkOperationResult> {
     return this.executeWithRetry(
       async () => {
         // Build bulk request body
-        const body = operations.flatMap((op) => [
+        const body: Array<Record<string, unknown>> = operations.flatMap((op) => [
           { index: { _index: op.index, _id: op.id } },
-          op.document,
+          op.document as Record<string, unknown>,
         ]);
 
         const response = await this.client.bulk({
@@ -232,39 +234,39 @@ export class ElasticsearchClient implements IElasticsearchClient {
   /**
    * Search documents with query DSL
    */
-  async search(
+  async search<T = SearchDocument>(
     index: string,
-    query: any,
+    query: Record<string, unknown>,
     options: {
       from?: number;
       size?: number;
-      sort?: any[];
-      highlight?: any;
-      aggregations?: any;
+      sort?: Array<Record<string, unknown>>;
+      highlight?: Record<string, unknown>;
+      aggregations?: Record<string, unknown>;
       source?: string[] | boolean;
       timeout?: string;
     } = {}
-  ): Promise<SearchResponse> {
+  ): Promise<SearchResponse<T>> {
     return this.executeWithRetry(
       async () => {
-        const searchBody: any = {
+        const searchBody: Record<string, unknown> = {
           query,
         };
 
         if (options.sort) {
-          searchBody.sort = options.sort;
+          searchBody['sort'] = options.sort;
         }
 
         if (options.highlight) {
-          searchBody.highlight = options.highlight;
+          searchBody['highlight'] = options.highlight;
         }
 
         if (options.aggregations) {
-          searchBody.aggs = options.aggregations;
+          searchBody['aggs'] = options.aggregations;
         }
 
         if (options.source !== undefined) {
-          searchBody._source = options.source;
+          searchBody['_source'] = options.source;
         }
 
         const response = await this.client.search({
@@ -275,21 +277,26 @@ export class ElasticsearchClient implements IElasticsearchClient {
           timeout: options.timeout,
         });
 
+        // Safely handle total field which can be number or object
+        const total = typeof response.hits.total === 'number' 
+          ? response.hits.total 
+          : response.hits.total?.value || 0;
+
         return {
           took: response.took,
           timed_out: response.timed_out,
           hits: {
-            total: response.hits.total,
-            max_score: response.hits.max_score,
-            hits: response.hits.hits.map((hit: any) => ({
-              _index: hit._index,
-              _id: hit._id,
-              _score: hit._score,
-              _source: hit._source,
-              highlight: hit.highlight,
+            total,
+            max_score: response.hits.max_score ?? null,
+            hits: response.hits.hits.map((hit) => ({
+              _index: String(hit._index),
+              _id: String(hit._id),
+              _score: Number(hit._score),
+              _source: hit._source as T,
+              highlight: hit.highlight as Record<string, string[]> | undefined,
             })),
           },
-          aggregations: response.aggregations,
+          aggregations: response.aggregations as Record<string, unknown> | undefined,
         };
       },
       'search',
@@ -333,7 +340,7 @@ export class ElasticsearchClient implements IElasticsearchClient {
       async () => {
         const response = await this.client.indices.create({
           index,
-          body: configuration,
+          body: configuration as Record<string, unknown>,
         });
 
         return {
@@ -396,9 +403,13 @@ export class ElasticsearchClient implements IElasticsearchClient {
             _version: response._version,
             result: response.result as 'deleted' | 'not_found',
           };
-        } catch (error: any) {
+        } catch (error: unknown) {
           // Handle 404 as not_found result instead of error
-          if (error.statusCode === 404) {
+          const statusCode = error && typeof error === 'object' && 'statusCode' in error 
+            ? (error as { statusCode: unknown }).statusCode 
+            : undefined;
+            
+          if (statusCode === 404) {
             return {
               _id: id,
               _index: index,
@@ -419,7 +430,7 @@ export class ElasticsearchClient implements IElasticsearchClient {
    */
   async deleteByQuery(
     index: string,
-    query: unknown
+    query: Record<string, unknown>
   ): Promise<{
     took: number;
     timed_out: boolean;
@@ -438,10 +449,10 @@ export class ElasticsearchClient implements IElasticsearchClient {
         });
 
         return {
-          took: response.took,
-          timed_out: response.timed_out,
-          total: response.total,
-          deleted: response.deleted,
+          took: response.took || 0,
+          timed_out: response.timed_out || false,
+          total: response.total || 0,
+          deleted: response.deleted || 0,
           failures: response.failures || [],
         };
       },
@@ -467,7 +478,7 @@ export class ElasticsearchClient implements IElasticsearchClient {
         });
 
         return {
-          _shards: response._shards,
+          _shards: response._shards || { total: 0, successful: 0, failed: 0 },
         };
       },
       'refresh',
@@ -494,9 +505,14 @@ export class ElasticsearchClient implements IElasticsearchClient {
       async () => {
         const response = await this.client.cluster.health();
 
+        // Map the status to ensure it's one of the expected values
+        const status = response.status === 'green' || response.status === 'yellow' || response.status === 'red'
+          ? response.status
+          : 'red'; // Default to red for unknown status
+
         return {
           cluster_name: response.cluster_name,
-          status: response.status,
+          status,
           timed_out: response.timed_out,
           number_of_nodes: response.number_of_nodes,
           number_of_data_nodes: response.number_of_data_nodes,
@@ -545,8 +561,42 @@ export class ElasticsearchClient implements IElasticsearchClient {
           index,
         });
 
+        // Transform the response to match our interface
+        const transformedIndices: Record<string, {
+          total: {
+            docs: { count: number; deleted: number };
+            store: { size_in_bytes: number };
+            indexing: { index_total: number; index_time_in_millis: number };
+            search: { query_total: number; query_time_in_millis: number };
+          };
+        }> = {};
+
+        if (response.indices) {
+          for (const [indexName, stats] of Object.entries(response.indices)) {
+            transformedIndices[indexName] = {
+              total: {
+                docs: {
+                  count: stats.total?.docs?.count || 0,
+                  deleted: stats.total?.docs?.deleted || 0,
+                },
+                store: {
+                  size_in_bytes: stats.total?.store?.size_in_bytes || 0,
+                },
+                indexing: {
+                  index_total: stats.total?.indexing?.index_total || 0,
+                  index_time_in_millis: stats.total?.indexing?.index_time_in_millis || 0,
+                },
+                search: {
+                  query_total: stats.total?.search?.query_total || 0,
+                  query_time_in_millis: stats.total?.search?.query_time_in_millis || 0,
+                },
+              },
+            };
+          }
+        }
+
         return {
-          indices: response.indices,
+          indices: transformedIndices,
         };
       },
       'getIndexStats',

@@ -16,7 +16,7 @@ import { QueueFactoryOptions, QueueStats } from './types.js';
 /**
  * Alert interface for queue monitoring
  */
-interface Alert extends Record<string, unknown> {
+interface QueueAlert {
   severity: 'info' | 'warning' | 'error' | 'critical';
   queueName: string;
   message: string;
@@ -135,7 +135,7 @@ export class QueueManager {
   public async getHealthStatus(): Promise<{
     healthy: boolean;
     queues: QueueStats[];
-    alerts: Alert[];
+    alerts: QueueAlert[];
     timestamp: Date;
   }> {
     if (!this.queueFactory || !this.queueMonitor) {
@@ -158,13 +158,13 @@ export class QueueManager {
         Promise.resolve(this.queueMonitor.getAlerts(10)),
       ]);
 
-      // Ensure alerts conform to the expected interface
-      const alerts: Alert[] = alertsRaw.map((alert: Alert) => ({
-        severity: alert['severity'] || 'info',
-        queueName: String(alert['queueName'] || 'unknown'),
-        message: String(alert['message'] || 'Unknown alert'),
-        timestamp: alert['timestamp'] || new Date(),
-        metadata: alert['metadata'] || {},
+      // Transform monitor alerts to queue alerts
+      const alerts: QueueAlert[] = alertsRaw.map((alert) => ({
+        severity: alert.severity || 'info',
+        queueName: alert.queueName || 'unknown',
+        message: alert.message || 'Unknown alert',
+        timestamp: alert.timestamp || new Date(),
+        metadata: alert.metadata || {},
       }));
 
       // Determine overall health
