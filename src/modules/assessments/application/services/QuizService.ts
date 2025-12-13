@@ -9,6 +9,25 @@
  */
 
 import {
+  ValidationError,
+  AuthorizationError,
+  NotFoundError,
+  ConflictError,
+  DatabaseError,
+} from '../../../../shared/errors/index.js';
+import { logger } from '../../../../shared/utils/logger.js';
+import { sanitizeByContentType } from '../../../../shared/utils/sanitization.js';
+
+import { QuizSubmission } from '../../../../infrastructure/database/schema/assessments.schema.js';
+
+import { Question } from '../../domain/entities/Question.js';
+import { Quiz } from '../../domain/entities/Quiz.js';
+
+import { IQuestionRepository } from '../../infrastructure/repositories/IQuestionRepository.js';
+import { IQuizRepository } from '../../infrastructure/repositories/IQuizRepository.js';
+import { IQuizSubmissionRepository } from '../../infrastructure/repositories/IQuizSubmissionRepository.js';
+
+import {
   IQuizService,
   CreateQuizDTO,
   CreateQuestionDTO,
@@ -19,26 +38,6 @@ import {
   QuizAttemptResult,
   GradingResult,
 } from './IQuizService.js';
-
-import { Quiz } from '../../domain/entities/Quiz.js';
-import { Question } from '../../domain/entities/Question.js';
-
-import { IQuizRepository } from '../../infrastructure/repositories/IQuizRepository.js';
-import { IQuestionRepository } from '../../infrastructure/repositories/IQuestionRepository.js';
-import { IQuizSubmissionRepository } from '../../infrastructure/repositories/IQuizSubmissionRepository.js';
-
-import { QuizSubmission } from '../../../../infrastructure/database/schema/assessments.schema.js';
-
-import {
-  ValidationError,
-  AuthorizationError,
-  NotFoundError,
-  ConflictError,
-  DatabaseError,
-} from '../../../../shared/errors/index.js';
-import { sanitizeByContentType } from '../../../../shared/utils/sanitization.js';
-
-import { logger } from '../../../../shared/utils/logger.js';
 
 /**
  * Quiz Service Implementation
@@ -803,10 +802,10 @@ export class QuizService implements IQuizService {
   /**
    * Auto-grades objective questions in a submission
    */
-  private async autoGradeSubmission(
+  private autoGradeSubmission(
     submission: QuizSubmission,
     questions: Question[]
-  ): Promise<GradingResult> {
+  ): GradingResult {
     const answers = (submission.answers as Record<string, unknown>) || {};
     let totalPoints = 0;
     let earnedPoints = 0;
@@ -860,13 +859,15 @@ export class QuizService implements IQuizService {
     }
 
     switch (question.questionType) {
-      case 'multiple_choice':
+      case 'multiple_choice': {
         return studentAnswer === question.correctAnswer;
+      }
 
-      case 'true_false':
+      case 'true_false': {
         return studentAnswer === question.correctAnswer;
+      }
 
-      case 'fill_blank':
+      case 'fill_blank': {
         if (!Array.isArray(studentAnswer) || !Array.isArray(question.correctAnswer)) {
           return false;
         }
@@ -881,6 +882,7 @@ export class QuizService implements IQuizService {
           (answer, index) =>
             answer.toLowerCase().trim() === correctAnswers[index]?.toLowerCase().trim()
         );
+      }
 
       default:
         return false; // Subjective questions can't be auto-graded

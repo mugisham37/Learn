@@ -10,7 +10,7 @@
 import type { IAnalyticsService } from '../../application/services/IAnalyticsService.js';
 import type { Role, DateRange } from '../../../../shared/types/index.js';
 
-
+import { logger } from '../../../../shared/utils/logger.js';
 import { analyticsCacheService } from './AnalyticsCacheService.js';
 
 /**
@@ -90,7 +90,7 @@ export class AnalyticsCacheWarmingService {
     let failed = 0;
 
     try {
-      console.log('Starting analytics cache warming...');
+      logger.info('Starting analytics cache warming...');
 
       // Warm in parallel but with controlled concurrency
       const warmingTasks = [];
@@ -123,18 +123,18 @@ export class AnalyticsCacheWarmingService {
           warmed += result.value.warmed;
           failed += result.value.failed;
         } else {
-          console.error('Cache warming task failed:', result.reason);
+          logger.error('Cache warming task failed:', result.reason);
           failed++;
         }
       }
 
       const duration = Date.now() - startTime;
-      console.log(`Cache warming completed: ${warmed} warmed, ${failed} failed, ${duration}ms`);
+      logger.info(`Cache warming completed: ${warmed} warmed, ${failed} failed, ${duration}ms`);
 
       return { warmed, failed, duration };
     } catch (error) {
       const duration = Date.now() - startTime;
-      console.error('Cache warming failed:', error);
+      logger.error('Cache warming failed:', error);
       return { warmed, failed: failed + 1, duration };
     }
   }
@@ -151,7 +151,7 @@ export class AnalyticsCacheWarmingService {
       const activeUserIds = await this.getActiveUserIds(this.config.maxUsersToWarm);
       const roles: Role[] = ['student', 'educator', 'admin'];
 
-      console.log(`Warming dashboard caches for ${activeUserIds.length} users...`);
+      logger.info(`Warming dashboard caches for ${activeUserIds.length} users...`);
 
       // Process in batches to avoid overwhelming the system
       for (let i = 0; i < activeUserIds.length; i += this.config.batchSize) {
@@ -168,7 +168,7 @@ export class AnalyticsCacheWarmingService {
                 warmed++;
               }
             } catch (error) {
-              console.error(
+              logger.error(
                 `Failed to warm dashboard cache for user ${userId}, role ${role}:`,
                 error
               );
@@ -185,10 +185,10 @@ export class AnalyticsCacheWarmingService {
         }
       }
 
-      console.log(`Dashboard cache warming completed: ${warmed} warmed, ${failed} failed`);
+      logger.info(`Dashboard cache warming completed: ${warmed} warmed, ${failed} failed`);
       return { warmed, failed };
     } catch (error) {
-      console.error('Dashboard cache warming failed:', error);
+      logger.error('Dashboard cache warming failed:', error);
       return { warmed, failed: failed + 1 };
     }
   }
@@ -204,7 +204,7 @@ export class AnalyticsCacheWarmingService {
       // Get popular course IDs (this would typically come from a course service)
       const popularCourseIds = await this.getPopularCourseIds(this.config.maxAnalyticsToWarm);
 
-      console.log(`Warming course analytics caches for ${popularCourseIds.length} courses...`);
+      logger.info(`Warming course analytics caches for ${popularCourseIds.length} courses...`);
 
       // Process in batches
       for (let i = 0; i < popularCourseIds.length; i += this.config.batchSize) {
@@ -220,7 +220,7 @@ export class AnalyticsCacheWarmingService {
               warmed++;
             }
           } catch (error) {
-            console.error(`Failed to warm course analytics cache for course ${courseId}:`, error);
+            logger.error(`Failed to warm course analytics cache for course ${courseId}:`, error);
             failed++;
           }
         });
@@ -232,10 +232,10 @@ export class AnalyticsCacheWarmingService {
         }
       }
 
-      console.log(`Course analytics cache warming completed: ${warmed} warmed, ${failed} failed`);
+      logger.info(`Course analytics cache warming completed: ${warmed} warmed, ${failed} failed`);
       return { warmed, failed };
     } catch (error) {
-      console.error('Course analytics cache warming failed:', error);
+      logger.error('Course analytics cache warming failed:', error);
       return { warmed, failed: failed + 1 };
     }
   }
@@ -251,7 +251,7 @@ export class AnalyticsCacheWarmingService {
       // Get active student IDs
       const activeStudentIds = await this.getActiveStudentIds(this.config.maxAnalyticsToWarm);
 
-      console.log(`Warming student analytics caches for ${activeStudentIds.length} students...`);
+      logger.info(`Warming student analytics caches for ${activeStudentIds.length} students...`);
 
       // Process in batches
       for (let i = 0; i < activeStudentIds.length; i += this.config.batchSize) {
@@ -267,7 +267,7 @@ export class AnalyticsCacheWarmingService {
               warmed++;
             }
           } catch (error) {
-            console.error(
+            logger.error(
               `Failed to warm student analytics cache for student ${studentId}:`,
               error
             );
@@ -282,10 +282,10 @@ export class AnalyticsCacheWarmingService {
         }
       }
 
-      console.log(`Student analytics cache warming completed: ${warmed} warmed, ${failed} failed`);
+      logger.info(`Student analytics cache warming completed: ${warmed} warmed, ${failed} failed`);
       return { warmed, failed };
     } catch (error) {
-      console.error('Student analytics cache warming failed:', error);
+      logger.error('Student analytics cache warming failed:', error);
       return { warmed, failed: failed + 1 };
     }
   }
@@ -318,7 +318,7 @@ export class AnalyticsCacheWarmingService {
         },
       ];
 
-      console.log('Warming trending data caches...');
+      logger.info('Warming trending data caches...');
 
       const warmingPromises = [];
 
@@ -331,7 +331,7 @@ export class AnalyticsCacheWarmingService {
                 warmed++;
               })
               .catch((error) => {
-                console.error(`Failed to warm trending courses cache (limit: ${limit}):`, error);
+                logger.error(`Failed to warm trending courses cache (limit: ${limit}):`, error);
                 failed++;
               })
           );
@@ -346,7 +346,7 @@ export class AnalyticsCacheWarmingService {
               warmed++;
             })
             .catch((error) => {
-              console.error(`Failed to warm top performers cache (limit: ${limit}):`, error);
+              logger.error(`Failed to warm top performers cache (limit: ${limit}):`, error);
               failed++;
             })
         );
@@ -354,10 +354,10 @@ export class AnalyticsCacheWarmingService {
 
       await Promise.allSettled(warmingPromises);
 
-      console.log(`Trending data cache warming completed: ${warmed} warmed, ${failed} failed`);
+      logger.info(`Trending data cache warming completed: ${warmed} warmed, ${failed} failed`);
       return { warmed, failed };
     } catch (error) {
-      console.error('Trending data cache warming failed:', error);
+      logger.error('Trending data cache warming failed:', error);
       return { warmed, failed: failed + 1 };
     }
   }
@@ -376,7 +376,7 @@ export class AnalyticsCacheWarmingService {
         this.getActiveStudentIds(10), // Limit to top 10 for reports
       ]);
 
-      console.log('Warming report caches...');
+      logger.info('Warming report caches...');
 
       const warmingPromises = [];
 
@@ -389,7 +389,7 @@ export class AnalyticsCacheWarmingService {
                 warmed++;
               })
               .catch((error) => {
-                console.error(`Failed to warm course report cache for course ${courseId}:`, error);
+                logger.error(`Failed to warm course report cache for course ${courseId}:`, error);
                 failed++;
               })
           );
@@ -405,7 +405,7 @@ export class AnalyticsCacheWarmingService {
                 warmed++;
               })
               .catch((error) => {
-                console.error(
+                logger.error(
                   `Failed to warm student report cache for student ${studentId}:`,
                   error
                 );
@@ -417,10 +417,10 @@ export class AnalyticsCacheWarmingService {
 
       await Promise.allSettled(warmingPromises);
 
-      console.log(`Report cache warming completed: ${warmed} warmed, ${failed} failed`);
+      logger.info(`Report cache warming completed: ${warmed} warmed, ${failed} failed`);
       return { warmed, failed };
     } catch (error) {
-      console.error('Report cache warming failed:', error);
+      logger.error('Report cache warming failed:', error);
       return { warmed, failed: failed + 1 };
     }
   }

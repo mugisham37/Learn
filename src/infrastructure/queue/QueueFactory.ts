@@ -461,27 +461,7 @@ export class QueueFactory {
       logger.debug(`Job ${job.id} waiting in queue ${queue.name}`);
     });
 
-    queue.on('stalled', (job: { id?: string; data?: Record<string, unknown> }) => {
-      const jobId: string = job?.id || 'unknown';
-      logger.warn(`Job ${jobId} stalled in queue ${queue.name}`);
-
-      const listener = this.eventListeners.get(queue.name);
-      if (listener?.onJobStalled) {
-        const jobData: Record<string, unknown> | null = job?.data || null;
-        const result = listener.onJobStalled({
-          jobId,
-          queueName: queue.name,
-          jobData,
-          timestamp: new Date(),
-        });
-        
-        if (result && typeof result.catch === 'function') {
-          result.catch((error: Error) => {
-            logger.error(`Error in stalled event listener:`, error);
-          });
-        }
-      }
-    });
+    // Note: 'stalled' event is handled on the worker, not the queue
   }
 
   /**
@@ -549,6 +529,26 @@ export class QueueFactory {
         if (listenerResult && typeof listenerResult.catch === 'function') {
           listenerResult.catch((error: Error) => {
             logger.error(`Error in progress event listener:`, error);
+          });
+        }
+      }
+    });
+
+    worker.on('stalled', (jobId: string) => {
+      logger.warn(`Job ${jobId} stalled in queue ${worker.name}`);
+
+      const listener = this.eventListeners.get(worker.name);
+      if (listener?.onJobStalled) {
+        const result = listener.onJobStalled({
+          jobId,
+          queueName: worker.name,
+          jobData: null, // Stalled event doesn't provide job data
+          timestamp: new Date(),
+        });
+        
+        if (result && typeof result.catch === 'function') {
+          result.catch((error: Error) => {
+            logger.error(`Error in stalled event listener:`, error);
           });
         }
       }

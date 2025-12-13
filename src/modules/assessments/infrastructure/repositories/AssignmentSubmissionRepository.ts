@@ -844,7 +844,7 @@ export class AssignmentSubmissionRepository implements IAssignmentSubmissionRepo
           or(
             eq(assignmentSubmissions.id, parentSubmissionId),
             eq(assignmentSubmissions.parentSubmissionId, parentSubmissionId)
-          )!
+          )
         );
 
       return result?.count || 0;

@@ -6,12 +6,15 @@
 
 import { eq, and, desc, asc, lte, isNull, count } from 'drizzle-orm';
 import type { NodePgDatabase } from 'drizzle-orm/node-postgres';
+
 import { announcements } from '../../../../infrastructure/database/schema/communication.schema.js';
-import type { IAnnouncementRepository } from './IAnnouncementRepository.js';
+
 import type { Announcement, AnnouncementData } from '../../domain/entities/Announcement.js';
 
+import type { IAnnouncementRepository } from './IAnnouncementRepository.js';
+
 export class AnnouncementRepository implements IAnnouncementRepository {
-  constructor(private db: NodePgDatabase<any>) {}
+  constructor(private db: NodePgDatabase<Record<string, never>>) {}
 
   async create(data: AnnouncementData): Promise<Announcement> {
     const [announcement] = await this.db
@@ -49,7 +52,7 @@ export class AnnouncementRepository implements IAnnouncementRepository {
   ): Promise<Announcement[]> {
     const { includeScheduled = false, limit = 50, offset = 0 } = options;
 
-    let whereConditions = [eq(announcements.courseId, courseId)];
+    const whereConditions = [eq(announcements.courseId, courseId)];
 
     if (!includeScheduled) {
       whereConditions.push(isNull(announcements.scheduledFor));
@@ -63,7 +66,7 @@ export class AnnouncementRepository implements IAnnouncementRepository {
       .limit(limit)
       .offset(offset);
 
-    return results.map(this.mapToEntity);
+    return results.map((result) => this.mapToEntity(result));
   }
   async findByEducatorId(
     educatorId: string,

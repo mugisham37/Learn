@@ -23,7 +23,7 @@ export class DiscussionPost {
     public readonly upvoteCount: number = 0,
     public readonly isSolution: boolean = false,
     public readonly editedAt: Date | null = null,
-    public readonly editHistory: any[] = [],
+    public readonly editHistory: unknown[] = [],
     public readonly isDeleted: boolean = false,
     public readonly createdAt: Date = new Date(),
     public readonly updatedAt: Date = new Date()

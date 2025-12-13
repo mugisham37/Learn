@@ -41,7 +41,7 @@ export class Quiz {
     public readonly config: QuizConfig,
     public readonly createdAt: Date,
     public readonly updatedAt: Date,
-    private _domainEvents: any[] = []
+    private _domainEvents: unknown[] = []
   ) {}
 
   static create(data: CreateQuizData): Quiz {
@@ -182,7 +182,7 @@ export class Quiz {
   /**
    * Gets domain events and clears them
    */
-  getDomainEvents(): any[] {
+  getDomainEvents(): unknown[] {
     const events = [...this._domainEvents];
     this._domainEvents.length = 0;
     return events;

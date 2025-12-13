@@ -17,9 +17,9 @@ import {
   DatabaseError,
   ExternalServiceError,
 } from '../../../../shared/errors/index.js';
-import { sanitizeByContentType } from '../../../../shared/utils/sanitization.js';
 import { IS3Service } from '../../../../shared/services/IS3Service.js';
 import { logger } from '../../../../shared/utils/logger.js';
+import { sanitizeByContentType } from '../../../../shared/utils/sanitization.js';
 import { Assignment } from '../../domain/entities/Assignment.js';
 import {
   AssignmentSubmission,
@@ -422,7 +422,7 @@ export class AssignmentService implements IAssignmentService {
 
       // Update submission in repository with sanitized feedback
       const updatedSubmission = await this.submissionRepository.update(data.submissionId, {
-        pointsAwarded: finalScore?.toString() || data.pointsAwarded.toString(),
+        pointsAwarded: (finalScore ?? data.pointsAwarded).toString(),
         feedback: sanitizeByContentType(data.feedback, 'feedback'),
         gradingStatus: 'graded',
         gradedAt: new Date(),

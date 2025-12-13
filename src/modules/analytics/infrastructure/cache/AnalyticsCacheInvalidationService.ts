@@ -8,7 +8,7 @@
  */
 
 import { buildCacheKey, CachePrefix } from '../../../../infrastructure/cache/index.js';
-
+import { logger } from '../../../../shared/utils/logger.js';
 import { analyticsCacheService, AnalyticsCacheKeys } from './AnalyticsCacheService.js';
 
 /**
@@ -79,7 +79,7 @@ export class AnalyticsCacheInvalidationService {
    */
   async handleCacheInvalidation(eventData: CacheInvalidationEventData): Promise<void> {
     try {
-      console.log(`Handling cache invalidation for event: ${eventData.eventType}`);
+      logger.debug(`Handling cache invalidation for event: ${eventData.eventType}`);
 
       switch (eventData.eventType) {
         // Course events
@@ -137,12 +137,12 @@ export class AnalyticsCacheInvalidationService {
           break;
 
         default:
-          console.warn(`Unknown cache invalidation event type: ${eventData.eventType as string}`);
+          logger.warn(`Unknown cache invalidation event type: ${eventData.eventType as string}`);
       }
 
-      console.log(`Cache invalidation completed for event: ${eventData.eventType}`);
+      logger.debug(`Cache invalidation completed for event: ${eventData.eventType}`);
     } catch (error) {
-      console.error(`Cache invalidation failed for event ${eventData.eventType}:`, error);
+      logger.error(`Cache invalidation failed for event ${eventData.eventType}:`, error);
       // Don't throw - cache invalidation failures shouldn't break the main flow
     }
   }
@@ -152,7 +152,7 @@ export class AnalyticsCacheInvalidationService {
    */
   private async handleCourseEvent(eventData: CacheInvalidationEventData): Promise<void> {
     if (!eventData.courseId) {
-      console.warn('Course event missing courseId');
+      logger.warn('Course event missing courseId');
       return;
     }
 
@@ -173,7 +173,7 @@ export class AnalyticsCacheInvalidationService {
    */
   private async handleCourseDeletedEvent(eventData: CacheInvalidationEventData): Promise<void> {
     if (!eventData.courseId) {
-      console.warn('Course deleted event missing courseId');
+      logger.warn('Course deleted event missing courseId');
       return;
     }
 
@@ -273,7 +273,7 @@ export class AnalyticsCacheInvalidationService {
    */
   private async handleUserEvent(eventData: CacheInvalidationEventData): Promise<void> {
     if (!eventData.userId) {
-      console.warn('User event missing userId');
+      logger.warn('User event missing userId');
       return;
     }
 
@@ -291,7 +291,7 @@ export class AnalyticsCacheInvalidationService {
    */
   private async handleUserDeletedEvent(eventData: CacheInvalidationEventData): Promise<void> {
     if (!eventData.userId) {
-      console.warn('User deleted event missing userId');
+      logger.warn('User deleted event missing userId');
       return;
     }
 
@@ -365,7 +365,7 @@ export class AnalyticsCacheInvalidationService {
       return;
     }
 
-    console.log(`Processing batch cache invalidation for ${events.length} events`);
+    logger.debug(`Processing batch cache invalidation for ${events.length} events`);
 
     // Group events by type for more efficient processing
     const eventGroups = this.groupEventsByType(events);
@@ -376,7 +376,7 @@ export class AnalyticsCacheInvalidationService {
     );
 
     await Promise.allSettled(promises);
-    console.log(`Batch cache invalidation completed for ${events.length} events`);
+    logger.debug(`Batch cache invalidation completed for ${events.length} events`);
   }
 
   /**
@@ -394,7 +394,7 @@ export class AnalyticsCacheInvalidationService {
         groups[key]!.push(event);
         return groups;
       },
-      {} as Record<string, CacheInvalidationEventData[]>
+{}
     );
   }
 
@@ -447,7 +447,7 @@ export class AnalyticsCacheInvalidationService {
 
       await Promise.all(promises);
     } catch (error) {
-      console.error(`Batch event group processing failed for ${eventType}:`, error);
+      logger.error(`Batch event group processing failed for ${eventType}:`, error);
     }
   }
 }

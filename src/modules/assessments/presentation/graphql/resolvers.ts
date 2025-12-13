@@ -232,7 +232,7 @@ function mapQuizTypeFromGraphQL(
     case 'PRACTICE':
       return 'practice';
     default:
-      throw new Error('Unknown quiz type: ' + type);
+      throw new Error(`Unknown quiz type: ${String(type)}`);
   }
 }
 
@@ -274,7 +274,7 @@ function mapDifficultyFromGraphQL(
     case 'HARD':
       return 'hard';
     default:
-      throw new Error('Unknown difficulty: ' + difficulty);
+      throw new Error(`Unknown difficulty: ${String(difficulty)}`);
   }
 }
 
@@ -664,11 +664,11 @@ export const assessmentResolvers = {
     /**
      * Update a quiz (educator only)
      */
-    updateQuiz: async (
+    updateQuiz: (
       _parent: unknown,
       _args: { id: string; input: UpdateQuizInput },
       context: AssessmentGraphQLContext
-    ): Promise<unknown> => {
+    ): never => {
       requireEducator(context);
 
       try {
@@ -688,11 +688,11 @@ export const assessmentResolvers = {
     /**
      * Delete a quiz (educator only)
      */
-    deleteQuiz: async (
+    deleteQuiz: (
       _parent: unknown,
       _args: { id: string },
       context: AssessmentGraphQLContext
-    ): Promise<boolean> => {
+    ): never => {
       requireEducator(context);
 
       try {
@@ -741,11 +741,11 @@ export const assessmentResolvers = {
     /**
      * Update a question (educator only)
      */
-    updateQuestion: async (
+    updateQuestion: (
       _parent: unknown,
       _args: { id: string; input: UpdateQuestionInput },
       context: AssessmentGraphQLContext
-    ): Promise<unknown> => {
+    ): never => {
       requireEducator(context);
 
       try {
@@ -765,11 +765,11 @@ export const assessmentResolvers = {
     /**
      * Delete a question (educator only)
      */
-    deleteQuestion: async (
+    deleteQuestion: (
       _parent: unknown,
       _args: { id: string },
       context: AssessmentGraphQLContext
-    ): Promise<boolean> => {
+    ): never => {
       requireEducator(context);
 
       try {
@@ -921,11 +921,11 @@ export const assessmentResolvers = {
     /**
      * Update an assignment (educator only)
      */
-    updateAssignment: async (
+    updateAssignment: (
       _parent: unknown,
       _args: { id: string; input: UpdateAssignmentInput },
       context: AssessmentGraphQLContext
-    ): Promise<unknown> => {
+    ): never => {
       requireEducator(context);
 
       try {
@@ -945,11 +945,11 @@ export const assessmentResolvers = {
     /**
      * Delete an assignment (educator only)
      */
-    deleteAssignment: async (
+    deleteAssignment: (
       _parent: unknown,
       _args: { id: string },
       context: AssessmentGraphQLContext
-    ): Promise<boolean> => {
+    ): never => {
       requireEducator(context);
 
       try {

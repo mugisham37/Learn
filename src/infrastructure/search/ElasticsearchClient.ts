@@ -315,7 +315,7 @@ export class ElasticsearchClient implements IElasticsearchClient {
               _id: String(hit._id),
               _score: Number(hit._score),
               _source: hit._source as T,
-              highlight: hit.highlight ? hit.highlight as Record<string, string[]> : undefined,
+              highlight: hit.highlight || undefined,
             })),
           },
           aggregations: response.aggregations as Record<string, unknown> | undefined,

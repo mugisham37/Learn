@@ -7,11 +7,9 @@
 
 import {
   ValidationError,
-  NotFoundError,
   AuthorizationError,
 } from '../../../../shared/errors/index.js';
 import { sanitizeByContentType } from '../../../../shared/utils/sanitization.js';
-import type { IAnnouncementRepository } from '../../infrastructure/repositories/IAnnouncementRepository.js';
 import {
   validateAnnouncementData,
   isAnnouncementReadyToPublish,
@@ -19,6 +17,8 @@ import {
   type CreateAnnouncementData,
   type AnnouncementData,
 } from '../../domain/entities/Announcement.js';
+
+import type { IAnnouncementRepository } from '../../infrastructure/repositories/IAnnouncementRepository.js';
 
 import {
   type IAnnouncementService,
@@ -64,7 +64,7 @@ interface INotificationService {
 }
 
 interface IEmailService {
-  sendBulk(recipients: string[], template: string, data: any): Promise<void>;
+  sendBulk(recipients: string[], template: string, data: Record<string, unknown>): Promise<void>;
 }
 
 /**
@@ -338,7 +338,7 @@ export class AnnouncementService implements IAnnouncementService {
    * Private helper methods
    */
 
-  private async verifyEducatorAuthorization(courseId: string, educatorId: string): Promise<void> {
+  private async verifyEducatorAuthorization(_courseId: string, _educatorId: string): Promise<void> {
     // This is a simplified check - in a real implementation, you would verify
     // that the educator actually owns/teaches this course
     // For now, we'll assume any educator can create announcements for any course
@@ -350,7 +350,7 @@ export class AnnouncementService implements IAnnouncementService {
     // }
   }
 
-  private async verifyUserEnrollment(courseId: string, userId: string): Promise<void> {
+  private async verifyUserEnrollment(_courseId: string, _userId: string): Promise<void> {
     // This is a simplified check - in a real implementation, you would verify
     // that the user is actually enrolled in this course
     // For now, we'll assume all users have access to all announcements
@@ -363,7 +363,7 @@ export class AnnouncementService implements IAnnouncementService {
   private async publishAnnouncement(announcement: Announcement): Promise<void> {
     try {
       // Get all enrolled students for this course
-      const enrolledStudents = await this.getEnrolledStudents(announcement.courseId);
+      const enrolledStudents = this.getEnrolledStudents(announcement.courseId);
 
       // Send real-time notification to course room
       if (this.realtimeService) {
@@ -403,7 +403,7 @@ export class AnnouncementService implements IAnnouncementService {
 
       // Send email digest for announcements (if email service is available)
       if (this.emailService && enrolledStudents.length > 0) {
-        const studentEmails = await this.getStudentEmails(enrolledStudents);
+        const studentEmails = this.getStudentEmails(enrolledStudents);
 
         if (studentEmails.length > 0) {
           await this.emailService.sendBulk(studentEmails, 'course-announcement', {
@@ -420,7 +420,7 @@ export class AnnouncementService implements IAnnouncementService {
     }
   }
 
-  private async getEnrolledStudents(courseId: string): Promise<string[]> {
+  private getEnrolledStudents(_courseId: string): string[] {
     // This is a placeholder - in a real implementation, you would get enrolled students
     // from the enrollment service
 
@@ -431,7 +431,7 @@ export class AnnouncementService implements IAnnouncementService {
     return []; // Return empty array for now
   }
 
-  private async getStudentEmails(studentIds: string[]): Promise<string[]> {
+  private getStudentEmails(_studentIds: string[]): string[] {
     // This is a placeholder - in a real implementation, you would get student emails
     // from the user service
 

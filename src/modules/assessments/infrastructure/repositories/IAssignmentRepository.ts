@@ -54,7 +54,7 @@ export interface CreateAssignmentDTO {
   requiresFileUpload?: boolean;
   allowedFileTypes: string[];
   maxFileSizeMb?: number;
-  rubric?: Record<string, any>;
+  rubric?: Record<string, unknown>;
 }
 
 /**
@@ -71,7 +71,7 @@ export interface UpdateAssignmentDTO {
   requiresFileUpload?: boolean;
   allowedFileTypes?: string[];
   maxFileSizeMb?: number;
-  rubric?: Record<string, any>;
+  rubric?: Record<string, unknown>;
 }
 
 /**

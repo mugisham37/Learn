@@ -13,8 +13,8 @@ import {
   NotFoundError,
   AuthorizationError,
 } from '../../../../shared/errors/index.js';
-import { sanitizeByContentType } from '../../../../shared/utils/sanitization.js';
 import { IS3Service } from '../../../../shared/services/IS3Service.js';
+import { sanitizeByContentType } from '../../../../shared/utils/sanitization.js';
 import {
   IMessagingRepository,
   MessagePagination,

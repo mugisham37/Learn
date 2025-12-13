@@ -210,13 +210,15 @@ export class Question {
     }
 
     switch (this.questionType) {
-      case 'multiple_choice':
+      case 'multiple_choice': {
         return studentAnswer === this.correctAnswer;
+      }
 
-      case 'true_false':
+      case 'true_false': {
         return studentAnswer === this.correctAnswer;
+      }
 
-      case 'fill_blank':
+      case 'fill_blank': {
         if (!Array.isArray(studentAnswer) || !Array.isArray(this.correctAnswer)) {
           return false;
         }
@@ -231,8 +233,9 @@ export class Question {
           (answer, index) =>
             answer.toLowerCase().trim() === correctAnswers[index]?.toLowerCase().trim()
         );
+      }
 
-      case 'short_answer':
+      case 'short_answer': {
         const correctAnswerArray = Array.isArray(this.correctAnswer)
           ? (this.correctAnswer as string[])
           : [this.correctAnswer as string];
@@ -241,6 +244,7 @@ export class Question {
         return correctAnswerArray.some(
           (correct) => correct.toLowerCase().trim() === studentAnswerStr
         );
+      }
 
       default:
         return false; // Essay and matching questions need manual grading
@@ -264,7 +268,7 @@ export class Question {
     const indices = Array.from({ length: options.length }, (_, i) => i);
     for (let i = indices.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
-      const temp = indices[i];
+      const temp = indices[i]!;
       indices[i] = indices[j]!;
       indices[j] = temp;
     }

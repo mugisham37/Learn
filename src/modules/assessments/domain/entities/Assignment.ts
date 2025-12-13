@@ -15,7 +15,7 @@ export interface AssignmentConfig {
   requiresFileUpload: boolean;
   allowedFileTypes: string[];
   maxFileSizeMb: number;
-  rubric?: Record<string, any>;
+  rubric?: Record<string, unknown>;
 }
 
 export interface CreateAssignmentData {
@@ -36,7 +36,7 @@ export class Assignment {
     public readonly config: AssignmentConfig,
     public readonly createdAt: Date,
     public readonly updatedAt: Date,
-    private _domainEvents: any[] = []
+    private _domainEvents: unknown[] = []
   ) {}
 
   static create(data: CreateAssignmentData): Assignment {
@@ -201,7 +201,7 @@ export class Assignment {
   /**
    * Gets domain events and clears them
    */
-  getDomainEvents(): any[] {
+  getDomainEvents(): unknown[] {
     const events = [...this._domainEvents];
     this._domainEvents.length = 0;
     return events;

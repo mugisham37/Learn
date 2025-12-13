@@ -26,6 +26,22 @@ import type {
 } from '../../application/services/IAnalyticsService.js';
 import type { CourseAnalytics, StudentAnalytics } from '../../domain/entities/index.js';
 
+interface PlatformMetrics {
+  totalUsers: number;
+  activeUsers: number;
+  totalCourses: number;
+  totalEnrollments: number;
+  totalRevenue: number;
+  averageCompletionRate: number;
+  averageRating: number;
+  growthMetrics: {
+    userGrowth: number;
+    courseGrowth: number;
+    enrollmentGrowth: number;
+    revenueGrowth: number;
+  };
+}
+
 /**
  * Cache TTL values specific to analytics data
  * Balances freshness with performance based on update frequency
@@ -220,7 +236,7 @@ export class AnalyticsCacheService {
   /**
    * Gets cached platform metrics or returns null if not cached
    */
-  async getPlatformMetrics(dateRange: DateRange): Promise<unknown | null> {
+  async getPlatformMetrics(dateRange: DateRange): Promise<PlatformMetrics | null> {
     const key = AnalyticsCacheKeys.platformMetrics(
       dateRange.startDate.toISOString(),
       dateRange.endDate.toISOString()
@@ -231,7 +247,7 @@ export class AnalyticsCacheService {
   /**
    * Caches platform metrics with appropriate TTL
    */
-  async setPlatformMetrics(dateRange: DateRange, metrics: unknown): Promise<void> {
+  async setPlatformMetrics(dateRange: DateRange, metrics: PlatformMetrics): Promise<void> {
     const key = AnalyticsCacheKeys.platformMetrics(
       dateRange.startDate.toISOString(),
       dateRange.endDate.toISOString()

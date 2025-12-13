@@ -12,8 +12,8 @@
  * - 9.5: Solution marking by educators
  */
 
-import type { DiscussionThread } from '../../domain/entities/DiscussionThread.js';
 import type { DiscussionPost, VoteType } from '../../domain/entities/DiscussionPost.js';
+import type { DiscussionThread } from '../../domain/entities/DiscussionThread.js';
 import type {
   ThreadWithDetails,
   PostWithReplies,

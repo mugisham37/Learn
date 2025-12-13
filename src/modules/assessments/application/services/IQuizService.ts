@@ -8,9 +8,10 @@
  * Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8
  */
 
-import { Quiz } from '../../domain/entities/Quiz.js';
-import { Question } from '../../domain/entities/Question.js';
 import { QuizSubmission } from '../../../../infrastructure/database/schema/assessments.schema.js';
+
+import { Question } from '../../domain/entities/Question.js';
+import { Quiz } from '../../domain/entities/Quiz.js';
 
 /**
  * Data Transfer Object for creating a new quiz

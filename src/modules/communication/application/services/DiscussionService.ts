@@ -28,6 +28,10 @@ import {
   CreateDiscussionPostDTO,
   VoteType,
 } from '../../domain/entities/DiscussionPost.js';
+
+import type { ICourseRepository } from '../../../courses/infrastructure/repositories/ICourseRepository.js';
+import type { IEnrollmentRepository } from '../../../enrollments/infrastructure/repositories/IEnrollmentRepository.js';
+
 import type {
   IDiscussionRepository,
   ThreadWithDetails,
@@ -37,8 +41,6 @@ import type {
   ThreadFilter,
   ThreadSortBy,
 } from '../../infrastructure/repositories/IDiscussionRepository.js';
-import type { IEnrollmentRepository } from '../../../enrollments/infrastructure/repositories/IEnrollmentRepository.js';
-import type { ICourseRepository } from '../../../courses/infrastructure/repositories/ICourseRepository.js';
 import type {
   IDiscussionService,
   CreateThreadDTO,
@@ -224,7 +226,7 @@ export class DiscussionService implements IDiscussionService {
       createdPost.upvoteCount,
       createdPost.isSolution,
       createdPost.editedAt,
-      createdPost.editHistory as any[],
+      createdPost.editHistory as unknown[],
       createdPost.isDeleted,
       createdPost.createdAt,
       createdPost.updatedAt
@@ -414,7 +416,7 @@ export class DiscussionService implements IDiscussionService {
       updatedPostData.upvoteCount,
       updatedPostData.isSolution,
       updatedPostData.editedAt,
-      updatedPostData.editHistory as any[],
+      updatedPostData.editHistory as unknown[],
       updatedPostData.isDeleted,
       updatedPostData.createdAt,
       updatedPostData.updatedAt
