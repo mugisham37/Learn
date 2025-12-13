@@ -12,12 +12,14 @@
  */
 
 import { Queue, Worker, Job, QueueOptions, WorkerOptions, JobsOptions } from 'bullmq';
-import { redis } from '../../infrastructure/cache/index.js';
-import { logger } from '../utils/logger.js';
-// import { config } from '../../config/index.js';
-import { IMediaConvertService } from './IMediaConvertService.js';
+
 import { IContentRepository } from '../../modules/content/infrastructure/repositories/IContentRepository.js';
+import { redis } from '../../infrastructure/cache/index.js';
+
 import { ExternalServiceError, NotFoundError, ValidationError } from '../errors/index.js';
+import { logger } from '../utils/logger.js';
+
+import { IMediaConvertService } from './IMediaConvertService.js';
 
 /**
  * Video processing job data interface
@@ -31,7 +33,7 @@ export interface VideoProcessingJobData {
   uploadedBy: string;
   originalFileName: string;
   fileSize: number;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 /**
@@ -184,7 +186,7 @@ export class VideoProcessingQueue {
     status: string;
     progress: number;
     data?: VideoProcessingJobData;
-    result?: any;
+    result?: unknown;
     failedReason?: string;
     processedOn?: Date;
     finishedOn?: Date;
@@ -199,7 +201,7 @@ export class VideoProcessingQueue {
         status: await job.getState(),
         progress: typeof job.progress === 'number' ? job.progress : 0,
         data: job.data,
-        result: job.returnvalue,
+        result: job.returnvalue as unknown,
         failedReason: job.failedReason,
         processedOn: job.processedOn ? new Date(job.processedOn) : undefined,
         finishedOn: job.finishedOn ? new Date(job.finishedOn) : undefined,
@@ -596,7 +598,7 @@ export class VideoProcessingQueue {
       });
 
       // TODO: Send notification to user about completion
-      this.sendCompletionNotification(result);
+      void this.sendCompletionNotification(result);
     });
 
     this.worker.on('failed', (job, error) => {

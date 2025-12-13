@@ -10,8 +10,9 @@
  */
 
 import { logger } from '../utils/logger.js';
-import { initializeAnalytics, getDefaultSchedulerConfig } from './initializeAnalytics.js';
+
 import { shutdownAnalyticsScheduler } from './AnalyticsScheduler.js';
+import { initializeAnalytics, getDefaultSchedulerConfig } from './initializeAnalytics.js';
 
 /**
  * Example: Add this to your application startup (e.g., in src/index.ts)

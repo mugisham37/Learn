@@ -11,9 +11,11 @@
  */
 
 import { S3Event, S3Handler, Context } from 'aws-lambda';
-import { MediaConvertService } from './MediaConvertService.js';
-import { IMediaConvertService, DEFAULT_TRANSCODING_RESOLUTIONS } from './IMediaConvertService.js';
+
 import { logger } from '../utils/logger.js';
+
+import { IMediaConvertService, DEFAULT_TRANSCODING_RESOLUTIONS } from './IMediaConvertService.js';
+import { MediaConvertService } from './MediaConvertService.js';
 
 /**
  * Lambda function configuration
@@ -42,7 +44,7 @@ interface ProcessingResult {
  * This function is triggered by S3 upload events and initiates
  * MediaConvert transcoding jobs for video files.
  */
-export const handler: S3Handler = async (event: S3Event, context: Context) => {
+export const handler = async (event: S3Event, context: Context): Promise<void> => {
   logger.info('Video processing Lambda triggered', {
     requestId: context.awsRequestId,
     eventRecordCount: event.Records.length,

@@ -11,11 +11,13 @@
  * - 4.6: Notification on processing completion/failure
  */
 
-import { logger } from '../utils/logger.js';
-import { ValidationError, NotFoundError, ExternalServiceError } from '../errors/index.js';
-import { VideoProcessingQueue, VideoProcessingJobData } from './VideoProcessingQueue.js';
 import { IContentRepository } from '../../modules/content/infrastructure/repositories/IContentRepository.js';
+
+import { ValidationError, NotFoundError, ExternalServiceError } from '../errors/index.js';
+import { logger } from '../utils/logger.js';
+
 import { IMediaConvertService } from './IMediaConvertService.js';
+import { VideoProcessingQueue, VideoProcessingJobData } from './VideoProcessingQueue.js';
 
 /**
  * Video upload completion parameters

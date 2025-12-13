@@ -260,16 +260,27 @@ export class SecretsManager {
             secretConfig.name === 'aws_access_key_id' ||
             secretConfig.name === 'aws_secret_access_key'
           ) {
-            const credentials = JSON.parse(response.SecretString);
-            secretValue =
-              secretConfig.name === 'aws_access_key_id'
-                ? credentials.accessKeyId
-                : credentials.secretAccessKey;
+            try {
+              const credentials = JSON.parse(response.SecretString) as {
+                accessKeyId?: string;
+                secretAccessKey?: string;
+              };
+              secretValue =
+                secretConfig.name === 'aws_access_key_id'
+                  ? credentials.accessKeyId
+                  : credentials.secretAccessKey;
+            } catch {
+              // If not valid JSON, treat as plain string
+              secretValue = response.SecretString;
+            }
           } else {
             // Handle simple string secrets
             try {
-              const parsed = JSON.parse(response.SecretString);
-              secretValue = parsed.value || parsed[secretConfig.name] || response.SecretString;
+              const parsed = JSON.parse(response.SecretString) as {
+                value?: string;
+                [key: string]: unknown;
+              };
+              secretValue = parsed.value || (parsed[secretConfig.name] as string) || response.SecretString;
             } catch {
               // If not JSON, use as-is
               secretValue = response.SecretString;

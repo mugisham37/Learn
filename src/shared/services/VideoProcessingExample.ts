@@ -11,10 +11,12 @@
  * - 4.6: Notification on processing completion/failure
  */
 
-import { logger } from '../utils/logger.js';
-import { VideoProcessingManager } from './VideoProcessingManager.js';
 import { IContentRepository } from '../../modules/content/infrastructure/repositories/IContentRepository.js';
+import { logger } from '../utils/logger.js';
+
 import { IMediaConvertService } from './IMediaConvertService.js';
+import { MediaConvertWebhookEvent } from './MediaConvertWebhookProcessor.js';
+import { VideoProcessingManager } from './VideoProcessingManager.js';
 
 /**
  * Example usage of the video processing workflow
@@ -117,23 +119,27 @@ export class VideoProcessingExample {
   /**
    * Example: Handle MediaConvert webhook
    */
-  async handleWebhook(webhookEvent: any): Promise<void> {
+  async handleWebhook(webhookEvent: unknown): Promise<void> {
     try {
+      // Type guard to ensure webhook event has expected structure
+      const typedEvent = webhookEvent as MediaConvertWebhookEvent;
+      
       logger.info('Processing MediaConvert webhook', {
-        eventId: webhookEvent.id,
-        jobId: webhookEvent.detail?.jobId,
-        status: webhookEvent.detail?.status,
+        eventId: typedEvent.id,
+        jobId: typedEvent.detail?.jobId,
+        status: typedEvent.detail?.status,
       });
 
       // Use the webhook processor to handle the event
-      await this.processingManager.processWebhookEvent(webhookEvent);
+      await this.processingManager.processWebhookEvent(typedEvent);
 
       logger.info('Webhook processed successfully', {
-        eventId: webhookEvent.id,
+        eventId: typedEvent.id,
       });
     } catch (error) {
+      const typedEvent = webhookEvent as MediaConvertWebhookEvent;
       logger.error('Failed to process webhook', {
-        eventId: webhookEvent.id,
+        eventId: typedEvent.id,
         error: error instanceof Error ? error.message : 'Unknown error',
       });
       // Don't re-throw to avoid webhook retry loops

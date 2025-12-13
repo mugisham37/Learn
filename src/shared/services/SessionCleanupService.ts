@@ -113,38 +113,44 @@ export class SessionCleanupService {
           'refresh_token:*',
           'COUNT',
           this.config.batchSize
-        );
+        ) as [string, string[]];
         cursor = result[0];
         const keys = result[1];
 
         if (keys.length > 0) {
           // Check TTL for each key and remove expired ones
           const pipeline = redis.pipeline();
-          const keysToCheck = [];
+          const keysToCheck: string[] = [];
 
           for (const key of keys) {
             keysToCheck.push(key);
             pipeline.ttl(key);
           }
 
-          const ttlResults = await pipeline.exec();
-          const expiredKeys = [];
+          const ttlResults = await pipeline.exec() as Array<[Error | null, number]> | null;
+          const expiredKeys: string[] = [];
 
-          for (let i = 0; i < keysToCheck.length; i++) {
-            const ttl = ttlResults?.[i]?.[1] as number;
-            // TTL of -1 means no expiration, -2 means expired/doesn't exist
-            if (ttl === -2) {
-              expiredKeys.push(keysToCheck[i]);
+          if (ttlResults) {
+            for (let i = 0; i < keysToCheck.length; i++) {
+              const ttl = ttlResults[i]?.[1];
+              const key = keysToCheck[i];
+              // TTL of -1 means no expiration, -2 means expired/doesn't exist
+              if (ttl === -2 && key) {
+                expiredKeys.push(key);
+              }
             }
           }
 
           if (expiredKeys.length > 0) {
-            await redis.del(...expiredKeys);
-            removedCount += expiredKeys.length;
-            logger.debug('Removed expired refresh tokens from Redis', {
-              count: expiredKeys.length,
-              keys: expiredKeys,
-            });
+            const validKeys = expiredKeys.filter((key): key is string => key !== undefined);
+            if (validKeys.length > 0) {
+              await redis.del(...validKeys);
+              removedCount += validKeys.length;
+              logger.debug('Removed expired refresh tokens from Redis', {
+                count: validKeys.length,
+                keys: validKeys,
+              });
+            }
           }
         }
       } while (cursor !== '0');
@@ -209,37 +215,43 @@ export class SessionCleanupService {
           'password_reset:*',
           'COUNT',
           this.config.batchSize
-        );
+        ) as [string, string[]];
         cursor = result[0];
         const keys = result[1];
 
         if (keys.length > 0) {
           // Check TTL for each key and remove expired ones
           const pipeline = redis.pipeline();
-          const keysToCheck = [];
+          const keysToCheck: string[] = [];
 
           for (const key of keys) {
             keysToCheck.push(key);
             pipeline.ttl(key);
           }
 
-          const ttlResults = await pipeline.exec();
-          const expiredKeys = [];
+          const ttlResults = await pipeline.exec() as Array<[Error | null, number]> | null;
+          const expiredKeys: string[] = [];
 
-          for (let i = 0; i < keysToCheck.length; i++) {
-            const ttl = ttlResults?.[i]?.[1] as number;
-            // TTL of -2 means expired/doesn't exist
-            if (ttl === -2) {
-              expiredKeys.push(keysToCheck[i]);
+          if (ttlResults) {
+            for (let i = 0; i < keysToCheck.length; i++) {
+              const ttl = ttlResults[i]?.[1];
+              const key = keysToCheck[i];
+              // TTL of -2 means expired/doesn't exist
+              if (ttl === -2 && key) {
+                expiredKeys.push(key);
+              }
             }
           }
 
           if (expiredKeys.length > 0) {
-            await redis.del(...expiredKeys);
-            removedCount += expiredKeys.length;
-            logger.debug('Removed expired password reset tokens from Redis', {
-              count: expiredKeys.length,
-            });
+            const validKeys = expiredKeys.filter((key): key is string => key !== undefined);
+            if (validKeys.length > 0) {
+              await redis.del(...validKeys);
+              removedCount += validKeys.length;
+              logger.debug('Removed expired password reset tokens from Redis', {
+                count: validKeys.length,
+              });
+            }
           }
         }
       } while (cursor !== '0');
@@ -274,12 +286,12 @@ export class SessionCleanupService {
           `refresh_token:${userId}:*`,
           'COUNT',
           this.config.batchSize
-        );
+        ) as [string, string[]];
         cursor = result[0];
         const keys = result[1];
 
         if (keys.length > 0) {
-          await redis.del(...keys);
+          await redis.del(...keys.filter((key): key is string => key !== undefined));
           removedCount += keys.length;
         }
       } while (cursor !== '0');
@@ -326,7 +338,7 @@ export class SessionCleanupService {
           'refresh_token:*',
           'COUNT',
           this.config.batchSize
-        );
+        ) as [string, string[]];
         cursor = result[0];
         stats.totalRefreshTokens += result[1].length;
       } while (cursor !== '0');
@@ -340,7 +352,7 @@ export class SessionCleanupService {
           'password_reset:*',
           'COUNT',
           this.config.batchSize
-        );
+        ) as [string, string[]];
         cursor = result[0];
         stats.totalPasswordResetTokens += result[1].length;
       } while (cursor !== '0');
@@ -354,7 +366,7 @@ export class SessionCleanupService {
         .from(users)
         .where(sql`${users.emailVerified} = false`);
 
-      if (unverifiedResult.length > 0) {
+      if (unverifiedResult.length > 0 && unverifiedResult[0]) {
         stats.unverifiedAccountsCount = unverifiedResult[0].count;
         stats.oldestUnverifiedAccount = unverifiedResult[0].oldestCreatedAt;
       }

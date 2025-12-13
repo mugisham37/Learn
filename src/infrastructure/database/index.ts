@@ -11,6 +11,7 @@ import { drizzle, NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { Pool, PoolClient, PoolConfig } from 'pg';
 
 import { config } from '../../config/index.js';
+import { logger } from '../../shared/utils/logger.js';
 import { connectionMonitor, ConnectionMonitor } from './ConnectionMonitor.js';
 
 /**
@@ -51,15 +52,15 @@ async function createPoolWithRetry(poolConfig: PoolConfig, poolName: string): Pr
       await client.query('SELECT 1');
       client.release();
 
-      console.log(`${poolName} connection pool established successfully`);
+      logger.info(`${poolName} connection pool established successfully`);
       return pool;
     } catch (error) {
       const isLastAttempt = attempt === RETRY_CONFIG.maxRetries - 1;
 
       if (isLastAttempt) {
-        console.error(
+        logger.error(
           `${poolName} connection failed after ${RETRY_CONFIG.maxRetries} attempts:`,
-          error
+          { error: error instanceof Error ? error.message : 'Unknown error' }
         );
         await pool.end();
         throw new Error(
@@ -68,9 +69,9 @@ async function createPoolWithRetry(poolConfig: PoolConfig, poolName: string): Pr
       }
 
       const delay = calculateBackoffDelay(attempt);
-      console.warn(
+      logger.warn(
         `${poolName} connection attempt ${attempt + 1} failed. Retrying in ${delay}ms...`,
-        error instanceof Error ? error.message : error
+        { error: error instanceof Error ? error.message : error }
       );
 
       await sleep(delay);
@@ -85,7 +86,7 @@ async function createPoolWithRetry(poolConfig: PoolConfig, poolName: string): Pr
  */
 function getDatabaseUrl(): string {
   if (config.database.usePgBouncer && config.database.pgBouncerUrl) {
-    console.log('Using PgBouncer connection URL');
+    logger.info('Using PgBouncer connection URL');
     return config.database.pgBouncerUrl;
   }
   return config.database.url;
@@ -127,7 +128,7 @@ let readPool: Pool | null = null;
  * Initialize database connection pools with monitoring
  */
 export async function initializeDatabasePools(): Promise<void> {
-  console.log('Initializing database connection pools...');
+  logger.info('Initializing database connection pools...');
 
   // Determine pool sizes based on PgBouncer usage
   const writePoolSize = config.database.usePgBouncer
@@ -163,23 +164,23 @@ export async function initializeDatabasePools(): Promise<void> {
 
   // Set up enhanced error handlers with monitoring
   writePool.on('error', (err) => {
-    console.error('Unexpected error on write pool idle client', err);
+    logger.error('Unexpected error on write pool idle client', { error: err.message });
     connectionMonitor.emit('poolError', { pool: 'write', error: err });
   });
 
   readPool.on('error', (err) => {
-    console.error('Unexpected error on read pool idle client', err);
+    logger.error('Unexpected error on read pool idle client', { error: err.message });
     connectionMonitor.emit('poolError', { pool: 'read', error: err });
   });
 
   // Set up connection event monitoring
   writePool.on('connect', (client) => {
-    console.log('New client connected to write pool');
+    logger.debug('New client connected to write pool');
     connectionMonitor.emit('clientConnect', { pool: 'write', client });
   });
 
   readPool.on('connect', (client) => {
-    console.log('New client connected to read pool');
+    logger.debug('New client connected to read pool');
     connectionMonitor.emit('clientConnect', { pool: 'read', client });
   });
 
@@ -189,15 +190,15 @@ export async function initializeDatabasePools(): Promise<void> {
     connectionMonitor.startMonitoring();
 
     // Set up alert handling
-    connectionMonitor.on('alert', (alert) => {
-      console.warn(`[DB Connection Alert] ${alert.type}: ${alert.message}`);
+    connectionMonitor.on('alert', (alert: { type: string; message: string }) => {
+      logger.warn(`[DB Connection Alert] ${alert.type}: ${alert.message}`);
       // In production, this could send alerts to monitoring systems
     });
 
-    console.log('Connection monitoring enabled');
+    logger.info('Connection monitoring enabled');
   }
 
-  console.log(
+  logger.info(
     `Database connection pools initialized successfully (PgBouncer: ${config.database.usePgBouncer ? 'enabled' : 'disabled'})`
   );
 }
@@ -241,7 +242,7 @@ export function getReadDb(): NodePgDatabase {
  * Maintained for backward compatibility
  */
 export const db = new Proxy({} as NodePgDatabase, {
-  get(_target, prop) {
+  get(_target, prop): unknown {
     return getWriteDb()[prop as keyof NodePgDatabase];
   },
 });
@@ -269,7 +270,7 @@ export async function withTransaction<T>(callback: TransactionCallback<T>): Prom
     return result;
   } catch (error) {
     await client.query('ROLLBACK');
-    console.error('Transaction rolled back due to error:', error);
+    logger.error('Transaction rolled back due to error:', { error: error instanceof Error ? error.message : 'Unknown error' });
     throw error;
   } finally {
     client.release();
@@ -296,7 +297,7 @@ export async function withDrizzleTransaction<T>(
     return result;
   } catch (error) {
     await client.query('ROLLBACK');
-    console.error('Drizzle transaction rolled back due to error:', error);
+    logger.error('Drizzle transaction rolled back due to error:', { error: error instanceof Error ? error.message : 'Unknown error' });
     throw error;
   } finally {
     client.release();
@@ -395,23 +396,28 @@ export async function checkDatabaseHealth(): Promise<DatabaseHealthCheck> {
 export async function testDatabaseConnection(): Promise<boolean> {
   const health = await checkDatabaseHealth();
   if (health.healthy) {
-    console.log('Database connection successful');
+    logger.info('Database connection successful');
   } else {
-    console.error('Database connection failed:', health.error);
+    logger.error('Database connection failed:', { error: health.error });
   }
   return health.healthy;
 }
 
 /**
+ * Alias for testDatabaseConnection for consistency
+ */
+export const testConnection = testDatabaseConnection;
+
+/**
  * Closes all database connection pools gracefully
  */
 export async function closeDatabaseConnection(): Promise<void> {
-  console.log('Closing database connection pools...');
+  logger.info('Closing database connection pools...');
 
   // Stop connection monitoring
   if (config.database.enableConnectionMonitoring) {
     connectionMonitor.stopMonitoring();
-    console.log('Connection monitoring stopped');
+    logger.info('Connection monitoring stopped');
   }
 
   const closePromises: Promise<void>[] = [];
@@ -419,7 +425,7 @@ export async function closeDatabaseConnection(): Promise<void> {
   if (writePool) {
     closePromises.push(
       writePool.end().then(() => {
-        console.log('Write pool closed');
+        logger.info('Write pool closed');
         writePool = null;
       })
     );
@@ -428,15 +434,20 @@ export async function closeDatabaseConnection(): Promise<void> {
   if (readPool) {
     closePromises.push(
       readPool.end().then(() => {
-        console.log('Read pool closed');
+        logger.info('Read pool closed');
         readPool = null;
       })
     );
   }
 
   await Promise.all(closePromises);
-  console.log('All database connection pools closed');
+  logger.info('All database connection pools closed');
 }
+
+/**
+ * Alias for closeDatabaseConnection for consistency
+ */
+export const closeConnection = closeDatabaseConnection;
 
 /**
  * Get connection monitor instance for external access

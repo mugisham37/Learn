@@ -11,9 +11,10 @@
  * Requirements: 13.7, 16.5, 17.1
  */
 
-import { secretsManager } from './SecretsManager.js';
 import { validateConfig } from '../../config/index.js';
 import { logger } from '../utils/logger.js';
+
+import { secretsManager } from './SecretsManager.js';
 
 /**
  * Startup configuration options
@@ -62,13 +63,13 @@ export class StartupService {
     this.startupTime = new Date();
 
     logger.info('Starting application initialization', {
-      nodeEnv: process.env.NODE_ENV,
+      nodeEnv: process.env['NODE_ENV'],
       timestamp: this.startupTime.toISOString(),
     });
 
     try {
       // Step 1: Basic configuration validation
-      await this.validateBasicConfig();
+      this.validateBasicConfig();
 
       // Step 2: Initialize secrets manager
       if (!options.skipSecretsManager) {
@@ -77,7 +78,7 @@ export class StartupService {
 
       // Step 3: Validate all secrets
       if (!options.skipSecretsManager) {
-        await this.validateSecrets();
+        this.validateSecrets();
       }
 
       // Step 4: Initialize database connection
@@ -114,7 +115,7 @@ export class StartupService {
   /**
    * Validate basic configuration
    */
-  private async validateBasicConfig(): Promise<void> {
+  private validateBasicConfig(): void {
     logger.info('Validating basic configuration');
 
     try {
@@ -148,7 +149,7 @@ export class StartupService {
   /**
    * Validate all secrets
    */
-  private async validateSecrets(): Promise<void> {
+  private validateSecrets(): void {
     logger.info('Validating secrets');
 
     try {
@@ -171,7 +172,10 @@ export class StartupService {
     try {
       // Import database module dynamically to avoid circular dependencies
       const { testConnection } = await import('../../infrastructure/database/index.js');
-      await testConnection();
+      const isHealthy = await testConnection();
+      if (!isHealthy) {
+        throw new Error('Database connection test failed');
+      }
       logger.info('Database connection initialization completed');
     } catch (error) {
       logger.error('Database connection initialization failed', {
@@ -241,8 +245,7 @@ export class StartupService {
         check: async () => {
           try {
             const { testConnection } = await import('../../infrastructure/database/index.js');
-            await testConnection();
-            return true;
+            return await testConnection();
           } catch {
             return false;
           }
@@ -257,8 +260,7 @@ export class StartupService {
         check: async () => {
           try {
             const { testConnection } = await import('../../infrastructure/cache/index.js');
-            await testConnection();
-            return true;
+            return await testConnection();
           } catch {
             return false;
           }
@@ -309,11 +311,14 @@ export class StartupService {
           failedChecks.push(name);
         }
       } else {
-        const name = healthChecks[index].name;
-        logger.error(`Health check error: ${name}`, {
-          error: result.reason instanceof Error ? result.reason.message : 'Unknown error',
-        });
-        failedChecks.push(name);
+        const healthCheck = healthChecks[index];
+        if (healthCheck) {
+          const name = healthCheck.name;
+          logger.error(`Health check error: ${name}`, {
+            error: result.reason instanceof Error ? result.reason.message : 'Unknown error',
+          });
+          failedChecks.push(name);
+        }
       }
     });
 

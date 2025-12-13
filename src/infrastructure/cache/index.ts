@@ -10,6 +10,7 @@
 import Redis, { RedisOptions } from 'ioredis';
 
 import { config } from '../../config/index.js';
+import { logger } from '../../shared/utils/logger.js';
 
 /**
  * Cache key prefixes for different domains
@@ -57,15 +58,15 @@ const redisOptions: RedisOptions = {
   enableOfflineQueue: true,
 
   // Retry strategy with exponential backoff
-  retryStrategy: (times: number) => {
+  retryStrategy: (times: number): number | null => {
     if (times > 10) {
       // Stop retrying after 10 attempts
-      console.error('Redis connection failed after 10 retries');
+      logger.error('Redis connection failed after 10 retries');
       return null;
     }
     // Exponential backoff: 50ms, 100ms, 200ms, 400ms, 800ms, 1600ms, 2000ms (capped)
     const delay = Math.min(times * 50, 2000);
-    console.log(`Redis retry attempt ${times}, waiting ${delay}ms`);
+    logger.info(`Redis retry attempt ${times}, waiting ${delay}ms`);
     return delay;
   },
 
@@ -113,31 +114,31 @@ export const sessionRedis = new Redis({
  * Connection event handlers
  */
 redis.on('connect', () => {
-  console.log('Redis connected successfully');
+  logger.info('Redis connected successfully');
 });
 
 redis.on('ready', () => {
-  console.log('Redis ready to accept commands');
+  logger.info('Redis ready to accept commands');
 });
 
 redis.on('error', (error) => {
-  console.error('Redis connection error:', error.message);
+  logger.error('Redis connection error:', { error: error.message });
 });
 
 redis.on('close', () => {
-  console.log('Redis connection closed');
+  logger.info('Redis connection closed');
 });
 
 redis.on('reconnecting', () => {
-  console.log('Redis reconnecting...');
+  logger.info('Redis reconnecting...');
 });
 
 sessionRedis.on('connect', () => {
-  console.log('Session Redis connected successfully');
+  logger.info('Session Redis connected successfully');
 });
 
 sessionRedis.on('error', (error) => {
-  console.error('Session Redis connection error:', error.message);
+  logger.error('Session Redis connection error:', { error: error.message });
 });
 
 /**
@@ -197,14 +198,37 @@ export async function checkSessionRedisHealth(): Promise<{
 export async function closeRedisConnections(): Promise<void> {
   try {
     await Promise.all([redis.quit(), sessionRedis.quit()]);
-    console.log('All Redis connections closed gracefully');
+    logger.info('All Redis connections closed gracefully');
   } catch (error) {
-    console.error('Error closing Redis connections:', error);
+    logger.error('Error closing Redis connections:', { error });
     // Force disconnect if graceful shutdown fails
     redis.disconnect();
     sessionRedis.disconnect();
   }
 }
+
+/**
+ * Alias for closeRedisConnections for consistency
+ */
+export const closeConnection = closeRedisConnections;
+
+/**
+ * Test Redis connectivity
+ */
+export async function testRedisConnection(): Promise<boolean> {
+  const health = await checkRedisHealth();
+  if (health.healthy) {
+    logger.info('Redis connection successful');
+  } else {
+    logger.error('Redis connection failed:', { error: health.error });
+  }
+  return health.healthy;
+}
+
+/**
+ * Alias for testRedisConnection for consistency
+ */
+export const testConnection = testRedisConnection;
 
 /**
  * Builds a cache key with proper namespace
@@ -459,9 +483,9 @@ export const cache = {
   async clear(): Promise<void> {
     try {
       await redis.flushdb();
-      console.log('Cache cleared successfully');
+      logger.info('Cache cleared successfully');
     } catch (error) {
-      console.error('Cache clear error:', error);
+      logger.error('Cache clear error:', { error });
       throw error;
     }
   },
@@ -489,12 +513,12 @@ export const cache = {
 
       return {
         keys: dbSize,
-        memory: stats.used_memory_human || 'unknown',
-        hits: stats.keyspace_hits,
-        misses: stats.keyspace_misses,
+        memory: stats['used_memory_human'] || 'unknown',
+        hits: stats['keyspace_hits'],
+        misses: stats['keyspace_misses'],
       };
     } catch (error) {
-      console.error('Cache getStats error:', error);
+      logger.error('Cache getStats error:', { error });
       return {
         keys: 0,
         memory: 'unknown',

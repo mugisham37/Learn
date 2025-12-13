@@ -11,14 +11,16 @@
  * - 4.6: Notification on processing completion/failure
  */
 
+import { IContentRepository } from '../../modules/content/infrastructure/repositories/IContentRepository.js';
+
 import { logger } from '../utils/logger.js';
-import { VideoProcessingService } from './VideoProcessingService.js';
+
+import { IMediaConvertService } from './IMediaConvertService.js';
 import {
   MediaConvertWebhookProcessor,
   MediaConvertWebhookEvent,
 } from './MediaConvertWebhookProcessor.js';
-import { IContentRepository } from '../../modules/content/infrastructure/repositories/IContentRepository.js';
-import { IMediaConvertService } from './IMediaConvertService.js';
+import { VideoProcessingService } from './VideoProcessingService.js';
 
 /**
  * Video Processing Manager
