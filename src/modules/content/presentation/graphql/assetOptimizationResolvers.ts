@@ -8,10 +8,13 @@
  */
 
 import { FastifyRequest } from 'fastify';
-import { AssetOptimizationService } from '../../../shared/services/AssetOptimizationService.js';
-import { CloudFrontService } from '../../../shared/services/CloudFrontService.js';
-import { ValidationError, AuthenticationError } from '../../../shared/errors/index.js';
-import { logger } from '../../../shared/utils/logger.js';
+
+import { ValidationError, AuthenticationError } from '../../../../shared/errors/index.js';
+import { AssetOptimizationService } from '../../../../shared/services/AssetOptimizationService.js';
+import { CloudFrontService } from '../../../../shared/services/CloudFrontService.js';
+import { ImageProcessingService } from '../../../../shared/services/ImageProcessingService.js';
+import { LazyLoadingService } from '../../../../shared/services/LazyLoadingService.js';
+import { logger } from '../../../../shared/utils/logger.js';
 
 /**
  * Asset optimization resolvers
@@ -21,8 +24,8 @@ export const assetOptimizationResolvers = {
     /**
      * Get optimized asset configuration
      */
-    optimizedAsset: async (
-      _parent: any,
+    optimizedAsset: (
+      _parent: unknown,
       args: {
         s3Key: string;
         assetType: 'image' | 'video' | 'document' | 'static';
@@ -33,19 +36,19 @@ export const assetOptimizationResolvers = {
         };
       },
       context: { request: FastifyRequest }
-    ) => {
+    ): Promise<unknown> => {
       try {
         // Create asset optimization service
         const cloudFrontService = new CloudFrontService();
+        const imageProcessingService = new ImageProcessingService();
+        const lazyLoadingService = new LazyLoadingService();
         const assetOptimizationService = new AssetOptimizationService(
           cloudFrontService,
-          new (
-            await import('../../../shared/services/ImageProcessingService.js')
-          ).ImageProcessingService(),
-          new (await import('../../../shared/services/LazyLoadingService.js')).LazyLoadingService()
+          imageProcessingService,
+          lazyLoadingService
         );
 
-        const optimizedAsset = await assetOptimizationService.optimizeAsset(
+        const optimizedAsset = assetOptimizationService.optimizeAsset(
           args.s3Key,
           args.assetType,
           args.options || {}
@@ -57,7 +60,7 @@ export const assetOptimizationResolvers = {
           userId: context.request.user?.id,
         });
 
-        return optimizedAsset;
+        return Promise.resolve(optimizedAsset);
       } catch (error) {
         logger.error('Failed to optimize asset via GraphQL', {
           s3Key: args.s3Key,
@@ -71,13 +74,13 @@ export const assetOptimizationResolvers = {
      * Get signed URL for private content
      */
     signedAssetUrl: async (
-      _parent: any,
+      _parent: unknown,
       args: {
         s3Key: string;
         expiresIn?: number;
       },
       context: { request: FastifyRequest }
-    ) => {
+    ): Promise<{ url: string; expiresAt: string }> => {
       try {
         // Require authentication for signed URLs
         if (!context.request.user) {
@@ -85,12 +88,12 @@ export const assetOptimizationResolvers = {
         }
 
         const cloudFrontService = new CloudFrontService();
+        const imageProcessingService = new ImageProcessingService();
+        const lazyLoadingService = new LazyLoadingService();
         const assetOptimizationService = new AssetOptimizationService(
           cloudFrontService,
-          new (
-            await import('../../../shared/services/ImageProcessingService.js')
-          ).ImageProcessingService(),
-          new (await import('../../../shared/services/LazyLoadingService.js')).LazyLoadingService()
+          imageProcessingService,
+          lazyLoadingService
         );
 
         const signedUrl = await assetOptimizationService.generateSignedUrl(
@@ -121,16 +124,14 @@ export const assetOptimizationResolvers = {
     /**
      * Get lazy loading client script
      */
-    lazyLoadingScript: async () => {
+    lazyLoadingScript: (): Promise<{ script: string; version: string }> => {
       try {
-        const { LazyLoadingService } =
-          await import('../../../shared/services/LazyLoadingService.js');
         const lazyLoadingService = new LazyLoadingService();
 
-        return {
+        return Promise.resolve({
           script: lazyLoadingService.generateClientScript(),
           version: '1.0.0',
-        };
+        });
       } catch (error) {
         logger.error('Failed to generate lazy loading script', {
           error: error instanceof Error ? error.message : 'Unknown error',
@@ -143,10 +144,10 @@ export const assetOptimizationResolvers = {
      * Get asset optimization statistics
      */
     assetOptimizationStats: async (
-      _parent: any,
-      _args: any,
+      _parent: unknown,
+      _args: Record<string, unknown>,
       context: { request: FastifyRequest }
-    ) => {
+    ): Promise<unknown> => {
       try {
         // Require admin role for statistics
         if (!context.request.user || context.request.user.role !== 'admin') {
@@ -154,18 +155,18 @@ export const assetOptimizationResolvers = {
         }
 
         const cloudFrontService = new CloudFrontService();
+        const imageProcessingService = new ImageProcessingService();
+        const lazyLoadingService = new LazyLoadingService();
         const assetOptimizationService = new AssetOptimizationService(
           cloudFrontService,
-          new (
-            await import('../../../shared/services/ImageProcessingService.js')
-          ).ImageProcessingService(),
-          new (await import('../../../shared/services/LazyLoadingService.js')).LazyLoadingService()
+          imageProcessingService,
+          lazyLoadingService
         );
 
         const stats = assetOptimizationService.getOptimizationStats();
 
         // Get compression stats
-        const { getCompressionStats } = await import('../../../shared/middleware/compression.js');
+        const { getCompressionStats } = await import('../../../../shared/middleware/compression.js');
         const compressionStats = getCompressionStats();
 
         return {
@@ -186,16 +187,16 @@ export const assetOptimizationResolvers = {
      * Optimize multiple assets in batch
      */
     optimizeAssets: async (
-      _parent: any,
+      _parent: unknown,
       args: {
         assets: Array<{
           s3Key: string;
           type: 'image' | 'video' | 'document' | 'static';
-          options?: any;
+          options?: Record<string, unknown>;
         }>;
       },
       context: { request: FastifyRequest }
-    ) => {
+    ): Promise<unknown> => {
       try {
         // Require authentication for batch optimization
         if (!context.request.user) {
@@ -211,12 +212,12 @@ export const assetOptimizationResolvers = {
         }
 
         const cloudFrontService = new CloudFrontService();
+        const imageProcessingService = new ImageProcessingService();
+        const lazyLoadingService = new LazyLoadingService();
         const assetOptimizationService = new AssetOptimizationService(
           cloudFrontService,
-          new (
-            await import('../../../shared/services/ImageProcessingService.js')
-          ).ImageProcessingService(),
-          new (await import('../../../shared/services/LazyLoadingService.js')).LazyLoadingService()
+          imageProcessingService,
+          lazyLoadingService
         );
 
         const optimizedAssets = await assetOptimizationService.optimizeAssets(args.assets);

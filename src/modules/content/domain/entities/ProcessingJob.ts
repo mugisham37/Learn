@@ -46,7 +46,7 @@ export interface JobConfiguration {
     initialDelay: number; // seconds
   };
 
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface JobResult {
@@ -78,7 +78,7 @@ export interface JobResult {
     format: string;
   }>;
 
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 /**
@@ -107,7 +107,7 @@ export class ProcessingJob {
     public readonly nextRetryAt: Date | null = null,
     public readonly priority: number = 5,
     public readonly scheduledFor: Date | null = null,
-    public readonly metadata: Record<string, any> = {},
+    public readonly metadata: Record<string, unknown> = {},
     public readonly createdAt: Date = new Date(),
     public readonly updatedAt: Date = new Date()
   ) {

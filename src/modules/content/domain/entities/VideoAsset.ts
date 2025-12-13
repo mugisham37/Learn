@@ -37,6 +37,7 @@ export interface VideoMetadata {
     startTime: number;
     endTime: number;
   }>;
+  [key: string]: unknown;
 }
 
 /**
@@ -131,7 +132,7 @@ export class VideoAsset {
    * Check if video is ready for streaming
    */
   isReadyForStreaming(): boolean {
-    return (
+    return Boolean(
       this.isProcessed() && (this.hlsManifestUrl || Object.keys(this.streamingUrls).length > 0)
     );
   }
@@ -175,7 +176,7 @@ export class VideoAsset {
     if (this.availableResolutions.length === 0) return null;
 
     // Sort by resolution height (descending) and return the highest
-    return this.availableResolutions.sort((a, b) => b.height - a.height)[0];
+    return this.availableResolutions.sort((a, b) => b.height - a.height)[0] || null;
   }
 
   /**
@@ -223,7 +224,7 @@ export class VideoAsset {
    * Check if video supports adaptive bitrate streaming
    */
   supportsAdaptiveStreaming(): boolean {
-    return !!this.hlsManifestUrl || !!this.streamingUrls.hls;
+    return Boolean(this.hlsManifestUrl) || Boolean(this.streamingUrls.hls);
   }
 
   /**

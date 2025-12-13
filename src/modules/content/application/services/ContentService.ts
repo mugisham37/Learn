@@ -12,18 +12,7 @@
 
 import { randomUUID } from 'crypto';
 import { extname } from 'path';
-import { logger } from '../../../../shared/utils/logger.js';
-import {
-  ValidationError,
-  NotFoundError,
-  AuthorizationError,
-  ExternalServiceError,
-} from '../../../../shared/errors/index.js';
-import { IContentRepository } from '../../infrastructure/repositories/IContentRepository.js';
-import { IS3Service } from '../../../../shared/services/IS3Service.js';
-import { ICloudFrontService } from '../../../../shared/services/ICloudFrontService.js';
-import { IMediaConvertService } from '../../../../shared/services/IMediaConvertService.js';
-import { VideoProcessingService } from '../../../../shared/services/VideoProcessingService.js';
+
 import {
   VideoAsset as VideoAssetData,
   FileAsset as FileAssetData,
@@ -32,7 +21,33 @@ import {
   NewFileAsset,
   AssetType,
 } from '../../../../infrastructure/database/schema/content.schema.js';
-import { VideoAsset, FileAsset, ProcessingJob } from '../../domain/entities/index.js';
+import {
+  ValidationError,
+  NotFoundError,
+  AuthorizationError,
+  ExternalServiceError,
+} from '../../../../shared/errors/index.js';
+import { ICloudFrontService } from '../../../../shared/services/ICloudFrontService.js';
+import { IMediaConvertService } from '../../../../shared/services/IMediaConvertService.js';
+import { IS3Service } from '../../../../shared/services/IS3Service.js';
+import { VideoProcessingService } from '../../../../shared/services/VideoProcessingService.js';
+import { logger } from '../../../../shared/utils/logger.js';
+import { 
+  VideoAsset, 
+  FileAsset, 
+  ProcessingJob,
+  VideoResolution,
+  StreamingUrls,
+  VideoMetadata,
+  FileVariants,
+  FileMetadata,
+  AccessLevel,
+  JobConfiguration,
+  JobResult,
+  JobType
+} from '../../domain/entities/index.js';
+import { IContentRepository } from '../../infrastructure/repositories/IContentRepository.js';
+
 import {
   IContentService,
   GenerateUploadUrlParams,
@@ -195,7 +210,7 @@ export class ContentService implements IContentService {
         originalFileSize: params.fileSize,
         processingStatus: 'pending',
         metadata: {
-          ...((videoAsset.metadata as Record<string, any>) || {}),
+          ...((videoAsset.metadata as Record<string, unknown>) || {}),
           ...params.metadata,
           uploadCompletedAt: new Date().toISOString(),
         },
@@ -697,8 +712,8 @@ export class ContentService implements IContentService {
       // Find content by S3 key (could be video or file asset)
       const s3Bucket = process.env['S3_BUCKET_NAME']!;
 
-      let videoAsset = await this.contentRepository.findVideoAssetByS3Key(s3Bucket, params.fileKey);
-      let fileAsset = await this.contentRepository.findFileAssetByS3Key(s3Bucket, params.fileKey);
+      const videoAsset = await this.contentRepository.findVideoAssetByS3Key(s3Bucket, params.fileKey);
+      const fileAsset = await this.contentRepository.findFileAssetByS3Key(s3Bucket, params.fileKey);
 
       if (!videoAsset && !fileAsset) {
         throw new NotFoundError('Content not found');
@@ -786,7 +801,7 @@ export class ContentService implements IContentService {
     }
   }
 
-  private isValidFileExtension(extension: string, contentType: string): boolean {
+  private isValidFileExtension(_extension: string, contentType: string): boolean {
     const validExtensions: Record<string, string[]> = {
       'video/mp4': ['.mp4'],
       'video/quicktime': ['.mov'],
@@ -802,13 +817,12 @@ export class ContentService implements IContentService {
     };
 
     const allowedExtensions = validExtensions[contentType];
-    return allowedExtensions ? allowedExtensions.includes(extension) : false;
+    return allowedExtensions ? allowedExtensions.includes(_extension) : false;
   }
 
   private generateS3Key(userId: string, fileName: string, fileType: string): string {
     const timestamp = Date.now();
     const uuid = randomUUID();
-    const extension = extname(fileName).toLowerCase();
     const sanitizedFileName = fileName
       .replace(/[^a-zA-Z0-9.-]/g, '_')
       .replace(/_{2,}/g, '_')
@@ -889,10 +903,10 @@ export class ContentService implements IContentService {
       data.hlsManifestUrl,
       data.thumbnailUrl,
       data.previewUrl,
-      Array.isArray(data.availableResolutions) ? (data.availableResolutions as any[]) : [],
+      Array.isArray(data.availableResolutions) ? data.availableResolutions as VideoResolution[] : [],
       data.cloudfrontDistribution,
-      (data.streamingUrls as any) || {},
-      (data.metadata as any) || {},
+      (data.streamingUrls as StreamingUrls) || {},
+      (data.metadata as VideoMetadata) || {},
       data.createdAt,
       data.updatedAt
     );
@@ -913,14 +927,14 @@ export class ContentService implements IContentService {
       data.s3Key,
       data.s3Region,
       data.isPublic,
-      data.accessLevel as any,
+      data.accessLevel as AccessLevel,
       data.cloudfrontUrl,
       data.processingStatus,
       data.processingErrorMessage,
-      (data.variants as any) || {},
+      (data.variants as FileVariants) || {},
       data.description,
       Array.isArray(data.tags) ? (data.tags as string[]) : [],
-      (data.metadata as any) || {},
+      (data.metadata as FileMetadata) || {},
       data.expiresAt,
       data.createdAt,
       data.updatedAt
@@ -932,15 +946,15 @@ export class ContentService implements IContentService {
       data.id,
       data.videoAssetId,
       data.fileAssetId,
-      data.jobType as any,
+      data.jobType as JobType,
       data.externalJobId,
       data.externalServiceName,
-      (data.jobConfiguration as any) || {},
+      (data.jobConfiguration as JobConfiguration) || {},
       data.status,
       data.progress,
       data.startedAt,
       data.completedAt,
-      (data.result as any) || null,
+      (data.result as JobResult) || null,
       data.errorMessage,
       data.errorCode,
       data.attemptCount,
@@ -948,7 +962,7 @@ export class ContentService implements IContentService {
       data.nextRetryAt,
       data.priority,
       data.scheduledFor,
-      (data.metadata as any) || {},
+      (data.metadata as Record<string, unknown>) || {},
       data.createdAt,
       data.updatedAt
     );

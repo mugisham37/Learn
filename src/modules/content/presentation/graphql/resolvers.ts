@@ -450,7 +450,7 @@ export const contentResolvers = {
               : [],
             videoAsset.cloudfrontDistribution,
             videoAsset.streamingUrls || ({} as StreamingUrls),
-            videoAsset.metadata || ({} as VideoMetadata),
+            (videoAsset.metadata as VideoMetadata) || ({} as VideoMetadata),
             videoAsset.createdAt,
             videoAsset.updatedAt
           )
@@ -512,7 +512,7 @@ export const contentResolvers = {
             (fileAsset.variants as FileVariants) || ({} as FileVariants),
             fileAsset.description,
             Array.isArray(fileAsset.tags) ? (fileAsset.tags as string[]) : [],
-            fileAsset.metadata || {},
+            (fileAsset.metadata as FileMetadata) || ({} as FileMetadata),
             fileAsset.expiresAt,
             fileAsset.createdAt,
             fileAsset.updatedAt

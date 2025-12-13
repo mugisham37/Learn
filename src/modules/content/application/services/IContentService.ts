@@ -47,7 +47,7 @@ export interface VideoUploadParams {
   mimeType: string;
   uploadedBy: string;
   lessonId?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 /**

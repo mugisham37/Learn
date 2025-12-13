@@ -127,7 +127,7 @@ export interface IContentRepository {
   updateVideoAssetProcessingStatus(
     id: string,
     status: ProcessingStatus,
-    metadata?: Record<string, any>
+    metadata?: Record<string, unknown>
   ): Promise<VideoAsset>;
 
   /**
@@ -264,7 +264,7 @@ export interface IContentRepository {
     id: string,
     status: ProcessingStatus,
     progress?: number,
-    result?: Record<string, any>,
+    result?: Record<string, unknown>,
     errorMessage?: string
   ): Promise<ProcessingJob>;
 

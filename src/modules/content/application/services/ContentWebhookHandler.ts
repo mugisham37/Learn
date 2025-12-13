@@ -10,13 +10,13 @@
  * - 4.3: Error handling for failed jobs
  */
 
-import { logger } from '../../../../shared/utils/logger.js';
-
-import { IContentRepository } from '../../infrastructure/repositories/IContentRepository.js';
 import {
   IWebhookHandler,
   ProcessedWebhookData,
 } from '../../../../shared/services/MediaConvertWebhookHandler.js';
+import { logger } from '../../../../shared/utils/logger.js';
+import { IContentRepository } from '../../infrastructure/repositories/IContentRepository.js';
+
 import { IContentService, TranscodingCompleteParams } from './IContentService.js';
 
 /**

@@ -32,7 +32,7 @@ export interface FileMetadata {
   producer?: string;
   creationDate?: string;
   modificationDate?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export type AccessLevel = 'public' | 'course' | 'lesson' | 'private';
@@ -203,7 +203,7 @@ export class FileAsset {
    */
   getFileExtension(): string {
     const parts = this.originalFileName.split('.');
-    return parts.length > 1 ? parts[parts.length - 1].toLowerCase() : '';
+    return parts.length > 1 ? (parts[parts.length - 1]?.toLowerCase() || '') : '';
   }
 
   /**

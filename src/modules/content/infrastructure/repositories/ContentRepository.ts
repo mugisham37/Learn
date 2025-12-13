@@ -9,8 +9,9 @@
  * - 4.4: Video processing status tracking and completion handling
  */
 
-import { eq, and, or, sql, desc, asc, lt, lte, gte, inArray, isNull } from 'drizzle-orm';
+import { eq, and, or, sql, desc, asc, lt, lte, inArray, isNull } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+
 import {
   videoAssets,
   fileAssets,
@@ -22,8 +23,8 @@ import {
   ProcessingJob,
   NewProcessingJob,
   ProcessingStatus,
-  AssetType,
 } from '../../../../infrastructure/database/schema/content.schema.js';
+
 import {
   IContentRepository,
   VideoAssetFilters,
@@ -40,7 +41,7 @@ import {
  * using Drizzle ORM with PostgreSQL.
  */
 export class ContentRepository implements IContentRepository {
-  constructor(private readonly db: PostgresJsDatabase<any>) {}
+  constructor(private readonly db: PostgresJsDatabase<Record<string, never>>) {}
 
   // Video Asset Operations
 
@@ -53,6 +54,10 @@ export class ContentRepository implements IContentRepository {
         updatedAt: new Date(),
       })
       .returning();
+
+    if (!created) {
+      throw new Error('Failed to create video asset');
+    }
 
     return created;
   }
@@ -105,10 +110,11 @@ export class ContentRepository implements IContentRepository {
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
     // Get total count
-    const [{ count }] = await this.db
+    const countResult = await this.db
       .select({ count: sql<number>`count(*)` })
       .from(videoAssets)
       .where(whereClause);
+    const count = countResult[0]?.count || 0;
 
     // Get paginated results
     const limit = pagination?.limit || 20;
@@ -116,7 +122,23 @@ export class ContentRepository implements IContentRepository {
     const orderBy = pagination?.orderBy || 'createdAt';
     const orderDirection = pagination?.orderDirection || 'desc';
 
-    const orderColumn = videoAssets[orderBy as keyof typeof videoAssets] || videoAssets.createdAt;
+    let orderColumn;
+    switch (orderBy) {
+      case 'createdAt':
+        orderColumn = videoAssets.createdAt;
+        break;
+      case 'updatedAt':
+        orderColumn = videoAssets.updatedAt;
+        break;
+      case 'originalFileName':
+        orderColumn = videoAssets.originalFileName;
+        break;
+      case 'processingStatus':
+        orderColumn = videoAssets.processingStatus;
+        break;
+      default:
+        orderColumn = videoAssets.createdAt;
+    }
     const orderFn = orderDirection === 'asc' ? asc : desc;
 
     const items = await this.db
@@ -156,14 +178,14 @@ export class ContentRepository implements IContentRepository {
   async updateVideoAssetProcessingStatus(
     id: string,
     status: ProcessingStatus,
-    metadata?: Record<string, any>
+    metadata?: Record<string, unknown>
   ): Promise<VideoAsset> {
     const updates: Partial<VideoAsset> = {
       processingStatus: status,
       updatedAt: new Date(),
     };
 
-    if (status === 'in_progress' && !metadata?.processingStartedAt) {
+    if (status === 'in_progress' && !metadata?.['processingStartedAt']) {
       updates.processingStartedAt = new Date();
     }
 
@@ -172,23 +194,23 @@ export class ContentRepository implements IContentRepository {
     }
 
     if (metadata) {
-      if (metadata.errorMessage) {
-        updates.processingErrorMessage = metadata.errorMessage;
+      if (metadata['errorMessage']) {
+        updates.processingErrorMessage = metadata['errorMessage'] as string;
       }
-      if (metadata.hlsManifestUrl) {
-        updates.hlsManifestUrl = metadata.hlsManifestUrl;
+      if (metadata['hlsManifestUrl']) {
+        updates.hlsManifestUrl = metadata['hlsManifestUrl'] as string;
       }
-      if (metadata.thumbnailUrl) {
-        updates.thumbnailUrl = metadata.thumbnailUrl;
+      if (metadata['thumbnailUrl']) {
+        updates.thumbnailUrl = metadata['thumbnailUrl'] as string;
       }
-      if (metadata.availableResolutions) {
-        updates.availableResolutions = metadata.availableResolutions;
+      if (metadata['availableResolutions']) {
+        updates.availableResolutions = metadata['availableResolutions'] as unknown;
       }
-      if (metadata.durationSeconds) {
-        updates.durationSeconds = metadata.durationSeconds;
+      if (metadata['durationSeconds']) {
+        updates.durationSeconds = metadata['durationSeconds'] as number;
       }
-      if (metadata.streamingUrls) {
-        updates.streamingUrls = metadata.streamingUrls;
+      if (metadata['streamingUrls']) {
+        updates.streamingUrls = metadata['streamingUrls'] as unknown;
       }
     }
 
@@ -210,6 +232,10 @@ export class ContentRepository implements IContentRepository {
         updatedAt: new Date(),
       })
       .returning();
+
+    if (!created) {
+      throw new Error('Failed to create file asset');
+    }
 
     return created;
   }
@@ -258,10 +284,11 @@ export class ContentRepository implements IContentRepository {
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
     // Get total count
-    const [{ count }] = await this.db
+    const countResult = await this.db
       .select({ count: sql<number>`count(*)` })
       .from(fileAssets)
       .where(whereClause);
+    const count = countResult[0]?.count || 0;
 
     // Get paginated results
     const limit = pagination?.limit || 20;
@@ -269,7 +296,26 @@ export class ContentRepository implements IContentRepository {
     const orderBy = pagination?.orderBy || 'createdAt';
     const orderDirection = pagination?.orderDirection || 'desc';
 
-    const orderColumn = fileAssets[orderBy as keyof typeof fileAssets] || fileAssets.createdAt;
+    let orderColumn;
+    switch (orderBy) {
+      case 'createdAt':
+        orderColumn = fileAssets.createdAt;
+        break;
+      case 'updatedAt':
+        orderColumn = fileAssets.updatedAt;
+        break;
+      case 'fileName':
+        orderColumn = fileAssets.fileName;
+        break;
+      case 'fileSize':
+        orderColumn = fileAssets.fileSize;
+        break;
+      case 'assetType':
+        orderColumn = fileAssets.assetType;
+        break;
+      default:
+        orderColumn = fileAssets.createdAt;
+    }
     const orderFn = orderDirection === 'asc' ? asc : desc;
 
     const items = await this.db
@@ -314,7 +360,7 @@ export class ContentRepository implements IContentRepository {
     return await this.db
       .select()
       .from(fileAssets)
-      .where(and(lte(fileAssets.expiresAt, beforeDate), isNull(fileAssets.expiresAt) === false));
+      .where(and(lte(fileAssets.expiresAt, beforeDate), sql`${fileAssets.expiresAt} IS NOT NULL`));
   }
 
   // Processing Job Operations
@@ -328,6 +374,10 @@ export class ContentRepository implements IContentRepository {
         updatedAt: new Date(),
       })
       .returning();
+
+    if (!created) {
+      throw new Error('Failed to create processing job');
+    }
 
     return created;
   }
@@ -380,10 +430,11 @@ export class ContentRepository implements IContentRepository {
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
     // Get total count
-    const [{ count }] = await this.db
+    const countResult = await this.db
       .select({ count: sql<number>`count(*)` })
       .from(processingJobs)
       .where(whereClause);
+    const count = countResult[0]?.count || 0;
 
     // Get paginated results
     const limit = pagination?.limit || 20;
@@ -391,8 +442,26 @@ export class ContentRepository implements IContentRepository {
     const orderBy = pagination?.orderBy || 'createdAt';
     const orderDirection = pagination?.orderDirection || 'desc';
 
-    const orderColumn =
-      processingJobs[orderBy as keyof typeof processingJobs] || processingJobs.createdAt;
+    let orderColumn;
+    switch (orderBy) {
+      case 'createdAt':
+        orderColumn = processingJobs.createdAt;
+        break;
+      case 'updatedAt':
+        orderColumn = processingJobs.updatedAt;
+        break;
+      case 'status':
+        orderColumn = processingJobs.status;
+        break;
+      case 'priority':
+        orderColumn = processingJobs.priority;
+        break;
+      case 'jobType':
+        orderColumn = processingJobs.jobType;
+        break;
+      default:
+        orderColumn = processingJobs.createdAt;
+    }
     const orderFn = orderDirection === 'asc' ? asc : desc;
 
     const items = await this.db
@@ -462,7 +531,7 @@ export class ContentRepository implements IContentRepository {
     id: string,
     status: ProcessingStatus,
     progress?: number,
-    result?: Record<string, any>,
+    result?: Record<string, unknown>,
     errorMessage?: string
   ): Promise<ProcessingJob> {
     const updates: Partial<ProcessingJob> = {
@@ -539,7 +608,7 @@ export class ContentRepository implements IContentRepository {
         status,
         updatedAt: new Date(),
       })
-      .where(inArray(processingJobs.id, ids));
+      .where(inArray(processingJobs.id, ids)) as { rowCount?: number };
 
     return result.rowCount || 0;
   }

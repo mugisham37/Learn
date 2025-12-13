@@ -72,6 +72,68 @@ export class LazyLoadingService {
 
     return attributes;
   }
+
+  /**
+   * Generate client-side lazy loading script
+   */
+  generateClientScript(): string {
+    return `
+      (function() {
+        'use strict';
+        
+        // Intersection Observer for lazy loading
+        const observer = new IntersectionObserver((entries) => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting) {
+              const element = entry.target;
+              const src = element.getAttribute('data-src');
+              if (src) {
+                if (element.tagName === 'IMG') {
+                  element.src = src;
+                } else if (element.tagName === 'VIDEO') {
+                  element.src = src;
+                } else {
+                  element.style.backgroundImage = 'url(' + src + ')';
+                }
+                element.removeAttribute('data-src');
+                observer.unobserve(element);
+              }
+            }
+          });
+        }, {
+          rootMargin: '50px 0px',
+          threshold: 0.01
+        });
+
+        // Observe all elements with data-src
+        document.querySelectorAll('[data-src]').forEach(el => {
+          observer.observe(el);
+        });
+
+        // Handle dynamically added elements
+        const mutationObserver = new MutationObserver((mutations) => {
+          mutations.forEach(mutation => {
+            mutation.addedNodes.forEach(node => {
+              if (node.nodeType === 1) {
+                const element = node;
+                if (element.hasAttribute && element.hasAttribute('data-src')) {
+                  observer.observe(element);
+                }
+                element.querySelectorAll && element.querySelectorAll('[data-src]').forEach(el => {
+                  observer.observe(el);
+                });
+              }
+            });
+          });
+        });
+
+        mutationObserver.observe(document.body, {
+          childList: true,
+          subtree: true
+        });
+      })();
+    `.trim();
+  }
 }
 
 /**
