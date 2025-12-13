@@ -10,7 +10,7 @@ export interface DomainEvent {
   eventType: string;
   aggregateId: string;
   occurredAt: Date;
-  payload: any;
+  payload: Record<string, unknown>;
 }
 
 export class EnrollmentCreatedEvent implements DomainEvent {
@@ -27,7 +27,7 @@ export class EnrollmentCreatedEvent implements DomainEvent {
       paymentId?: string;
     }
   ) {
-    this.eventId = `enrollment-created-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    this.eventId = `enrollment-created-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
     this.occurredAt = new Date();
   }
 }
@@ -48,7 +48,7 @@ export class LessonProgressUpdatedEvent implements DomainEvent {
       completedAt?: Date;
     }
   ) {
-    this.eventId = `lesson-progress-updated-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    this.eventId = `lesson-progress-updated-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
     this.occurredAt = new Date();
   }
 }
@@ -69,7 +69,7 @@ export class CourseProgressUpdatedEvent implements DomainEvent {
       totalLessons: number;
     }
   ) {
-    this.eventId = `course-progress-updated-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    this.eventId = `course-progress-updated-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
     this.occurredAt = new Date();
   }
 }
@@ -89,7 +89,7 @@ export class CourseCompletedEvent implements DomainEvent {
       timeToCompletionDays: number;
     }
   ) {
-    this.eventId = `course-completed-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    this.eventId = `course-completed-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
     this.occurredAt = new Date();
   }
 }
@@ -110,7 +110,7 @@ export class CertificateGeneratedEvent implements DomainEvent {
       verificationUrl: string;
     }
   ) {
-    this.eventId = `certificate-generated-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    this.eventId = `certificate-generated-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
     this.occurredAt = new Date();
   }
 }
@@ -130,7 +130,7 @@ export class EnrollmentWithdrawnEvent implements DomainEvent {
       progressAtWithdrawal: number;
     }
   ) {
-    this.eventId = `enrollment-withdrawn-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    this.eventId = `enrollment-withdrawn-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
     this.occurredAt = new Date();
   }
 }

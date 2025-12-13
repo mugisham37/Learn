@@ -8,10 +8,10 @@
  */
 
 import DataLoader from 'dataloader';
-import { IEnrollmentRepository } from '../../infrastructure/repositories/IEnrollmentRepository.js';
-import { IEnrollmentService } from '../../application/services/IEnrollmentService.js';
+
 import { Enrollment } from '../../../../infrastructure/database/schema/enrollments.schema.js';
-import { EnrollmentProgressSummary } from '../../application/services/IEnrollmentService.js';
+import { IEnrollmentService, EnrollmentProgressSummary } from '../../application/services/IEnrollmentService.js';
+import { IEnrollmentRepository } from '../../infrastructure/repositories/IEnrollmentRepository.js';
 
 /**
  * DataLoader context interface for Enrollments module
@@ -40,7 +40,9 @@ export class EnrollmentDataLoaders {
       {
         cache: true,
         maxBatchSize: 100,
-        batchScheduleFn: (callback: () => void) => setTimeout(callback, 10),
+        batchScheduleFn: (callback: () => void): void => {
+          setTimeout(callback, 10);
+        },
       }
     );
 
@@ -53,7 +55,9 @@ export class EnrollmentDataLoaders {
       {
         cache: true,
         maxBatchSize: 50,
-        batchScheduleFn: (callback: () => void) => setTimeout(callback, 10),
+        batchScheduleFn: (callback: () => void): void => {
+          setTimeout(callback, 10);
+        },
       }
     );
 
@@ -66,7 +70,9 @@ export class EnrollmentDataLoaders {
       {
         cache: true,
         maxBatchSize: 50,
-        batchScheduleFn: (callback: () => void) => setTimeout(callback, 10),
+        batchScheduleFn: (callback: () => void): void => {
+          setTimeout(callback, 10);
+        },
       }
     );
 
@@ -79,7 +85,9 @@ export class EnrollmentDataLoaders {
       {
         cache: true,
         maxBatchSize: 100,
-        batchScheduleFn: (callback: () => void) => setTimeout(callback, 10),
+        batchScheduleFn: (callback: () => void): void => {
+          setTimeout(callback, 10);
+        },
       }
     );
   }

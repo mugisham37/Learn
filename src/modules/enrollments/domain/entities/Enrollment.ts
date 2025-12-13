@@ -7,14 +7,16 @@
  * Requirements: 5.1, 5.4, 5.5, 5.6
  */
 
-import { LessonProgress } from './LessonProgress';
-import { Certificate } from './Certificate';
 import {
   EnrollmentCreatedEvent,
   CourseProgressUpdatedEvent,
   CourseCompletedEvent,
   EnrollmentWithdrawnEvent,
 } from '../events/EnrollmentEvents';
+import { DomainEventList } from '../types/DomainEvent.js';
+
+import { Certificate } from './Certificate';
+import { LessonProgress } from './LessonProgress';
 
 export type EnrollmentStatus = 'active' | 'completed' | 'dropped';
 
@@ -37,7 +39,7 @@ export class Enrollment {
   private _props: EnrollmentProps;
   private _lessonProgress: LessonProgress[] = [];
   private _certificate?: Certificate;
-  private _domainEvents: any[] = [];
+  private _domainEvents: DomainEventList = [];
 
   constructor(props: EnrollmentProps) {
     this.validateProps(props);
@@ -87,7 +89,7 @@ export class Enrollment {
   get certificate(): Certificate | undefined {
     return this._certificate;
   }
-  get domainEvents(): any[] {
+  get domainEvents(): DomainEventList {
     return [...this._domainEvents];
   }
 
@@ -95,7 +97,7 @@ export class Enrollment {
   static create(props: { studentId: string; courseId: string; paymentId?: string }): Enrollment {
     const now = new Date();
     const enrollmentProps: EnrollmentProps = {
-      id: `enrollment-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: `enrollment-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
       studentId: props.studentId,
       courseId: props.courseId,
       enrolledAt: now,
@@ -448,7 +450,7 @@ export class Enrollment {
     }
   }
 
-  private addDomainEvent(event: any): void {
+  private addDomainEvent(event: EnrollmentCreatedEvent | CourseProgressUpdatedEvent | CourseCompletedEvent | EnrollmentWithdrawnEvent): void {
     this._domainEvents.push(event);
   }
 }

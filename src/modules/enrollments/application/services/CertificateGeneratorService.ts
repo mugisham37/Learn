@@ -7,9 +7,8 @@
  * Requirements: 5.6, 5.7
  */
 
-import PDFDocument from 'pdfkit';
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const QRCode = require('qrcode');
+import PDFKit from 'pdfkit';
+import * as QRCode from 'qrcode';
 
 import { ValidationError, ExternalServiceError } from '../../../../shared/errors/index.js';
 import { IS3Service } from '../../../../shared/services/IS3Service.js';
@@ -17,7 +16,9 @@ import { logger } from '../../../../shared/utils/logger.js';
 
 import { Certificate } from '../../domain/entities/Certificate.js';
 import { Enrollment } from '../../domain/entities/Enrollment.js';
+
 import { ICertificateGenerator, CertificateGenerationData } from './ICertificateGenerator.js';
+import { PDFDocument, PDFDocumentOptions, QRCodeOptions } from './types/pdf.types.js';
 
 /**
  * Certificate Generator Service Implementation
@@ -111,7 +112,7 @@ export class CertificateGeneratorService implements ICertificateGenerator {
 
     try {
       // Create PDF document
-      const doc = new PDFDocument({
+      const options: PDFDocumentOptions = {
         size: 'A4',
         layout: 'landscape',
         margins: {
@@ -120,21 +121,23 @@ export class CertificateGeneratorService implements ICertificateGenerator {
           left: 50,
           right: 50,
         },
-      }) as any;
+      };
+      const doc = new PDFKit(options) as PDFDocument;
 
       // Collect PDF data
       const chunks: Buffer[] = [];
       doc.on('data', (chunk: Buffer) => chunks.push(chunk));
 
       // Generate QR code for verification
-      const qrCodeDataUrl = (await QRCode.toDataURL(certificate.getQRCodeData(), {
+      const qrCodeOptions: QRCodeOptions = {
         width: 150,
         margin: 2,
         color: {
           dark: '#000000',
           light: '#FFFFFF',
         },
-      })) as string;
+      };
+      const qrCodeDataUrl = await QRCode.toDataURL(certificate.getQRCodeData(), qrCodeOptions);
 
       // Convert data URL to buffer
       const base64Data = qrCodeDataUrl.split(',')[1];
@@ -240,9 +243,9 @@ export class CertificateGeneratorService implements ICertificateGenerator {
   /**
    * Designs the certificate PDF layout
    */
-  private designCertificate(doc: any, certificate: Certificate, qrCodeBuffer: Buffer): void {
-    const pageWidth = doc.page.width as number;
-    const pageHeight = doc.page.height as number;
+  private designCertificate(doc: PDFDocument, certificate: Certificate, qrCodeBuffer: Buffer): void {
+    const pageWidth = doc.page.width;
+    const pageHeight = doc.page.height;
     const margin = 50;
 
     // Certificate border

@@ -8,6 +8,7 @@
  */
 
 import { GraphQLError } from 'graphql';
+
 import {
   SUBSCRIPTION_EVENTS,
   createAsyncIterator,
@@ -15,7 +16,6 @@ import {
   withFilter,
 } from '../../../../infrastructure/graphql/pubsub.js';
 import { requireAuth } from '../../../../infrastructure/graphql/utils.js';
-
 import { ICourseRepository } from '../../../courses/infrastructure/repositories/ICourseRepository.js';
 import { IUserRepository } from '../../../users/infrastructure/repositories/IUserRepository.js';
 import {
@@ -93,7 +93,7 @@ interface PaginationInput {
 /**
  * Helper function to require authentication
  */
-function requireAuth(context: EnrollmentGraphQLContext): {
+function requireEnrollmentAuth(context: EnrollmentGraphQLContext): {
   id: string;
   email: string;
   role: string;
@@ -1572,15 +1572,23 @@ export const enrollmentResolvers = {
      */
     enrollmentProgressUpdated: {
       subscribe: withFilter(
-        (_parent: any, _args: any, context: EnrollmentGraphQLContext) => {
+        (_parent: unknown, _args: unknown, context: EnrollmentGraphQLContext) => {
           // Require authentication for subscriptions
+          if (!context) {
+            throw new GraphQLError('Context is required');
+          }
           requireAuth(context);
           return createAsyncIterator(SUBSCRIPTION_EVENTS.ENROLLMENT_PROGRESS_UPDATED);
         },
-        (payload: any, variables: any, context: EnrollmentGraphQLContext) => {
+        (payload: unknown, variables: unknown, context: EnrollmentGraphQLContext) => {
           // Users can only subscribe to their own enrollment progress
+          if (!context) {
+            return false;
+          }
           const user = requireAuth(context);
-          return payload.enrollmentId === variables.enrollmentId && payload.studentId === user.id;
+          const payloadData = payload as { enrollmentId: string; studentId: string };
+          const variablesData = variables as { enrollmentId: string };
+          return payloadData.enrollmentId === variablesData.enrollmentId && payloadData.studentId === user.id;
         }
       ),
     },
@@ -1590,15 +1598,23 @@ export const enrollmentResolvers = {
      */
     lessonProgressUpdated: {
       subscribe: withFilter(
-        (_parent: any, _args: any, context: EnrollmentGraphQLContext) => {
+        (_parent: unknown, _args: unknown, context: EnrollmentGraphQLContext) => {
           // Require authentication for subscriptions
+          if (!context) {
+            throw new GraphQLError('Context is required');
+          }
           requireAuth(context);
           return createAsyncIterator(SUBSCRIPTION_EVENTS.LESSON_PROGRESS_UPDATED);
         },
-        (payload: any, variables: any, context: EnrollmentGraphQLContext) => {
+        (payload: unknown, variables: unknown, context: EnrollmentGraphQLContext) => {
           // Users can only subscribe to their own lesson progress
+          if (!context) {
+            return false;
+          }
           const user = requireAuth(context);
-          return payload.enrollmentId === variables.enrollmentId && payload.studentId === user.id;
+          const payloadData = payload as { enrollmentId: string; studentId: string };
+          const variablesData = variables as { enrollmentId: string };
+          return payloadData.enrollmentId === variablesData.enrollmentId && payloadData.studentId === user.id;
         }
       ),
     },
@@ -1608,15 +1624,23 @@ export const enrollmentResolvers = {
      */
     certificateGenerated: {
       subscribe: withFilter(
-        (_parent: any, _args: any, context: EnrollmentGraphQLContext) => {
+        (_parent: unknown, _args: unknown, context: EnrollmentGraphQLContext) => {
           // Require authentication for subscriptions
+          if (!context) {
+            throw new GraphQLError('Context is required');
+          }
           requireAuth(context);
           return createAsyncIterator(SUBSCRIPTION_EVENTS.CERTIFICATE_GENERATED);
         },
-        (payload: any, variables: any, context: EnrollmentGraphQLContext) => {
+        (payload: unknown, variables: unknown, context: EnrollmentGraphQLContext) => {
           // Users can only subscribe to their own certificates
+          if (!context) {
+            return false;
+          }
           const user = requireAuth(context);
-          return payload.enrollmentId === variables.enrollmentId && payload.studentId === user.id;
+          const payloadData = payload as { enrollmentId: string; studentId: string };
+          const variablesData = variables as { enrollmentId: string };
+          return payloadData.enrollmentId === variablesData.enrollmentId && payloadData.studentId === user.id;
         }
       ),
     },
@@ -1626,15 +1650,23 @@ export const enrollmentResolvers = {
      */
     courseCompleted: {
       subscribe: withFilter(
-        (_parent: any, _args: any, context: EnrollmentGraphQLContext) => {
+        (_parent: unknown, _args: unknown, context: EnrollmentGraphQLContext) => {
           // Require authentication for subscriptions
+          if (!context) {
+            throw new GraphQLError('Context is required');
+          }
           requireAuth(context);
           return createAsyncIterator(SUBSCRIPTION_EVENTS.COURSE_COMPLETED);
         },
-        (payload: any, variables: any, context: EnrollmentGraphQLContext) => {
+        (payload: unknown, variables: unknown, context: EnrollmentGraphQLContext) => {
           // Users can only subscribe to their own course completions
+          if (!context) {
+            return false;
+          }
           const user = requireAuth(context);
-          return payload.enrollmentId === variables.enrollmentId && payload.studentId === user.id;
+          const payloadData = payload as { enrollmentId: string; studentId: string };
+          const variablesData = variables as { enrollmentId: string };
+          return payloadData.enrollmentId === variablesData.enrollmentId && payloadData.studentId === user.id;
         }
       ),
     },

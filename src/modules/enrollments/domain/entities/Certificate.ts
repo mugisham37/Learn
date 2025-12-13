@@ -8,6 +8,17 @@
  */
 
 import { CertificateGeneratedEvent } from '../events/EnrollmentEvents';
+import { DomainEventList } from '../types/DomainEvent.js';
+
+export interface CertificateMetadata {
+  studentName: string;
+  courseTitle: string;
+  instructorName: string;
+  completionDate: Date;
+  grade?: string;
+  creditsEarned?: number;
+  [key: string]: unknown;
+}
 
 export interface CertificateProps {
   id: string;
@@ -16,21 +27,13 @@ export interface CertificateProps {
   pdfUrl: string;
   issuedAt: Date;
   verificationUrl: string;
-  metadata?: {
-    studentName: string;
-    courseTitle: string;
-    instructorName: string;
-    completionDate: Date;
-    grade?: string;
-    creditsEarned?: number;
-    [key: string]: any;
-  };
+  metadata?: CertificateMetadata;
   createdAt: Date;
 }
 
 export class Certificate {
   private _props: CertificateProps;
-  private _domainEvents: any[] = [];
+  private _domainEvents: DomainEventList = [];
 
   constructor(props: CertificateProps) {
     this.validateProps(props);
@@ -62,7 +65,7 @@ export class Certificate {
   get createdAt(): Date {
     return this._props.createdAt;
   }
-  get domainEvents(): any[] {
+  get domainEvents(): DomainEventList {
     return [...this._domainEvents];
   }
 
@@ -82,7 +85,7 @@ export class Certificate {
     const certificateId = Certificate.generateCertificateId();
 
     const certificateProps: CertificateProps = {
-      id: `certificate-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: `certificate-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
       enrollmentId: props.enrollmentId,
       certificateId,
       pdfUrl: '', // Will be set after PDF generation
@@ -134,11 +137,11 @@ export class Certificate {
   /**
    * Update certificate metadata
    */
-  updateMetadata(metadata: Partial<CertificateProps['metadata']>): void {
+  updateMetadata(metadata: Partial<CertificateMetadata>): void {
     this._props.metadata = {
       ...this._props.metadata,
       ...metadata,
-    } as CertificateProps['metadata'];
+    } as CertificateMetadata;
   }
 
   /**
@@ -231,7 +234,7 @@ export class Certificate {
    */
   private static generateCertificateId(): string {
     const timestamp = Date.now().toString(36);
-    const random = Math.random().toString(36).substr(2, 9);
+    const random = Math.random().toString(36).substring(2, 11);
     return `CERT-${timestamp.toUpperCase()}-${random.toUpperCase()}`;
   }
 
@@ -262,7 +265,7 @@ export class Certificate {
     }
   }
 
-  private addDomainEvent(event: any): void {
+  private addDomainEvent(event: CertificateGeneratedEvent): void {
     this._domainEvents.push(event);
   }
 }

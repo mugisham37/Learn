@@ -7,12 +7,12 @@
  * Requirements: 14.3 - Certificate generation queue integration
  */
 
-import { logger } from '../../../../shared/utils/logger.js';
+import { ValidationError, ExternalServiceError } from '../../../../shared/errors/index.js';
 import {
   getCertificateGenerationQueue,
   CertificateGenerationJobData,
 } from '../../../../shared/services/CertificateGenerationQueue.js';
-import { ValidationError, ExternalServiceError } from '../../../../shared/errors/index.js';
+import { logger } from '../../../../shared/utils/logger.js';
 import { Enrollment } from '../../domain/entities/Enrollment.js';
 
 /**
@@ -44,7 +44,7 @@ export interface ICertificateQueueService {
   getJobStatus(jobId: string): Promise<{
     status: string;
     progress: number;
-    result?: any;
+    result?: unknown;
     error?: string;
   } | null>;
 }
@@ -118,7 +118,7 @@ export class CertificateQueueService implements ICertificateQueueService {
   async getJobStatus(jobId: string): Promise<{
     status: string;
     progress: number;
-    result?: any;
+    result?: unknown;
     error?: string;
   } | null> {
     try {

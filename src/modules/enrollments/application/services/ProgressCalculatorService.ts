@@ -8,16 +8,20 @@
  */
 
 import { NotFoundError, ValidationError } from '../../../../shared/errors/index.js';
-import { Enrollment } from '../../domain/entities/Enrollment.js';
+
 import { ILessonRepository } from '../../../courses/infrastructure/repositories/ILessonRepository.js';
-import { ILessonProgressRepository } from '../../infrastructure/repositories/ILessonProgressRepository.js';
+
+import { Enrollment } from '../../domain/entities/Enrollment.js';
+
 import { IEnrollmentRepository } from '../../infrastructure/repositories/IEnrollmentRepository.js';
+import { ILessonProgressRepository } from '../../infrastructure/repositories/ILessonProgressRepository.js';
 import {
   IProgressCalculator,
   StrugglingArea,
   ProgressCalculationResult,
   TimeEstimationResult,
 } from './IProgressCalculator.js';
+import { LessonProgressRecord, LessonData, LessonTypeMultipliers, DefaultLessonDurations } from './types/progress.types.js';
 
 /**
  * Progress Calculator Service Implementation
@@ -164,23 +168,23 @@ export class ProgressCalculatorService implements IProgressCalculator {
     const strugglingAreas: StrugglingArea[] = [];
 
     // Analyze quiz performance
-    const quizStruggles = await this.analyzeQuizPerformance(progressRecords);
+    const quizStruggles = this.analyzeQuizPerformance(progressRecords);
     strugglingAreas.push(...quizStruggles);
 
     // Analyze time spent patterns
-    const timeStruggles = await this.analyzeTimeSpentPatterns(progressRecords);
+    const timeStruggles = this.analyzeTimeSpentPatterns(progressRecords);
     strugglingAreas.push(...timeStruggles);
 
     // Analyze completion patterns
-    const completionStruggles = await this.analyzeCompletionPatterns(progressRecords);
+    const completionStruggles = this.analyzeCompletionPatterns(progressRecords);
     strugglingAreas.push(...completionStruggles);
 
     // Analyze attempt patterns
-    const attemptStruggles = await this.analyzeAttemptPatterns(progressRecords);
+    const attemptStruggles = this.analyzeAttemptPatterns(progressRecords);
     strugglingAreas.push(...attemptStruggles);
 
     // Analyze engagement patterns
-    const engagementStruggles = await this.analyzeEngagementPatterns(progressRecords, enrollment);
+    const engagementStruggles = this.analyzeEngagementPatterns(progressRecords, enrollment);
     strugglingAreas.push(...engagementStruggles);
 
     return strugglingAreas;
@@ -352,9 +356,9 @@ export class ProgressCalculatorService implements IProgressCalculator {
 
   // Private helper methods
 
-  private async estimateFromLessonDurations(
-    progressRecords: any[],
-    lessons: any[]
+  private estimateFromLessonDurations(
+    progressRecords: LessonProgressRecord[],
+    lessons: LessonData[]
   ): Promise<TimeEstimationResult> {
     const remainingLessons = progressRecords.filter((p) => p.status !== 'completed');
 
@@ -379,11 +383,11 @@ export class ProgressCalculatorService implements IProgressCalculator {
     };
   }
 
-  private async applyLessonTypeWeighting(
+  private applyLessonTypeWeighting(
     _remainingLessons: number,
     averageTimePerLesson: number,
-    progressRecords: any[],
-    lessons: any[]
+    progressRecords: LessonProgressRecord[],
+    lessons: LessonData[]
   ): Promise<number> {
     let weightedTime = 0;
 
@@ -402,25 +406,25 @@ export class ProgressCalculatorService implements IProgressCalculator {
   }
 
   private getLessonTypeMultiplier(lessonType: string): number {
-    const multipliers = {
+    const multipliers: LessonTypeMultipliers = {
       video: 1.0, // Base time
       text: 0.7, // Usually faster to read
       quiz: 1.2, // May need multiple attempts
       assignment: 1.8, // Usually takes longer
     };
 
-    return multipliers[lessonType as keyof typeof multipliers] || 1.0;
+    return multipliers[lessonType as keyof LessonTypeMultipliers] || 1.0;
   }
 
   private getDefaultLessonDuration(lessonType: string): number {
-    const defaults = {
+    const defaults: DefaultLessonDurations = {
       video: 15, // 15 minutes
       text: 10, // 10 minutes
       quiz: 20, // 20 minutes
       assignment: 45, // 45 minutes
     };
 
-    return defaults[lessonType as keyof typeof defaults] || 15;
+    return defaults[lessonType as keyof DefaultLessonDurations] || 15;
   }
 
   private determineConfidenceLevel(
@@ -438,7 +442,7 @@ export class ProgressCalculatorService implements IProgressCalculator {
     }
   }
 
-  private async analyzeQuizPerformance(progressRecords: any[]): Promise<StrugglingArea[]> {
+  private analyzeQuizPerformance(progressRecords: LessonProgressRecord[]): StrugglingArea[] {
     const areas: StrugglingArea[] = [];
 
     const quizScores = progressRecords
@@ -449,8 +453,8 @@ export class ProgressCalculatorService implements IProgressCalculator {
       return areas;
     }
 
-    const averageScore = quizScores.reduce((sum, score) => sum + score, 0) / quizScores.length;
-    const lowScores = quizScores.filter((score) => score < 70).length;
+    const averageScore = quizScores.reduce((sum, score) => (sum || 0) + (score || 0), 0) / quizScores.length;
+    const lowScores = quizScores.filter((score) => (score || 0) < 70).length;
     const lowScoreRatio = lowScores / quizScores.length;
 
     if (averageScore < 70) {
@@ -482,7 +486,7 @@ export class ProgressCalculatorService implements IProgressCalculator {
     return areas;
   }
 
-  private async analyzeTimeSpentPatterns(progressRecords: any[]): Promise<StrugglingArea[]> {
+  private analyzeTimeSpentPatterns(progressRecords: LessonProgressRecord[]): StrugglingArea[] {
     const areas: StrugglingArea[] = [];
 
     const timeRecords = progressRecords.filter((p) => p.timeSpentSeconds > 0);
@@ -528,7 +532,7 @@ export class ProgressCalculatorService implements IProgressCalculator {
     return areas;
   }
 
-  private async analyzeCompletionPatterns(progressRecords: any[]): Promise<StrugglingArea[]> {
+  private analyzeCompletionPatterns(progressRecords: LessonProgressRecord[]): StrugglingArea[] {
     const areas: StrugglingArea[] = [];
 
     const inProgressCount = progressRecords.filter((p) => p.status === 'in_progress').length;
@@ -551,7 +555,7 @@ export class ProgressCalculatorService implements IProgressCalculator {
     return areas;
   }
 
-  private async analyzeAttemptPatterns(progressRecords: any[]): Promise<StrugglingArea[]> {
+  private analyzeAttemptPatterns(progressRecords: LessonProgressRecord[]): StrugglingArea[] {
     const areas: StrugglingArea[] = [];
 
     const highAttemptRecords = progressRecords.filter((p) => p.attemptsCount > 3);
@@ -573,8 +577,8 @@ export class ProgressCalculatorService implements IProgressCalculator {
     return areas;
   }
 
-  private async analyzeEngagementPatterns(
-    progressRecords: any[],
+  private analyzeEngagementPatterns(
+    progressRecords: LessonProgressRecord[],
     enrollment: Enrollment
   ): Promise<StrugglingArea[]> {
     const areas: StrugglingArea[] = [];
@@ -649,7 +653,7 @@ export class ProgressCalculatorService implements IProgressCalculator {
     return 2.5; // 2.5 lessons per week average
   }
 
-  private hasRecentActivity(progressRecords: any[], days: number): boolean {
+  private hasRecentActivity(progressRecords: LessonProgressRecord[], days: number): boolean {
     const cutoffDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
     return progressRecords.some((p) => {
@@ -658,17 +662,17 @@ export class ProgressCalculatorService implements IProgressCalculator {
     });
   }
 
-  private calculateAverageQuizScore(progressRecords: any[]): number {
+  private calculateAverageQuizScore(progressRecords: LessonProgressRecord[]): number {
     const scores = progressRecords
       .filter((p) => p.quizScore !== undefined && p.quizScore !== null)
       .map((p) => p.quizScore);
 
     if (scores.length === 0) return 0;
 
-    return scores.reduce((sum, score) => sum + score, 0) / scores.length;
+    return scores.reduce((sum, score) => (sum || 0) + (score || 0), 0) / scores.length;
   }
 
-  private analyzeStudyPatterns(progressRecords: any[]): {
+  private analyzeStudyPatterns(progressRecords: LessonProgressRecord[]): {
     optimalSessionLength: number;
     optimalFrequency: number;
     bestTimeOfDay?: 'morning' | 'afternoon' | 'evening';
@@ -710,7 +714,7 @@ export class ProgressCalculatorService implements IProgressCalculator {
 
   private async generateNextSteps(
     enrollment: Enrollment,
-    progressRecords: any[]
+    progressRecords: LessonProgressRecord[]
   ): Promise<string[]> {
     const nextSteps: string[] = [];
 
@@ -743,7 +747,7 @@ export class ProgressCalculatorService implements IProgressCalculator {
     return nextSteps;
   }
 
-  private generateMotivationalTips(_enrollment: Enrollment, progressRecords: unknown[]): string[] {
+  private generateMotivationalTips(_enrollment: Enrollment, progressRecords: LessonProgressRecord[]): string[] {
     const tips: string[] = [];
 
     const completedCount = progressRecords.filter((p) => p.status === 'completed').length;

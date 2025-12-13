@@ -8,9 +8,9 @@
  */
 
 import { ConflictError, NotFoundError, ValidationError } from '../../../../shared/errors/index.js';
+import { ICourseModuleRepository } from '../../../courses/infrastructure/repositories/ICourseModuleRepository.js';
 import { ICourseRepository } from '../../../courses/infrastructure/repositories/ICourseRepository.js';
 import { ILessonRepository } from '../../../courses/infrastructure/repositories/ILessonRepository.js';
-import { ICourseModuleRepository } from '../../../courses/infrastructure/repositories/ICourseModuleRepository.js';
 import { IUserRepository } from '../../../users/infrastructure/repositories/IUserRepository.js';
 import { Certificate } from '../../domain/entities/Certificate.js';
 import { Enrollment } from '../../domain/entities/Enrollment.js';
@@ -926,11 +926,11 @@ export class EnrollmentService implements IEnrollmentService {
       return [];
     }
 
-    const prerequisites = [
+    const prerequisites: Array<{ id: string; title: string; prerequisiteModuleId?: string }> = [
       {
         id: module.id,
         title: module.title,
-        prerequisiteModuleId: module.prerequisiteModuleId,
+        prerequisiteModuleId: module.prerequisiteModuleId || undefined,
       },
     ];
 

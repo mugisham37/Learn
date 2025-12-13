@@ -12,6 +12,12 @@ import { eq, and, count, avg, sum, sql } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
 import {
+  cache,
+  buildCacheKey,
+  CachePrefix,
+  CacheTTL,
+} from '../../../../infrastructure/cache/index.js';
+import {
   getWriteDb,
   getReadDb,
   withDrizzleTransaction,
@@ -25,13 +31,8 @@ import {
   lessons,
   courseModules,
 } from '../../../../infrastructure/database/schema/courses.schema.js';
-import {
-  cache,
-  buildCacheKey,
-  CachePrefix,
-  CacheTTL,
-} from '../../../../infrastructure/cache/index.js';
 import { DatabaseError, ConflictError, NotFoundError } from '../../../../shared/errors/index.js';
+
 import {
   ILessonProgressRepository,
   CreateLessonProgressDTO,
@@ -594,9 +595,9 @@ export class LessonProgressRepository implements ILessonProgressRepository {
         inProgressLessons: stats.inProgressLessons,
         notStartedLessons: stats.notStartedLessons,
         progressPercentage,
-        totalTimeSpentSeconds: stats.totalTimeSpentSeconds || 0,
+        totalTimeSpentSeconds: Number(stats.totalTimeSpentSeconds) || 0,
         averageQuizScore: stats.averageQuizScore
-          ? Math.round(stats.averageQuizScore * 100) / 100
+          ? Math.round(Number(stats.averageQuizScore) * 100) / 100
           : undefined,
       };
 

@@ -8,6 +8,7 @@
  */
 
 import { LessonProgressUpdatedEvent } from '../events/EnrollmentEvents';
+import { DomainEventList } from '../types/DomainEvent.js';
 
 export type ProgressStatus = 'not_started' | 'in_progress' | 'completed';
 
@@ -27,7 +28,7 @@ export interface LessonProgressProps {
 
 export class LessonProgress {
   private _props: LessonProgressProps;
-  private _domainEvents: any[] = [];
+  private _domainEvents: DomainEventList = [];
 
   constructor(props: LessonProgressProps) {
     this.validateProps(props);
@@ -68,7 +69,7 @@ export class LessonProgress {
   get updatedAt(): Date {
     return this._props.updatedAt;
   }
-  get domainEvents(): any[] {
+  get domainEvents(): DomainEventList {
     return [...this._domainEvents];
   }
 
@@ -79,7 +80,7 @@ export class LessonProgress {
     const now = new Date();
     const progressProps: LessonProgressProps = {
       ...props,
-      id: `lesson-progress-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      id: `lesson-progress-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
       createdAt: now,
       updatedAt: now,
     };
@@ -309,7 +310,7 @@ export class LessonProgress {
     }
   }
 
-  private addDomainEvent(event: any): void {
+  private addDomainEvent(event: LessonProgressUpdatedEvent): void {
     this._domainEvents.push(event);
   }
 }

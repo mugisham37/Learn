@@ -11,19 +11,20 @@
 import { eq, and, desc, asc, count, sql } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
-import { getWriteDb, getReadDb } from '../../../../infrastructure/database/index.js';
-import {
-  enrollments,
-  Enrollment,
-  NewEnrollment,
-} from '../../../../infrastructure/database/schema/enrollments.schema.js';
 import {
   cache,
   buildCacheKey,
   CachePrefix,
   CacheTTL,
 } from '../../../../infrastructure/cache/index.js';
+import { getWriteDb, getReadDb } from '../../../../infrastructure/database/index.js';
+import {
+  enrollments,
+  Enrollment,
+  NewEnrollment,
+} from '../../../../infrastructure/database/schema/enrollments.schema.js';
 import { DatabaseError, ConflictError, NotFoundError } from '../../../../shared/errors/index.js';
+
 import {
   IEnrollmentRepository,
   CreateEnrollmentDTO,
@@ -330,10 +331,12 @@ export class EnrollmentRepository implements IEnrollmentRepository {
       ];
 
       // Get total count
-      const [{ totalCount }] = await this.readDb
+      const countResult = await this.readDb
         .select({ totalCount: count() })
         .from(enrollments)
         .where(and(...conditions));
+      
+      const totalCount = countResult[0]?.totalCount || 0;
 
       // Get enrollments with pagination
       const enrollmentList = await this.readDb
@@ -406,10 +409,12 @@ export class EnrollmentRepository implements IEnrollmentRepository {
       ];
 
       // Get total count
-      const [{ totalCount }] = await this.readDb
+      const countResult = await this.readDb
         .select({ totalCount: count() })
         .from(enrollments)
         .where(and(...conditions));
+      
+      const totalCount = countResult[0]?.totalCount || 0;
 
       // Get enrollments with pagination
       const enrollmentList = await this.readDb
@@ -642,10 +647,12 @@ export class EnrollmentRepository implements IEnrollmentRepository {
       }
 
       // Query database if not in cache
-      const [{ activeCount }] = await this.readDb
+      const countResult = await this.readDb
         .select({ activeCount: count() })
         .from(enrollments)
         .where(and(eq(enrollments.courseId, courseId), eq(enrollments.status, 'active')));
+
+      const activeCount = countResult[0]?.activeCount || 0;
 
       // Cache the result with 5-minute TTL
       await cache.set(cacheKey, activeCount, CacheTTL.MEDIUM);
@@ -680,10 +687,12 @@ export class EnrollmentRepository implements IEnrollmentRepository {
       }
 
       // Query database if not in cache
-      const [{ completedCount }] = await this.readDb
+      const countResult = await this.readDb
         .select({ completedCount: count() })
         .from(enrollments)
         .where(and(eq(enrollments.courseId, courseId), eq(enrollments.status, 'completed')));
+
+      const completedCount = countResult[0]?.completedCount || 0;
 
       // Cache the result with 5-minute TTL
       await cache.set(cacheKey, completedCount, CacheTTL.MEDIUM);
