@@ -10,7 +10,6 @@
 import { Client, ClientOptions } from '@elastic/elasticsearch';
 
 import { config } from '../../config/index.js';
-
 import type { ISearchRepository } from './ISearchRepository.js';
 
 /**
@@ -514,7 +513,7 @@ export async function reindexWithZeroDowntime(
       }
     }, 60000); // 1 minute delay
 
-    console.log('Zero-downtime reindex completed successfully');
+    
   } catch (error) {
     console.error('Zero-downtime reindex failed:', error);
     throw error;

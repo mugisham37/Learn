@@ -777,7 +777,7 @@ export class SearchRepository implements ISearchRepository {
       return [];
     }
 
-    return aggregation.buckets.map((bucket: any) => ({
+    return aggregation.buckets.map((bucket: unknown) => ({
       key: bucket.key,
       count: bucket.doc_count,
       from: bucket.from,

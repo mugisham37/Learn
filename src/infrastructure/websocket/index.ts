@@ -515,7 +515,7 @@ export async function getOnlineUsersInCourse(courseId: string): Promise<string[]
     }
 
     const sockets = await io.in(SocketRooms.course(courseId)).fetchSockets();
-    return sockets.map((socket: any) => socket.userId).filter(Boolean);
+    return sockets.map((socket: unknown) => socket.userId).filter(Boolean);
   } catch (error) {
     logger.error('Error getting online users in course', {
       courseId,

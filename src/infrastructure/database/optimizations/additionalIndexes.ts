@@ -457,12 +457,12 @@ export async function analyzeIndexUsage(db: NodePgDatabase<Record<string, never>
     );
 
     return {
-      unusedIndexes: unusedResult.rows.map((row: Record<string, unknown>) => String(row.indexname)),
-      heavilyUsedIndexes: heavyUsageResult.rows.map((row: Record<string, unknown>) => String(row.indexname)),
+      unusedIndexes: unusedResult.rows.map((row: Record<string, unknown>) => String(row['indexname'])),
+      heavilyUsedIndexes: heavyUsageResult.rows.map((row: Record<string, unknown>) => String(row['indexname'])),
       indexSizes: sizeResult.rows.map((row: Record<string, unknown>) => ({
-        name: String(row.indexname),
-        size: String(row.size),
-        table: String(row.tablename),
+        name: String(row['indexname']),
+        size: String(row['size']),
+        table: String(row['tablename']),
       })),
     };
   } catch (error) {
@@ -474,7 +474,7 @@ export async function analyzeIndexUsage(db: NodePgDatabase<Record<string, never>
 /**
  * Update table statistics for better query planning
  */
-export async function updateTableStatistics(db: NodePgDatabase<any>): Promise<void> {
+export async function updateTableStatistics(db: NodePgDatabase<Record<string, never>>): Promise<void> {
   logger.info('Updating table statistics for query optimization...');
 
   const tables = [

@@ -417,7 +417,7 @@ export class ElasticsearchClient implements IElasticsearchClient {
     timed_out: boolean;
     total: number;
     deleted: number;
-    failures: any[];
+    failures: unknown[];
   }> {
     return this.executeWithRetry(
       async () => {

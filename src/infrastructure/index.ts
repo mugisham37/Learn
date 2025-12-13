@@ -94,8 +94,10 @@ export async function shutdownInfrastructure(): Promise<void> {
         .then(() => {
           logger.info('✓ Database connections closed');
         })
-        .catch((error) => {
-          logger.error('Error closing database connections', { error });
+        .catch((error: unknown) => {
+          logger.error('Error closing database connections', { 
+            error: error instanceof Error ? error.message : String(error) 
+          });
         })
     );
   } catch (error) {
@@ -110,12 +112,16 @@ export async function shutdownInfrastructure(): Promise<void> {
         .then(() => {
           logger.info('✓ Redis connections closed');
         })
-        .catch((error) => {
-          logger.error('Error closing Redis connections', { error });
+        .catch((error: unknown) => {
+          logger.error('Error closing Redis connections', { 
+            error: error instanceof Error ? error.message : String(error) 
+          });
         })
     );
   } catch (error) {
-    logger.error('Error importing cache module for shutdown', { error });
+    logger.error('Error importing cache module for shutdown', { 
+      error: error instanceof Error ? error.message : String(error) 
+    });
   }
 
   // Close Elasticsearch connection
@@ -126,12 +132,16 @@ export async function shutdownInfrastructure(): Promise<void> {
         .then(() => {
           logger.info('✓ Elasticsearch connection closed');
         })
-        .catch((error) => {
-          logger.error('Error closing Elasticsearch connection', { error });
+        .catch((error: unknown) => {
+          logger.error('Error closing Elasticsearch connection', { 
+            error: error instanceof Error ? error.message : String(error) 
+          });
         })
     );
   } catch (error) {
-    logger.error('Error importing search module for shutdown', { error });
+    logger.error('Error importing search module for shutdown', { 
+      error: error instanceof Error ? error.message : String(error) 
+    });
   }
 
   // Shutdown BullMQ queue infrastructure
@@ -144,12 +154,16 @@ export async function shutdownInfrastructure(): Promise<void> {
         .then(() => {
           logger.info('✓ BullMQ queue infrastructure shutdown');
         })
-        .catch((error) => {
-          logger.error('Error shutting down queue infrastructure', { error });
+        .catch((error: unknown) => {
+          logger.error('Error shutting down queue infrastructure', { 
+            error: error instanceof Error ? error.message : String(error) 
+          });
         })
     );
   } catch (error) {
-    logger.error('Error importing queue module for shutdown', { error });
+    logger.error('Error importing queue module for shutdown', { 
+      error: error instanceof Error ? error.message : String(error) 
+    });
   }
 
   // Wait for all shutdown operations to complete
@@ -236,7 +250,7 @@ export async function checkInfrastructureHealth(): Promise<{
     const queueHealth = await queueManager.getHealthStatus();
     components.queues = queueHealth.healthy;
     if (!queueHealth.healthy) {
-      errors.push(`Queues: ${queueHealth.alerts.map((a) => a.message).join(', ')}`);
+      errors.push(`Queues: ${queueHealth.alerts.map((a: { message: string }) => a.message).join(', ')}`);
     }
   } catch (error) {
     errors.push(`Queues: ${error instanceof Error ? error.message : 'Unknown error'}`);
