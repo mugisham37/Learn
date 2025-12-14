@@ -8,8 +8,8 @@
  * Requirements: 10.7
  */
 
-import { NotificationPreferences } from '../../../users/domain/value-objects/UserProfile.js';
 import { NotificationType } from '../../../../infrastructure/database/schema/notifications.schema.js';
+import { NotificationPreferences } from '../../../users/domain/value-objects/UserProfile.js';
 
 /**
  * Notification preference update data

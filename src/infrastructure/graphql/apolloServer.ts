@@ -165,6 +165,12 @@ export interface GraphQLContext {
     enrollmentsByStudentId?: DataLoader<string, Record<string, unknown>[]>;
     enrollmentsByCourseId?: DataLoader<string, Record<string, unknown>[]>;
   };
+  dataSources?: {
+    notificationService?: unknown;
+    notificationRepository?: unknown;
+    notificationPreferenceService?: unknown;
+    userRepository?: unknown;
+  };
 }
 
 /**

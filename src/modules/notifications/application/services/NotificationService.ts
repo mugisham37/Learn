@@ -12,6 +12,7 @@ import {
   Notification,
   NotificationType,
 } from '../../../../infrastructure/database/schema/notifications.schema.js';
+import { SUBSCRIPTION_EVENTS, publishEvent } from '../../../../infrastructure/graphql/pubsub.js';
 import {
   ValidationError,
   NotFoundError,
@@ -21,15 +22,16 @@ import {
 import { IEmailService, EmailOptions } from '../../../../shared/services/IEmailService.js';
 import { IRealtimeService } from '../../../../shared/services/IRealtimeService.js';
 import { logger } from '../../../../shared/utils/logger.js';
-import { SUBSCRIPTION_EVENTS, publishEvent } from '../../../../infrastructure/graphql/pubsub.js';
-import { NotificationPreferences } from '../../../users/domain/value-objects/UserProfile.js';
+
 import { IUserProfileService } from '../../../users/application/services/IUserProfileService.js';
-import { INotificationPreferenceService } from './INotificationPreferenceService.js';
+import { NotificationPreferences } from '../../../users/domain/value-objects/UserProfile.js';
 import { IUserRepository } from '../../../users/infrastructure/repositories/IUserRepository.js';
+
 import {
   INotificationRepository,
   CreateNotificationDTO,
 } from '../../infrastructure/repositories/INotificationRepository.js';
+import { INotificationPreferenceService } from './INotificationPreferenceService.js';
 
 import {
   INotificationService,
@@ -714,25 +716,7 @@ export class NotificationService implements INotificationService {
     };
   }
 
-  /**
-   * Maps notification type to user preference key
-   */
-  private mapNotificationTypeToPreferenceKey(notificationType: NotificationType): string {
-    const keyMap: Record<NotificationType, string> = {
-      new_message: 'newMessage',
-      assignment_due: 'assignmentDue',
-      grade_posted: 'gradePosted',
-      course_update: 'courseUpdate',
-      announcement: 'announcement',
-      discussion_reply: 'discussionReply',
-      enrollment_confirmed: 'courseUpdate', // Map to courseUpdate as closest match
-      certificate_issued: 'gradePosted', // Map to gradePosted as it's achievement-related
-      payment_received: 'courseUpdate', // Map to courseUpdate as closest match
-      refund_processed: 'courseUpdate', // Map to courseUpdate as closest match
-    };
 
-    return keyMap[notificationType] || 'courseUpdate';
-  }
 
   /**
    * Gets action button text for email templates

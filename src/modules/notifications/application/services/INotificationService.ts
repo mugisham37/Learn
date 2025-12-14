@@ -46,7 +46,7 @@ export interface BatchNotificationData {
 /**
  * Email template data for notification emails
  */
-export interface NotificationEmailData {
+export interface NotificationEmailData extends Record<string, unknown> {
   recipientName: string;
   notificationTitle: string;
   notificationContent: string;
@@ -63,7 +63,7 @@ export interface PushNotificationData {
   body: string;
   icon?: string;
   badge?: number;
-  data?: Record<string, any>;
+  data?: Record<string, unknown>;
   clickAction?: string;
 }
 

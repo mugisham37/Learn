@@ -8,13 +8,12 @@
  */
 
 import { GraphQLError, GraphQLResolveInfo } from 'graphql';
+
 import {
-  AuthenticationError,
-  AuthorizationError,
-  ValidationError,
-  NotFoundError,
-} from '../../../../shared/errors/index.js';
-import { logger } from '../../../../shared/utils/logger.js';
+  Notification,
+  NotificationType,
+  Priority,
+} from '../../../../infrastructure/database/schema/notifications.schema.js';
 import {
   SUBSCRIPTION_EVENTS,
   createAsyncIterator,
@@ -23,16 +22,14 @@ import {
 } from '../../../../infrastructure/graphql/pubsub.js';
 import { requireAuth } from '../../../../infrastructure/graphql/utils.js';
 import { type GraphQLContext } from '../../../../infrastructure/graphql/apolloServer.js';
-import { INotificationService } from '../../application/services/INotificationService.js';
-import { INotificationPreferenceService } from '../../application/services/INotificationPreferenceService.js';
-import { INotificationRepository } from '../../infrastructure/repositories/INotificationRepository.js';
-import { IRealtimeService } from '../../../../shared/services/IRealtimeService.js';
-import { IUserRepository } from '../../../users/infrastructure/repositories/IUserRepository.js';
 import {
-  Notification,
-  NotificationType,
-  Priority,
-} from '../../../../infrastructure/database/schema/notifications.schema.js';
+  AuthenticationError,
+  AuthorizationError,
+  ValidationError,
+  NotFoundError,
+} from '../../../../shared/errors/index.js';
+import { logger } from '../../../../shared/utils/logger.js';
+
 import { NotificationPreferences } from '../../../users/domain/value-objects/UserProfile.js';
 
 /**
@@ -89,13 +86,48 @@ interface PageInfo {
 }
 
 /**
+ * Data sources interface for notifications
+ */
+interface NotificationDataSources {
+  notificationService: {
+    markAsRead: (notificationId: string, userId: string) => Promise<Notification>;
+  };
+  notificationRepository: {
+    findByRecipient: (
+      userId: string,
+      filters: Record<string, unknown>,
+      options: Record<string, unknown>
+    ) => Promise<{ items: Notification[]; total: number }>;
+    countUnreadByRecipient: (userId: string) => Promise<number>;
+    findById: (id: string) => Promise<Notification | null>;
+    markManyAsRead: (ids: string[]) => Promise<void>;
+    markAllAsReadByRecipient: (userId: string) => Promise<number>;
+    deleteExpired: () => Promise<number>;
+  };
+  notificationPreferenceService: {
+    getPreferences: (userId: string) => Promise<NotificationPreferences>;
+    updatePreferences: (userId: string, preferences: NotificationPreferences) => Promise<void>;
+  };
+  userRepository: {
+    findById: (id: string) => Promise<{ id: string; email: string } | null>;
+  };
+}
+
+/**
  * Utility function to get data sources
  */
-function getDataSources(context: GraphQLContext) {
+function getDataSources(context: GraphQLContext): NotificationDataSources {
   if (!context.dataSources) {
     throw new GraphQLError('Data sources not available');
   }
-  return context.dataSources;
+  return context.dataSources as NotificationDataSources;
+}
+
+/**
+ * Cursor data interface
+ */
+interface CursorData {
+  offset: number;
 }
 
 /**
@@ -121,7 +153,7 @@ function parsePagination(pagination?: PaginationInput): {
       // Decode cursor to get offset
       try {
         const decodedCursor = Buffer.from(pagination.after, 'base64').toString('utf-8');
-        const cursorData = JSON.parse(decodedCursor);
+        const cursorData = JSON.parse(decodedCursor) as CursorData;
         offset = cursorData.offset || 0;
       } catch (error) {
         logger.warn('Invalid cursor provided', { cursor: pagination.after });
@@ -134,7 +166,7 @@ function parsePagination(pagination?: PaginationInput): {
       // For backward pagination, we need to calculate offset differently
       try {
         const decodedCursor = Buffer.from(pagination.before, 'base64').toString('utf-8');
-        const cursorData = JSON.parse(decodedCursor);
+        const cursorData = JSON.parse(decodedCursor) as CursorData;
         offset = Math.max(0, (cursorData.offset || 0) - limit);
       } catch (error) {
         logger.warn('Invalid cursor provided', { cursor: pagination.before });
@@ -219,7 +251,7 @@ export const notificationResolvers = {
         const { limit, offset } = parsePagination(args.pagination);
 
         // Build filters
-        const filters: any = {};
+        const filters: Record<string, unknown> = {};
         if (args.filter?.notificationType) {
           filters.notificationType = args.filter.notificationType;
         }
@@ -285,7 +317,7 @@ export const notificationResolvers = {
      */
     getNotificationPreferences: async (
       _parent: unknown,
-      _args: {},
+      _args: Record<string, never>,
       context: GraphQLContext,
       _info: GraphQLResolveInfo
     ): Promise<NotificationPreferences> => {
@@ -573,7 +605,7 @@ export const notificationResolvers = {
 
         if (args.input?.notificationType || args.input?.olderThan) {
           // Mark specific notifications as read
-          const filters: any = { isRead: false };
+          const filters: Record<string, unknown> = { isRead: false };
 
           if (args.input.notificationType) {
             filters.notificationType = args.input.notificationType;
@@ -591,7 +623,7 @@ export const notificationResolvers = {
           );
 
           if (result.items.length > 0) {
-            const notificationIds = result.items.map((n) => n.id);
+            const notificationIds = result.items.map((n: Notification) => n.id);
             await notificationRepository.markManyAsRead(notificationIds);
             markedCount = notificationIds.length;
           } else {
@@ -702,7 +734,7 @@ export const notificationResolvers = {
      */
     deleteExpiredNotifications: async (
       _parent: unknown,
-      _args: {},
+      _args: Record<string, never>,
       context: GraphQLContext,
       _info: GraphQLResolveInfo
     ): Promise<number> => {
@@ -763,7 +795,7 @@ export const notificationResolvers = {
      */
     notificationReceived: {
       subscribe: withFilter(
-        (_parent: any, _args: any, context: GraphQLContext) => {
+        (_parent: unknown, _args: Record<string, unknown>, context: GraphQLContext) => {
           // Require authentication for subscriptions
           const user = requireAuth(context);
 
@@ -774,7 +806,7 @@ export const notificationResolvers = {
 
           return createAsyncIterator(SUBSCRIPTION_EVENTS.NOTIFICATION_RECEIVED);
         },
-        (payload: any, variables: any, context: GraphQLContext) => {
+        (payload: { userId: string }, variables: { userId: string }, context: GraphQLContext) => {
           // Users can only subscribe to their own notifications
           const user = requireAuth(context);
           return payload.userId === variables.userId && payload.userId === user.id;
@@ -787,7 +819,7 @@ export const notificationResolvers = {
      */
     notificationRead: {
       subscribe: withFilter(
-        (_parent: any, _args: any, context: GraphQLContext) => {
+        (_parent: unknown, _args: Record<string, unknown>, context: GraphQLContext) => {
           // Require authentication for subscriptions
           const user = requireAuth(context);
 
@@ -798,7 +830,7 @@ export const notificationResolvers = {
 
           return createAsyncIterator(SUBSCRIPTION_EVENTS.NOTIFICATION_READ);
         },
-        (payload: any, variables: any, context: GraphQLContext) => {
+        (payload: { userId: string }, variables: { userId: string }, context: GraphQLContext) => {
           // Users can only subscribe to their own notification updates
           const user = requireAuth(context);
           return payload.userId === variables.userId && payload.userId === user.id;
@@ -811,7 +843,7 @@ export const notificationResolvers = {
      */
     unreadCountChanged: {
       subscribe: withFilter(
-        (_parent: any, _args: any, context: GraphQLContext) => {
+        (_parent: unknown, _args: Record<string, unknown>, context: GraphQLContext) => {
           // Require authentication for subscriptions
           const user = requireAuth(context);
 
@@ -822,7 +854,7 @@ export const notificationResolvers = {
 
           return createAsyncIterator(SUBSCRIPTION_EVENTS.UNREAD_COUNT_CHANGED);
         },
-        (payload: any, variables: unknown, context: GraphQLContext) => {
+        (payload: { userId: string }, variables: { userId: string }, context: GraphQLContext) => {
           // Users can only subscribe to their own unread count updates
           const user = requireAuth(context);
           return payload.userId === variables.userId && payload.userId === user.id;
@@ -840,7 +872,7 @@ export const notificationResolvers = {
      */
     recipient: async (
       parent: Notification,
-      _args: {},
+      _args: Record<st
       context: GraphQLContext,
       _info: GraphQLResolveInfo
     ) => {

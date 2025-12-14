@@ -116,7 +116,7 @@ export class NotificationPreference {
       ];
 
       if (criticalTypes.includes(notificationType as NotificationType)) {
-        const hasEnabledChannel = channelPrefs.email || channelPrefs.push || channelPrefs.in_app;
+        const hasEnabledChannel = Boolean(channelPrefs.email || channelPrefs.push || channelPrefs.in_app);
         if (!hasEnabledChannel) {
           throw new Error(
             `At least one channel must be enabled for critical notification type: ${notificationType}`
@@ -144,12 +144,12 @@ export class NotificationPreference {
    * @returns NotificationPreference value object
    * @throws Error if JSON is invalid
    */
-  static fromJSON(json: any): NotificationPreference {
+  static fromJSON(json: unknown): NotificationPreference {
     if (!json || typeof json !== 'object') {
       throw new Error('Invalid JSON: must be an object');
     }
 
-    return NotificationPreference.create(json);
+    return NotificationPreference.create(json as Partial<NotificationPreferencesMap>);
   }
 
   /**
