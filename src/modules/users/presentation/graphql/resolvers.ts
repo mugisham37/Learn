@@ -8,36 +8,28 @@
  */
 
 import { GraphQLError } from 'graphql';
+
+import { User as DbUser } from '../../../../infrastructure/database/schema/users.schema.js';
+import { GraphQLContext } from '../../../../infrastructure/graphql/apolloServer.js';
+import {
+  requireAuth,
+  validateRequiredFields,
+  validatePasswordStrength,
+  createAuthenticationError,
+  createValidationError,
+} from '../../../../infrastructure/graphql/utils.js';
 import { IAuthService, RegisterDTO } from '../../application/services/IAuthService.js';
 import {
   IUserProfileService,
   UpdateProfileDTO,
 } from '../../application/services/IUserProfileService.js';
-import { IUserRepository } from '../../infrastructure/repositories/IUserRepository.js';
-import { User as DbUser } from '../../../../infrastructure/database/schema/users.schema.js';
 import { UserProfile, NotificationPreferences } from '../../domain/value-objects/UserProfile.js';
-import {
-  requireAuth,
-  requireOwnershipOrAdmin,
-  validateRequiredFields,
-  validatePasswordStrength,
-  withErrorHandling,
-  throwNotFound,
-  throwConflict,
-  createValidationError,
-  createAuthenticationError,
-  createGraphQLError,
-} from '../../../../infrastructure/graphql/utils.js';
+import { IUserRepository } from '../../infrastructure/repositories/IUserRepository.js';
 
 /**
- * GraphQL context interface
+ * Extended GraphQL context interface for user resolvers
  */
-export interface GraphQLContext {
-  user?: {
-    id: string;
-    email: string;
-    role: string;
-  };
+export interface UserGraphQLContext extends GraphQLContext {
   authService: IAuthService;
   userProfileService: IUserProfileService;
   userRepository: IUserRepository;
@@ -109,13 +101,7 @@ interface VerifyEmailInput {
   token: string;
 }
 
-interface RefreshTokenInput {
-  refreshToken: string;
-}
 
-interface LogoutInput {
-  refreshToken?: string;
-}
 
 // Note: requireAuth is now imported from GraphQL utilities
 
@@ -154,7 +140,7 @@ function mapRoleFromGraphQL(
     case 'ADMIN':
       return 'admin';
     default:
-      throw new Error(`Unknown GraphQL role: ${role}`);
+      throw new Error(`Unknown GraphQL role: ${String(role)}`);
   }
 }
 
@@ -166,7 +152,7 @@ export const userResolvers = {
     /**
      * Get current authenticated user
      */
-    me: async (_parent: any, _args: any, context: GraphQLContext): Promise<DbUser> => {
+    me: async (_parent: unknown, _args: Record<string, unknown>, context: UserGraphQLContext): Promise<DbUser> => {
       const authUser = requireAuth(context);
 
       try {
@@ -199,9 +185,9 @@ export const userResolvers = {
      * Get user by ID (requires appropriate permissions)
      */
     user: async (
-      _parent: any,
+      _parent: unknown,
       args: { id: string },
-      context: GraphQLContext
+      context: UserGraphQLContext
     ): Promise<DbUser | null> => {
       const authUser = requireAuth(context);
 
@@ -233,11 +219,11 @@ export const userResolvers = {
     /**
      * Register a new user
      */
-    register: withErrorHandling(
-      async (_parent: any, args: { input: RegisterInput }, context: GraphQLContext) => {
+    register: async (_parent: unknown, args: { input: RegisterInput }, context: UserGraphQLContext): Promise<{ accessToken: string; refreshToken: string; user: DbUser }> => {
+      try {
         // Validate required fields with proper error formatting
         validateRequiredFields(
-          args.input,
+          args.input as unknown as Record<string, unknown>,
           [
             { field: 'email', type: 'email' },
             { field: 'password', type: 'string', minLength: 8 },
@@ -272,25 +258,36 @@ export const userResolvers = {
             refreshToken: loginResult.refreshToken,
             user: loginResult.user,
           };
-        } catch (error: any) {
-          if (error.message?.includes('duplicate') || error.message?.includes('already exists')) {
-            throwConflict('Email already exists', 'email', context);
+        } catch (error: unknown) {
+          const errorMessage = error instanceof Error ? error.message : '';
+          if (errorMessage.includes('duplicate') || errorMessage.includes('already exists')) {
+            throw createValidationError('Email already exists', [{ field: 'email', message: 'Email already exists' }], context.requestId);
           }
 
           // Re-throw the error to be handled by withErrorHandling
+          throw error instanceof Error ? error : new Error('Unknown error');
+        }
+      } catch (error: unknown) {
+        if (error instanceof GraphQLError) {
           throw error;
         }
+        throw new GraphQLError('Registration failed', {
+          extensions: {
+            code: 'INTERNAL_ERROR',
+            http: { status: 500 },
+          },
+        });
       }
-    ),
+    },
 
     /**
      * Login user
      */
-    login: withErrorHandling(
-      async (_parent: any, args: { input: LoginInput }, context: GraphQLContext) => {
+    login: async (_parent: unknown, args: { input: LoginInput }, context: UserGraphQLContext): Promise<{ accessToken: string; refreshToken: string; user: DbUser }> => {
+      try {
         // Validate required fields
         validateRequiredFields(
-          args.input,
+          args.input as unknown as Record<string, unknown>,
           [
             { field: 'email', type: 'email' },
             { field: 'password', type: 'string', minLength: 1 },
@@ -309,8 +306,9 @@ export const userResolvers = {
             refreshToken: result.refreshToken,
             user: result.user,
           };
-        } catch (error: any) {
-          if (error.message?.includes('invalid') || error.message?.includes('credentials')) {
+        } catch (error: unknown) {
+          const errorMessage = error instanceof Error ? error.message : '';
+          if (errorMessage.includes('invalid') || errorMessage.includes('credentials')) {
             throw createAuthenticationError(
               'Invalid email or password',
               'invalid_credentials',
@@ -318,7 +316,7 @@ export const userResolvers = {
             );
           }
 
-          if (error.message?.includes('not verified')) {
+          if (errorMessage.includes('not verified')) {
             throw createAuthenticationError(
               'Email not verified',
               'email_not_verified',
@@ -327,10 +325,20 @@ export const userResolvers = {
           }
 
           // Re-throw the error to be handled by withErrorHandling
+          throw error instanceof Error ? error : new Error('Unknown error');
+        }
+      } catch (error: unknown) {
+        if (error instanceof GraphQLError) {
           throw error;
         }
+        throw new GraphQLError('Login failed', {
+          extensions: {
+            code: 'INTERNAL_ERROR',
+            http: { status: 500 },
+          },
+        });
       }
-    ),
+    },
 
     /**
      * Refresh access token
@@ -338,10 +346,10 @@ export const userResolvers = {
      * rather than cookies since GraphQL doesn't have direct access to HTTP context
      */
     refreshToken: async (
-      _parent: any,
+      _parent: unknown,
       args: { input: { refreshToken: string } },
-      context: GraphQLContext
-    ) => {
+      context: UserGraphQLContext
+    ): Promise<{ accessToken: string; refreshToken: string }> => {
       try {
         if (!args.input.refreshToken) {
           throw new GraphQLError('Refresh token is required', {
@@ -360,11 +368,12 @@ export const userResolvers = {
           // Note: We don't return user here since it's not part of the refresh token result
           // The client should use the new access token to query for user data if needed
         };
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : '';
         if (
-          error.message?.includes('invalid') ||
-          error.message?.includes('expired') ||
-          error.message?.includes('revoked')
+          errorMessage.includes('invalid') ||
+          errorMessage.includes('expired') ||
+          errorMessage.includes('revoked')
         ) {
           throw new GraphQLError('Invalid or expired refresh token', {
             extensions: {
@@ -387,9 +396,9 @@ export const userResolvers = {
      * Logout user
      */
     logout: async (
-      _parent: any,
+      _parent: unknown,
       args: { input?: { refreshToken?: string } },
-      context: GraphQLContext
+      context: UserGraphQLContext
     ): Promise<boolean> => {
       const authUser = requireAuth(context);
 
@@ -413,9 +422,9 @@ export const userResolvers = {
      * Verify email
      */
     verifyEmail: async (
-      _parent: any,
+      _parent: unknown,
       args: { input: VerifyEmailInput },
-      context: GraphQLContext
+      context: UserGraphQLContext
     ): Promise<boolean> => {
       try {
         // Validate input
@@ -430,12 +439,13 @@ export const userResolvers = {
 
         await context.authService.verifyEmail(args.input.token.trim());
         return true;
-      } catch (error: any) {
+      } catch (error: unknown) {
         if (error instanceof GraphQLError) {
           throw error;
         }
 
-        if (error.message?.includes('invalid') || error.message?.includes('expired')) {
+        const errorMessage = error instanceof Error ? error.message : '';
+        if (errorMessage.includes('invalid') || errorMessage.includes('expired')) {
           throw new GraphQLError('Invalid or expired verification token', {
             extensions: {
               code: 'BAD_USER_INPUT',
@@ -457,9 +467,9 @@ export const userResolvers = {
      * Request password reset
      */
     requestPasswordReset: async (
-      _parent: any,
+      _parent: unknown,
       args: { input: RequestPasswordResetInput },
-      context: GraphQLContext
+      context: UserGraphQLContext
     ): Promise<boolean> => {
       try {
         // Validate input
@@ -499,9 +509,9 @@ export const userResolvers = {
      * Reset password
      */
     resetPassword: async (
-      _parent: any,
+      _parent: unknown,
       args: { input: ResetPasswordInput },
-      context: GraphQLContext
+      context: UserGraphQLContext
     ): Promise<boolean> => {
       try {
         // Validate input
@@ -525,12 +535,13 @@ export const userResolvers = {
 
         await context.authService.resetPassword(args.input.token.trim(), args.input.newPassword);
         return true;
-      } catch (error: any) {
+      } catch (error: unknown) {
         if (error instanceof GraphQLError) {
           throw error;
         }
 
-        if (error.message?.includes('invalid') || error.message?.includes('expired')) {
+        const errorMessage = error instanceof Error ? error.message : '';
+        if (errorMessage.includes('invalid') || errorMessage.includes('expired')) {
           throw new GraphQLError('Invalid or expired reset token', {
             extensions: {
               code: 'BAD_USER_INPUT',
@@ -539,7 +550,7 @@ export const userResolvers = {
           });
         }
 
-        if (error.message?.includes('validation') || error.message?.includes('password')) {
+        if (errorMessage.includes('validation') || errorMessage.includes('password')) {
           throw new GraphQLError('Password does not meet requirements', {
             extensions: {
               code: 'BAD_USER_INPUT',
@@ -561,9 +572,9 @@ export const userResolvers = {
      * Update user profile
      */
     updateProfile: async (
-      _parent: any,
+      _parent: unknown,
       args: { input: UpdateProfileInput },
-      context: GraphQLContext
+      context: UserGraphQLContext
     ): Promise<UserProfile> => {
       const authUser = requireAuth(context);
 
@@ -580,8 +591,9 @@ export const userResolvers = {
           updateData
         );
         return updatedProfile;
-      } catch (error: any) {
-        if (error.message?.includes('validation') || error.message?.includes('invalid')) {
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : '';
+        if (errorMessage.includes('validation') || errorMessage.includes('invalid')) {
           throw new GraphQLError('Invalid profile data', {
             extensions: {
               code: 'BAD_USER_INPUT',
@@ -590,7 +602,7 @@ export const userResolvers = {
           });
         }
 
-        if (error.message?.includes('not found')) {
+        if (errorMessage.includes('not found')) {
           throw new GraphQLError('User not found', {
             extensions: {
               code: 'NOT_FOUND',
@@ -612,9 +624,9 @@ export const userResolvers = {
      * Update notification preferences
      */
     updateNotificationPreferences: async (
-      _parent: any,
+      _parent: unknown,
       args: { input: UpdateNotificationPreferencesInput },
-      context: GraphQLContext
+      context: UserGraphQLContext
     ): Promise<UserProfile> => {
       const authUser = requireAuth(context);
 
@@ -630,8 +642,9 @@ export const userResolvers = {
           preferences
         );
         return updatedProfile;
-      } catch (error: any) {
-        if (error.message?.includes('validation') || error.message?.includes('invalid')) {
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : '';
+        if (errorMessage.includes('validation') || errorMessage.includes('invalid')) {
           throw new GraphQLError('Invalid notification preferences', {
             extensions: {
               code: 'BAD_USER_INPUT',
@@ -640,7 +653,7 @@ export const userResolvers = {
           });
         }
 
-        if (error.message?.includes('not found')) {
+        if (errorMessage.includes('not found')) {
           throw new GraphQLError('User not found', {
             extensions: {
               code: 'NOT_FOUND',
@@ -661,12 +674,12 @@ export const userResolvers = {
 
   // Field resolvers
   User: {
-    role: (user: DbUser) => mapRoleToGraphQL(user.role),
+    role: (user: DbUser): 'STUDENT' | 'EDUCATOR' | 'ADMIN' => mapRoleToGraphQL(user.role),
 
     profile: async (
       user: DbUser,
-      _args: any,
-      context: GraphQLContext
+      _args: Record<string, unknown>,
+      context: UserGraphQLContext
     ): Promise<UserProfile | null> => {
       try {
         const profile = await context.userProfileService.getUserProfile(user.id);

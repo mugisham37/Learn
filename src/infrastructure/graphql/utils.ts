@@ -18,6 +18,16 @@ import {
   createGraphQLError,
 } from './errorFormatter.js';
 
+// Re-export error creation functions for convenience
+export {
+  createAuthenticationError,
+  createAuthorizationError,
+  createValidationError,
+  createNotFoundError,
+  createConflictError,
+  createGraphQLError,
+};
+
 /**
  * Requires authentication for a resolver
  * Throws authentication error if user is not authenticated

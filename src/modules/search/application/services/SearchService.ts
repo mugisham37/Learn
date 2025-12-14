@@ -8,14 +8,14 @@
  * Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 8.7
  */
 
-import { ExternalServiceError } from '../../../../shared/errors/index.js';
-import { comprehensiveCacheService } from '../../../../shared/services/ComprehensiveCacheService.js';
 import type {
   ISearchRepository,
   CourseSearchDocument,
   LessonSearchDocument,
   SearchResult,
 } from '../../../../infrastructure/search/ISearchRepository.js';
+import { ExternalServiceError } from '../../../../shared/errors/index.js';
+import { comprehensiveCacheService } from '../../../../shared/services/ComprehensiveCacheService.js';
 import type { Course } from '../../../courses/domain/entities/Course.js';
 import type { Lesson } from '../../../courses/domain/entities/Lesson.js';
 import type { SearchRepositoryWithFacets } from '../../infrastructure/types/ElasticsearchTypes';

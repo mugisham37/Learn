@@ -20,8 +20,8 @@ export interface CreateUserProfileDTO {
   avatarUrl?: string;
   timezone?: string;
   language?: string;
-  notificationPreferences?: Record<string, any>;
-  privacySettings?: Record<string, any>;
+  notificationPreferences?: Record<string, unknown>;
+  privacySettings?: Record<string, unknown>;
 }
 
 /**
@@ -33,8 +33,8 @@ export interface UpdateUserProfileDTO {
   avatarUrl?: string;
   timezone?: string;
   language?: string;
-  notificationPreferences?: Record<string, any>;
-  privacySettings?: Record<string, any>;
+  notificationPreferences?: Record<string, unknown>;
+  privacySettings?: Record<string, unknown>;
 }
 
 /**

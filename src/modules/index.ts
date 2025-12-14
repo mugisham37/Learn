@@ -6,6 +6,7 @@
  */
 
 import { FastifyInstance } from 'fastify';
+
 import { logger } from '../shared/utils/logger';
 
 // Import module plugins

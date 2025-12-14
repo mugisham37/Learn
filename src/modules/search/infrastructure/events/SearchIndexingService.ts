@@ -7,11 +7,12 @@
  * Requirements: 8.7 - Search indexing strategy implementation
  */
 
-import type { ISearchService } from '../../application/services/ISearchService.js';
-import type { CourseEvent } from '../../../courses/domain/events/CourseEvents.js';
 import { eventBus } from '../../../../shared/services/EventBus.js';
 import { SearchIndexingQueue } from '../../../../shared/services/SearchIndexingQueue.js';
 import { logger } from '../../../../shared/utils/logger.js';
+import type { CourseEvent } from '../../../courses/domain/events/CourseEvents.js';
+import type { ISearchService } from '../../application/services/ISearchService.js';
+
 import { SearchIndexingEventHandlers } from './SearchIndexingEventHandlers.js';
 
 /**

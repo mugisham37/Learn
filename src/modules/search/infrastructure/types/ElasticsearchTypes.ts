@@ -100,7 +100,7 @@ export interface SortClause {
   [field: string]: {
     order: 'asc' | 'desc';
     mode?: 'min' | 'max' | 'sum' | 'avg' | 'median';
-    missing?: '_first' | '_last' | string | number;
+    missing?: string | number;
   } | 'asc' | 'desc';
 }
 

@@ -8,10 +8,11 @@
  */
 
 import DataLoader from 'dataloader';
-import { IUserRepository } from '../../infrastructure/repositories/IUserRepository.js';
-import { IUserProfileService } from '../../application/services/IUserProfileService.js';
+
 import { User } from '../../../../infrastructure/database/schema/users.schema.js';
+import { IUserProfileService } from '../../application/services/IUserProfileService.js';
 import { UserProfile } from '../../domain/value-objects/UserProfile.js';
+import { IUserRepository } from '../../infrastructure/repositories/IUserRepository.js';
 
 /**
  * DataLoader context interface for Users module

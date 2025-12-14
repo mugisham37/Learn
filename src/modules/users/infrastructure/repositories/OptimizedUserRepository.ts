@@ -6,9 +6,10 @@
  * Requirements: 15.1 - Database query optimization
  */
 
-import { eq, and, sql, ilike } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { Redis } from 'ioredis';
+
 import {
   users,
   userProfiles,
@@ -46,7 +47,7 @@ export class OptimizedUserRepository extends OptimizedBaseRepository<User> {
   protected table = users;
   protected primaryKey = 'id';
 
-  constructor(db: NodePgDatabase<any>, redis: Redis) {
+  constructor(db: NodePgDatabase<Record<string, never>>, redis: Redis) {
     super(db, redis, {
       enabled: true,
       ttl: 300, // 5 minutes
@@ -272,40 +273,41 @@ export class OptimizedUserRepository extends OptimizedBaseRepository<User> {
       logger.warn('Slow user search query', {
         filters,
         executionTime,
-        resultCount: results.length,
+        resultCount: results.rows?.length || 0,
       });
     }
 
     // Transform results
-    const items: UserWithProfile[] = results.slice(0, limit).map((row: any) => {
+    const resultRows = results.rows || [];
+    const items: UserWithProfile[] = resultRows.slice(0, limit).map((row: Record<string, unknown>) => {
       const user: UserWithProfile = {
-        id: row.id,
-        email: row.email,
-        passwordHash: row.password_hash,
-        role: row.role,
-        emailVerified: row.email_verified,
-        verificationToken: row.verification_token,
-        passwordResetToken: row.password_reset_token,
-        passwordResetExpires: row.password_reset_expires,
-        lastLogin: row.last_login,
-        createdAt: row.created_at,
-        updatedAt: row.updated_at,
-        deletedAt: row.deleted_at,
+        id: String(row['id']),
+        email: String(row['email']),
+        passwordHash: String(row['password_hash']),
+        role: String(row['role']) as 'student' | 'educator' | 'admin',
+        emailVerified: Boolean(row['email_verified']),
+        verificationToken: row['verification_token'] ? String(row['verification_token']) : null,
+        passwordResetToken: row['password_reset_token'] ? String(row['password_reset_token']) : null,
+        passwordResetExpires: row['password_reset_expires'] ? new Date(String(row['password_reset_expires'])) : null,
+        lastLogin: row['last_login'] ? new Date(String(row['last_login'])) : null,
+        createdAt: new Date(String(row['created_at'])),
+        updatedAt: new Date(String(row['updated_at'])),
+        deletedAt: row['deleted_at'] ? new Date(String(row['deleted_at'])) : null,
       };
 
-      if (row.profile_id) {
+      if (row['profile_id']) {
         user.profile = {
-          id: row.profile_id,
-          userId: row.id,
-          fullName: row.full_name,
-          bio: row.bio,
-          avatarUrl: row.avatar_url,
-          timezone: row.timezone,
-          language: row.language,
-          notificationPreferences: row.notification_preferences,
-          privacySettings: row.privacy_settings,
-          createdAt: row.profile_created_at,
-          updatedAt: row.profile_updated_at,
+          id: String(row['profile_id']),
+          userId: String(row['id']),
+          fullName: String(row['full_name']),
+          bio: row['bio'] ? String(row['bio']) : null,
+          avatarUrl: row['avatar_url'] ? String(row['avatar_url']) : null,
+          timezone: String(row['timezone']),
+          language: String(row['language']),
+          notificationPreferences: row['notification_preferences'] as Record<string, unknown> || {},
+          privacySettings: row['privacy_settings'] as Record<string, unknown> || {},
+          createdAt: new Date(String(row['profile_created_at'])),
+          updatedAt: new Date(String(row['profile_updated_at'])),
         };
       }
 
@@ -313,10 +315,10 @@ export class OptimizedUserRepository extends OptimizedBaseRepository<User> {
     });
 
     // Determine pagination info
-    const hasMore = results.length > limit;
+    const hasMore = resultRows.length > limit;
     const nextCursor =
       hasMore && items.length > 0
-        ? this.generateCursor(items[items.length - 1], orderBy)
+        ? this.generateCursor(items[items.length - 1]!, orderBy)
         : undefined;
 
     return {
@@ -407,7 +409,12 @@ export class OptimizedUserRepository extends OptimizedBaseRepository<User> {
     const cached = await this.getFromCache(cacheKey, 'stats');
 
     if (cached) {
-      return cached;
+      return cached as unknown as {
+        totalUsers: number;
+        usersByRole: Record<string, number>;
+        recentSignups: number;
+        verifiedUsers: number;
+      };
     }
 
     // Use optimized queries with indexes
@@ -439,7 +446,7 @@ export class OptimizedUserRepository extends OptimizedBaseRepository<User> {
       .where(and(sql`created_at >= ${weekAgo}`, sql`deleted_at IS NULL`));
 
     const stats = {
-      totalUsers: totalResult.count,
+      totalUsers: totalResult?.count || 0,
       usersByRole: roleResults.reduce(
         (acc, { role, count }) => {
           acc[role] = count;
@@ -447,8 +454,8 @@ export class OptimizedUserRepository extends OptimizedBaseRepository<User> {
         },
         {} as Record<string, number>
       ),
-      recentSignups: recentResult.count,
-      verifiedUsers: verifiedResult.count,
+      recentSignups: recentResult?.count || 0,
+      verifiedUsers: verifiedResult?.count || 0,
     };
 
     // Cache for 5 minutes

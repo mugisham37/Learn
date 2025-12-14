@@ -11,19 +11,20 @@
 import { eq } from 'drizzle-orm';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 
-import { getWriteDb, getReadDb } from '../../../../infrastructure/database/index.js';
-import {
-  userProfiles,
-  UserProfile,
-  NewUserProfile,
-} from '../../../../infrastructure/database/schema/users.schema.js';
 import {
   cache,
   buildCacheKey,
   CachePrefix,
   CacheTTL,
 } from '../../../../infrastructure/cache/index.js';
+import { getWriteDb, getReadDb } from '../../../../infrastructure/database/index.js';
+import {
+  userProfiles,
+  UserProfile,
+  NewUserProfile,
+} from '../../../../infrastructure/database/schema/users.schema.js';
 import { DatabaseError, ConflictError, NotFoundError } from '../../../../shared/errors/index.js';
+
 import {
   IUserProfileRepository,
   CreateUserProfileDTO,

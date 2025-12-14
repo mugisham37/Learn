@@ -14,10 +14,10 @@ import {
   NotFoundError,
   ExternalServiceError,
 } from '../../../../shared/errors/index.js';
-import { sanitizeByContentType } from '../../../../shared/utils/sanitization.js';
-import { logger } from '../../../../shared/utils/logger.js';
-import { IS3Service } from '../../../../shared/services/IS3Service.js';
 import { IImageProcessingService } from '../../../../shared/services/IImageProcessingService.js';
+import { IS3Service } from '../../../../shared/services/IS3Service.js';
+import { logger } from '../../../../shared/utils/logger.js';
+import { sanitizeByContentType } from '../../../../shared/utils/sanitization.js';
 import {
   UserProfile as UserProfileEntity,
   NotificationPreferences,
@@ -25,6 +25,7 @@ import {
 } from '../../domain/value-objects/UserProfile.js';
 import { IUserProfileRepository } from '../../infrastructure/repositories/IUserProfileRepository.js';
 import { IUserRepository } from '../../infrastructure/repositories/IUserRepository.js';
+
 import {
   IUserProfileService,
   UpdateProfileDTO,
@@ -335,7 +336,7 @@ export class UserProfileService implements IUserProfileService {
         profileData = await this.userProfileRepository.create({
           userId,
           fullName: 'Unknown User',
-          notificationPreferences: preferences,
+          notificationPreferences: preferences as Record<string, unknown>,
         });
       } else {
         // Merge with existing preferences to preserve unspecified settings
@@ -348,7 +349,7 @@ export class UserProfileService implements IUserProfileService {
 
         // Update existing profile
         profileData = await this.userProfileRepository.update(userId, {
-          notificationPreferences: mergedPreferences,
+          notificationPreferences: mergedPreferences as Record<string, unknown>,
         });
       }
 
@@ -411,7 +412,10 @@ export class UserProfileService implements IUserProfileService {
         updatedPreferences[channel] = {};
       }
 
-      updatedPreferences[channel]![notificationType] = enabled;
+      const channelPrefs = updatedPreferences[channel];
+      if (channelPrefs && typeof channelPrefs === 'object') {
+        (channelPrefs as Record<string, boolean>)[notificationType] = enabled;
+      }
 
       // Update the full preferences
       const profile = await this.updateNotificationPreferences(userId, updatedPreferences);
@@ -567,10 +571,11 @@ export class UserProfileService implements IUserProfileService {
 
     // Merge each channel
     for (const [channel, settings] of Object.entries(updates)) {
-      if (settings && typeof settings === 'object') {
-        merged[channel as keyof NotificationPreferences] = {
-          ...(merged[channel as keyof NotificationPreferences] || {}),
-          ...settings,
+      if (settings && typeof settings === 'object' && channel in merged) {
+        const channelKey = channel as keyof NotificationPreferences;
+        merged[channelKey] = {
+          ...(merged[channelKey] || {}),
+          ...(settings as Record<string, boolean>),
         };
       }
     }
@@ -638,7 +643,7 @@ export class UserProfileService implements IUserProfileService {
       }
 
       if (settings && typeof settings === 'object') {
-        for (const [type, enabled] of Object.entries(settings)) {
+        for (const [type, enabled] of Object.entries(settings as Record<string, unknown>)) {
           if (!validTypes.includes(type)) {
             throw new ValidationError(`Invalid notification type: ${type}`);
           }
