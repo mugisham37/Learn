@@ -40,7 +40,7 @@ export class UserDataLoaders {
       {
         cache: true,
         maxBatchSize: 100,
-        batchScheduleFn: (callback: () => void) => setTimeout(callback, 10),
+        batchScheduleFn: (callback: () => void): NodeJS.Timeout => setTimeout(callback, 10),
       }
     );
 
@@ -61,7 +61,7 @@ export class UserDataLoaders {
       {
         cache: true,
         maxBatchSize: 50,
-        batchScheduleFn: (callback: () => void) => setTimeout(callback, 10),
+        batchScheduleFn: (callback: () => void): NodeJS.Timeout => setTimeout(callback, 10),
       }
     );
 
@@ -74,7 +74,7 @@ export class UserDataLoaders {
       {
         cache: true,
         maxBatchSize: 100,
-        batchScheduleFn: (callback: () => void) => setTimeout(callback, 10),
+        batchScheduleFn: (callback: () => void): NodeJS.Timeout => setTimeout(callback, 10),
       }
     );
   }

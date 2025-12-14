@@ -8,7 +8,8 @@
  */
 
 import { ApolloServerPlugin, GraphQLRequestListener } from '@apollo/server';
-import { GraphQLError } from 'graphql';
+
+// import { GraphQLError } from 'graphql';
 import {
   generateETag,
   buildCacheControlHeader,
@@ -284,7 +285,7 @@ export function createGraphQLCachingPlugin(): ApolloServerPlugin {
 /**
  * Create cache-aware GraphQL context
  */
-export function createCacheAwareContext(baseContext: any): any {
+export function createCacheAwareContext(baseContext: any): unknown {
   return {
     ...baseContext,
     cache: {

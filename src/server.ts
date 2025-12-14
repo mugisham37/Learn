@@ -13,8 +13,8 @@ import Fastify, { FastifyInstance, FastifyServerOptions } from 'fastify';
 
 import { config } from './config/index.js';
 import { createSocketServer, closeSocketServer } from './infrastructure/websocket/index.js';
-import { logRequest, logResponse } from './shared/middleware/index.js';
 import { registerCSRFProtection } from './shared/middleware/csrf.js';
+import { logRequest, logResponse } from './shared/middleware/index.js';
 import {
   registerGlobalRateLimit,
   registerAdaptiveRateLimit,

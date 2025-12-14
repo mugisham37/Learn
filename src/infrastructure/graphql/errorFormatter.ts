@@ -10,7 +10,6 @@
 import { GraphQLError, GraphQLFormattedError } from 'graphql';
 
 import { config } from '../../config/index.js';
-import { logger } from '../../shared/utils/logger.js';
 import {
   AppError,
   ValidationError,
@@ -24,6 +23,7 @@ import {
   isOperationalError,
   sanitizeError,
 } from '../../shared/errors/index.js';
+import { logger } from '../../shared/utils/logger.js';
 
 /**
  * GraphQL Error Extension interface

@@ -214,7 +214,7 @@ function calculateQueryComplexity(document: any): number {
 /**
  * Recursively count selections in a selection set
  */
-function countSelections(selectionSet: any): number {
+function countSelections(selectionSet: unknown): number {
   let count = 0;
 
   if (selectionSet.selections) {

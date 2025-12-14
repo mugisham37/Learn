@@ -384,7 +384,7 @@ export function withResponseOptimization<TArgs = any, TResult = any>(
   return async (
     parent: any,
     args: TArgs,
-    context: any,
+    context: unknown,
     info: GraphQLResolveInfo
   ): Promise<TResult> => {
     const result = await resolver(parent, args, context, info);

@@ -246,7 +246,7 @@ export function createExecutionTimeTracker() {
           }
         },
 
-        async didResolveOperation(requestContext: any) {
+        async didResolveOperation(requestContext: unknown) {
           const requestId = requestContext.request.http?.requestId || 'unknown';
           startTimes.set(requestId, Date.now());
         },

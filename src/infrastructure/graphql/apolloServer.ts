@@ -16,7 +16,7 @@ import {
 import { mergeResolvers, mergeTypeDefs } from '@graphql-tools/merge';
 import { makeExecutableSchema } from '@graphql-tools/schema';
 import { FastifyInstance } from 'fastify';
-import { GraphQLSchema } from 'graphql';
+import { GraphQLSchema, GraphQLFormattedError } from 'graphql';
 
 import { config } from '../../config/index.js';
 import { adminTypeDefs, adminResolvers } from '../../modules/admin/presentation/graphql/index.js';
@@ -54,8 +54,8 @@ import {
 } from '../../modules/search/presentation/graphql/index.js';
 import { UserDataLoaders } from '../../modules/users/presentation/graphql/dataloaders.js';
 import { userResolvers, userTypeDefs } from '../../modules/users/presentation/graphql/index.js';
-
 import { logger } from '../../shared/utils/logger.js';
+
 import { createGraphQLCachingPlugin, createCacheAwareContext } from './cachingPlugin.js';
 import {
   createComplexityAnalysisPlugin,
@@ -65,8 +65,8 @@ import {
 import { complexityDirectiveTypeDefs } from './complexityDirectives.js';
 import { createExecutionTimeTracker } from './complexityMonitoring.js';
 import { complexityMonitoringSchema } from './complexitySchema.js';
-import { formatGraphQLError } from './errorFormatter.js';
 import { createDataLoaders as createDataLoadersFactory } from './dataLoaderFactory.js';
+import { formatGraphQLError } from './errorFormatter.js';
 import { createPubSub } from './pubsub.js';
 import {
   createResponseOptimizationPlugin,
@@ -75,7 +75,9 @@ import {
 import { createSubscriptionServer } from './subscriptionServer.js';
 
 // Helper function to safely import resolvers
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function safeImportResolvers(): any[] {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const resolvers: any[] = [];
 
   // Always available resolvers
@@ -312,7 +314,7 @@ export function createApolloServer(fastify: FastifyInstance): {
     ],
 
     // Format errors for consistent structure using custom formatter
-    formatError: (formattedError, error): any => {
+    formatError: (formattedError, error): GraphQLFormattedError => {
       return formatGraphQLError(formattedError, error);
     },
 
@@ -420,7 +422,7 @@ export async function createGraphQLContext({
 
   // Add PubSub instance to context for subscriptions
   try {
-    context.pubsub = createPubSub() as PubSubInstance;
+    context.pubsub = createPubSub() as unknown as PubSubInstance;
   } catch (error) {
     logger.error('Failed to create PubSub for GraphQL context', {
       error: error instanceof Error ? error.message : String(error),

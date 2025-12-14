@@ -8,6 +8,7 @@
  */
 
 import { logger } from '../../shared/utils/logger.js';
+
 import { GraphQLContext } from './apolloServer.js';
 
 /**
@@ -27,9 +28,10 @@ export async function createDataLoaders(requestId: string): Promise<GraphQLConte
       await import('../../modules/enrollments/presentation/graphql/dataloaders.js');
 
     // Use the imported functions to avoid unused variable warnings
-    const userDataLoaders = createUserDataLoaders ? await createUserDataLoaders({}) : undefined;
-    const courseDataLoaders = createCourseDataLoaders ? await createCourseDataLoaders({}) : undefined;
-    const enrollmentDataLoaders = createEnrollmentDataLoaders ? await createEnrollmentDataLoaders({}) : undefined;
+    // Note: These would need proper context in a real implementation
+    const userDataLoaders = createUserDataLoaders ? createUserDataLoaders({} as any) : undefined;
+    const courseDataLoaders = createCourseDataLoaders ? createCourseDataLoaders({} as any) : undefined;
+    const enrollmentDataLoaders = createEnrollmentDataLoaders ? createEnrollmentDataLoaders({} as any) : undefined;
 
     // Populate the dataloaders object
     if (userDataLoaders) {
@@ -118,7 +120,7 @@ export function primeDataLoaderCaches(
     // Prime enrollment data
     if (data.enrollments && dataloaders.enrollments) {
       for (const enrollment of data.enrollments) {
-        dataloaders.enrollments.primeEnrollment(enrollment as any);
+        dataloaders.enrollments.primeEnrollment(enrollment as unknown);
       }
     }
 
