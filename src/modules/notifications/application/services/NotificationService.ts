@@ -22,17 +22,15 @@ import {
 import { IEmailService, EmailOptions } from '../../../../shared/services/IEmailService.js';
 import { IRealtimeService } from '../../../../shared/services/IRealtimeService.js';
 import { logger } from '../../../../shared/utils/logger.js';
-
 import { IUserProfileService } from '../../../users/application/services/IUserProfileService.js';
 import { NotificationPreferences } from '../../../users/domain/value-objects/UserProfile.js';
 import { IUserRepository } from '../../../users/infrastructure/repositories/IUserRepository.js';
-
 import {
   INotificationRepository,
   CreateNotificationDTO,
 } from '../../infrastructure/repositories/INotificationRepository.js';
-import { INotificationPreferenceService } from './INotificationPreferenceService.js';
 
+import { INotificationPreferenceService } from './INotificationPreferenceService.js';
 import {
   INotificationService,
   CreateNotificationData,

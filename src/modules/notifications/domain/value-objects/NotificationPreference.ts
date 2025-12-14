@@ -100,7 +100,8 @@ export class NotificationPreference {
       // Validate channel preferences structure
       const requiredChannels: (keyof ChannelPreferences)[] = ['email', 'push', 'in_app'];
       for (const channel of requiredChannels) {
-        if (typeof channelPrefs[channel] !== 'boolean') {
+        const channelValue = (channelPrefs as Record<string, unknown>)[channel];
+        if (typeof channelValue !== 'boolean') {
           throw new Error(`Invalid ${channel} preference for ${notificationType}: must be boolean`);
         }
       }
@@ -116,7 +117,8 @@ export class NotificationPreference {
       ];
 
       if (criticalTypes.includes(notificationType as NotificationType)) {
-        const hasEnabledChannel = Boolean(channelPrefs.email || channelPrefs.push || channelPrefs.in_app);
+        const channelPrefsTyped = channelPrefs as ChannelPreferences;
+        const hasEnabledChannel = Boolean(channelPrefsTyped.email || channelPrefsTyped.push || channelPrefsTyped.in_app);
         if (!hasEnabledChannel) {
           throw new Error(
             `At least one channel must be enabled for critical notification type: ${notificationType}`

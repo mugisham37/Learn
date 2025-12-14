@@ -334,7 +334,7 @@ export class PaymentService implements IPaymentService {
       if (this.notificationService) {
         await this.notificationService.createNotification({
           recipientId: enrollment.studentId,
-          notificationType: 'refund_processed' as any,
+          notificationType: 'refund_processed',
           title: 'Refund Processed',
           content: `Your refund of $${refundAmount} has been processed and will appear in your account within 5-10 business days.`,
           metadata: {
@@ -354,10 +354,10 @@ export class PaymentService implements IPaymentService {
       return Refund.fromData({
         id: refund.id,
         paymentId: refund.paymentId,
-        enrollmentId: refund.enrollmentId,
-        stripeRefundId: refund.stripeRefundId,
+        enrollmentId: refund.enrollmentId ?? undefined,
+        stripeRefundId: refund.stripeRefundId ?? undefined,
         amount: refund.amount,
-        reason: refund.reason,
+        reason: refund.reason ?? undefined,
         status: refund.status,
         createdAt: refund.createdAt,
         updatedAt: refund.updatedAt,
@@ -425,7 +425,7 @@ export class PaymentService implements IPaymentService {
         stripeSubscriptionId: stripeSubscription.id,
         stripeCustomerId: customer.id,
         planId: params.planId,
-        status: stripeSubscription.status as any,
+        status: stripeSubscription.status,
         currentPeriodStart: new Date(stripeSubscription.current_period_start * 1000),
         currentPeriodEnd: new Date(stripeSubscription.current_period_end * 1000),
         cancelAtPeriodEnd: stripeSubscription.cancel_at_period_end,
@@ -492,7 +492,7 @@ export class PaymentService implements IPaymentService {
 
       // Update subscription record
       const updatedSubscription = await this.subscriptionRepository.update(subscription.id, {
-        status: stripeSubscription.status as any,
+        status: stripeSubscription.status,
         cancelAtPeriodEnd: stripeSubscription.cancel_at_period_end,
       });
 
@@ -500,7 +500,7 @@ export class PaymentService implements IPaymentService {
       if (this.notificationService) {
         await this.notificationService.createNotification({
           recipientId: subscription.userId,
-          notificationType: 'subscription_canceled' as any,
+          notificationType: 'subscription_canceled',
           title: 'Subscription Canceled',
           content: params.cancelAtPeriodEnd
             ? 'Your subscription will be canceled at the end of the current billing period.'
@@ -550,7 +550,13 @@ export class PaymentService implements IPaymentService {
   /**
    * Gets payment history for a user
    */
-  async getPaymentHistory(userId: string, page: number, limit: number) {
+  async getPaymentHistory(userId: string, page: number, limit: number): Promise<{
+    payments: Payment[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
     try {
       if (!userId) {
         throw new ValidationError('User ID is required');
@@ -568,14 +574,14 @@ export class PaymentService implements IPaymentService {
           Payment.fromData({
             id: payment.id,
             userId: payment.userId,
-            courseId: payment.courseId,
-            stripePaymentIntentId: payment.stripePaymentIntentId,
-            stripeCheckoutSessionId: payment.stripeCheckoutSessionId,
+            courseId: payment.courseId ?? undefined,
+            stripePaymentIntentId: payment.stripePaymentIntentId ?? undefined,
+            stripeCheckoutSessionId: payment.stripeCheckoutSessionId ?? undefined,
             amount: payment.amount,
             currency: payment.currency,
             status: payment.status,
-            paymentMethod: payment.paymentMethod,
-            metadata: payment.metadata as Record<string, any>,
+            paymentMethod: payment.paymentMethod ?? undefined,
+            metadata: payment.metadata as Record<string, unknown>,
             createdAt: payment.createdAt,
             updatedAt: payment.updatedAt,
           })
@@ -650,7 +656,17 @@ export class PaymentService implements IPaymentService {
   /**
    * Validates refund eligibility for an enrollment
    */
-  async validateRefundEligibility(enrollmentId: string) {
+  async validateRefundEligibility(enrollmentId: string): Promise<{
+    eligible: boolean;
+    reason?: string;
+    maxRefundAmount?: string;
+    refundPolicy: {
+      fullRefundDays: number;
+      contentConsumptionThreshold: number;
+      minimumRefundPercentage: number;
+      administrativeFeePercentage: number;
+    };
+  }> {
     const enrollment = await this.enrollmentRepository.findById(enrollmentId);
     if (!enrollment) {
       throw new NotFoundError('Enrollment not found');
@@ -742,14 +758,14 @@ export class PaymentService implements IPaymentService {
       return Payment.fromData({
         id: updatedPayment.id,
         userId: updatedPayment.userId,
-        courseId: updatedPayment.courseId,
-        stripePaymentIntentId: updatedPayment.stripePaymentIntentId,
-        stripeCheckoutSessionId: updatedPayment.stripeCheckoutSessionId,
+        courseId: updatedPayment.courseId ?? undefined,
+        stripePaymentIntentId: updatedPayment.stripePaymentIntentId ?? undefined,
+        stripeCheckoutSessionId: updatedPayment.stripeCheckoutSessionId ?? undefined,
         amount: updatedPayment.amount,
         currency: updatedPayment.currency,
         status: updatedPayment.status,
-        paymentMethod: updatedPayment.paymentMethod,
-        metadata: updatedPayment.metadata as Record<string, any>,
+        paymentMethod: updatedPayment.paymentMethod ?? undefined,
+        metadata: updatedPayment.metadata as Record<string, unknown>,
         createdAt: updatedPayment.createdAt,
         updatedAt: updatedPayment.updatedAt,
       });
@@ -855,7 +871,7 @@ export class PaymentService implements IPaymentService {
     if (this.notificationService) {
       await this.notificationService.createNotification({
         recipientId: payment.userId,
-        notificationType: 'payment_succeeded' as any,
+        notificationType: 'payment_succeeded',
         title: 'Payment Successful',
         content: `Your payment of $${payment.amount} has been processed successfully.`,
         metadata: {
@@ -880,7 +896,7 @@ export class PaymentService implements IPaymentService {
     await this.paymentRepository.update(payment.id, {
       status: 'failed',
       metadata: {
-        ...(payment.metadata as Record<string, any>),
+        ...(payment.metadata as Record<string, unknown>),
         failureReason,
       },
     });
@@ -889,7 +905,7 @@ export class PaymentService implements IPaymentService {
     if (this.notificationService) {
       await this.notificationService.createNotification({
         recipientId: payment.userId,
-        notificationType: 'payment_failed' as any,
+        notificationType: 'payment_failed',
         title: 'Payment Failed',
         content: `Your payment of $${payment.amount} could not be processed. Please try again or contact support.`,
         metadata: {
@@ -942,7 +958,7 @@ export class PaymentService implements IPaymentService {
     if (this.notificationService) {
       await this.notificationService.createNotification({
         recipientId: subscription.userId,
-        notificationType: 'subscription_payment_failed' as any,
+        notificationType: 'subscription_payment_failed',
         title: 'Subscription Payment Failed',
         content:
           'Your subscription payment could not be processed. Please update your payment method.',
@@ -979,7 +995,7 @@ export class PaymentService implements IPaymentService {
     }
 
     await this.subscriptionRepository.update(subscription.id, {
-      status: stripeSubscription.status as any,
+      status: stripeSubscription.status,
       currentPeriodStart: new Date(stripeSubscription.current_period_start * 1000),
       currentPeriodEnd: new Date(stripeSubscription.current_period_end * 1000),
       cancelAtPeriodEnd: stripeSubscription.cancel_at_period_end,

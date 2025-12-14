@@ -10,11 +10,13 @@
  */
 
 import { randomUUID } from 'crypto';
+
 import {
   PaymentCreatedEvent,
   PaymentSucceededEvent,
   PaymentFailedEvent,
   PaymentRefundedEvent,
+  PaymentDomainEvents,
 } from '../events/PaymentEvents';
 
 export type PaymentStatus = 'pending' | 'succeeded' | 'failed' | 'refunded';
@@ -29,7 +31,7 @@ export interface PaymentData {
   currency: string;
   status: PaymentStatus;
   paymentMethod?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
   createdAt: Date;
   updatedAt: Date;
 }

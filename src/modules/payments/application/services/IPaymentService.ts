@@ -12,6 +12,7 @@
  */
 
 import Stripe from 'stripe';
+
 import { Payment, Subscription, Refund } from '../../domain/entities/index.js';
 
 /**
