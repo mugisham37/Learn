@@ -61,6 +61,13 @@ export class ComplexityMonitor {
   }
 
   /**
+   * Record a query for monitoring (alias for logComplexity)
+   */
+  recordQuery(metrics: ComplexityMetrics): void {
+    this.logComplexity(metrics);
+  }
+
+  /**
    * Log a query's complexity metrics
    */
   logComplexity(metrics: ComplexityMetrics): void {
@@ -205,25 +212,27 @@ export const complexityMonitor = new ComplexityMonitor();
  * Helper function to create complexity metrics
  */
 export function createComplexityMetrics(
-  query: string,
-  complexity: number,
-  context?: {
+  data: {
+    query: string;
     operationName?: string;
+    variables?: Record<string, unknown>;
+    complexity: number;
+    depth?: number;
+    executionTime?: number;
+    timestamp: Date;
     userId?: string;
     userRole?: string;
-    executionTime?: number;
-    variables?: Record<string, unknown>;
   }
 ): ComplexityMetrics {
   return {
-    query,
-    complexity,
-    timestamp: new Date(),
-    operationName: context?.operationName,
-    userId: context?.userId,
-    userRole: context?.userRole,
-    executionTime: context?.executionTime,
-    variables: context?.variables,
+    query: data.query,
+    complexity: data.complexity,
+    timestamp: data.timestamp,
+    operationName: data.operationName,
+    userId: data.userId,
+    userRole: data.userRole,
+    executionTime: data.executionTime,
+    variables: data.variables,
   };
 }
 

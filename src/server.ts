@@ -268,7 +268,7 @@ export async function createServer(): Promise<FastifyInstance> {
   const authService = new AuthService(userRepository);
 
   // Register auth routes
-  await registerAuthRoutes(server, authService);
+  registerAuthRoutes(server, authService);
   logger.info('Authentication REST routes registered successfully');
 
   // Register Apollo Server GraphQL plugin

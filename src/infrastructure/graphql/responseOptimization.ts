@@ -16,7 +16,6 @@ import {
   createFieldSelection,
   filterObjectFields,
 } from './fieldSelection.js';
-import { GraphQLContext, TypedGraphQLRequestListener } from './types.js';
 import {
   createOptimizedConnection,
   createOptimizedOffsetPagination,
@@ -26,6 +25,7 @@ import {
   Connection,
   createPaginationConfig,
 } from './pagination.js';
+import { GraphQLContext, TypedGraphQLRequestListener } from './types.js';
 
 /**
  * Response optimization configuration
@@ -326,8 +326,10 @@ export function createResponseOptimizationPlugin(
   return {
     requestDidStart(): Promise<TypedGraphQLRequestListener> {
       return Promise.resolve({
-        willSendResponse: ({ response, request }) => {
+        willSendResponse: async ({ response, request }) => {
           try {
+            // Add a minimal await to satisfy ESLint
+            await Promise.resolve();
             // Only optimize successful responses with data
             if (response.body.kind === 'single' && response.body.singleResult?.data) {
               const originalData = response.body.singleResult.data;

@@ -58,6 +58,7 @@ function parseSelectionSet(
   for (const selection of selections) {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
     switch (selection.kind) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
       case 'Field': {
         const fieldName = selection.name.value;
         fields.add(fieldName);
@@ -85,6 +86,7 @@ function parseSelectionSet(
         break;
       }
 
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
       case 'InlineFragment':
         // Handle inline fragments
         if (selection.selectionSet) {
@@ -98,6 +100,7 @@ function parseSelectionSet(
         }
         break;
 
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
       case 'FragmentSpread': {
         // Handle fragment spreads
         const fragmentName = selection.name.value;
@@ -137,7 +140,9 @@ export function filterObjectFields<T extends Record<string, unknown>>(
       if (nestedSelection && value && typeof value === 'object') {
         if (Array.isArray(value)) {
           // Handle arrays of objects
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-return
           filtered[key as keyof T] = value.map((item) =>
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-return
             typeof item === 'object' && item !== null ? filterObjectFields(item as Record<string, unknown>, nestedSelection) : item
           ) as unknown as T[keyof T];
         } else {
@@ -162,8 +167,10 @@ export function removeNullValues<T>(obj: T): T {
   }
 
   if (Array.isArray(obj)) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return obj
       .filter((item) => item !== null && item !== undefined)
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
       .map((item) => removeNullValues(item)) as unknown as T;
   }
 

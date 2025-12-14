@@ -49,6 +49,27 @@ const DEFAULT_CACHE_CONFIGS: Record<string, CacheConfig> = {
 };
 
 /**
+ * Helper function to safely get cache config
+ */
+function getSafeCacheConfig(operationType: string, configs?: Record<string, CacheConfig>): CacheConfig {
+  const configMap = configs || DEFAULT_CACHE_CONFIGS;
+  
+  // Use explicit key checking for known operation types
+  if (operationType === 'query') {
+    return configMap[operationType] || DEFAULT_CACHE_CONFIGS['query']!;
+  }
+  if (operationType === 'mutation') {
+    return configMap[operationType] || DEFAULT_CACHE_CONFIGS['query']!;
+  }
+  if (operationType === 'subscription') {
+    return configMap[operationType] || DEFAULT_CACHE_CONFIGS['query']!;
+  }
+  
+  // For unknown operation types, fall back to query config
+  return DEFAULT_CACHE_CONFIGS['query']!;
+}
+
+/**
  * Cache utilities interface
  */
 export interface CacheUtilities {
@@ -133,9 +154,7 @@ export function getCacheConfig(
   customConfigs?: Record<string, CacheConfig>
 ): CacheConfig {
   const operationType = info.operation.operation;
-  const configs = customConfigs || DEFAULT_CACHE_CONFIGS;
-  
-  return configs[operationType] || DEFAULT_CACHE_CONFIGS.query;
+  return getSafeCacheConfig(operationType, customConfigs);
 }
 
 /**
@@ -167,12 +186,13 @@ export function createGraphQLCachingPlugin(): ApolloServerPlugin<GraphQLContext>
   return {
     requestDidStart(): Promise<TypedGraphQLRequestListener> {
       return Promise.resolve({
-        willSendResponse: async ({ response, request }) => {
+        willSendResponse({ response, request }): Promise<void> {
+          return Promise.resolve().then(() => {
           try {
             // Only cache successful responses
             if (response.body.kind === 'single' && response.body.singleResult?.data) {
               const operationType = request.operationName ? 'query' : 'query'; // Default to query
-              const config = DEFAULT_CACHE_CONFIGS[operationType] || DEFAULT_CACHE_CONFIGS.query;
+              const config: CacheConfig = getSafeCacheConfig(operationType);
 
               // Generate ETag for response data
               const etag = generateETag(response.body.singleResult.data);
@@ -193,6 +213,7 @@ export function createGraphQLCachingPlugin(): ApolloServerPlugin<GraphQLContext>
               operationName: request.operationName,
             });
           }
+          });
         },
       });
     },
@@ -233,6 +254,12 @@ export function createCustomCacheConfig(
   operationType: string,
   overrides: Partial<CacheConfig>
 ): CacheConfig {
-  const baseConfig = DEFAULT_CACHE_CONFIGS[operationType] || DEFAULT_CACHE_CONFIGS.query;
-  return { ...baseConfig, ...overrides };
+  const baseConfig: CacheConfig = getSafeCacheConfig(operationType);
+  const result: CacheConfig = {
+    maxAge: overrides.maxAge ?? baseConfig.maxAge,
+    staleWhileRevalidate: overrides.staleWhileRevalidate ?? baseConfig.staleWhileRevalidate,
+    public: overrides.public ?? baseConfig.public,
+    varyHeaders: overrides.varyHeaders ?? baseConfig.varyHeaders,
+  };
+  return result;
 }

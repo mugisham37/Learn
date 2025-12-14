@@ -7,9 +7,9 @@
  * Requirements: 21.2
  */
 
-import { ValidationRule, GraphQLError } from 'graphql';
-import { createComplexityLimitRule } from 'graphql-query-complexity';
 import { ApolloServerPlugin } from '@apollo/server';
+import { ValidationRule, GraphQLError } from 'graphql';
+import { createComplexityRule, ComplexityEstimator } from 'graphql-query-complexity';
 
 import { logger } from '../../shared/utils/logger.js';
 
@@ -74,48 +74,36 @@ export function getComplexityConfig(): ComplexityConfig {
 /**
  * Custom complexity estimator for specific fields
  */
-export function createComplexityEstimator() {
-  return {
-    // Estimate complexity based on field type and arguments
-    estimateComplexity: ({ field, node, childComplexity }: {
-      field: { name: string; type: unknown };
-      node: {
-        arguments?: Array<{
-          name: { value: string };
-          value: { kind: string; value: string };
-        }>;
-      };
-      childComplexity: number;
-    }): number => {
-      const fieldName = field.name;
+export function createComplexityEstimator(): ComplexityEstimator {
+  // Estimate complexity based on field type and arguments
+  return ({ field, node: _node, childComplexity, args }) => {
+    const fieldName = field.name;
+    
+    // Higher complexity for list fields with pagination
+    if (fieldName.endsWith('Connection') || fieldName.endsWith('List')) {
+      // Check for pagination arguments
+      const firstArg = args['first'] as number | undefined;
+      const limitArg = args['limit'] as number | undefined;
       
-      // Higher complexity for list fields with pagination
-      if (fieldName.endsWith('Connection') || fieldName.endsWith('List')) {
-        const firstArg = node.arguments?.find(arg => arg.name.value === 'first');
-        const limitArg = node.arguments?.find(arg => arg.name.value === 'limit');
-        
-        if (firstArg && firstArg.value.kind === 'IntValue') {
-          const limit = parseInt(firstArg.value.value, 10);
-          return Math.max(1, limit / 10) * childComplexity;
-        }
-        
-        if (limitArg && limitArg.value.kind === 'IntValue') {
-          const limit = parseInt(limitArg.value.value, 10);
-          return Math.max(1, limit / 10) * childComplexity;
-        }
-        
-        // Default list complexity
-        return 10 * childComplexity;
+      if (typeof firstArg === 'number') {
+        return Math.max(1, firstArg / 10) * childComplexity;
       }
       
-      // Higher complexity for search and analytics fields
-      if (fieldName.includes('search') || fieldName.includes('analytics')) {
-        return 5 * childComplexity;
+      if (typeof limitArg === 'number') {
+        return Math.max(1, limitArg / 10) * childComplexity;
       }
       
-      // Default complexity
-      return childComplexity;
-    },
+      // Default list complexity
+      return 10 * childComplexity;
+    }
+    
+    // Higher complexity for search and analytics fields
+    if (fieldName.includes('search') || fieldName.includes('analytics')) {
+      return 5 * childComplexity;
+    }
+    
+    // Default complexity
+    return childComplexity;
   };
 }
 
@@ -127,15 +115,11 @@ export function createComplexityAnalysisRule(
 ): ValidationRule {
   const finalConfig = { ...DEFAULT_COMPLEXITY_CONFIG, ...config };
   
-  return createComplexityLimitRule(finalConfig.maximumComplexity, {
-    maximumDepth: finalConfig.maximumDepth,
-    scalarCost: finalConfig.scalarCost,
-    objectCost: finalConfig.objectCost,
-    listFactor: finalConfig.listFactor,
-    introspectionCost: finalConfig.introspectionCost,
+  return createComplexityRule({
+    maximumComplexity: finalConfig.maximumComplexity,
     createError: finalConfig.createError,
-    estimators: [createComplexityEstimator().estimateComplexity],
-  });
+    estimators: [createComplexityEstimator()],
+  }) as ValidationRule;
 }
 
 /**
@@ -145,7 +129,8 @@ export function createComplexityAnalysisPlugin(_config: Partial<ComplexityConfig
   return {
     requestDidStart(): Promise<TypedGraphQLRequestListener> {
       return Promise.resolve({
-        didResolveOperation: async (requestContext: GraphQLRequestContextDidResolveOperationTyped): Promise<void> => {
+        didResolveOperation(requestContext: GraphQLRequestContextDidResolveOperationTyped): Promise<void> {
+          return Promise.resolve().then(() => {
           try {
             const { request, document, operationName } = requestContext;
             
@@ -180,6 +165,7 @@ export function createComplexityAnalysisPlugin(_config: Partial<ComplexityConfig
               requestId: requestContext.contextValue?.requestId,
             });
           }
+          });
         },
       });
     },

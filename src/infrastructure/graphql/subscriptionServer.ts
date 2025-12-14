@@ -14,20 +14,10 @@ import { verify } from 'jsonwebtoken';
 import { WebSocketServer } from 'ws';
 
 import { logger } from '../../shared/utils/logger.js';
+
 import { GraphQLContext } from './types.js';
 
-/**
- * WebSocket connection context
- */
-interface _ConnectionContext {
-  user?: {
-    id: string;
-    email: string;
-    role: string;
-  };
-  connectionId: string;
-  connectedAt: Date;
-}
+
 
 /**
  * Creates and configures WebSocket server for GraphQL subscriptions
