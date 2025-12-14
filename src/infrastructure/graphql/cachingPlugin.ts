@@ -18,11 +18,12 @@ import {
   type CacheConfig,
 } from '../../shared/middleware/httpCaching.js';
 import { logger } from '../../shared/utils/logger.js';
+
 import {
   type GraphQLContext,
-  type GraphQLRequestContext,
   type TypedGraphQLRequestListener,
-  type ProcessEnv,
+  type GraphQLRequestContextWillSendResponseTyped,
+  type GraphQLRequestContextDidEncounterErrorsTyped,
 } from './types.js';
 
 /**
@@ -99,7 +100,7 @@ function getCacheConfigForOperation(
 ): GraphQLCacheConfig | null {
   // No caching for mutations and subscriptions
   if (operationType !== 'query') {
-    return GraphQLCacheConfigs['MUTATIONS'];
+    return GraphQLCacheConfigs['MUTATIONS'] || null;
   }
 
   if (!operationName) {
@@ -171,13 +172,13 @@ export function createGraphQLCachingPlugin(): ApolloServerPlugin<GraphQLContext>
   return {
     requestDidStart(): Promise<TypedGraphQLRequestListener> {
       return Promise.resolve({
-        willSendResponse(requestContext: GraphQLRequestContext): Promise<void> {
+        willSendResponse: (requestContext: GraphQLRequestContextWillSendResponseTyped) => {
           return new Promise<void>((resolve) => {
             const { request, response, contextValue } = requestContext;
 
             try {
               // Skip caching for errors
-              if (response.body.kind === 'single' && response.body.singleResult?.errors) {
+              if (response.body && 'kind' in response.body && response.body.kind === 'single' && 'singleResult' in response.body && response.body.singleResult?.errors) {
                 resolve();
                 return;
               }
@@ -202,8 +203,7 @@ export function createGraphQLCachingPlugin(): ApolloServerPlugin<GraphQLContext>
               );
 
               // Get response data
-              const responseData =
-                response.body.kind === 'single' ? response.body.singleResult?.data : null;
+              const responseData = response.body && 'kind' in response.body && response.body.kind === 'single' && 'singleResult' in response.body ? response.body.singleResult?.data : null;
 
               if (!responseData) {
                 resolve();
@@ -237,12 +237,16 @@ export function createGraphQLCachingPlugin(): ApolloServerPlugin<GraphQLContext>
 
                 if (matches) {
                   // Return 304 Not Modified
-                  response.http.status = 304;
-                  response.http.body = '';
+                  if (response.http) {
+                    response.http.status = 304;
+                    if ('body' in response.http) {
+                      (response.http as any).body = '';
+                    }
 
-                  // Remove content headers
-                  response.http.headers.delete('Content-Type');
-                  response.http.headers.delete('Content-Length');
+                    // Remove content headers
+                    response.http.headers.delete('Content-Type');
+                    response.http.headers.delete('Content-Length');
+                  }
 
                   logger.debug('GraphQL 304 Not Modified response', {
                     operationName,
@@ -275,7 +279,7 @@ export function createGraphQLCachingPlugin(): ApolloServerPlugin<GraphQLContext>
           });
         },
 
-        didEncounterErrors(requestContext: GraphQLRequestContext): Promise<void> {
+        didEncounterErrors: (requestContext: GraphQLRequestContextDidEncounterErrorsTyped): Promise<void> => {
           return new Promise<void>((resolve) => {
             // Don't cache responses with errors
             const { response } = requestContext;

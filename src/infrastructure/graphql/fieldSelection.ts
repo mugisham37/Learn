@@ -8,6 +8,7 @@
  */
 
 import { GraphQLResolveInfo, FieldNode, SelectionNode } from 'graphql';
+
 import { logger } from '../../shared/utils/logger.js';
 
 /**
@@ -250,7 +251,7 @@ export function createResponseOptimizationPlugin() {
               response.body.singleResult.data = optimizedData;
 
               // Log optimization if enabled
-              if (process.env.LOG_RESPONSE_OPTIMIZATION === 'true') {
+              if ((process.env as Record<string, string | undefined>)['LOG_RESPONSE_OPTIMIZATION'] === 'true') {
                 const originalSize = JSON.stringify(originalData).length;
                 const optimizedSize = JSON.stringify(optimizedData).length;
                 const reduction = Math.round(((originalSize - optimizedSize) / originalSize) * 100);

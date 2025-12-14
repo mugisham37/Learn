@@ -7,9 +7,9 @@
  * Requirements: 21.4
  */
 
-import { PubSub, withFilter } from 'graphql-subscriptions';
-import { RedisPubSub } from 'graphql-redis-subscriptions';
 import Redis from 'ioredis';
+import { RedisPubSub } from 'graphql-redis-subscriptions';
+import { PubSub, withFilter } from 'graphql-subscriptions';
 
 import { config } from '../../config/index.js';
 import { logger } from '../../shared/utils/logger.js';

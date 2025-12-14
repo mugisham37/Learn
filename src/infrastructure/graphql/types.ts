@@ -5,13 +5,19 @@
  * to ensure type safety across the GraphQL layer.
  */
 
-import { GraphQLRequestListener } from '@apollo/server';
+import { 
+  GraphQLRequestListener,
+  GraphQLRequestContextDidResolveOperation,
+  GraphQLRequestContextWillSendResponse,
+  GraphQLRequestContextDidEncounterErrors
+} from '@apollo/server';
 import { GraphQLError, GraphQLFormattedError } from 'graphql';
 
 /**
  * User context interface for GraphQL operations
  */
 export interface GraphQLUserContext {
+  id: string;
   userId: string;
   role: string;
   email?: string;
@@ -19,12 +25,71 @@ export interface GraphQLUserContext {
 }
 
 /**
+ * PubSub interface for subscriptions
+ */
+interface PubSubInstance {
+  publish: (triggerName: string, payload: Record<string, unknown>) => Promise<void>;
+  subscribe: (triggerName: string) => AsyncIterator<unknown>;
+  asyncIterator?: (triggers: string | string[]) => AsyncIterator<unknown>;
+}
+
+/**
+ * DataLoader interface for type safety
+ */
+interface DataLoader<K, V> {
+  load: (key: K) => Promise<V>;
+  loadMany: (keys: K[]) => Promise<(V | Error)[]>;
+  clear: (key: K) => DataLoader<K, V>;
+  clearAll: () => DataLoader<K, V>;
+  prime: (key: K, value: V) => DataLoader<K, V>;
+}
+
+/**
  * GraphQL request context interface
  */
 export interface GraphQLContext {
-  user?: GraphQLUserContext;
+  user?: {
+    id: string;
+    email: string;
+    role: string;
+  };
   requestId: string;
   executionTime?: number;
+  pubsub?: PubSubInstance;
+  dataloaders?: {
+    // User data loaders
+    users?: any;
+
+    // Course data loaders
+    courses?: any;
+
+    // Enrollment data loaders
+    enrollments?: any;
+
+    // Legacy individual loaders for backward compatibility
+    userById?: DataLoader<string, Record<string, unknown>>;
+    usersByIds?: DataLoader<string[], Record<string, unknown>[]>;
+    courseById?: DataLoader<string, Record<string, unknown>>;
+    coursesByInstructorId?: DataLoader<string, Record<string, unknown>[]>;
+    modulesByCourseId?: DataLoader<string, Record<string, unknown>[]>;
+    moduleById?: DataLoader<string, Record<string, unknown>>;
+    lessonsByModuleId?: DataLoader<string, Record<string, unknown>[]>;
+    lessonById?: DataLoader<string, Record<string, unknown>>;
+    enrollmentById?: DataLoader<string, Record<string, unknown>>;
+    enrollmentsByStudentId?: DataLoader<string, Record<string, unknown>[]>;
+    enrollmentsByCourseId?: DataLoader<string, Record<string, unknown>[]>;
+  };
+  dataSources?: {
+    notificationService?: unknown;
+    notificationRepository?: unknown;
+    notificationPreferenceService?: unknown;
+    userRepository?: unknown;
+  };
+  cache?: {
+    generateETag: (data: any) => string;
+    buildCacheControlHeader: (config: any) => string;
+    configs: Record<string, any>;
+  };
   [key: string]: unknown;
 }
 
@@ -146,6 +211,13 @@ export interface EnhancedGraphQLErrorExtensions {
  * Type-safe GraphQL request listener
  */
 export type TypedGraphQLRequestListener = GraphQLRequestListener<GraphQLContext>;
+
+/**
+ * Apollo Server request context types
+ */
+export type GraphQLRequestContextDidResolveOperationTyped = GraphQLRequestContextDidResolveOperation<GraphQLContext>;
+export type GraphQLRequestContextWillSendResponseTyped = GraphQLRequestContextWillSendResponse<GraphQLContext>;
+export type GraphQLRequestContextDidEncounterErrorsTyped = GraphQLRequestContextDidEncounterErrors<GraphQLContext>;
 
 /**
  * Pagination arguments interface

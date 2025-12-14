@@ -7,12 +7,13 @@
  * Requirements: 21.1
  */
 
-import { FastifyInstance, FastifyPluginAsync, FastifyRequest, FastifyReply } from 'fastify';
 import { ApolloServer } from '@apollo/server';
+import { FastifyInstance, FastifyPluginAsync, FastifyRequest, FastifyReply } from 'fastify';
 import fp from 'fastify-plugin';
 
-import { createApolloServer, createGraphQLContext, GraphQLContext } from './apolloServer.js';
 import { logger } from '../../shared/utils/logger.js';
+
+import { createApolloServer, createGraphQLContext, GraphQLContext } from './apolloServer.js';
 
 /**
  * Fastify plugin options for Apollo Server
@@ -32,7 +33,7 @@ const apolloServerPlugin: FastifyPluginAsync<ApolloServerPluginOptions> = async 
   const { path = '/graphql', cors = true } = options;
 
   // Create Apollo Server instance with subscription support
-  const { server: apolloServer, subscriptionCleanup } = await createApolloServer(fastify);
+  const { server: apolloServer, subscriptionCleanup } = createApolloServer(fastify);
 
   // Start Apollo Server
   await apolloServer.start();
@@ -61,34 +62,38 @@ const apolloServerPlugin: FastifyPluginAsync<ApolloServerPluginOptions> = async 
         // Create GraphQL context
         const contextValue = await createGraphQLContext({ request });
 
+        // Create HeaderMap with required __identity property
+        const headerMap = new Map(Object.entries(request.headers as Record<string, string>));
+        (headerMap as Record<string, unknown>)['__identity'] = 'HeaderMap';
+
         // Execute GraphQL request
         const response = await apolloServer.executeHTTPGraphQLRequest({
           httpGraphQLRequest: {
             method: request.method.toUpperCase() as 'GET' | 'POST',
-            headers: new Map(Object.entries(request.headers as Record<string, string>)),
-            search: request.url.includes('?') ? request.url.split('?')[1] : '',
+            headers: headerMap,
+            search: request.url.includes('?') ? request.url.split('?')[1] || '' : '',
             body: request.body,
           },
-          context: async () => contextValue,
+          context: () => Promise.resolve(contextValue),
         });
 
         // Set response headers
         if (response.headers) {
           for (const [key, value] of response.headers) {
-            reply.header(key, value);
+            void reply.header(key, value);
           }
         }
 
         // Set CORS headers if enabled
         if (cors) {
-          reply
+          void reply
             .header('Access-Control-Allow-Origin', '*')
             .header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
             .header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
         }
 
         // Send response
-        reply
+        void reply
           .code(response.status || 200)
           .type('application/json')
           .send(response.body);
@@ -107,7 +112,7 @@ const apolloServerPlugin: FastifyPluginAsync<ApolloServerPluginOptions> = async 
           url: request.url,
         });
 
-        reply
+        void reply
           .code(500)
           .type('application/json')
           .send({

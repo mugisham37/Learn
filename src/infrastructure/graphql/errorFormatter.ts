@@ -29,7 +29,7 @@ import { logger } from '../../shared/utils/logger.js';
  * GraphQL Error Extension interface
  * Defines the structure of error extensions for consistent formatting
  */
-export interface GraphQLErrorExtensions {
+export interface GraphQLErrorExtensions extends Record<string, unknown> {
   code: string;
   requestId?: string;
   field?: string;
@@ -125,7 +125,7 @@ export function createGraphQLError(error: Error, requestId?: string): GraphQLErr
     if (error instanceof ValidationError && error.fields) {
       extensions.fields = error.fields;
       // If there's only one field error, also set the field property
-      if (error.fields.length === 1) {
+      if (error.fields.length === 1 && error.fields[0]) {
         extensions.field = error.fields[0].field;
       }
     }
@@ -173,7 +173,7 @@ export function createGraphQLError(error: Error, requestId?: string): GraphQLErr
   // Handle GraphQLError instances (preserve existing structure)
   if (error instanceof GraphQLError) {
     const existingExtensions = error.extensions || {};
-    const code = existingExtensions.code || 'INTERNAL_SERVER_ERROR';
+    const code = (existingExtensions['code'] as string) || 'INTERNAL_SERVER_ERROR';
 
     return new GraphQLError(error.message, {
       nodes: error.nodes,
@@ -187,7 +187,7 @@ export function createGraphQLError(error: Error, requestId?: string): GraphQLErr
         statusCode: STATUS_CODE_MAP[code] || 500,
         timestamp,
         requestId,
-      },
+      } as GraphQLErrorExtensions,
     });
   }
 
@@ -219,7 +219,7 @@ export function formatGraphQLError(
   error: unknown
 ): GraphQLFormattedError {
   const originalError = error instanceof Error ? error : new Error(String(error));
-  const requestId = (formattedError.extensions?.requestId as string) || 'unknown';
+  const requestId = (formattedError.extensions?.['requestId'] as string) || 'unknown';
 
   // Log the error with full context
   logGraphQLError(formattedError, originalError, requestId);
@@ -233,28 +233,33 @@ export function formatGraphQLError(
       message: sanitizedGraphQLError.message,
       locations: formattedError.locations,
       path: formattedError.path,
-      extensions: sanitizedGraphQLError.extensions as GraphQLErrorExtensions,
+      extensions: sanitizedGraphQLError.extensions,
     };
   }
 
   // Ensure extensions exist and have required properties
   const extensions: GraphQLErrorExtensions = {
-    code: (formattedError.extensions?.code as string) || 'INTERNAL_SERVER_ERROR',
+    code: (formattedError.extensions?.['code'] as string) || 'INTERNAL_SERVER_ERROR',
     requestId,
-    timestamp: (formattedError.extensions?.timestamp as string) || new Date().toISOString(),
-    ...(formattedError.extensions?.statusCode && {
-      statusCode: formattedError.extensions.statusCode as number,
-    }),
-    ...(formattedError.extensions?.field && {
-      field: formattedError.extensions.field as string,
-    }),
-    ...(formattedError.extensions?.fields && {
-      fields: formattedError.extensions.fields as Array<{ field: string; message: string }>,
-    }),
-    ...(formattedError.extensions?.details && {
-      details: formattedError.extensions.details as Record<string, unknown>,
-    }),
+    timestamp: (formattedError.extensions?.['timestamp'] as string) || new Date().toISOString(),
   };
+
+  // Add optional properties if they exist
+  if (formattedError.extensions?.['statusCode']) {
+    extensions.statusCode = formattedError.extensions['statusCode'] as number;
+  }
+
+  if (formattedError.extensions?.['field']) {
+    extensions.field = formattedError.extensions['field'] as string;
+  }
+
+  if (formattedError.extensions?.['fields']) {
+    extensions.fields = formattedError.extensions['fields'] as Array<{ field: string; message: string }>;
+  }
+
+  if (formattedError.extensions?.['details']) {
+    extensions.details = formattedError.extensions['details'] as Record<string, unknown>;
+  }
 
   return {
     message: formattedError.message,
@@ -277,28 +282,32 @@ function logGraphQLError(
   originalError: Error,
   requestId: string
 ): void {
-  const logContext = {
+  const logContext: Record<string, unknown> = {
     requestId,
-    errorCode: formattedError.extensions?.code || 'UNKNOWN',
+    errorCode: formattedError.extensions?.['code'] || 'UNKNOWN',
     errorMessage: formattedError.message,
     graphqlPath: formattedError.path,
     graphqlLocations: formattedError.locations,
     originalErrorName: originalError.constructor.name,
     originalErrorMessage: originalError.message,
-    ...(formattedError.extensions?.statusCode && {
-      statusCode: formattedError.extensions.statusCode,
-    }),
-    ...(formattedError.extensions?.field && {
-      field: formattedError.extensions.field,
-    }),
-    ...(formattedError.extensions?.fields && {
-      validationFields: formattedError.extensions.fields,
-    }),
   };
 
+  // Add optional properties if they exist
+  if (formattedError.extensions?.['statusCode']) {
+    logContext.statusCode = formattedError.extensions['statusCode'];
+  }
+
+  if (formattedError.extensions?.['field']) {
+    logContext.field = formattedError.extensions['field'];
+  }
+
+  if (formattedError.extensions?.['fields']) {
+    logContext.validationFields = formattedError.extensions['fields'];
+  }
+
   // Determine log level based on error type
-  const errorCode = formattedError.extensions?.code as string;
-  const statusCode = formattedError.extensions?.statusCode as number;
+  const errorCode = formattedError.extensions?.['code'] as string;
+  const statusCode = formattedError.extensions?.['statusCode'] as number;
 
   if (errorCode === 'UNAUTHENTICATED' || errorCode === 'FORBIDDEN') {
     // Authentication/authorization errors are warnings
@@ -315,7 +324,7 @@ function logGraphQLError(
   } else if (errorCode === 'RATE_LIMITED' || statusCode === 429) {
     // Rate limit errors are warnings
     logger.warn('GraphQL Rate Limit Error', logContext);
-  } else if (statusCode >= 500) {
+  } else if (statusCode && statusCode >= 500) {
     // Server errors are errors with stack trace
     logger.error('GraphQL Server Error', {
       ...logContext,

@@ -8,7 +8,9 @@
  */
 
 import { GraphQLResolveInfo } from 'graphql';
+
 import { logger } from '../../shared/utils/logger.js';
+
 import {
   optimizeGraphQLResponse,
   removeNullValues,
@@ -43,7 +45,7 @@ const DEFAULT_CONFIG: ResponseOptimizationConfig = {
   enableFieldSelection: true,
   removeNullValues: true,
   enableCompressionHints: true,
-  logOptimizations: process.env.NODE_ENV === 'development',
+  logOptimizations: (process.env as Record<string, string | undefined>)['NODE_ENV'] === 'development',
   maxPayloadSize: 10 * 1024 * 1024, // 10MB
   warnThreshold: 1024 * 1024, // 1MB
 };

@@ -57,6 +57,7 @@ import { userResolvers, userTypeDefs } from '../../modules/users/presentation/gr
 import { logger } from '../../shared/utils/logger.js';
 
 import { createGraphQLCachingPlugin, createCacheAwareContext } from './cachingPlugin.js';
+import { GraphQLContext } from './types.js';
 import {
   createComplexityAnalysisPlugin,
   createComplexityAnalysisRule,
@@ -131,47 +132,7 @@ interface DataLoader<K, V> {
   prime: (key: K, value: V) => DataLoader<K, V>;
 }
 
-/**
- * GraphQL Context interface
- */
-export interface GraphQLContext {
-  user?: {
-    id: string;
-    email: string;
-    role: string;
-  };
-  requestId: string;
-  pubsub?: PubSubInstance;
-  dataloaders?: {
-    // User data loaders
-    users?: UserDataLoaders;
 
-    // Course data loaders
-    courses?: CourseDataLoaders;
-
-    // Enrollment data loaders
-    enrollments?: EnrollmentDataLoaders;
-
-    // Legacy individual loaders for backward compatibility
-    userById?: DataLoader<string, Record<string, unknown>>;
-    usersByIds?: DataLoader<string[], Record<string, unknown>[]>;
-    courseById?: DataLoader<string, Record<string, unknown>>;
-    coursesByInstructorId?: DataLoader<string, Record<string, unknown>[]>;
-    modulesByCourseId?: DataLoader<string, Record<string, unknown>[]>;
-    moduleById?: DataLoader<string, Record<string, unknown>>;
-    lessonsByModuleId?: DataLoader<string, Record<string, unknown>[]>;
-    lessonById?: DataLoader<string, Record<string, unknown>>;
-    enrollmentById?: DataLoader<string, Record<string, unknown>>;
-    enrollmentsByStudentId?: DataLoader<string, Record<string, unknown>[]>;
-    enrollmentsByCourseId?: DataLoader<string, Record<string, unknown>[]>;
-  };
-  dataSources?: {
-    notificationService?: unknown;
-    notificationRepository?: unknown;
-    notificationPreferenceService?: unknown;
-    userRepository?: unknown;
-  };
-}
 
 /**
  * Creates the merged GraphQL schema from all modules

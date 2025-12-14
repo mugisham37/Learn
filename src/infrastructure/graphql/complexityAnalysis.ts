@@ -8,7 +8,7 @@
  * Requirements: 15.6
  */
 
-import { ValidationRule } from 'graphql';
+import { ValidationRule, GraphQLError } from 'graphql';
 import {
   createComplexityRule,
   fieldExtensionsEstimator,
@@ -16,12 +16,13 @@ import {
 } from 'graphql-query-complexity';
 
 import { logger } from '../../shared/utils/logger.js';
+
 import { complexityMonitor, createComplexityMetrics } from './complexityMonitoring.js';
 import {
-  type ComplexityEstimatorArgs,
   type GraphQLDocument,
   type GraphQLSelectionSet,
   type GraphQLRequestContext,
+  type GraphQLRequestContextDidResolveOperationTyped,
   type ProcessEnv,
 } from './types.js';
 
@@ -49,6 +50,29 @@ const DEFAULT_CONFIG: ComplexityConfig = {
   listFactor: 10, // Multiplier for list fields
   introspectionCost: 1000, // High cost for introspection queries
 };
+
+/**
+ * Complexity estimator arguments interface
+ */
+interface ComplexityEstimatorArgs {
+  field: {
+    name: string;
+    type: unknown;
+  };
+  node: {
+    arguments?: Array<{
+      name: { value: string };
+      value: { kind: string; value: string };
+    }>;
+    loc?: {
+      source?: {
+        body: string;
+      };
+    };
+    name?: { value: string };
+  };
+  childComplexity: number;
+}
 
 /**
  * Custom complexity estimator that assigns scores based on field types
@@ -123,11 +147,6 @@ export function createComplexityAnalysisRule(
       simpleEstimator({ defaultComplexity: 1 }),
     ],
     createError: (max: number, actual: number) => {
-      const error = new Error(
-        `Query complexity limit exceeded. Maximum allowed: ${max}, actual: ${actual}. ` +
-          'Please simplify your query or reduce the number of requested fields.'
-      );
-
       // Log complex queries for monitoring
       logger.warn('GraphQL query complexity limit exceeded', {
         maximumAllowed: max,
@@ -135,7 +154,11 @@ export function createComplexityAnalysisRule(
         timestamp: new Date().toISOString(),
       });
 
-      return error;
+      // Return GraphQLError instead of Error
+      return new GraphQLError(
+        `Query complexity limit exceeded. Maximum allowed: ${max}, actual: ${actual}. ` +
+          'Please simplify your query or reduce the number of requested fields.'
+      );
     },
   });
 }
@@ -145,15 +168,15 @@ export function createComplexityAnalysisRule(
  */
 export function createComplexityAnalysisPlugin(_config: Partial<ComplexityConfig> = {}): {
   requestDidStart(): Promise<{
-    didResolveOperation(requestContext: GraphQLRequestContext): Promise<void>;
+    didResolveOperation(requestContext: GraphQLRequestContextDidResolveOperationTyped): Promise<void>;
   }>;
 } {
   return {
     requestDidStart(): Promise<{
-      didResolveOperation(requestContext: GraphQLRequestContext): Promise<void>;
+      didResolveOperation(requestContext: GraphQLRequestContextDidResolveOperationTyped): Promise<void>;
     }> {
       return Promise.resolve({
-        didResolveOperation(requestContext: GraphQLRequestContext): Promise<void> {
+        didResolveOperation(requestContext: GraphQLRequestContextDidResolveOperationTyped): Promise<void> {
           return new Promise<void>((resolve) => {
             const { request, contextValue } = requestContext;
             
@@ -162,7 +185,7 @@ export function createComplexityAnalysisPlugin(_config: Partial<ComplexityConfig
               // Create metrics for monitoring
               const metrics = createComplexityMetrics(request.query || 'Unknown query', 0, {
                 operationName: request.operationName,
-                userId: contextValue.user?.userId,
+                userId: contextValue.user?.id,
                 userRole: contextValue.user?.role,
                 variables: request.variables,
               });
@@ -188,7 +211,7 @@ export function createComplexityAnalysisPlugin(_config: Partial<ComplexityConfig
  * Calculate query complexity for a given document
  * This is used for logging and monitoring purposes
  */
-function calculateQueryComplexity(document: GraphQLDocument): number {
+function _calculateQueryComplexity(document: GraphQLDocument): number {
   try {
     // This is a simplified complexity calculation for logging
     // In a real implementation, you would use the same estimators

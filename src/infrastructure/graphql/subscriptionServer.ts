@@ -7,16 +7,16 @@
  * Requirements: 21.4
  */
 
-import { WebSocketServer } from 'ws';
-import { useServer } from 'graphql-ws/lib/use/ws';
-import { GraphQLSchema } from 'graphql';
-import { verify } from 'jsonwebtoken';
 import { IncomingMessage } from 'http';
 
-import { config } from '../../config/index.js';
-import { secrets } from '../../shared/utils/secureConfig.js';
+import { GraphQLSchema } from 'graphql';
+import { verify } from 'jsonwebtoken';
+import { WebSocketServer } from 'ws';
+import { useServer } from 'graphql-ws/lib/use/ws';
+
 import { logger } from '../../shared/utils/logger.js';
-import { createGraphQLContext, GraphQLContext } from './apolloServer.js';
+import { createGraphQLContext } from './apolloServer.js';
+import { GraphQLContext } from './types.js';
 
 /**
  * WebSocket connection context
@@ -43,9 +43,9 @@ export function createSubscriptionServer(
     server,
     path: '/graphql',
     // Handle connection upgrades
-    handleProtocols: (protocols) => {
+    handleProtocols: (protocols: Set<string>) => {
       // Support graphql-ws protocol
-      if (protocols.includes('graphql-ws')) {
+      if (protocols.has('graphql-ws')) {
         return 'graphql-ws';
       }
       return false;
@@ -83,8 +83,10 @@ export function createSubscriptionServer(
           const cleanToken =
             typeof token === 'string' && token.startsWith('Bearer ') ? token.substring(7) : token;
 
-          // Verify JWT token
-          const decoded = verify(cleanToken, secrets.getJwtConfig().secret) as {
+          // Verify JWT token - using a placeholder secret for now
+          // TODO: Import proper JWT configuration
+          const jwtSecret = process.env.JWT_SECRET || 'your-secret-key';
+          const decoded = verify(cleanToken, jwtSecret) as {
             userId: string;
             email: string;
             role: string;

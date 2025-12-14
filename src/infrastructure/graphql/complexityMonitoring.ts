@@ -8,6 +8,10 @@
  */
 
 import { logger } from '../../shared/utils/logger.js';
+import { 
+  GraphQLRequestContextWillSendResponseTyped,
+  GraphQLRequestContextDidResolveOperationTyped 
+} from './types.js';
 
 /**
  * Interface for complexity monitoring data
@@ -227,19 +231,19 @@ export function createComplexityMetrics(
  */
 export function createExecutionTimeTracker(): {
   requestDidStart(): Promise<{
-    willSendResponse(requestContext: { request: { http?: { requestId?: string } }; contextValue?: { executionTime?: number } }): Promise<void>;
-    didResolveOperation(requestContext: { request: { http?: { requestId?: string } } }): Promise<void>;
+    willSendResponse(requestContext: GraphQLRequestContextWillSendResponseTyped): Promise<void>;
+    didResolveOperation(requestContext: GraphQLRequestContextDidResolveOperationTyped): Promise<void>;
   }>;
 } {
   const startTimes = new Map<string, number>();
 
   return {
     requestDidStart(): Promise<{
-      willSendResponse(requestContext: { request: { http?: { requestId?: string } }; contextValue?: { executionTime?: number } }): Promise<void>;
-      didResolveOperation(requestContext: { request: { http?: { requestId?: string } } }): Promise<void>;
+      willSendResponse(requestContext: GraphQLRequestContextWillSendResponseTyped): Promise<void>;
+      didResolveOperation(requestContext: GraphQLRequestContextDidResolveOperationTyped): Promise<void>;
     }> {
       return Promise.resolve({
-        willSendResponse(requestContext: { request: { http?: { requestId?: string } }; contextValue?: { executionTime?: number } }): Promise<void> {
+        willSendResponse(requestContext: GraphQLRequestContextWillSendResponseTyped): Promise<void> {
           return new Promise<void>((resolve) => {
             const requestId = requestContext.request.http?.requestId || 'unknown';
             const startTime = startTimes.get(requestId);
@@ -258,7 +262,7 @@ export function createExecutionTimeTracker(): {
           });
         },
 
-        didResolveOperation(requestContext: { request: { http?: { requestId?: string } } }): Promise<void> {
+        didResolveOperation(requestContext: GraphQLRequestContextDidResolveOperationTyped): Promise<void> {
           return new Promise<void>((resolve) => {
             const requestId = requestContext.request.http?.requestId || 'unknown';
             startTimes.set(requestId, Date.now());

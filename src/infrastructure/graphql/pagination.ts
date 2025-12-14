@@ -8,7 +8,9 @@
  */
 
 import { GraphQLResolveInfo } from 'graphql';
+
 import { logger } from '../../shared/utils/logger.js';
+
 import { createFieldSelection, filterObjectFields, removeNullValues } from './fieldSelection.js';
 
 /**
@@ -216,7 +218,7 @@ export function createOptimizedConnection<T>(
     }
 
     // Log optimization metrics
-    if (process.env.LOG_PAGINATION_OPTIMIZATION === 'true') {
+    if ((process.env as Record<string, string | undefined>)['LOG_PAGINATION_OPTIMIZATION'] === 'true') {
       logger.debug('Pagination response optimized', {
         recordCount: records.length,
         fieldsRequested: nodeSelection?.fields.size || 'all',
@@ -340,8 +342,8 @@ export function extractOffsetPaginationInput(args: any): OffsetPaginationInput {
  */
 export function createPaginationConfig(): PaginationConfig {
   return {
-    defaultLimit: parseInt(process.env.PAGINATION_DEFAULT_LIMIT || '20', 10),
-    maxLimit: parseInt(process.env.PAGINATION_MAX_LIMIT || '100', 10),
-    includeTotalCount: process.env.PAGINATION_INCLUDE_TOTAL_COUNT !== 'false',
+    defaultLimit: parseInt((process.env as Record<string, string | undefined>)['PAGINATION_DEFAULT_LIMIT'] || '20', 10),
+    maxLimit: parseInt((process.env as Record<string, string | undefined>)['PAGINATION_MAX_LIMIT'] || '100', 10),
+    includeTotalCount: (process.env as Record<string, string | undefined>)['PAGINATION_INCLUDE_TOTAL_COUNT'] !== 'false',
   };
 }
