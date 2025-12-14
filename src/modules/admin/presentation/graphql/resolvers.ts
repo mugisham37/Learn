@@ -136,7 +136,7 @@ export const adminResolvers = {
       { queueName }: { queueName?: string },
       context: AdminGraphQLContext
     ) => {
-      const admin = requireAdmin(context);
+      requireAdmin(context);
 
       try {
         const jobMonitoringService = JobMonitoringService.getInstance();

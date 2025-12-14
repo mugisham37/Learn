@@ -167,7 +167,7 @@ export const userResolvers = {
         }
 
         // Convert domain entity to database type for GraphQL
-        return user.toPersistence() as DbUser;
+        return user as unknown as DbUser;
       } catch (error) {
         if (error instanceof GraphQLError) {
           throw error;
@@ -204,7 +204,7 @@ export const userResolvers = {
 
       try {
         const user = await context.userRepository.findById(args.id);
-        return user ? user.toPersistence() as DbUser : null;
+        return user ? user as unknown as DbUser : null;
       } catch (error) {
         throw new GraphQLError('Failed to fetch user', {
           extensions: {
@@ -257,7 +257,7 @@ export const userResolvers = {
           return {
             accessToken: loginResult.accessToken,
             refreshToken: loginResult.refreshToken,
-            user: loginResult.user.toPersistence() as DbUser,
+            user: loginResult.user as unknown as DbUser,
           };
         } catch (error: unknown) {
           const errorMessage = error instanceof Error ? error.message : '';
@@ -305,7 +305,7 @@ export const userResolvers = {
           return {
             accessToken: result.accessToken,
             refreshToken: result.refreshToken,
-            user: result.user.toPersistence() as DbUser,
+            user: result.user as unknown as DbUser,
           };
         } catch (error: unknown) {
           const errorMessage = error instanceof Error ? error.message : '';

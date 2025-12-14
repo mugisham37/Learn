@@ -395,7 +395,9 @@ export class RequestTracingService implements IRequestTracingService {
       // Limit memory usage
       if (this.traces.size > this.maxTraces) {
         const oldestTraceId = this.traces.keys().next().value;
-        this.traces.delete(oldestTraceId);
+        if (oldestTraceId) {
+          this.traces.delete(oldestTraceId);
+        }
       }
     }
 

@@ -275,7 +275,7 @@ export class SearchRepository implements ISearchRepository {
       // Execute search
       const response = await elasticsearch.search({
         index: ElasticsearchAlias.COURSES,
-        body: builtQuery,
+        body: builtQuery as any, // Type assertion to handle Elasticsearch client type compatibility
       });
 
       // Process results
@@ -397,7 +397,7 @@ export class SearchRepository implements ISearchRepository {
       // Execute search
       const response = await elasticsearch.search({
         index: ElasticsearchAlias.LESSONS,
-        body: builtQuery,
+        body: builtQuery as any, // Type assertion to handle Elasticsearch client type compatibility
       });
 
       // Process results
@@ -729,7 +729,7 @@ export class SearchRepository implements ISearchRepository {
       // Execute search
       const response = await elasticsearch.search({
         index: ElasticsearchAlias.COURSES,
-        body: builtQuery,
+        body: builtQuery as any, // Type assertion to handle Elasticsearch client type compatibility
       });
 
       // Process results

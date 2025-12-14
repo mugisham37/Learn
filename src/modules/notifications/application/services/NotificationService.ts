@@ -563,6 +563,10 @@ export class NotificationService implements INotificationService {
       certificate_issued: 'certificate-issued',
       payment_received: 'payment-received',
       refund_processed: 'refund-processed',
+      payment_succeeded: 'payment-succeeded',
+      payment_failed: 'payment-failed',
+      subscription_canceled: 'subscription-canceled',
+      subscription_payment_failed: 'subscription-payment-failed',
     };
 
     return templateMap[notificationType] || 'generic-notification';
@@ -731,6 +735,10 @@ export class NotificationService implements INotificationService {
       certificate_issued: 'Download Certificate',
       payment_received: 'View Receipt',
       refund_processed: 'View Details',
+      payment_succeeded: 'View Receipt',
+      payment_failed: 'Retry Payment',
+      subscription_canceled: 'View Details',
+      subscription_payment_failed: 'Update Payment',
     };
 
     return buttonTextMap[notificationType] || 'View Details';
@@ -751,6 +759,10 @@ export class NotificationService implements INotificationService {
       certificate_issued: 'certificate',
       payment_received: 'payment',
       refund_processed: 'refund',
+      payment_succeeded: 'payment',
+      payment_failed: 'error',
+      subscription_canceled: 'subscription',
+      subscription_payment_failed: 'error',
     };
 
     return iconMap[notificationType] || 'notification';

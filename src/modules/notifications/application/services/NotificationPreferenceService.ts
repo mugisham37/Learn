@@ -369,6 +369,10 @@ export class NotificationPreferenceService implements INotificationPreferenceSer
       certificate_issued: 'certificateIssued',
       payment_received: 'paymentReceived',
       refund_processed: 'refundProcessed',
+      payment_succeeded: 'paymentSucceeded',
+      payment_failed: 'paymentFailed',
+      subscription_canceled: 'subscriptionCanceled',
+      subscription_payment_failed: 'subscriptionPaymentFailed',
     };
 
     return typeMapping[notificationType] || notificationType;

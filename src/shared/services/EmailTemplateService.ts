@@ -460,6 +460,10 @@ export class EmailTemplateService {
       certificate_issued: 'certificate_issued',
       payment_received: 'payment_received',
       refund_processed: 'refund_processed',
+      payment_succeeded: 'payment_succeeded',
+      payment_failed: 'payment_failed',
+      subscription_canceled: 'subscription_canceled',
+      subscription_payment_failed: 'subscription_payment_failed',
     };
 
     return mapping[notificationType] || 'default';
