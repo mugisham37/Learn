@@ -20,6 +20,9 @@ import type {
   IndexStats,
 } from './ISearchRepository.js';
 
+// Type for Elasticsearch client compatibility
+type ElasticsearchSearchBody = Record<string, unknown>;
+
 import {
   elasticsearch,
   ElasticsearchIndex as _ElasticsearchIndex,
@@ -275,7 +278,7 @@ export class SearchRepository implements ISearchRepository {
       // Execute search
       const response = await elasticsearch.search({
         index: ElasticsearchAlias.COURSES,
-        body: builtQuery as any, // Type assertion to handle Elasticsearch client type compatibility
+        body: builtQuery as ElasticsearchSearchBody,
       });
 
       // Process results
@@ -397,7 +400,7 @@ export class SearchRepository implements ISearchRepository {
       // Execute search
       const response = await elasticsearch.search({
         index: ElasticsearchAlias.LESSONS,
-        body: builtQuery as any, // Type assertion to handle Elasticsearch client type compatibility
+        body: builtQuery as ElasticsearchSearchBody,
       });
 
       // Process results
@@ -729,7 +732,7 @@ export class SearchRepository implements ISearchRepository {
       // Execute search
       const response = await elasticsearch.search({
         index: ElasticsearchAlias.COURSES,
-        body: builtQuery as any, // Type assertion to handle Elasticsearch client type compatibility
+        body: builtQuery as ElasticsearchSearchBody,
       });
 
       // Process results
