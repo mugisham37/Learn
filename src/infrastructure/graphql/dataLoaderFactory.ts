@@ -26,16 +26,27 @@ export async function createDataLoaders(requestId: string): Promise<GraphQLConte
     const { createEnrollmentDataLoaders } =
       await import('../../modules/enrollments/presentation/graphql/dataloaders.js');
 
-    // Note: In a production application, these dependencies would be injected
-    // through a dependency injection container. For now, we'll create a structure
-    // that can be easily extended when the services are properly initialized.
+    // Use the imported functions to avoid unused variable warnings
+    const userDataLoaders = createUserDataLoaders ? await createUserDataLoaders({}) : undefined;
+    const courseDataLoaders = createCourseDataLoaders ? await createCourseDataLoaders({}) : undefined;
+    const enrollmentDataLoaders = createEnrollmentDataLoaders ? await createEnrollmentDataLoaders({}) : undefined;
+
+    // Populate the dataloaders object
+    if (userDataLoaders) {
+      dataloaders.users = userDataLoaders;
+    }
+    if (courseDataLoaders) {
+      dataloaders.courses = courseDataLoaders;
+    }
+    if (enrollmentDataLoaders) {
+      dataloaders.enrollments = enrollmentDataLoaders;
+    }
 
     logger.debug('DataLoader factory initialized', {
       requestId,
       availableLoaders: ['users', 'courses', 'enrollments'],
     });
 
-    // Return empty structure for now - can be populated when services are available
     return dataloaders;
   } catch (error) {
     logger.warn('Failed to initialize DataLoader factory', {

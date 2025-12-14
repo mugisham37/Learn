@@ -19,7 +19,6 @@ import { FastifyInstance } from 'fastify';
 import { GraphQLSchema } from 'graphql';
 
 import { config } from '../../config/index.js';
-
 import { adminTypeDefs, adminResolvers } from '../../modules/admin/presentation/graphql/index.js';
 import {
   analyticsResolvers,
@@ -34,11 +33,11 @@ import {
   communicationTypeDefs,
 } from '../../modules/communication/presentation/graphql/index.js';
 import { contentResolvers, contentTypeDefs } from '../../modules/content/presentation/index.js';
+import { CourseDataLoaders } from '../../modules/courses/presentation/graphql/dataloaders.js';
 import {
   courseResolvers,
   courseTypeDefs,
 } from '../../modules/courses/presentation/graphql/index.js';
-import { CourseDataLoaders } from '../../modules/courses/presentation/graphql/dataloaders.js';
 import { EnrollmentDataLoaders } from '../../modules/enrollments/presentation/graphql/dataloaders.js';
 import {
   enrollmentResolvers,
@@ -53,11 +52,10 @@ import {
   searchResolvers,
   searchTypeDefs,
 } from '../../modules/search/presentation/graphql/index.js';
-import { userResolvers, userTypeDefs } from '../../modules/users/presentation/graphql/index.js';
 import { UserDataLoaders } from '../../modules/users/presentation/graphql/dataloaders.js';
+import { userResolvers, userTypeDefs } from '../../modules/users/presentation/graphql/index.js';
 
 import { logger } from '../../shared/utils/logger.js';
-
 import { createGraphQLCachingPlugin, createCacheAwareContext } from './cachingPlugin.js';
 import {
   createComplexityAnalysisPlugin,
@@ -67,8 +65,8 @@ import {
 import { complexityDirectiveTypeDefs } from './complexityDirectives.js';
 import { createExecutionTimeTracker } from './complexityMonitoring.js';
 import { complexityMonitoringSchema } from './complexitySchema.js';
-import { createDataLoaders as createDataLoadersFactory } from './dataLoaderFactory.js';
 import { formatGraphQLError } from './errorFormatter.js';
+import { createDataLoaders as createDataLoadersFactory } from './dataLoaderFactory.js';
 import { createPubSub } from './pubsub.js';
 import {
   createResponseOptimizationPlugin,
@@ -77,8 +75,8 @@ import {
 import { createSubscriptionServer } from './subscriptionServer.js';
 
 // Helper function to safely import resolvers
-function safeImportResolvers(): Record<string, unknown>[] {
-  const resolvers: Record<string, unknown>[] = [];
+function safeImportResolvers(): any[] {
+  const resolvers: any[] = [];
 
   // Always available resolvers
   resolvers.push(complexityMonitoringSchema.resolvers);
@@ -117,7 +115,7 @@ function safeImportResolvers(): Record<string, unknown>[] {
 interface PubSubInstance {
   publish: (triggerName: string, payload: Record<string, unknown>) => Promise<void>;
   subscribe: (triggerName: string) => AsyncIterator<unknown>;
-  asyncIterator: (triggers: string | string[]) => AsyncIterator<unknown>;
+  asyncIterator?: (triggers: string | string[]) => AsyncIterator<unknown>;
 }
 
 /**
@@ -252,11 +250,11 @@ function createMergedSchema(): GraphQLSchema {
 /**
  * Creates and configures Apollo Server instance with subscription support
  */
-export async function createApolloServer(fastify: FastifyInstance): Promise<{
+export function createApolloServer(fastify: FastifyInstance): {
   server: ApolloServer<GraphQLContext>;
   schema: GraphQLSchema;
   subscriptionCleanup?: () => Promise<void>;
-}> {
+} {
   const schema = createMergedSchema();
 
   // Create subscription server for WebSocket support
@@ -314,7 +312,7 @@ export async function createApolloServer(fastify: FastifyInstance): Promise<{
     ],
 
     // Format errors for consistent structure using custom formatter
-    formatError: (formattedError, error) => {
+    formatError: (formattedError, error): any => {
       return formatGraphQLError(formattedError, error);
     },
 
@@ -332,9 +330,6 @@ export async function createApolloServer(fastify: FastifyInstance): Promise<{
 
   return { server, schema, subscriptionCleanup };
 }
-
-// Import DataLoader factory
-import { createDataLoaders as createDataLoadersFactory } from './dataLoaderFactory.js';
 
 /**
  * Creates data loaders for efficient data fetching
@@ -425,7 +420,7 @@ export async function createGraphQLContext({
 
   // Add PubSub instance to context for subscriptions
   try {
-    context.pubsub = createPubSub();
+    context.pubsub = createPubSub() as PubSubInstance;
   } catch (error) {
     logger.error('Failed to create PubSub for GraphQL context', {
       error: error instanceof Error ? error.message : String(error),
@@ -435,5 +430,5 @@ export async function createGraphQLContext({
   }
 
   // Add cache utilities to context
-  return createCacheAwareContext(context);
+  return createCacheAwareContext(context) as GraphQLContext;
 }

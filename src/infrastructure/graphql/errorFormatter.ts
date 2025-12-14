@@ -8,8 +8,9 @@
  */
 
 import { GraphQLError, GraphQLFormattedError } from 'graphql';
-import { logger } from '../../shared/utils/logger.js';
+
 import { config } from '../../config/index.js';
+import { logger } from '../../shared/utils/logger.js';
 import {
   AppError,
   ValidationError,
@@ -18,8 +19,8 @@ import {
   NotFoundError,
   ConflictError,
   ExternalServiceError,
-  DatabaseError,
-  RateLimitError,
+  // DatabaseError,
+  // RateLimitError,
   isOperationalError,
   sanitizeError,
 } from '../../shared/errors/index.js';
@@ -216,7 +217,7 @@ export function createGraphQLError(error: Error, requestId?: string): GraphQLErr
 export function formatGraphQLError(
   formattedError: GraphQLFormattedError,
   error: unknown
-): FormattedGraphQLError {
+): GraphQLFormattedError {
   const originalError = error instanceof Error ? error : new Error(String(error));
   const requestId = (formattedError.extensions?.requestId as string) || 'unknown';
 

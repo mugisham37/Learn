@@ -151,9 +151,9 @@ export function createComplexityAnalysisRule(
  */
 export function createComplexityAnalysisPlugin(config: Partial<ComplexityConfig> = {}) {
   return {
-    requestDidStart() {
+    async requestDidStart() {
       return {
-        didResolveOperation({ request, document, contextValue }: any) {
+        async didResolveOperation({ request, document, contextValue }: any) {
           // Log query complexity for monitoring
           try {
             // Calculate complexity for logging purposes

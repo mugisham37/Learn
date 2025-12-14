@@ -7,8 +7,9 @@
 
 import { FastifyInstance } from 'fastify';
 
-import { config, validateConfig } from './config/index.js';
+import { config } from './config/index.js';
 import { createServer, startServer, stopServer } from './server.js';
+import { handleUncaughtException, handleUnhandledRejection } from './shared/errors/index.js';
 import { logger } from './shared/utils/logger.js';
 
 // Global server instance for graceful shutdown
@@ -56,7 +57,7 @@ async function bootstrap(): Promise<void> {
       enabled: config.nodeEnv === 'production',
       timezone: 'UTC',
     });
-    await schedulerService.initialize();
+    schedulerService.initialize();
     logger.info('Unified scheduler service initialized successfully');
 
     // Register module routes
@@ -136,8 +137,6 @@ process.on('SIGTERM', () => void shutdown('SIGTERM'));
 process.on('SIGINT', () => void shutdown('SIGINT'));
 
 // Handle uncaught errors with comprehensive error handlers
-import { handleUncaughtException, handleUnhandledRejection } from './shared/errors/index.js';
-
 process.on('uncaughtException', (error) => {
   handleUncaughtException(error);
   void shutdown('UNCAUGHT_EXCEPTION');

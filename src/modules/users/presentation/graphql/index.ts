@@ -7,7 +7,7 @@
  */
 
 export { userTypeDefs } from './schema.js';
-export { userResolvers, type GraphQLContext } from './resolvers.js';
+export { userResolvers, type UserGraphQLContext } from './resolvers.js';
 export {
   UserDataLoaders,
   createUserDataLoaders,

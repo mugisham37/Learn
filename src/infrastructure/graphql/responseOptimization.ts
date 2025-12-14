@@ -321,9 +321,9 @@ export function createResponseOptimizationPlugin(
   config: ResponseOptimizationConfig = DEFAULT_CONFIG
 ) {
   return {
-    requestDidStart() {
+    async requestDidStart() {
       return {
-        willSendResponse({ response, request }: any) {
+        async willSendResponse({ response, request }: any) {
           try {
             // Only optimize successful responses with data
             if (response.body.kind === 'single' && response.body.singleResult.data) {

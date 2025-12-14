@@ -229,9 +229,9 @@ export function createExecutionTimeTracker() {
   const startTimes = new Map<string, number>();
 
   return {
-    requestDidStart() {
+    async requestDidStart() {
       return {
-        willSendResponse(requestContext: any) {
+        async willSendResponse(requestContext: any) {
           const requestId = requestContext.request.http?.requestId || 'unknown';
           const startTime = startTimes.get(requestId);
 
@@ -246,7 +246,7 @@ export function createExecutionTimeTracker() {
           }
         },
 
-        didResolveOperation(requestContext: any) {
+        async didResolveOperation(requestContext: any) {
           const requestId = requestContext.request.http?.requestId || 'unknown';
           startTimes.set(requestId, Date.now());
         },

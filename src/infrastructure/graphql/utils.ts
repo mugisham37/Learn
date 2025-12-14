@@ -8,6 +8,7 @@
  */
 
 import { GraphQLError } from 'graphql';
+
 import { GraphQLContext } from './apolloServer.js';
 import {
   createAuthenticationError,
@@ -280,10 +281,10 @@ export function validatePasswordStrength(password: string, context: GraphQLConte
  * @param resolver - The resolver function to wrap
  * @returns Wrapped resolver with error handling
  */
-export function withErrorHandling<TArgs = any, TResult = any>(
-  resolver: (parent: any, args: TArgs, context: GraphQLContext, info: any) => Promise<TResult>
+export function withErrorHandling<TArgs = unknown, TResult = unknown>(
+  resolver: (parent: unknown, args: TArgs, context: GraphQLContext, info: unknown) => Promise<TResult>
 ) {
-  return async (parent: any, args: TArgs, context: GraphQLContext, info: any): Promise<TResult> => {
+  return async (parent: unknown, args: TArgs, context: GraphQLContext, info: unknown): Promise<TResult> => {
     try {
       return await resolver(parent, args, context, info);
     } catch (error) {

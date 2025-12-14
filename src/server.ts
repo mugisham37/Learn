@@ -12,14 +12,14 @@ import helmet from '@fastify/helmet';
 import Fastify, { FastifyInstance, FastifyServerOptions } from 'fastify';
 
 import { config } from './config/index.js';
-import { logger } from './shared/utils/logger.js';
+import { createSocketServer, closeSocketServer } from './infrastructure/websocket/index.js';
 import { logRequest, logResponse } from './shared/middleware/index.js';
+import { registerCSRFProtection } from './shared/middleware/csrf.js';
 import {
   registerGlobalRateLimit,
   registerAdaptiveRateLimit,
 } from './shared/middleware/rateLimiting.js';
-import { registerCSRFProtection } from './shared/middleware/csrf.js';
-import { createSocketServer, closeSocketServer } from './infrastructure/websocket/index.js';
+import { logger } from './shared/utils/logger.js';
 
 /**
  * Creates and configures a Fastify server instance
@@ -129,7 +129,7 @@ export async function createServer(): Promise<FastifyInstance> {
 
   // Register HTTP caching middleware
   const { registerHttpCaching } = await import('./shared/middleware/httpCaching.js');
-  await registerHttpCaching(server);
+  registerHttpCaching(server);
 
   // Register request tracing middleware (must be first for proper context)
   const { registerRequestTracing } = await import('./shared/middleware/requestTracing.js');
@@ -170,7 +170,7 @@ export async function createServer(): Promise<FastifyInstance> {
   });
 
   // Deep health check endpoint (checks dependencies)
-  server.get('/health/deep', async (request, reply) => {
+  server.get('/health/deep', async (_request, reply) => {
     try {
       const { performSystemHealthCheck } = await import('./shared/utils/health.js');
       const health = await performSystemHealthCheck();
@@ -191,7 +191,7 @@ export async function createServer(): Promise<FastifyInstance> {
   });
 
   // Readiness probe endpoint (for Kubernetes)
-  server.get('/health/ready', async (request, reply) => {
+  server.get('/health/ready', async (_request, reply) => {
     try {
       const { checkReadiness } = await import('./shared/utils/health.js');
       const readiness = await checkReadiness();
@@ -208,10 +208,10 @@ export async function createServer(): Promise<FastifyInstance> {
   });
 
   // Liveness probe endpoint (for Kubernetes)
-  server.get('/health/live', async (request, reply) => {
+  server.get('/health/live', async (_request, reply) => {
     try {
       const { checkLiveness } = await import('./shared/utils/health.js');
-      const liveness = await checkLiveness();
+      const liveness = checkLiveness();
 
       const statusCode = liveness.alive ? 200 : 503;
       return reply.code(statusCode).send(liveness);
@@ -259,11 +259,9 @@ export async function createServer(): Promise<FastifyInstance> {
   logger.info('Socket.io server initialized successfully');
 
   // Register authentication REST routes
-  const { registerAuthRoutes } =
-    await import('./modules/users/presentation/rest/authController.js');
+  const { registerAuthRoutes } = await import('./modules/users/presentation/rest/authController.js');
   const { AuthService } = await import('./modules/users/application/services/AuthService.js');
-  const { UserRepository } =
-    await import('./modules/users/infrastructure/repositories/UserRepository.js');
+  const { UserRepository } = await import('./modules/users/infrastructure/repositories/UserRepository.js');
 
   // Create auth service instance
   const userRepository = new UserRepository();
