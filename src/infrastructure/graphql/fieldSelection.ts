@@ -57,7 +57,7 @@ function parseSelectionSet(
 ): void {
   for (const selection of selections) {
     switch (selection.kind) {
-      case 'Field':
+      case 'Field': {
         const fieldName = selection.name.value;
         fields.add(fieldName);
 
@@ -82,6 +82,7 @@ function parseSelectionSet(
           });
         }
         break;
+      }
 
       case 'InlineFragment':
         // Handle inline fragments
@@ -96,7 +97,7 @@ function parseSelectionSet(
         }
         break;
 
-      case 'FragmentSpread':
+      case 'FragmentSpread': {
         // Handle fragment spreads
         const fragmentName = selection.name.value;
         const fragment = info.fragments[fragmentName];
@@ -110,6 +111,7 @@ function parseSelectionSet(
           );
         }
         break;
+      }
     }
   }
 }
@@ -117,7 +119,7 @@ function parseSelectionSet(
 /**
  * Filters an object to include only selected fields
  */
-export function filterObjectFields<T extends Record<string, any>>(
+export function filterObjectFields<T extends Record<string, unknown>>(
   obj: T,
   selection: FieldSelection
 ): Partial<T> {

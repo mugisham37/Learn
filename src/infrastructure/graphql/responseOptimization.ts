@@ -320,32 +320,63 @@ export function resetOptimizationStats(): void {
 }
 
 /**
+ * Apollo Server plugin interface
+ */
+interface ApolloServerPlugin {
+  requestDidStart?: () => Promise<{
+    willSendResponse?: (requestContext: {
+      response: {
+        body: {
+          kind: string;
+          singleResult?: {
+            data?: Record<string, unknown>;
+          };
+        };
+        http: {
+          headers: Map<string, string>;
+        };
+      };
+      request: {
+        operationName?: string;
+      };
+    }) => Promise<void>;
+  }>;
+}
+
+/**
  * Apollo Server plugin for automatic response optimization
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function createResponseOptimizationPlugin(
   config: ResponseOptimizationConfig = DEFAULT_CONFIG
-): unknown {
+): ApolloServerPlugin {
   return {
-    // eslint-disable-next-line @typescript-eslint/require-await, @typescript-eslint/no-explicit-any
-    async requestDidStart(): Promise<any> {
+    async requestDidStart() {
       return {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/require-await
-        async willSendResponse({ response, request }: any): Promise<void> {
+        async willSendResponse({ response, request }: {
+          response: {
+            body: {
+              kind: string;
+              singleResult?: {
+                data?: Record<string, unknown>;
+              };
+            };
+            http: {
+              headers: Map<string, string>;
+            };
+          };
+          request: {
+            operationName?: string;
+          };
+        }): Promise<void> {
           try {
             // Only optimize successful responses with data
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-            if (response.body.kind === 'single' && response.body.singleResult.data) {
-              // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
+            if (response.body.kind === 'single' && response.body.singleResult?.data) {
               const originalData = response.body.singleResult.data;
 
               // Apply basic null value removal (field selection handled at resolver level)
               if (config.removeNullValues) {
                 const optimizedData = removeNullValues(originalData);
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-                const optimizedDataResult = optimizedData;
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-                response.body.singleResult.data = optimizedDataResult;
+                response.body.singleResult.data = optimizedData;
 
                 // Log optimization metrics
                 if (config.logOptimizations) {
@@ -356,7 +387,6 @@ export function createResponseOptimizationPlugin(
                   );
 
                   logger.debug('Response optimized in plugin', {
-                    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
                     operationName: request.operationName,
                     originalSize,
                     optimizedSize,
@@ -367,13 +397,11 @@ export function createResponseOptimizationPlugin(
 
               // Add compression hints if enabled
               if (config.enableCompressionHints) {
-                // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
                 const responseSize = JSON.stringify(response.body.singleResult.data).length;
 
                 // Add headers to encourage compression for larger responses
                 if (responseSize > 1024) {
                   // 1KB threshold
-                  // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
                   response.http.headers.set('X-Compress-Hint', 'true');
                 }
               }
@@ -381,7 +409,6 @@ export function createResponseOptimizationPlugin(
           } catch (error) {
             logger.error('Failed to optimize response in plugin', {
               error: error instanceof Error ? error.message : String(error),
-              // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
               operationName: request.operationName,
             });
           }

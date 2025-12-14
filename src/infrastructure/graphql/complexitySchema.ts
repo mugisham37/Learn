@@ -68,11 +68,45 @@ export const complexityMonitoringTypeDefs = `
 `;
 
 /**
+ * Context interface for complexity monitoring resolvers
+ */
+interface ComplexityMonitoringContext {
+  user?: {
+    role: string;
+  };
+}
+
+/**
+ * Complexity stats interface
+ */
+interface ComplexityStats {
+  totalQueries: number;
+  averageComplexity: number;
+  maxComplexity: number;
+  minComplexity: number;
+  highComplexityQueries: number;
+  alertQueries: number;
+}
+
+/**
+ * Complexity metric interface
+ */
+interface ComplexityMetric {
+  query: string;
+  operationName?: string;
+  complexity: number;
+  executionTime?: number;
+  userId?: string;
+  userRole?: string;
+  timestamp: Date;
+}
+
+/**
  * GraphQL resolvers for complexity monitoring
  */
 export const complexityMonitoringResolvers = {
   Query: {
-    complexityStats: async (_: never, __: any, context: any): Promise<any> => {
+    complexityStats: (_: never, __: Record<string, never>, context: ComplexityMonitoringContext): ComplexityStats => {
       // Check admin authorization
       if (!context.user || context.user.role !== 'admin') {
         throw new Error('Admin access required');
@@ -81,7 +115,7 @@ export const complexityMonitoringResolvers = {
       return complexityMonitor.getComplexityStats();
     },
 
-    topComplexQueries: async (_: any, { limit }: { limit: number }, context: any): Promise<any> => {
+    topComplexQueries: (_: never, { limit }: { limit: number }, context: ComplexityMonitoringContext): ComplexityMetric[] => {
       // Check admin authorization
       if (!context.user || context.user.role !== 'admin') {
         throw new Error('Admin access required');
@@ -90,7 +124,7 @@ export const complexityMonitoringResolvers = {
       return complexityMonitor.getTopComplexQueries(limit);
     },
 
-    userComplexityQueries: async (_: any, { userId }: { userId: string }, context: any): Promise<any> => {
+    userComplexityQueries: (_: never, { userId }: { userId: string }, context: ComplexityMonitoringContext): ComplexityMetric[] => {
       // Check admin authorization
       if (!context.user || context.user.role !== 'admin') {
         throw new Error('Admin access required');
@@ -101,7 +135,7 @@ export const complexityMonitoringResolvers = {
   },
 
   Mutation: {
-    clearComplexityMetrics: async (_: any, __: any, context: any): Promise<any> => {
+    clearComplexityMetrics: (_: never, __: Record<string, never>, context: ComplexityMonitoringContext): boolean => {
       // Check admin authorization
       if (!context.user || context.user.role !== 'admin') {
         throw new Error('Admin access required');
@@ -111,16 +145,16 @@ export const complexityMonitoringResolvers = {
       return true;
     },
 
-    updateComplexityConfig: async (
-      _: any,
+    updateComplexityConfig: (
+      _: never,
       args: {
         logThreshold?: number;
         alertThreshold?: number;
         enableDetailedLogging?: boolean;
         enablePerformanceTracking?: boolean;
       },
-      context: any
-    ): Promise<unknown> => {
+      context: ComplexityMonitoringContext
+    ): boolean => {
       // Check admin authorization
       if (!context.user || context.user.role !== 'admin') {
         throw new Error('Admin access required');

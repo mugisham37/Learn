@@ -28,10 +28,10 @@ interface RefreshTokenRequest {
 /**
  * Register authentication routes with Fastify
  */
-export async function registerAuthRoutes(
+export function registerAuthRoutes(
   fastify: FastifyInstance,
   authService: IAuthService
-): Promise<void> {
+): void {
   // Login endpoint
   fastify.post<{ Body: LoginRequest }>('/api/auth/login', async (request, reply) => {
     try {

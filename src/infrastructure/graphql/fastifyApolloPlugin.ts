@@ -13,7 +13,8 @@ import fp from 'fastify-plugin';
 
 import { logger } from '../../shared/utils/logger.js';
 
-import { createApolloServer, createGraphQLContext, GraphQLContext } from './apolloServer.js';
+import { createApolloServer, createGraphQLContext } from './apolloServer.js';
+import { GraphQLContext } from './types.js';
 
 /**
  * Fastify plugin options for Apollo Server
@@ -62,14 +63,10 @@ const apolloServerPlugin: FastifyPluginAsync<ApolloServerPluginOptions> = async 
         // Create GraphQL context
         const contextValue = await createGraphQLContext({ request });
 
-        // Create HeaderMap with required __identity property
-        const headerMap = new Map(Object.entries(request.headers as Record<string, string>));
+        // Create HeaderMap with required __identity property for Apollo Server compatibility
+        const headerMap = new Map(Object.entries(request.headers as Record<string, string>)) as Map<string, string> & { __identity: string };
         // Add the required __identity property for Apollo Server HeaderMap compatibility
-        Object.defineProperty(headerMap, '__identity', {
-          value: 'HeaderMap',
-          enumerable: false,
-          writable: false,
-        });
+        (headerMap as Map<string, string> & { __identity: string }).__identity = 'HeaderMap';
 
         // Execute GraphQL request
         const response = await apolloServer.executeHTTPGraphQLRequest({

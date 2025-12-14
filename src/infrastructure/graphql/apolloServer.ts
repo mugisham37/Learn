@@ -72,6 +72,9 @@ import {
 import { createSubscriptionServer } from './subscriptionServer.js';
 import { GraphQLContext } from './types.js';
 
+// Re-export GraphQLContext for other modules
+export { GraphQLContext } from './types.js';
+
 // Helper function to safely import resolvers
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function safeImportResolvers(): any[] {

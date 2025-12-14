@@ -11,7 +11,7 @@ import {
   GraphQLRequestContextWillSendResponse,
   GraphQLRequestContextDidEncounterErrors
 } from '@apollo/server';
-import { GraphQLError, GraphQLFormattedError } from 'graphql';
+import { GraphQLError } from 'graphql';
 
 /**
  * User context interface for GraphQL operations
@@ -45,6 +45,38 @@ interface DataLoader<K, V> {
 }
 
 /**
+ * User DataLoader interface
+ */
+export interface UserDataLoaderInterface {
+  userById: DataLoader<string, Record<string, unknown>>;
+  usersByIds: DataLoader<string[], Record<string, unknown>[]>;
+  clearAll: () => void;
+  primeUser: (user: Record<string, unknown>) => void;
+}
+
+/**
+ * Course DataLoader interface
+ */
+export interface CourseDataLoaderInterface {
+  courseById: DataLoader<string, Record<string, unknown>>;
+  coursesByInstructorId: DataLoader<string, Record<string, unknown>[]>;
+  modulesByCourseId: DataLoader<string, Record<string, unknown>[]>;
+  clearAll: () => void;
+  prime: (course: Record<string, unknown>) => void;
+}
+
+/**
+ * Enrollment DataLoader interface
+ */
+export interface EnrollmentDataLoaderInterface {
+  enrollmentById: DataLoader<string, Record<string, unknown>>;
+  enrollmentsByStudentId: DataLoader<string, Record<string, unknown>[]>;
+  enrollmentsByCourseId: DataLoader<string, Record<string, unknown>[]>;
+  clearAll: () => void;
+  primeEnrollment: (enrollment: Record<string, unknown>) => void;
+}
+
+/**
  * GraphQL request context interface
  */
 export interface GraphQLContext {
@@ -58,13 +90,13 @@ export interface GraphQLContext {
   pubsub?: PubSubInstance;
   dataloaders?: {
     // User data loaders
-    users?: any;
+    users?: UserDataLoaderInterface;
 
     // Course data loaders
-    courses?: any;
+    courses?: CourseDataLoaderInterface;
 
     // Enrollment data loaders
-    enrollments?: any;
+    enrollments?: EnrollmentDataLoaderInterface;
 
     // Legacy individual loaders for backward compatibility
     userById?: DataLoader<string, Record<string, unknown>>;
@@ -86,8 +118,8 @@ export interface GraphQLContext {
     userRepository?: unknown;
   };
   cache?: {
-    generateETag: (data: any) => string;
-    buildCacheControlHeader: (config: any) => string;
+    generateETag: (data: Record<string, unknown>) => string;
+    buildCacheControlHeader: (config: Record<string, unknown>) => string;
     configs: Record<string, unknown>;
   };
   [key: string]: unknown;
