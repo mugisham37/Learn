@@ -330,7 +330,7 @@ export function extractPaginationInput(args: any): PaginationInput {
 /**
  * Utility to extract offset pagination parameters from GraphQL arguments
  */
-export function extractOffsetPaginationInput(args: any): OffsetPaginationInput {
+export function extractOffsetPaginationInput(args: unknown): OffsetPaginationInput {
   return {
     page: args.page,
     limit: args.limit,

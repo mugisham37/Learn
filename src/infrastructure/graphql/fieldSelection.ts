@@ -298,7 +298,7 @@ export function getNestedFieldSelection(
 /**
  * Utility to create a minimal object with only requested fields
  */
-export function createMinimalResponse<T extends Record<string, any>>(
+export function createMinimalResponse<T extends Record<string, unknown>>(
   data: T,
   info: GraphQLResolveInfo
 ): Partial<T> {

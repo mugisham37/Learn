@@ -6,6 +6,7 @@
  */
 
 import { FastifyInstance } from 'fastify';
+
 import { IAuthService } from '../../application/services/IAuthService.js';
 
 interface LoginRequest {

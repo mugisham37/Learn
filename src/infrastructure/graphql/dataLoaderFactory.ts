@@ -10,6 +10,12 @@
 import { logger } from '../../shared/utils/logger.js';
 
 import { GraphQLContext } from './apolloServer.js';
+import { EnrollmentDataLoaderContext } from './types.js';
+import { DataLoaderContext } from './types.js';
+import { UserDataLoaderContext } from './types.js';
+import { EnrollmentDataLoaderContext } from './types.js';
+import { DataLoaderContext } from './types.js';
+import { UserDataLoaderContext } from './types.js';
 
 /**
  * Creates DataLoaders for GraphQL context

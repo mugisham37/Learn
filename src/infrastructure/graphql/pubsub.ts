@@ -148,7 +148,7 @@ export function getPubSub(): PubSub | RedisPubSub {
 /**
  * Publishes an event to subscribers
  */
-export async function publishEvent(event: SubscriptionEvent, payload: any): Promise<void> {
+export async function publishEvent(event: SubscriptionEvent, payload: unknown): Promise<void> {
   try {
     const pubsubInstance = getPubSub();
     await pubsubInstance.publish(event, payload);

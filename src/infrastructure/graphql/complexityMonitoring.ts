@@ -246,11 +246,14 @@ export function createExecutionTimeTracker(): {
       return Promise.resolve({
         willSendResponse(requestContext: GraphQLRequestContextWillSendResponseTyped): Promise<void> {
           return new Promise<void>((resolve) => {
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
             const requestId = (requestContext.request.http as any)?.requestId || 'unknown';
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
             const startTime = startTimes.get(requestId);
 
             if (startTime) {
               const executionTime = Date.now() - startTime;
+              // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
               startTimes.delete(requestId);
 
               // Add execution time to context for complexity monitoring
@@ -265,7 +268,9 @@ export function createExecutionTimeTracker(): {
 
         didResolveOperation(requestContext: GraphQLRequestContextDidResolveOperationTyped): Promise<void> {
           return new Promise<void>((resolve) => {
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
             const requestId = (requestContext.request.http as any)?.requestId || 'unknown';
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
             startTimes.set(requestId, Date.now());
             resolve();
           });

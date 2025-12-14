@@ -88,7 +88,7 @@ export interface GraphQLContext {
   cache?: {
     generateETag: (data: any) => string;
     buildCacheControlHeader: (config: any) => string;
-    configs: Record<string, any>;
+    configs: Record<string, unknown>;
   };
   [key: string]: unknown;
 }

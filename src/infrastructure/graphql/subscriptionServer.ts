@@ -35,7 +35,7 @@ interface ConnectionContext {
  * Creates and configures WebSocket server for GraphQL subscriptions
  */
 export function createSubscriptionServer(
-  server: any,
+  server: unknown,
   schema: GraphQLSchema
 ): { wsServer: WebSocketServer; cleanup: () => Promise<void> } {
   // Create WebSocket server

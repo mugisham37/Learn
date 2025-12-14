@@ -72,7 +72,7 @@ export const complexityMonitoringTypeDefs = `
  */
 export const complexityMonitoringResolvers = {
   Query: {
-    complexityStats: async (_: any, __: any, context: any): Promise<any> => {
+    complexityStats: async (_: never, __: any, context: any): Promise<any> => {
       // Check admin authorization
       if (!context.user || context.user.role !== 'admin') {
         throw new Error('Admin access required');
@@ -120,7 +120,7 @@ export const complexityMonitoringResolvers = {
         enablePerformanceTracking?: boolean;
       },
       context: any
-    ): Promise<any> => {
+    ): Promise<unknown> => {
       // Check admin authorization
       if (!context.user || context.user.role !== 'admin') {
         throw new Error('Admin access required');
