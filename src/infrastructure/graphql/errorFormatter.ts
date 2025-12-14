@@ -294,15 +294,15 @@ function logGraphQLError(
 
   // Add optional properties if they exist
   if (formattedError.extensions?.['statusCode']) {
-    logContext.statusCode = formattedError.extensions['statusCode'];
+    logContext['statusCode'] = formattedError.extensions['statusCode'];
   }
 
   if (formattedError.extensions?.['field']) {
-    logContext.field = formattedError.extensions['field'];
+    logContext['field'] = formattedError.extensions['field'];
   }
 
   if (formattedError.extensions?.['validationFields']) {
-    logContext.validationFields = formattedError.extensions['validationFields'];
+    logContext['validationFields'] = formattedError.extensions['validationFields'];
   }
 
   // Determine log level based on error type

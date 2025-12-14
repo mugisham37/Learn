@@ -70,7 +70,7 @@ const apolloServerPlugin: FastifyPluginAsync<ApolloServerPluginOptions> = async 
         const response = await apolloServer.executeHTTPGraphQLRequest({
           httpGraphQLRequest: {
             method: request.method.toUpperCase() as 'GET' | 'POST',
-            headers: headerMap,
+            headers: headerMap as unknown as import('@apollo/server').HeaderMap, // Type assertion for HeaderMap compatibility
             search: request.url.includes('?') ? request.url.split('?')[1] || '' : '',
             body: request.body,
           },

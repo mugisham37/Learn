@@ -56,8 +56,9 @@ function parseSelectionSet(
   fragmentMap?: Map<string, FieldNode>
 ): void {
   for (const selection of selections) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
     switch (selection.kind) {
-      case 'Field' as const: {
+      case 'Field': {
         const fieldName = selection.name.value;
         fields.add(fieldName);
 
@@ -84,7 +85,7 @@ function parseSelectionSet(
         break;
       }
 
-      case 'InlineFragment' as const:
+      case 'InlineFragment':
         // Handle inline fragments
         if (selection.selectionSet) {
           parseSelectionSet(
@@ -97,7 +98,7 @@ function parseSelectionSet(
         }
         break;
 
-      case 'FragmentSpread' as const: {
+      case 'FragmentSpread': {
         // Handle fragment spreads
         const fragmentName = selection.name.value;
         const fragment = info.fragments[fragmentName];
@@ -138,7 +139,7 @@ export function filterObjectFields<T extends Record<string, unknown>>(
           // Handle arrays of objects
           filtered[key as keyof T] = value.map((item) =>
             typeof item === 'object' && item !== null ? filterObjectFields(item as Record<string, unknown>, nestedSelection) : item
-          ) as T[keyof T];
+          ) as unknown as T[keyof T];
         } else {
           // Handle nested objects
           filtered[key as keyof T] = filterObjectFields(value as Record<string, unknown>, nestedSelection) as T[keyof T];
@@ -163,7 +164,7 @@ export function removeNullValues<T>(obj: T): T {
   if (Array.isArray(obj)) {
     return obj
       .filter((item) => item !== null && item !== undefined)
-      .map((item) => removeNullValues(item)) as T;
+      .map((item) => removeNullValues(item)) as unknown as T;
   }
 
   if (typeof obj === 'object') {

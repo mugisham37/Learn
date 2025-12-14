@@ -7,9 +7,9 @@
  * Requirements: 21.4
  */
 
-import Redis from 'ioredis';
 import { RedisPubSub } from 'graphql-redis-subscriptions';
 import { PubSub, withFilter } from 'graphql-subscriptions';
+import Redis from 'ioredis';
 
 import { config } from '../../config/index.js';
 import { logger } from '../../shared/utils/logger.js';
@@ -63,7 +63,7 @@ export function createPubSub(): PubSub | RedisPubSub {
 
   try {
     // Use Redis PubSub for production/distributed environments
-    if (config.nodeEnv === 'production' || (config.redis as any).cluster) {
+    if (config.nodeEnv === 'production' || (config.redis as Record<string, unknown>)['cluster']) {
       logger.info('Initializing Redis PubSub for GraphQL subscriptions');
 
       // Create Redis clients for pub/sub
@@ -151,7 +151,8 @@ export function getPubSub(): PubSub | RedisPubSub {
 export async function publishEvent(event: SubscriptionEvent, payload: unknown): Promise<void> {
   try {
     const pubsubInstance = getPubSub();
-    await pubsubInstance.publish(event, payload);
+    // Type assertion to handle union type publish methods
+    await (pubsubInstance.publish as (event: string, payload: unknown) => Promise<void>)(event, payload);
 
     logger.debug('Event published successfully', {
       event,
@@ -168,7 +169,7 @@ export async function publishEvent(event: SubscriptionEvent, payload: unknown): 
 /**
  * Creates an async iterator for subscription events
  */
-export function createAsyncIterator(events: SubscriptionEvent | SubscriptionEvent[]) {
+export function createAsyncIterator(events: SubscriptionEvent | SubscriptionEvent[]): AsyncIterator<unknown> {
   const pubsubInstance = getPubSub();
   const eventArray = Array.isArray(events) ? events : [events];
   

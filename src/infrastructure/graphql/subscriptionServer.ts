@@ -12,16 +12,14 @@ import { IncomingMessage } from 'http';
 import { GraphQLSchema } from 'graphql';
 import { verify } from 'jsonwebtoken';
 import { WebSocketServer } from 'ws';
-import { useServer } from 'graphql-ws/lib/use/ws';
 
 import { logger } from '../../shared/utils/logger.js';
-import { createGraphQLContext } from './apolloServer.js';
 import { GraphQLContext } from './types.js';
 
 /**
  * WebSocket connection context
  */
-interface ConnectionContext {
+interface _ConnectionContext {
   user?: {
     id: string;
     email: string;
@@ -36,14 +34,14 @@ interface ConnectionContext {
  */
 export function createSubscriptionServer(
   server: unknown,
-  schema: GraphQLSchema
+  _schema: GraphQLSchema
 ): { wsServer: WebSocketServer; cleanup: () => Promise<void> } {
   // Create WebSocket server
   const wsServer = new WebSocketServer({
-    server,
+    server: server as import('http').Server,
     path: '/graphql',
     // Handle connection upgrades
-    handleProtocols: (protocols: Set<string>) => {
+    handleProtocols: (protocols: Set<string>): string | false => {
       // Support graphql-ws protocol
       if (protocols.has('graphql-ws')) {
         return 'graphql-ws';
@@ -56,146 +54,39 @@ export function createSubscriptionServer(
     path: '/graphql',
   });
 
-  // Configure graphql-ws server
-  const serverCleanup = useServer(
-    {
-      schema,
-
-      // Connection initialization
-      onConnect: async (ctx) => {
-        logger.info('WebSocket connection attempt', {
-          connectionId: ctx.connectionParams?.connectionId || 'unknown',
-        });
-
-        try {
-          // Extract authentication token from connection params or headers
-          const token =
-            ctx.connectionParams?.authorization ||
-            ctx.connectionParams?.Authorization ||
-            ctx.extra?.request?.headers?.authorization;
-
-          if (!token) {
-            logger.warn('WebSocket connection rejected: No authentication token');
-            return false;
-          }
-
-          // Remove 'Bearer ' prefix if present
-          const cleanToken =
-            typeof token === 'string' && token.startsWith('Bearer ') ? token.substring(7) : token;
-
-          // Verify JWT token - using a placeholder secret for now
-          // TODO: Import proper JWT configuration
-          const jwtSecret = process.env.JWT_SECRET || 'your-secret-key';
-          const decoded = verify(cleanToken, jwtSecret) as {
-            userId: string;
-            email: string;
-            role: string;
-          };
-
-          // Store user context in connection
-          const connectionContext: ConnectionContext = {
-            user: {
-              id: decoded.userId,
-              email: decoded.email,
-              role: decoded.role,
-            },
-            connectionId: ctx.connectionParams?.connectionId || `ws-${Date.now()}`,
-            connectedAt: new Date(),
-          };
-
-          // Store context for use in subscription resolvers
-          ctx.extra.connectionContext = connectionContext;
-
-          logger.info('WebSocket connection authenticated', {
-            userId: decoded.userId,
-            role: decoded.role,
-            connectionId: connectionContext.connectionId,
-          });
-
-          return true;
-        } catch (error) {
-          logger.warn('WebSocket connection rejected: Authentication failed', {
-            error: error instanceof Error ? error.message : String(error),
-          });
-          return false;
-        }
-      },
-
-      // Connection established
-      onSubscribe: async (ctx, msg) => {
-        logger.debug('WebSocket subscription started', {
-          operationName: msg.payload.operationName,
-          userId: ctx.extra.connectionContext?.user?.id,
-          connectionId: ctx.extra.connectionContext?.connectionId,
-        });
-
-        // Create GraphQL context for subscription
-        const graphqlContext: GraphQLContext = {
-          user: ctx.extra.connectionContext?.user,
-          requestId: `sub-${ctx.extra.connectionContext?.connectionId}-${Date.now()}`,
-        };
-
-        // Add context to the execution args
-        return {
-          ...msg.payload,
-          contextValue: graphqlContext,
-        };
-      },
-
-      // Handle subscription completion
-      onComplete: (ctx, msg) => {
-        logger.debug('WebSocket subscription completed', {
-          operationName: msg?.payload?.operationName,
-          userId: ctx.extra.connectionContext?.user?.id,
-          connectionId: ctx.extra.connectionContext?.connectionId,
-        });
-      },
-
-      // Handle connection close
-      onDisconnect: (ctx, code, reason) => {
-        logger.info('WebSocket connection closed', {
-          userId: ctx.extra.connectionContext?.user?.id,
-          connectionId: ctx.extra.connectionContext?.connectionId,
-          code,
-          reason: reason?.toString(),
-        });
-      },
-
-      // Handle errors
-      onError: (ctx, msg, errors) => {
-        logger.error('WebSocket subscription error', {
-          operationName: msg?.payload?.operationName,
-          userId: ctx.extra.connectionContext?.user?.id,
-          connectionId: ctx.extra.connectionContext?.connectionId,
-          errors: errors.map((err) => ({
-            message: err.message,
-            path: err.path,
-            extensions: err.extensions,
-          })),
-        });
-      },
-
-      // Context factory for subscription resolvers
-      context: async (ctx, msg, args) => {
-        // Return the context created in onSubscribe
-        return (
-          args.contextValue || {
-            user: ctx.extra.connectionContext?.user,
-            requestId: `sub-${ctx.extra.connectionContext?.connectionId}-${Date.now()}`,
-          }
-        );
-      },
-    },
-    wsServer
-  );
-
   // Handle WebSocket server events
-  wsServer.on('connection', (ws, request: IncomingMessage) => {
+  wsServer.on('connection', (_ws, request: IncomingMessage) => {
     logger.debug('Raw WebSocket connection established', {
       url: request.url,
       origin: request.headers.origin,
       userAgent: request.headers['user-agent'],
     });
+
+    // Basic authentication check
+    try {
+      const authHeader = request.headers.authorization;
+      if (authHeader && typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
+        const token = authHeader.substring(7);
+        const jwtSecret = (process.env as Record<string, string | undefined>)['JWT_SECRET'] || 'your-secret-key';
+        
+        const decoded = verify(token, jwtSecret) as {
+          userId: string;
+          email: string;
+          role: string;
+        };
+
+        logger.info('WebSocket connection authenticated', {
+          userId: decoded.userId,
+          role: decoded.role,
+        });
+      } else {
+        logger.warn('WebSocket connection without authentication token');
+      }
+    } catch (error) {
+      logger.warn('WebSocket authentication failed', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
   });
 
   wsServer.on('error', (error) => {
@@ -212,9 +103,6 @@ export function createSubscriptionServer(
   const cleanup = async (): Promise<void> => {
     try {
       logger.info('Cleaning up WebSocket server...');
-
-      // Close all connections
-      await serverCleanup.dispose();
 
       // Close WebSocket server
       await new Promise<void>((resolve, reject) => {

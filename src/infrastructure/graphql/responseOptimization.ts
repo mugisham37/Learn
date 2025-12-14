@@ -16,11 +16,14 @@ import {
   createFieldSelection,
   filterObjectFields,
 } from './fieldSelection.js';
+import { GraphQLContext, TypedGraphQLRequestListener } from './types.js';
 import {
   createOptimizedConnection,
   createOptimizedOffsetPagination,
   PaginationInput,
   OffsetPaginationInput,
+  OffsetPaginationResult,
+  Connection,
   createPaginationConfig,
 } from './pagination.js';
 
@@ -92,13 +95,11 @@ export function createOptimizationConfig(): ResponseOptimizationConfig {
 /**
  * Optimizes a GraphQL response with comprehensive optimization
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function optimizeResponse<T>(
   data: T,
   info: GraphQLResolveInfo,
   config: ResponseOptimizationConfig = DEFAULT_CONFIG
 ): { data: T; metrics: OptimizationMetrics } {
-  // Removed unused variable
 
   let originalData: string;
   let originalSize: number;
@@ -136,8 +137,7 @@ export function optimizeResponse<T>(
     // Apply field selection if enabled
     if (config.enableFieldSelection) {
       const selection = createFieldSelection(info);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      optimizedData = filterObjectFields(optimizedData as any, selection) as T;
+      optimizedData = filterObjectFields(optimizedData as Record<string, unknown>, selection) as T;
     }
 
     // Remove null values if enabled
@@ -225,7 +225,6 @@ export function optimizeResponse<T>(
 /**
  * Creates an optimized list response with pagination
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function optimizeListResponse<T>(
   records: T[],
   paginationInput: PaginationInput,
@@ -233,7 +232,7 @@ export function optimizeListResponse<T>(
   totalCount?: number,
   cursorField: string = 'id',
   _config: ResponseOptimizationConfig = DEFAULT_CONFIG
-): any {
+): Connection<T> {
   const paginationConfig = createPaginationConfig();
 
   return createOptimizedConnection(
@@ -249,14 +248,13 @@ export function optimizeListResponse<T>(
 /**
  * Creates an optimized offset-based list response
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function optimizeOffsetListResponse<T>(
   records: T[],
   paginationInput: OffsetPaginationInput,
   info: GraphQLResolveInfo,
   totalCount: number,
   _config: ResponseOptimizationConfig = DEFAULT_CONFIG
-): unknown {
+): OffsetPaginationResult<T> {
   const paginationConfig = createPaginationConfig();
 
   return createOptimizedOffsetPagination(
@@ -320,54 +318,15 @@ export function resetOptimizationStats(): void {
 }
 
 /**
- * Apollo Server plugin interface
- */
-interface ApolloServerPlugin {
-  requestDidStart?: () => Promise<{
-    willSendResponse?: (requestContext: {
-      response: {
-        body: {
-          kind: string;
-          singleResult?: {
-            data?: Record<string, unknown>;
-          };
-        };
-        http: {
-          headers: Map<string, string>;
-        };
-      };
-      request: {
-        operationName?: string;
-      };
-    }) => Promise<void>;
-  }>;
-}
-
-/**
  * Apollo Server plugin for automatic response optimization
  */
 export function createResponseOptimizationPlugin(
   config: ResponseOptimizationConfig = DEFAULT_CONFIG
-): ApolloServerPlugin {
+): import('@apollo/server').ApolloServerPlugin<GraphQLContext> {
   return {
-    async requestDidStart() {
-      return {
-        async willSendResponse({ response, request }: {
-          response: {
-            body: {
-              kind: string;
-              singleResult?: {
-                data?: Record<string, unknown>;
-              };
-            };
-            http: {
-              headers: Map<string, string>;
-            };
-          };
-          request: {
-            operationName?: string;
-          };
-        }): Promise<void> {
+    requestDidStart(): Promise<TypedGraphQLRequestListener> {
+      return Promise.resolve({
+        willSendResponse: ({ response, request }) => {
           try {
             // Only optimize successful responses with data
             if (response.body.kind === 'single' && response.body.singleResult?.data) {
@@ -413,7 +372,7 @@ export function createResponseOptimizationPlugin(
             });
           }
         },
-      };
+      });
     },
   };
 }
@@ -421,18 +380,14 @@ export function createResponseOptimizationPlugin(
 /**
  * Utility function to wrap resolvers with automatic optimization
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function withResponseOptimization<TArgs = any, TResult = any>(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  resolver: (parent: any, args: TArgs, context: any, info: GraphQLResolveInfo) => Promise<TResult>,
+export function withResponseOptimization<TArgs = Record<string, unknown>, TResult = unknown>(
+  resolver: (parent: unknown, args: TArgs, context: unknown, info: GraphQLResolveInfo) => Promise<TResult>,
   config: ResponseOptimizationConfig = DEFAULT_CONFIG
 ) {
   return async (
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    parent: any,
+    parent: unknown,
     args: TArgs,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    context: any,
+    context: unknown,
     info: GraphQLResolveInfo
   ): Promise<TResult> => {
     const result = await resolver(parent, args, context, info);

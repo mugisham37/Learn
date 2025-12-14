@@ -207,7 +207,7 @@ export function createOptimizedConnection<T>(
       // Optimize each node in the edges
       connection.edges = connection.edges.map((edge) => ({
         ...edge,
-        node: removeNullValues(filterObjectFields(edge.node as any, nodeSelection)) as T,
+        node: removeNullValues(filterObjectFields(edge.node as Record<string, unknown>, nodeSelection)) as T,
       }));
     } else {
       // Just remove null values if no specific field selection
@@ -300,7 +300,7 @@ export function createOptimizedOffsetPagination<T>(
 
     if (itemsSelection) {
       result.items = result.items.map(
-        (item) => removeNullValues(filterObjectFields(item as any, itemsSelection)) as T
+        (item) => removeNullValues(filterObjectFields(item as Record<string, unknown>, itemsSelection)) as T
       );
     } else {
       result.items = result.items.map((item) => removeNullValues(item));
@@ -318,22 +318,22 @@ export function createOptimizedOffsetPagination<T>(
 /**
  * Utility to extract pagination parameters from GraphQL arguments
  */
-export function extractPaginationInput(args: any): PaginationInput {
+export function extractPaginationInput(args: Record<string, unknown>): PaginationInput {
   return {
-    first: args.first,
-    after: args.after,
-    last: args.last,
-    before: args.before,
+    first: args['first'] as number | undefined,
+    after: args['after'] as string | undefined,
+    last: args['last'] as number | undefined,
+    before: args['before'] as string | undefined,
   };
 }
 
 /**
  * Utility to extract offset pagination parameters from GraphQL arguments
  */
-export function extractOffsetPaginationInput(args: unknown): OffsetPaginationInput {
+export function extractOffsetPaginationInput(args: Record<string, unknown>): OffsetPaginationInput {
   return {
-    page: args.page,
-    limit: args.limit,
+    page: args['page'] as number | undefined,
+    limit: args['limit'] as number | undefined,
   };
 }
 
