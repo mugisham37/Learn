@@ -793,11 +793,12 @@ export const notificationResolvers = {
      * Requirements: 21.4
      */
     notificationReceived: {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
       subscribe: withFilter(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        ((_parent: unknown, _args: Record<string, unknown> | undefined, context: GraphQLContext): AsyncIterator<unknown> => {
-          // Require authentication for subscriptions
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+        (): AsyncIterator<unknown> => createAsyncIterator(SUBSCRIPTION_EVENTS.NOTIFICATION_RECEIVED),
+        (payload: { userId: string } | undefined, variables: { userId: string } | undefined, context: GraphQLContext | undefined) => {
+          // Users can only subscribe to their own notifications
+          if (!context) return false;
           const user = requireAuth(context);
 
           logger.info('Setting up notification subscription', {
@@ -805,14 +806,6 @@ export const notificationResolvers = {
             requestId: context.requestId,
           });
 
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-          return createAsyncIterator(SUBSCRIPTION_EVENTS.NOTIFICATION_RECEIVED);
-        }) as any,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (payload: { userId: string } | undefined, variables: { userId: string } | undefined, context: GraphQLContext | undefined) => {
-          // Users can only subscribe to their own notifications
-          if (!context) return false;
-          const user = requireAuth(context);
           return payload?.userId === variables?.userId && payload?.userId === user.id;
         }
       ),
@@ -822,11 +815,12 @@ export const notificationResolvers = {
      * Real-time notification read status updates
      */
     notificationRead: {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
       subscribe: withFilter(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        ((_parent: unknown, _args: Record<string, unknown> | undefined, context: GraphQLContext): AsyncIterator<unknown> => {
-          // Require authentication for subscriptions
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+        (): AsyncIterator<unknown> => createAsyncIterator(SUBSCRIPTION_EVENTS.NOTIFICATION_READ),
+        (payload: { userId: string } | undefined, variables: { userId: string } | undefined, context: GraphQLContext | undefined) => {
+          // Users can only subscribe to their own notification updates
+          if (!context) return false;
           const user = requireAuth(context);
 
           logger.info('Setting up notification read subscription', {
@@ -834,14 +828,6 @@ export const notificationResolvers = {
             requestId: context.requestId,
           });
 
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-          return createAsyncIterator(SUBSCRIPTION_EVENTS.NOTIFICATION_READ);
-        }) as any,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (payload: { userId: string } | undefined, variables: { userId: string } | undefined, context: GraphQLContext | undefined) => {
-          // Users can only subscribe to their own notification updates
-          if (!context) return false;
-          const user = requireAuth(context);
           return payload?.userId === variables?.userId && payload?.userId === user.id;
         }
       ),
@@ -851,11 +837,12 @@ export const notificationResolvers = {
      * Real-time unread count updates
      */
     unreadCountChanged: {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument
       subscribe: withFilter(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        ((_parent: unknown, _args: Record<string, unknown> | undefined, context: GraphQLContext): AsyncIterator<unknown> => {
-          // Require authentication for subscriptions
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+        (): AsyncIterator<unknown> => createAsyncIterator(SUBSCRIPTION_EVENTS.UNREAD_COUNT_CHANGED),
+        (payload: { userId: string } | undefined, variables: { userId: string } | undefined, context: GraphQLContext | undefined) => {
+          // Users can only subscribe to their own unread count updates
+          if (!context) return false;
           const user = requireAuth(context);
 
           logger.info('Setting up unread count subscription', {
@@ -863,14 +850,6 @@ export const notificationResolvers = {
             requestId: context.requestId,
           });
 
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-          return createAsyncIterator(SUBSCRIPTION_EVENTS.UNREAD_COUNT_CHANGED);
-        }) as unknown,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (payload: { userId: string } | undefined, variables: { userId: string } | undefined, context: GraphQLContext | undefined) => {
-          // Users can only subscribe to their own unread count updates
-          if (!context) return false;
-          const user = requireAuth(context);
           return payload?.userId === variables?.userId && payload?.userId === user.id;
         }
       ),

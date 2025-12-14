@@ -23,8 +23,8 @@ import {
   Refund,
   NewRefund,
 } from '../../../../infrastructure/database/schema/payments.schema.js';
-
 import { DatabaseError, NotFoundError } from '../../../../shared/errors/index.js';
+
 import {
   IRefundRepository,
   CreateRefundDTO,

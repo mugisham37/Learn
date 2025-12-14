@@ -11,6 +11,7 @@
  */
 
 import Stripe from 'stripe';
+
 import { logger } from '../../../../shared/utils/logger';
 import { IPaymentService } from '../../application/services/IPaymentService';
 
