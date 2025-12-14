@@ -8,16 +8,17 @@
  * Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 8.7
  */
 
+import { ExternalServiceError } from '../../../../shared/errors/index.js';
+import { comprehensiveCacheService } from '../../../../shared/services/ComprehensiveCacheService.js';
 import type {
   ISearchRepository,
   CourseSearchDocument,
   LessonSearchDocument,
   SearchResult,
 } from '../../../../infrastructure/search/ISearchRepository.js';
-import { ExternalServiceError } from '../../../../shared/errors/index.js';
-import { comprehensiveCacheService } from '../../../../shared/services/ComprehensiveCacheService.js';
 import type { Course } from '../../../courses/domain/entities/Course.js';
 import type { Lesson } from '../../../courses/domain/entities/Lesson.js';
+import type { SearchRepositoryWithFacets } from '../../infrastructure/types/ElasticsearchTypes';
 
 import type {
   ISearchService,
@@ -170,7 +171,7 @@ export class SearchService implements ISearchService {
       );
 
       // Cache the result
-      await comprehensiveCacheService.cacheSearchResults(query, filtersKey, page, searchResult);
+      await comprehensiveCacheService.cacheSearchResults(query, filtersKey, page, searchResult as unknown as Record<string, unknown>);
 
       return searchResult;
     } catch (error) {
@@ -612,7 +613,7 @@ export class SearchService implements ISearchService {
     }
 
     // Use the repository's faceted search method
-    const searchResult = await (this.searchRepository as any).searchCoursesWithFacets(
+    const searchResult = await (this.searchRepository as unknown as SearchRepositoryWithFacets).searchCoursesWithFacets(
       query,
       options
     );
@@ -634,68 +635,13 @@ export class SearchService implements ISearchService {
     };
 
     return {
-      ...searchResult,
+      documents: searchResult.documents as CourseSearchResult[],
+      total: searchResult.total,
+      took: searchResult.took,
+      maxScore: searchResult.maxScore,
       facets,
     };
   }
 
-  /**
-   * Generate facets for course search using aggregations
-   */
-  private async generateCourseFacets(
-    _query: string,
-    _currentFilters: {
-      category?: string[];
-      difficulty?: string[];
-      priceRange?: { min?: number; max?: number };
-      rating?: { min?: number };
-      status?: string[];
-    }
-  ): Promise<SearchFacets> {
-    // This is a simplified implementation that returns static facets
-    // In a production system, you would:
-    // 1. Execute a separate aggregation query to get real facet counts
-    // 2. Use the SearchQueryBuilder to build faceted queries
-    // 3. Parse Elasticsearch aggregation results
 
-    // For now, return realistic static facets
-    return {
-      categories: [
-        { key: 'Web Development', count: 150 },
-        { key: 'Data Science', count: 89 },
-        { key: 'Mobile Development', count: 67 },
-        { key: 'Machine Learning', count: 45 },
-        { key: 'DevOps', count: 34 },
-        { key: 'Design', count: 28 },
-        { key: 'Business', count: 22 },
-        { key: 'Marketing', count: 18 },
-      ],
-      difficulties: [
-        { key: 'beginner', count: 200 },
-        { key: 'intermediate', count: 120 },
-        { key: 'advanced', count: 65 },
-      ],
-      priceRanges: [
-        { key: 'Free', count: 85, from: 0, to: 0 },
-        { key: '$1-$50', count: 120, from: 1, to: 50 },
-        { key: '$51-$100', count: 95, from: 51, to: 100 },
-        { key: '$101-$200', count: 65, from: 101, to: 200 },
-        { key: '$201+', count: 20, from: 201 },
-      ],
-      ratings: [
-        { key: '4+ stars', count: 250, from: 4 },
-        { key: '3+ stars', count: 320, from: 3 },
-        { key: '2+ stars', count: 365, from: 2 },
-        { key: '1+ stars', count: 385, from: 1 },
-      ],
-      languages: [
-        { key: 'English', count: 350 },
-        { key: 'Spanish', count: 45 },
-        { key: 'French', count: 23 },
-        { key: 'German', count: 18 },
-        { key: 'Portuguese', count: 12 },
-        { key: 'Italian', count: 8 },
-      ],
-    };
-  }
 }

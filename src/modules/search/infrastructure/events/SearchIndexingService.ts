@@ -7,12 +7,12 @@
  * Requirements: 8.7 - Search indexing strategy implementation
  */
 
-import { logger } from '../../../../shared/utils/logger.js';
-import { eventBus } from '../../../../shared/services/EventBus.js';
-import { SearchIndexingQueue } from '../../../../shared/services/SearchIndexingQueue.js';
-import { SearchIndexingEventHandlers } from './SearchIndexingEventHandlers.js';
 import type { ISearchService } from '../../application/services/ISearchService.js';
 import type { CourseEvent } from '../../../courses/domain/events/CourseEvents.js';
+import { eventBus } from '../../../../shared/services/EventBus.js';
+import { SearchIndexingQueue } from '../../../../shared/services/SearchIndexingQueue.js';
+import { logger } from '../../../../shared/utils/logger.js';
+import { SearchIndexingEventHandlers } from './SearchIndexingEventHandlers.js';
 
 /**
  * Search Indexing Service Configuration
@@ -64,7 +64,7 @@ export class SearchIndexingService {
 
       // Set up event handlers if enabled
       if (this.config.enableEventHandlers !== false) {
-        await this.setupEventHandlers();
+        this.setupEventHandlers();
       }
 
       this.isInitialized = true;
@@ -84,7 +84,7 @@ export class SearchIndexingService {
   /**
    * Sets up event handlers for course and lesson events
    */
-  private async setupEventHandlers(): Promise<void> {
+  private setupEventHandlers(): void {
     try {
       logger.info('Setting up search indexing event handlers...');
 
@@ -321,8 +321,8 @@ export class SearchIndexingService {
   async getJobStatus(jobId: string): Promise<{
     status: string;
     progress: number;
-    data?: any;
-    result?: any;
+    data?: unknown;
+    result?: unknown;
     failedReason?: string;
     processedOn?: Date;
     finishedOn?: Date;

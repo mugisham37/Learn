@@ -47,7 +47,7 @@ export interface SortOptions {
 /**
  * Search result with metadata and facets
  */
-export interface SearchResults<T = any> {
+export interface SearchResults<T = Record<string, unknown>> {
   documents: T[];
   total: number;
   took: number; // Query execution time in milliseconds

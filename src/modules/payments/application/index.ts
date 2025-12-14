@@ -16,4 +16,9 @@
  * - 11.5: Refund processing with policy validation
  */
 
+// Export all services
 export * from './services/index.js';
+
+// Re-export for explicit access
+export type { IPaymentService } from './services/IPaymentService.js';
+export { PaymentService } from './services/PaymentService.js';

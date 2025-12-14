@@ -8,8 +8,9 @@
  */
 
 import { logger } from '../../../shared/utils/logger.js';
-import { SearchIndexingService } from './events/SearchIndexingService.js';
+
 import { createSearchService } from '../index.js';
+import { SearchIndexingService } from './events/SearchIndexingService.js';
 
 /**
  * Global search indexing service instance

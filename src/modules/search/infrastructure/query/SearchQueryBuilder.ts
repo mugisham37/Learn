@@ -67,16 +67,26 @@ export interface SearchQueryOptions {
   minimumShouldMatch?: string | number;
 }
 
+import type { 
+  ElasticsearchQuery, 
+  QueryClause, 
+  SortClause, 
+  HighlightConfig,
+  AggregationClause,
+  BoolQuery,
+  MultiMatchQuery
+} from '../types/ElasticsearchTypes';
+
 /**
  * Built Elasticsearch query structure
  */
-export interface BuiltQuery {
-  query: any;
-  sort?: any[];
+export interface BuiltQuery extends ElasticsearchQuery {
+  query?: QueryClause;
+  sort?: SortClause[];
   from?: number;
   size?: number;
-  highlight?: any;
-  aggs?: any;
+  highlight?: HighlightConfig;
+  aggs?: { [name: string]: AggregationClause };
   _source?: string[] | boolean;
 }
 
@@ -340,8 +350,8 @@ export class SearchQueryBuilder {
   /**
    * Build the main query structure
    */
-  private buildQuery(): any {
-    const boolQuery: any = {
+  private buildQuery(): QueryClause {
+    const boolQuery: { bool: Required<Omit<BoolQuery, 'minimum_should_match'>> & Pick<BoolQuery, 'minimum_should_match'> } = {
       bool: {
         must: [],
         filter: [],
@@ -352,11 +362,12 @@ export class SearchQueryBuilder {
 
     // Add full-text search query
     if (this.options.query && this.options.query.trim()) {
-      const multiMatchQuery: any = {
+      const multiMatchQuery: { multi_match: MultiMatchQuery } = {
         multi_match: {
           query: this.options.query.trim(),
           type: 'best_fields',
           fuzziness: this.options.fuzziness || 'AUTO',
+          fields: [],
         },
       };
 
@@ -379,7 +390,7 @@ export class SearchQueryBuilder {
       // Term filters
       if (this.options.filters.terms) {
         Object.entries(this.options.filters.terms).forEach(([field, values]) => {
-          if (values.length === 1) {
+          if (values.length === 1 && values[0] !== undefined) {
             boolQuery.bool.filter.push({ term: { [field]: values[0] } });
           } else if (values.length > 1) {
             boolQuery.bool.filter.push({ terms: { [field]: values } });
@@ -397,7 +408,9 @@ export class SearchQueryBuilder {
       // Boolean filters
       if (this.options.filters.bool) {
         Object.entries(this.options.filters.bool).forEach(([field, value]) => {
-          boolQuery.bool.filter.push({ term: { [field]: value } });
+          if (value !== undefined) {
+            boolQuery.bool.filter.push({ term: { [field]: value } });
+          }
         });
       }
 
@@ -422,9 +435,11 @@ export class SearchQueryBuilder {
     }
 
     // Clean up empty arrays
-    Object.keys(boolQuery.bool).forEach((key) => {
-      if (Array.isArray(boolQuery.bool[key]) && boolQuery.bool[key].length === 0) {
-        delete boolQuery.bool[key];
+    const boolKeys = Object.keys(boolQuery.bool) as Array<keyof Required<BoolQuery>>;
+    boolKeys.forEach((key) => {
+      const value = boolQuery.bool[key];
+      if (Array.isArray(value) && value.length === 0) {
+        delete (boolQuery.bool as Record<string, unknown>)[key];
       }
     });
 
@@ -434,24 +449,27 @@ export class SearchQueryBuilder {
   /**
    * Build sort configuration
    */
-  private buildSort(): any[] | undefined {
+  private buildSort(): SortClause[] | undefined {
     if (!this.options.sort || this.options.sort.length === 0) {
       return undefined;
     }
 
-    return this.options.sort.map((sortConfig) => {
+    return this.options.sort.map((sortConfig): SortClause => {
       if (sortConfig.field === '_score' || sortConfig.field === 'relevance') {
-        return '_score';
+        return { _score: 'desc' };
       }
 
-      const sortObj: any = {
+      const sortObj: SortClause = {
         [sortConfig.field]: {
           order: sortConfig.order,
         },
       };
 
       if (sortConfig.mode) {
-        sortObj[sortConfig.field].mode = sortConfig.mode;
+        const fieldSort = sortObj[sortConfig.field];
+        if (typeof fieldSort === 'object' && fieldSort !== null) {
+          fieldSort.mode = sortConfig.mode;
+        }
       }
 
       return sortObj;
@@ -461,12 +479,12 @@ export class SearchQueryBuilder {
   /**
    * Build highlight configuration
    */
-  private buildHighlight(): any | undefined {
+  private buildHighlight(): HighlightConfig | undefined {
     if (!this.options.highlight) {
       return undefined;
     }
 
-    const highlightConfig: any = {
+    const highlightConfig: HighlightConfig = {
       pre_tags: this.options.highlight.preTags,
       post_tags: this.options.highlight.postTags,
       fields: {},
@@ -485,12 +503,12 @@ export class SearchQueryBuilder {
   /**
    * Build aggregations configuration
    */
-  private buildAggregations(): any | undefined {
+  private buildAggregations(): { [name: string]: AggregationClause } | undefined {
     if (!this.options.aggregations || Object.keys(this.options.aggregations).length === 0) {
       return undefined;
     }
 
-    const aggs: any = {};
+    const aggs: { [name: string]: AggregationClause } = {};
 
     Object.entries(this.options.aggregations).forEach(([name, aggConfig]) => {
       switch (aggConfig.type) {
@@ -547,7 +565,7 @@ export class SearchQueryBuilder {
    */
   clone(): SearchQueryBuilder {
     const cloned = new SearchQueryBuilder();
-    cloned.options = JSON.parse(JSON.stringify(this.options));
+    cloned.options = JSON.parse(JSON.stringify(this.options)) as typeof this.options;
     return cloned;
   }
 }

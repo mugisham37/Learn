@@ -12,7 +12,15 @@ export * from './infrastructure';
 export * from './domain';
 
 // Application exports
-export * from './application';
+export { PaymentService } from './application/services/PaymentService.js';
+export type { 
+  IPaymentService,
+  CreateCheckoutSessionParams,
+  CheckoutSession,
+  ProcessRefundParams,
+  CreateSubscriptionParams,
+  CancelSubscriptionParams
+} from './application/services/IPaymentService.js';
 
 // Presentation exports
 export * from './presentation';

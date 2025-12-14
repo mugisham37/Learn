@@ -7,3 +7,7 @@
 
 export * from './IPaymentService.js';
 export * from './PaymentService.js';
+
+// Re-export specific interfaces for explicit access
+export type { IPaymentService } from './IPaymentService.js';
+export { PaymentService } from './PaymentService.js';

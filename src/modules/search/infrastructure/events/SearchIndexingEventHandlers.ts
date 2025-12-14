@@ -7,8 +7,10 @@
  * Requirements: 8.7 - Implement event listeners for course/lesson changes
  */
 
-import { logger } from '../../../../shared/utils/logger.js';
+/* eslint-disable @typescript-eslint/no-unnecessary-type-assertion */
+
 import type { SearchIndexingQueue } from '../../../../shared/services/SearchIndexingQueue.js';
+import { logger } from '../../../../shared/utils/logger.js';
 import type {
   CourseCreatedEvent,
   CourseUpdatedEvent,
@@ -453,8 +455,8 @@ export class SearchIndexingEventHandlers {
 
         default:
           logger.warn('Unknown course event type for search indexing', {
-            eventType: (event as any).eventType,
-            eventId: (event as any).eventId,
+            eventType: (event as CourseEvent).eventType,
+            eventId: (event as CourseEvent).eventId,
           });
       }
     } catch (error) {
