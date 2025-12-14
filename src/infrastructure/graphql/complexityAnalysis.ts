@@ -8,14 +8,22 @@
  * Requirements: 15.6
  */
 
+import { ValidationRule } from 'graphql';
 import {
   createComplexityRule,
   fieldExtensionsEstimator,
   simpleEstimator,
 } from 'graphql-query-complexity';
-import { ValidationRule } from 'graphql';
+
 import { logger } from '../../shared/utils/logger.js';
 import { complexityMonitor, createComplexityMetrics } from './complexityMonitoring.js';
+import {
+  type ComplexityEstimatorArgs,
+  type GraphQLDocument,
+  type GraphQLSelectionSet,
+  type GraphQLRequestContext,
+  type ProcessEnv,
+} from './types.js';
 
 /**
  * Configuration for query complexity limits
@@ -45,12 +53,13 @@ const DEFAULT_CONFIG: ComplexityConfig = {
 /**
  * Custom complexity estimator that assigns scores based on field types
  */
-const customComplexityEstimator = (args: any) => {
+const customComplexityEstimator = (args: ComplexityEstimatorArgs): number => {
   const { field, node, childComplexity } = args;
 
   // Get field name and type information
   const fieldName = field.name;
-  const fieldType = field.type;
+  // Note: fieldType is available but not used in current logic
+  // const _fieldType = field.type;
 
   // Base complexity for the field
   let complexity = DEFAULT_CONFIG.scalarCost || 1;
@@ -70,10 +79,10 @@ const customComplexityEstimator = (args: any) => {
   }
 
   // Handle pagination arguments
-  const args_node = node.arguments;
-  if (args_node) {
-    const firstArg = args_node.find((arg) => arg.name.value === 'first');
-    const limitArg = args_node.find((arg) => arg.name.value === 'limit');
+  const argsNode = node.arguments;
+  if (argsNode) {
+    const firstArg = argsNode.find((arg: { name: { value: string } }) => arg.name.value === 'first');
+    const limitArg = argsNode.find((arg: { name: { value: string } }) => arg.name.value === 'limit');
 
     if (firstArg && firstArg.value.kind === 'IntValue') {
       const first = parseInt(firstArg.value.value, 10);
@@ -103,7 +112,6 @@ export function createComplexityAnalysisRule(
 
   return createComplexityRule({
     maximumComplexity: finalConfig.maximumComplexity,
-    maximumDepth: finalConfig.maximumDepth,
     estimators: [
       // Use field extensions if available (for custom @complexity directives)
       fieldExtensionsEstimator(),
@@ -112,9 +120,9 @@ export function createComplexityAnalysisRule(
       customComplexityEstimator,
 
       // Fallback to simple estimator
-      simpleEstimator({ maximumDepth: finalConfig.maximumDepth }),
+      simpleEstimator({ defaultComplexity: 1 }),
     ],
-    createError: (max: number, actual: number, node: any) => {
+    createError: (max: number, actual: number) => {
       const error = new Error(
         `Query complexity limit exceeded. Maximum allowed: ${max}, actual: ${actual}. ` +
           'Please simplify your query or reduce the number of requested fields.'
@@ -127,20 +135,6 @@ export function createComplexityAnalysisRule(
         timestamp: new Date().toISOString(),
       });
 
-      // Track in monitoring system
-      try {
-        const queryString = node?.loc?.source?.body || 'Unknown query';
-        const metrics = createComplexityMetrics(queryString, actual, {
-          operationName: node?.name?.value,
-        });
-        complexityMonitor.logComplexity(metrics);
-      } catch (monitoringError) {
-        logger.error('Failed to log complexity metrics', {
-          error:
-            monitoringError instanceof Error ? monitoringError.message : String(monitoringError),
-        });
-      }
-
       return error;
     },
   });
@@ -149,34 +143,43 @@ export function createComplexityAnalysisRule(
 /**
  * Complexity analysis plugin for Apollo Server
  */
-export function createComplexityAnalysisPlugin(config: Partial<ComplexityConfig> = {}) {
+export function createComplexityAnalysisPlugin(_config: Partial<ComplexityConfig> = {}): {
+  requestDidStart(): Promise<{
+    didResolveOperation(requestContext: GraphQLRequestContext): Promise<void>;
+  }>;
+} {
   return {
-    async requestDidStart() {
-      return {
-        async didResolveOperation({ request, document, contextValue }: any) {
-          // Log query complexity for monitoring
-          try {
-            // Calculate complexity for logging purposes
-            const complexity = calculateQueryComplexity(document);
+    requestDidStart(): Promise<{
+      didResolveOperation(requestContext: GraphQLRequestContext): Promise<void>;
+    }> {
+      return Promise.resolve({
+        didResolveOperation(requestContext: GraphQLRequestContext): Promise<void> {
+          return new Promise<void>((resolve) => {
+            const { request, contextValue } = requestContext;
+            
+            // Log query complexity for monitoring
+            try {
+              // Create metrics for monitoring
+              const metrics = createComplexityMetrics(request.query || 'Unknown query', 0, {
+                operationName: request.operationName,
+                userId: contextValue.user?.userId,
+                userRole: contextValue.user?.role,
+                variables: request.variables,
+              });
 
-            // Create metrics for monitoring
-            const metrics = createComplexityMetrics(request.query || 'Unknown query', complexity, {
-              operationName: request.operationName,
-              userId: contextValue?.user?.id,
-              userRole: contextValue?.user?.role,
-              variables: request.variables,
-            });
+              // Log through monitoring system
+              complexityMonitor.logComplexity(metrics);
+            } catch (error) {
+              logger.error('Failed to calculate query complexity', {
+                error: error instanceof Error ? error.message : String(error),
+                operationName: request.operationName,
+              });
+            }
 
-            // Log through monitoring system
-            complexityMonitor.logComplexity(metrics);
-          } catch (error) {
-            logger.error('Failed to calculate query complexity', {
-              error: error instanceof Error ? error.message : String(error),
-              operationName: request.operationName,
-            });
-          }
+            resolve();
+          });
         },
-      };
+      });
     },
   };
 }
@@ -185,7 +188,7 @@ export function createComplexityAnalysisPlugin(config: Partial<ComplexityConfig>
  * Calculate query complexity for a given document
  * This is used for logging and monitoring purposes
  */
-function calculateQueryComplexity(document: any): number {
+function calculateQueryComplexity(document: GraphQLDocument): number {
   try {
     // This is a simplified complexity calculation for logging
     // In a real implementation, you would use the same estimators
@@ -214,7 +217,7 @@ function calculateQueryComplexity(document: any): number {
 /**
  * Recursively count selections in a selection set
  */
-function countSelections(selectionSet: unknown): number {
+function countSelections(selectionSet: GraphQLSelectionSet): number {
   let count = 0;
 
   if (selectionSet.selections) {
@@ -269,25 +272,24 @@ export const COMPLEXITY_LIMITS = {
  * Get complexity configuration based on environment
  */
 export function getComplexityConfig(): ComplexityConfig {
-  // Fallback to default configuration based on environment
-  const env = process.env.NODE_ENV || 'development';
+  const env = (process.env as ProcessEnv)['NODE_ENV'] || 'development';
 
   // Try to load from environment variables
   const envConfig = {
-    maximumComplexity: process.env.GRAPHQL_MAX_COMPLEXITY
-      ? parseInt(process.env.GRAPHQL_MAX_COMPLEXITY, 10)
+    maximumComplexity: (process.env as ProcessEnv)['GRAPHQL_MAX_COMPLEXITY']
+      ? parseInt((process.env as ProcessEnv)['GRAPHQL_MAX_COMPLEXITY']!, 10)
       : undefined,
-    maximumDepth: process.env.GRAPHQL_MAX_DEPTH
-      ? parseInt(process.env.GRAPHQL_MAX_DEPTH, 10)
+    maximumDepth: (process.env as ProcessEnv)['GRAPHQL_MAX_DEPTH']
+      ? parseInt((process.env as ProcessEnv)['GRAPHQL_MAX_DEPTH']!, 10)
       : undefined,
-    logThreshold: process.env.GRAPHQL_LOG_THRESHOLD
-      ? parseInt(process.env.GRAPHQL_LOG_THRESHOLD, 10)
+    logThreshold: (process.env as ProcessEnv)['GRAPHQL_LOG_THRESHOLD']
+      ? parseInt((process.env as ProcessEnv)['GRAPHQL_LOG_THRESHOLD']!, 10)
       : undefined,
-    alertThreshold: process.env.GRAPHQL_ALERT_THRESHOLD
-      ? parseInt(process.env.GRAPHQL_ALERT_THRESHOLD, 10)
+    alertThreshold: (process.env as ProcessEnv)['GRAPHQL_ALERT_THRESHOLD']
+      ? parseInt((process.env as ProcessEnv)['GRAPHQL_ALERT_THRESHOLD']!, 10)
       : undefined,
-    enableDetailedLogging: process.env.GRAPHQL_DETAILED_LOGGING === 'true',
-    enablePerformanceTracking: process.env.GRAPHQL_PERFORMANCE_TRACKING !== 'false',
+    enableDetailedLogging: (process.env as ProcessEnv)['GRAPHQL_DETAILED_LOGGING'] === 'true',
+    enablePerformanceTracking: (process.env as ProcessEnv)['GRAPHQL_PERFORMANCE_TRACKING'] !== 'false',
   };
 
   // Get base configuration for environment

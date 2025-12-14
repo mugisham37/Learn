@@ -20,7 +20,7 @@ export interface ComplexityMetrics {
   userId?: string;
   userRole?: string;
   timestamp: Date;
-  variables?: Record<string, any>;
+  variables?: Record<string, unknown>;
 }
 
 /**
@@ -39,7 +39,7 @@ export interface ComplexityMonitoringConfig {
 const DEFAULT_MONITORING_CONFIG: ComplexityMonitoringConfig = {
   logThreshold: 500, // Log queries with complexity > 500
   alertThreshold: 800, // Alert on queries with complexity > 800
-  enableDetailedLogging: process.env.NODE_ENV !== 'production',
+  enableDetailedLogging: (process.env as Record<string, string | undefined>)['NODE_ENV'] !== 'production',
   enablePerformanceTracking: true,
 };
 
@@ -207,7 +207,7 @@ export function createComplexityMetrics(
     userId?: string;
     userRole?: string;
     executionTime?: number;
-    variables?: Record<string, any>;
+    variables?: Record<string, unknown>;
   }
 ): ComplexityMetrics {
   return {
@@ -225,32 +225,47 @@ export function createComplexityMetrics(
 /**
  * Middleware to track query execution time
  */
-export function createExecutionTimeTracker() {
+export function createExecutionTimeTracker(): {
+  requestDidStart(): Promise<{
+    willSendResponse(requestContext: { request: { http?: { requestId?: string } }; contextValue?: { executionTime?: number } }): Promise<void>;
+    didResolveOperation(requestContext: { request: { http?: { requestId?: string } } }): Promise<void>;
+  }>;
+} {
   const startTimes = new Map<string, number>();
 
   return {
-    async requestDidStart() {
-      return {
-        async willSendResponse(requestContext: any) {
-          const requestId = requestContext.request.http?.requestId || 'unknown';
-          const startTime = startTimes.get(requestId);
+    requestDidStart(): Promise<{
+      willSendResponse(requestContext: { request: { http?: { requestId?: string } }; contextValue?: { executionTime?: number } }): Promise<void>;
+      didResolveOperation(requestContext: { request: { http?: { requestId?: string } } }): Promise<void>;
+    }> {
+      return Promise.resolve({
+        willSendResponse(requestContext: { request: { http?: { requestId?: string } }; contextValue?: { executionTime?: number } }): Promise<void> {
+          return new Promise<void>((resolve) => {
+            const requestId = requestContext.request.http?.requestId || 'unknown';
+            const startTime = startTimes.get(requestId);
 
-          if (startTime) {
-            const executionTime = Date.now() - startTime;
-            startTimes.delete(requestId);
+            if (startTime) {
+              const executionTime = Date.now() - startTime;
+              startTimes.delete(requestId);
 
-            // Add execution time to context for complexity monitoring
-            if (requestContext.contextValue) {
-              requestContext.contextValue.executionTime = executionTime;
+              // Add execution time to context for complexity monitoring
+              if (requestContext.contextValue) {
+                requestContext.contextValue.executionTime = executionTime;
+              }
             }
-          }
+
+            resolve();
+          });
         },
 
-        async didResolveOperation(requestContext: unknown) {
-          const requestId = requestContext.request.http?.requestId || 'unknown';
-          startTimes.set(requestId, Date.now());
+        didResolveOperation(requestContext: { request: { http?: { requestId?: string } } }): Promise<void> {
+          return new Promise<void>((resolve) => {
+            const requestId = requestContext.request.http?.requestId || 'unknown';
+            startTimes.set(requestId, Date.now());
+            resolve();
+          });
         },
-      };
+      });
     },
   };
 }

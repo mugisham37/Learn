@@ -7,9 +7,8 @@
  * Requirements: 15.4
  */
 
-import { ApolloServerPlugin, GraphQLRequestListener } from '@apollo/server';
+import { ApolloServerPlugin } from '@apollo/server';
 
-// import { GraphQLError } from 'graphql';
 import {
   generateETag,
   buildCacheControlHeader,
@@ -19,6 +18,12 @@ import {
   type CacheConfig,
 } from '../../shared/middleware/httpCaching.js';
 import { logger } from '../../shared/utils/logger.js';
+import {
+  type GraphQLContext,
+  type GraphQLRequestContext,
+  type TypedGraphQLRequestListener,
+  type ProcessEnv,
+} from './types.js';
 
 /**
  * GraphQL operation cache configuration
@@ -94,7 +99,7 @@ function getCacheConfigForOperation(
 ): GraphQLCacheConfig | null {
   // No caching for mutations and subscriptions
   if (operationType !== 'query') {
-    return GraphQLCacheConfigs.MUTATIONS;
+    return GraphQLCacheConfigs['MUTATIONS'];
   }
 
   if (!operationName) {
@@ -131,8 +136,8 @@ function getCacheConfigForOperation(
  */
 function generateCacheKey(
   operationName: string | null | undefined,
-  variables: Record<string, any> | null | undefined,
-  userContext: any,
+  variables: Record<string, unknown> | null | undefined,
+  userContext: GraphQLContext,
   config: GraphQLCacheConfig
 ): string {
   const parts: string[] = [];
@@ -149,10 +154,10 @@ function generateCacheKey(
   }
 
   // Add user context if configured
-  if (config.includeUserContext && userContext?.userId) {
-    parts.push(`user:${userContext.userId}`);
-    if (userContext.role) {
-      parts.push(`role:${userContext.role}`);
+  if (config.includeUserContext && userContext.user?.userId) {
+    parts.push(`user:${userContext.user.userId}`);
+    if (userContext.user.role) {
+      parts.push(`role:${userContext.user.role}`);
     }
   }
 
@@ -162,122 +167,134 @@ function generateCacheKey(
 /**
  * GraphQL HTTP Caching Plugin
  */
-export function createGraphQLCachingPlugin(): ApolloServerPlugin {
+export function createGraphQLCachingPlugin(): ApolloServerPlugin<GraphQLContext> {
   return {
-    async requestDidStart(): Promise<GraphQLRequestListener<any>> {
-      return {
-        async willSendResponse(requestContext) {
-          const { request, response, contextValue } = requestContext;
+    requestDidStart(): Promise<TypedGraphQLRequestListener> {
+      return Promise.resolve({
+        willSendResponse(requestContext: GraphQLRequestContext): Promise<void> {
+          return new Promise<void>((resolve) => {
+            const { request, response, contextValue } = requestContext;
 
-          try {
-            // Skip caching for errors
-            if (response.body.kind === 'single' && response.body.singleResult.errors) {
-              return;
-            }
-
-            // Get operation info
-            const operationName = request.operationName;
-            const operationType = requestContext.operation?.operation || 'query';
-
-            // Get cache configuration
-            const cacheConfig = getCacheConfigForOperation(operationName, operationType);
-            if (!cacheConfig) {
-              return;
-            }
-
-            // Generate cache key for ETag
-            const cacheKey = generateCacheKey(
-              operationName,
-              request.variables,
-              contextValue,
-              cacheConfig
-            );
-
-            // Get response data
-            const responseData =
-              response.body.kind === 'single' ? response.body.singleResult.data : null;
-
-            if (!responseData) {
-              return;
-            }
-
-            // Generate ETag including cache key and response data
-            const etagData = {
-              key: cacheKey,
-              data: responseData,
-              timestamp: Date.now(),
-            };
-            const etag = generateETag(etagData);
-
-            // Set caching headers
-            response.http.headers.set('ETag', etag);
-            response.http.headers.set('Cache-Control', buildCacheControlHeader(cacheConfig));
-
-            // Add Vary header for user-specific content
-            if (cacheConfig.includeUserContext) {
-              response.http.headers.set('Vary', 'Authorization');
-            }
-
-            // Handle conditional requests
-            const ifNoneMatch = requestContext.request.http?.headers.get('if-none-match');
-            if (ifNoneMatch) {
-              const clientETags = parseIfNoneMatch(ifNoneMatch);
-              const matches = clientETags.some(
-                (clientETag) => clientETag === '*' || etagsMatch(clientETag, etag)
-              );
-
-              if (matches) {
-                // Return 304 Not Modified
-                response.http.status = 304;
-                response.http.body = '';
-
-                // Remove content headers
-                response.http.headers.delete('Content-Type');
-                response.http.headers.delete('Content-Length');
-
-                logger.debug('GraphQL 304 Not Modified response', {
-                  operationName,
-                  etag,
-                  clientETags,
-                });
-
+            try {
+              // Skip caching for errors
+              if (response.body.kind === 'single' && response.body.singleResult?.errors) {
+                resolve();
                 return;
               }
+
+              // Get operation info
+              const operationName = request.operationName;
+              const operationType = requestContext.operation?.operation || 'query';
+
+              // Get cache configuration
+              const cacheConfig = getCacheConfigForOperation(operationName, operationType);
+              if (!cacheConfig) {
+                resolve();
+                return;
+              }
+
+              // Generate cache key for ETag
+              const cacheKey = generateCacheKey(
+                operationName,
+                request.variables,
+                contextValue,
+                cacheConfig
+              );
+
+              // Get response data
+              const responseData =
+                response.body.kind === 'single' ? response.body.singleResult?.data : null;
+
+              if (!responseData) {
+                resolve();
+                return;
+              }
+
+              // Generate ETag including cache key and response data
+              const etagData = {
+                key: cacheKey,
+                data: responseData,
+                timestamp: Date.now(),
+              };
+              const etag = generateETag(etagData);
+
+              // Set caching headers
+              response.http.headers.set('ETag', etag);
+              response.http.headers.set('Cache-Control', buildCacheControlHeader(cacheConfig));
+
+              // Add Vary header for user-specific content
+              if (cacheConfig.includeUserContext) {
+                response.http.headers.set('Vary', 'Authorization');
+              }
+
+              // Handle conditional requests
+              const ifNoneMatch = request.http?.headers.get('if-none-match');
+              if (ifNoneMatch) {
+                const clientETags = parseIfNoneMatch(ifNoneMatch);
+                const matches = clientETags.some(
+                  (clientETag) => clientETag === '*' || etagsMatch(clientETag, etag)
+                );
+
+                if (matches) {
+                  // Return 304 Not Modified
+                  response.http.status = 304;
+                  response.http.body = '';
+
+                  // Remove content headers
+                  response.http.headers.delete('Content-Type');
+                  response.http.headers.delete('Content-Length');
+
+                  logger.debug('GraphQL 304 Not Modified response', {
+                    operationName,
+                    etag,
+                    clientETags,
+                  });
+
+                  resolve();
+                  return;
+                }
+              }
+
+              logger.debug('GraphQL caching headers added', {
+                operationName,
+                operationType,
+                etag,
+                cacheControl: buildCacheControlHeader(cacheConfig),
+                cacheKey,
+              });
+            } catch (error) {
+              logger.error('Error in GraphQL caching plugin', {
+                operationName: request.operationName,
+                error: error instanceof Error ? error.message : String(error),
+              });
+
+              // Continue without caching if plugin fails
             }
 
-            logger.debug('GraphQL caching headers added', {
-              operationName,
-              operationType,
-              etag,
-              cacheControl: buildCacheControlHeader(cacheConfig),
-              cacheKey,
-            });
-          } catch (error) {
-            logger.error('Error in GraphQL caching plugin', {
-              operationName: request.operationName,
-              error: error instanceof Error ? error.message : String(error),
-            });
-
-            // Continue without caching if plugin fails
-          }
-        },
-
-        async didEncounterErrors(requestContext) {
-          // Don't cache responses with errors
-          const { response } = requestContext;
-
-          // Set no-cache headers for error responses
-          response.http.headers.set(
-            'Cache-Control',
-            buildCacheControlHeader(CacheConfigs.NO_CACHE)
-          );
-
-          logger.debug('GraphQL error response - no caching applied', {
-            operationName: requestContext.request.operationName,
-            errorCount: requestContext.errors?.length || 0,
+            resolve();
           });
         },
-      };
+
+        didEncounterErrors(requestContext: GraphQLRequestContext): Promise<void> {
+          return new Promise<void>((resolve) => {
+            // Don't cache responses with errors
+            const { response } = requestContext;
+
+            // Set no-cache headers for error responses
+            response.http.headers.set(
+              'Cache-Control',
+              buildCacheControlHeader(CacheConfigs.NO_CACHE)
+            );
+
+            logger.debug('GraphQL error response - no caching applied', {
+              operationName: requestContext.request.operationName,
+              errorCount: requestContext.errors?.length || 0,
+            });
+
+            resolve();
+          });
+        },
+      });
     },
   };
 }
@@ -285,7 +302,7 @@ export function createGraphQLCachingPlugin(): ApolloServerPlugin {
 /**
  * Create cache-aware GraphQL context
  */
-export function createCacheAwareContext(baseContext: any): unknown {
+export function createCacheAwareContext(baseContext: GraphQLContext): GraphQLContext {
   return {
     ...baseContext,
     cache: {
