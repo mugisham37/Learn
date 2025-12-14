@@ -8,9 +8,8 @@
 
 import Stripe from 'stripe';
 
-import { config } from '../../../../config';
-import { secrets } from '../../../../shared/utils/secureConfig';
 import { logger } from '../../../../shared/utils/logger';
+import { secrets } from '../../../../shared/utils/secureConfig';
 import {
   IStripeClient,
   CheckoutSessionParams,

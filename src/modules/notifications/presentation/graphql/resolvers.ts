@@ -217,7 +217,7 @@ function createConnection(
 }
 
 /**
- * GraphQL resolvers for notifications module
+ * SubshQL resolvers for notifications module
  */
 export const notificationResolvers = {
   Query: {

@@ -5,8 +5,8 @@
  * This ensures consistent configuration across the application.
  */
 
-import { StripeClient } from './StripeClient';
 import { IStripeClient } from './IStripeClient';
+import { StripeClient } from './StripeClient';
 
 export class StripeClientFactory {
   private static instance: IStripeClient | null = null;

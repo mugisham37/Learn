@@ -44,7 +44,7 @@ export interface CreatePaymentData {
   amount: string;
   currency?: string;
   paymentMethod?: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 /**
@@ -241,7 +241,7 @@ export class Payment {
    *
    * @param metadata - Additional metadata to merge
    */
-  updateMetadata(metadata: Record<string, any>): void {
+  updateMetadata(metadata: Record<string, unknown>): void {
     this.data.metadata = { ...this.data.metadata, ...metadata };
     this.data.updatedAt = new Date();
   }
@@ -283,7 +283,7 @@ export class Payment {
     return this.data.paymentMethod;
   }
 
-  getMetadata(): Record<string, any> {
+  getMetadata(): Record<string, unknown> {
     return { ...this.data.metadata };
   }
 
@@ -305,13 +305,13 @@ export class Payment {
   }
 
   // Domain events handling
-  private domainEvents: any[] = [];
+  private domainEvents: PaymentDomainEvents[] = [];
 
-  private addDomainEvent(event: any): void {
+  private addDomainEvent(event: PaymentDomainEvents): void {
     this.domainEvents.push(event);
   }
 
-  getDomainEvents(): any[] {
+  getDomainEvents(): PaymentDomainEvents[] {
     return [...this.domainEvents];
   }
 

@@ -10,10 +10,12 @@
  */
 
 import { randomUUID } from 'crypto';
+
 import {
   SubscriptionCreatedEvent,
   SubscriptionCanceledEvent,
   SubscriptionRenewedEvent,
+  PaymentDomainEvents,
 } from '../events/PaymentEvents';
 
 export type SubscriptionStatus = 'active' | 'canceled' | 'past_due' | 'unpaid';
@@ -353,13 +355,13 @@ export class Subscription {
   }
 
   // Domain events handling
-  private domainEvents: any[] = [];
+  private domainEvents: PaymentDomainEvents[] = [];
 
-  private addDomainEvent(event: any): void {
+  private addDomainEvent(event: PaymentDomainEvents): void {
     this.domainEvents.push(event);
   }
 
-  getDomainEvents(): any[] {
+  getDomainEvents(): PaymentDomainEvents[] {
     return [...this.domainEvents];
   }
 

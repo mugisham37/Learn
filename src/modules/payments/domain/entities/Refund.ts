@@ -10,10 +10,12 @@
  */
 
 import { randomUUID } from 'crypto';
+
 import {
   RefundCreatedEvent,
   RefundProcessedEvent,
   RefundFailedEvent,
+  PaymentDomainEvents,
 } from '../events/PaymentEvents';
 
 export type RefundStatus = 'pending' | 'succeeded' | 'failed';
@@ -355,13 +357,13 @@ export class Refund {
   }
 
   // Domain events handling
-  private domainEvents: any[] = [];
+  private domainEvents: PaymentDomainEvents[] = [];
 
-  private addDomainEvent(event: any): void {
+  private addDomainEvent(event: PaymentDomainEvents): void {
     this.domainEvents.push(event);
   }
 
-  getDomainEvents(): any[] {
+  getDomainEvents(): PaymentDomainEvents[] {
     return [...this.domainEvents];
   }
 

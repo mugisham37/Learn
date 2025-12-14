@@ -6,10 +6,11 @@
  */
 
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import { StripeClientFactory } from '../../infrastructure/clients/StripeClientFactory';
-import { StripeWebhookHandler } from '../../infrastructure/webhooks/StripeWebhookHandler';
+
 import { EndpointRateLimits } from '../../../../shared/middleware/rateLimiting.js';
 import { logger } from '../../../../shared/utils/logger';
+import { StripeClientFactory } from '../../infrastructure/clients/StripeClientFactory';
+import { StripeWebhookHandler } from '../../infrastructure/webhooks/StripeWebhookHandler';
 
 /**
  * Registers Stripe webhook routes with the Fastify instance

@@ -37,6 +37,10 @@ export const notificationTypeEnum = pgEnum('notification_type', [
   'certificate_issued',
   'payment_received',
   'refund_processed',
+  'payment_succeeded',
+  'payment_failed',
+  'subscription_canceled',
+  'subscription_payment_failed',
 ]);
 
 /**
