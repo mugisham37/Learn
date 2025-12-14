@@ -163,7 +163,7 @@ export const PAGINATION_MULTIPLIERS = {
 /**
  * Get multiplier value for pagination arguments
  */
-export function getPaginationMultiplier(argName: string, argValue: any): number {
+export function getPaginationMultiplier(argName: string, argValue: unknown): number {
   const multiplierFn = PAGINATION_MULTIPLIERS[argName as keyof typeof PAGINATION_MULTIPLIERS];
 
   if (multiplierFn && typeof argValue === 'number') {

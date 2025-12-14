@@ -29,9 +29,9 @@ export async function createDataLoaders(requestId: string): Promise<GraphQLConte
 
     // Use the imported functions to avoid unused variable warnings
     // Note: These would need proper context in a real implementation
-    const userDataLoaders = createUserDataLoaders ? createUserDataLoaders({} as any) : undefined;
-    const courseDataLoaders = createCourseDataLoaders ? createCourseDataLoaders({} as any) : undefined;
-    const enrollmentDataLoaders = createEnrollmentDataLoaders ? createEnrollmentDataLoaders({} as any) : undefined;
+    const userDataLoaders = createUserDataLoaders ? createUserDataLoaders({ userId: requestId } as UserDataLoaderContext) : undefined;
+    const courseDataLoaders = createCourseDataLoaders ? createCourseDataLoaders({ courseId: requestId } as DataLoaderContext) : undefined;
+    const enrollmentDataLoaders = createEnrollmentDataLoaders ? createEnrollmentDataLoaders({ studentId: requestId, courseId: requestId } as EnrollmentDataLoaderContext) : undefined;
 
     // Populate the dataloaders object
     if (userDataLoaders) {
@@ -104,23 +104,23 @@ export function primeDataLoaderCaches(
 
   try {
     // Prime user data
-    if (data.users && dataloaders.users) {
+    if (data.users && dataloaders.users && 'primeUser' in dataloaders.users) {
       for (const user of data.users) {
-        dataloaders.users.primeUser(user as any);
+        (dataloaders.users as any).primeUser(user);
       }
     }
 
     // Prime course data
-    if (data.courses && dataloaders.courses) {
+    if (data.courses && dataloaders.courses && 'prime' in dataloaders.courses) {
       for (const course of data.courses) {
-        dataloaders.courses.prime(course as any);
+        (dataloaders.courses as any).prime(course);
       }
     }
 
     // Prime enrollment data
-    if (data.enrollments && dataloaders.enrollments) {
+    if (data.enrollments && dataloaders.enrollments && 'primeEnrollment' in dataloaders.enrollments) {
       for (const enrollment of data.enrollments) {
-        dataloaders.enrollments.primeEnrollment(enrollment as unknown);
+        (dataloaders.enrollments as any).primeEnrollment(enrollment);
       }
     }
 

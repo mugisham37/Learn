@@ -12,7 +12,6 @@ import { GraphQLResolveInfo } from 'graphql';
 import { logger } from '../../shared/utils/logger.js';
 
 import {
-  optimizeGraphQLResponse,
   removeNullValues,
   createFieldSelection,
   filterObjectFields,
@@ -22,7 +21,6 @@ import {
   createOptimizedOffsetPagination,
   PaginationInput,
   OffsetPaginationInput,
-  PaginationConfig,
   createPaginationConfig,
 } from './pagination.js';
 
@@ -80,13 +78,14 @@ let optimizationStats = {
  * Creates response optimization configuration from environment
  */
 export function createOptimizationConfig(): ResponseOptimizationConfig {
+  const env = process.env as Record<string, string | undefined>;
   return {
-    enableFieldSelection: process.env.GRAPHQL_FIELD_SELECTION !== 'false',
-    removeNullValues: process.env.GRAPHQL_REMOVE_NULLS !== 'false',
-    enableCompressionHints: process.env.GRAPHQL_COMPRESSION_HINTS !== 'false',
-    logOptimizations: process.env.GRAPHQL_LOG_OPTIMIZATIONS === 'true',
-    maxPayloadSize: parseInt(process.env.GRAPHQL_MAX_PAYLOAD_SIZE || '10485760', 10),
-    warnThreshold: parseInt(process.env.GRAPHQL_WARN_THRESHOLD || '1048576', 10),
+    enableFieldSelection: env['GRAPHQL_FIELD_SELECTION'] !== 'false',
+    removeNullValues: env['GRAPHQL_REMOVE_NULLS'] !== 'false',
+    enableCompressionHints: env['GRAPHQL_COMPRESSION_HINTS'] !== 'false',
+    logOptimizations: env['GRAPHQL_LOG_OPTIMIZATIONS'] === 'true',
+    maxPayloadSize: parseInt(env['GRAPHQL_MAX_PAYLOAD_SIZE'] || '10485760', 10),
+    warnThreshold: parseInt(env['GRAPHQL_WARN_THRESHOLD'] || '1048576', 10),
   };
 }
 
@@ -98,7 +97,7 @@ export function optimizeResponse<T>(
   info: GraphQLResolveInfo,
   config: ResponseOptimizationConfig = DEFAULT_CONFIG
 ): { data: T; metrics: OptimizationMetrics } {
-  const startTime = Date.now();
+  const _startTime = Date.now();
 
   let originalData: string;
   let originalSize: number;
@@ -230,8 +229,8 @@ export function optimizeListResponse<T>(
   info: GraphQLResolveInfo,
   totalCount?: number,
   cursorField: string = 'id',
-  config: ResponseOptimizationConfig = DEFAULT_CONFIG
-) {
+  _config: ResponseOptimizationConfig = DEFAULT_CONFIG
+): any {
   const paginationConfig = createPaginationConfig();
 
   return createOptimizedConnection(
@@ -252,8 +251,8 @@ export function optimizeOffsetListResponse<T>(
   paginationInput: OffsetPaginationInput,
   info: GraphQLResolveInfo,
   totalCount: number,
-  config: ResponseOptimizationConfig = DEFAULT_CONFIG
-) {
+  _config: ResponseOptimizationConfig = DEFAULT_CONFIG
+): any {
   const paginationConfig = createPaginationConfig();
 
   return createOptimizedOffsetPagination(
@@ -401,14 +400,14 @@ export function withResponseOptimization<TArgs = any, TResult = any>(
  * Utility to check if response optimization is enabled
  */
 export function isOptimizationEnabled(): boolean {
-  return process.env.GRAPHQL_RESPONSE_OPTIMIZATION !== 'false';
+  return (process.env as Record<string, string | undefined>)['GRAPHQL_RESPONSE_OPTIMIZATION'] !== 'false';
 }
 
 /**
  * Utility to get optimization configuration for current environment
  */
 export function getEnvironmentOptimizationConfig(): ResponseOptimizationConfig {
-  const env = process.env.NODE_ENV || 'development';
+  const env = (process.env as Record<string, string | undefined>)['NODE_ENV'] || 'development';
 
   const baseConfig = createOptimizationConfig();
 

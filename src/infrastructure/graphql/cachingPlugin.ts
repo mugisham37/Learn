@@ -155,8 +155,8 @@ function generateCacheKey(
   }
 
   // Add user context if configured
-  if (config.includeUserContext && userContext.user?.userId) {
-    parts.push(`user:${userContext.user.userId}`);
+  if (config.includeUserContext && userContext.user?.id) {
+    parts.push(`user:${userContext.user.id}`);
     if (userContext.user.role) {
       parts.push(`role:${userContext.user.role}`);
     }
@@ -240,7 +240,7 @@ export function createGraphQLCachingPlugin(): ApolloServerPlugin<GraphQLContext>
                   if (response.http) {
                     response.http.status = 304;
                     if ('body' in response.http) {
-                      (response.http as any).body = '';
+                      (response.http as { body?: string }).body = '';
                     }
 
                     // Remove content headers

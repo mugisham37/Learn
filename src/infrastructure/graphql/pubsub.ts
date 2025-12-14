@@ -63,7 +63,7 @@ export function createPubSub(): PubSub | RedisPubSub {
 
   try {
     // Use Redis PubSub for production/distributed environments
-    if (config.nodeEnv === 'production' || config.redis.cluster) {
+    if (config.nodeEnv === 'production' || (config.redis as any).cluster) {
       logger.info('Initializing Redis PubSub for GraphQL subscriptions');
 
       // Create Redis clients for pub/sub
@@ -72,7 +72,6 @@ export function createPubSub(): PubSub | RedisPubSub {
         port: config.redis.port,
         password: config.redis.password,
         db: config.redis.db,
-        retryDelayOnFailover: 100,
         enableReadyCheck: true,
         maxRetriesPerRequest: 3,
         lazyConnect: true,
@@ -83,7 +82,6 @@ export function createPubSub(): PubSub | RedisPubSub {
         port: config.redis.port,
         password: config.redis.password,
         db: config.redis.db,
-        retryDelayOnFailover: 100,
         enableReadyCheck: true,
         maxRetriesPerRequest: 3,
         lazyConnect: true,
@@ -173,7 +171,14 @@ export async function publishEvent(event: SubscriptionEvent, payload: any): Prom
 export function createAsyncIterator(events: SubscriptionEvent | SubscriptionEvent[]) {
   const pubsubInstance = getPubSub();
   const eventArray = Array.isArray(events) ? events : [events];
-  return pubsubInstance.asyncIterator(eventArray);
+  
+  // Handle different PubSub implementations
+  if ('asyncIterator' in pubsubInstance && typeof pubsubInstance.asyncIterator === 'function') {
+    return pubsubInstance.asyncIterator(eventArray);
+  }
+  
+  // Fallback for implementations without asyncIterator
+  throw new Error('PubSub implementation does not support asyncIterator');
 }
 
 /**

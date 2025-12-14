@@ -5,7 +5,7 @@
  * This complements the GraphQL API with traditional REST endpoints.
  */
 
-import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import { FastifyInstance } from 'fastify';
 import { IAuthService } from '../../application/services/IAuthService.js';
 
 interface LoginRequest {

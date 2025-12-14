@@ -33,12 +33,10 @@ import {
   communicationTypeDefs,
 } from '../../modules/communication/presentation/graphql/index.js';
 import { contentResolvers, contentTypeDefs } from '../../modules/content/presentation/index.js';
-import { CourseDataLoaders } from '../../modules/courses/presentation/graphql/dataloaders.js';
 import {
   courseResolvers,
   courseTypeDefs,
 } from '../../modules/courses/presentation/graphql/index.js';
-import { EnrollmentDataLoaders } from '../../modules/enrollments/presentation/graphql/dataloaders.js';
 import {
   enrollmentResolvers,
   enrollmentTypeDefs,
@@ -52,12 +50,10 @@ import {
   searchResolvers,
   searchTypeDefs,
 } from '../../modules/search/presentation/graphql/index.js';
-import { UserDataLoaders } from '../../modules/users/presentation/graphql/dataloaders.js';
 import { userResolvers, userTypeDefs } from '../../modules/users/presentation/graphql/index.js';
 import { logger } from '../../shared/utils/logger.js';
 
 import { createGraphQLCachingPlugin, createCacheAwareContext } from './cachingPlugin.js';
-import { GraphQLContext } from './types.js';
 import {
   createComplexityAnalysisPlugin,
   createComplexityAnalysisRule,
@@ -74,6 +70,7 @@ import {
   getEnvironmentOptimizationConfig,
 } from './responseOptimization.js';
 import { createSubscriptionServer } from './subscriptionServer.js';
+import { GraphQLContext } from './types.js';
 
 // Helper function to safely import resolvers
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -121,16 +118,7 @@ interface PubSubInstance {
   asyncIterator?: (triggers: string | string[]) => AsyncIterator<unknown>;
 }
 
-/**
- * DataLoader interface for type safety
- */
-interface DataLoader<K, V> {
-  load: (key: K) => Promise<V>;
-  loadMany: (keys: K[]) => Promise<(V | Error)[]>;
-  clear: (key: K) => DataLoader<K, V>;
-  clearAll: () => DataLoader<K, V>;
-  prime: (key: K, value: V) => DataLoader<K, V>;
-}
+
 
 
 
@@ -300,7 +288,7 @@ export function createApolloServer(fastify: FastifyInstance): {
 async function createDataLoaders(
   context: Pick<GraphQLContext, 'requestId'>
 ): Promise<GraphQLContext['dataloaders']> {
-  return await createDataLoadersFactory(context.requestId);
+  return (await createDataLoadersFactory(context.requestId)) as GraphQLContext['dataloaders'];
 }
 
 /**
@@ -393,5 +381,5 @@ export async function createGraphQLContext({
   }
 
   // Add cache utilities to context
-  return createCacheAwareContext(context) as GraphQLContext;
+  return createCacheAwareContext(context);
 }

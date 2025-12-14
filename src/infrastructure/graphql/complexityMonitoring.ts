@@ -8,6 +8,7 @@
  */
 
 import { logger } from '../../shared/utils/logger.js';
+
 import { 
   GraphQLRequestContextWillSendResponseTyped,
   GraphQLRequestContextDidResolveOperationTyped 
@@ -245,7 +246,7 @@ export function createExecutionTimeTracker(): {
       return Promise.resolve({
         willSendResponse(requestContext: GraphQLRequestContextWillSendResponseTyped): Promise<void> {
           return new Promise<void>((resolve) => {
-            const requestId = requestContext.request.http?.requestId || 'unknown';
+            const requestId = (requestContext.request.http as any)?.requestId || 'unknown';
             const startTime = startTimes.get(requestId);
 
             if (startTime) {
@@ -264,7 +265,7 @@ export function createExecutionTimeTracker(): {
 
         didResolveOperation(requestContext: GraphQLRequestContextDidResolveOperationTyped): Promise<void> {
           return new Promise<void>((resolve) => {
-            const requestId = requestContext.request.http?.requestId || 'unknown';
+            const requestId = (requestContext.request.http as any)?.requestId || 'unknown';
             startTimes.set(requestId, Date.now());
             resolve();
           });

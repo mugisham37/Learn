@@ -72,7 +72,7 @@ export const complexityMonitoringTypeDefs = `
  */
 export const complexityMonitoringResolvers = {
   Query: {
-    complexityStats: async (_: any, __: any, context: any) => {
+    complexityStats: async (_: any, __: any, context: any): Promise<any> => {
       // Check admin authorization
       if (!context.user || context.user.role !== 'admin') {
         throw new Error('Admin access required');
@@ -81,7 +81,7 @@ export const complexityMonitoringResolvers = {
       return complexityMonitor.getComplexityStats();
     },
 
-    topComplexQueries: async (_: any, { limit }: { limit: number }, context: any) => {
+    topComplexQueries: async (_: any, { limit }: { limit: number }, context: any): Promise<any> => {
       // Check admin authorization
       if (!context.user || context.user.role !== 'admin') {
         throw new Error('Admin access required');
@@ -90,7 +90,7 @@ export const complexityMonitoringResolvers = {
       return complexityMonitor.getTopComplexQueries(limit);
     },
 
-    userComplexityQueries: async (_: any, { userId }: { userId: string }, context: any) => {
+    userComplexityQueries: async (_: any, { userId }: { userId: string }, context: any): Promise<any> => {
       // Check admin authorization
       if (!context.user || context.user.role !== 'admin') {
         throw new Error('Admin access required');
@@ -101,7 +101,7 @@ export const complexityMonitoringResolvers = {
   },
 
   Mutation: {
-    clearComplexityMetrics: async (_: any, __: any, context: any) => {
+    clearComplexityMetrics: async (_: any, __: any, context: any): Promise<any> => {
       // Check admin authorization
       if (!context.user || context.user.role !== 'admin') {
         throw new Error('Admin access required');
@@ -120,7 +120,7 @@ export const complexityMonitoringResolvers = {
         enablePerformanceTracking?: boolean;
       },
       context: any
-    ) => {
+    ): Promise<any> => {
       // Check admin authorization
       if (!context.user || context.user.role !== 'admin') {
         throw new Error('Admin access required');
