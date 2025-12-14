@@ -15,7 +15,7 @@ import { GraphQLContext, UserDataLoaderInterface, CourseDataLoaderInterface, Enr
  * Creates DataLoaders for GraphQL context
  * This is a simplified implementation that provides the structure for DataLoader integration
  */
-export async function createDataLoaders(requestId: string): Promise<GraphQLContext['dataloaders']> {
+export function createDataLoaders(requestId: string): Promise<GraphQLContext['dataloaders']> {
   const dataloaders: GraphQLContext['dataloaders'] = {};
 
   try {
@@ -25,15 +25,15 @@ export async function createDataLoaders(requestId: string): Promise<GraphQLConte
     // Create mock DataLoader implementations that satisfy the interface
     const mockUserDataLoaders: UserDataLoaderInterface = {
       userById: {
-        load: async () => ({}),
-        loadMany: async () => [],
+        load: () => Promise.resolve({}),
+        loadMany: () => Promise.resolve([]),
         clear: () => mockUserDataLoaders.userById,
         clearAll: () => mockUserDataLoaders.userById,
         prime: () => mockUserDataLoaders.userById,
       },
       usersByIds: {
-        load: async () => [],
-        loadMany: async () => [],
+        load: () => Promise.resolve([]),
+        loadMany: () => Promise.resolve([]),
         clear: () => mockUserDataLoaders.usersByIds,
         clearAll: () => mockUserDataLoaders.usersByIds,
         prime: () => mockUserDataLoaders.usersByIds,
@@ -44,22 +44,22 @@ export async function createDataLoaders(requestId: string): Promise<GraphQLConte
 
     const mockCourseDataLoaders: CourseDataLoaderInterface = {
       courseById: {
-        load: async () => ({}),
-        loadMany: async () => [],
+        load: () => Promise.resolve({}),
+        loadMany: () => Promise.resolve([]),
         clear: () => mockCourseDataLoaders.courseById,
         clearAll: () => mockCourseDataLoaders.courseById,
         prime: () => mockCourseDataLoaders.courseById,
       },
       coursesByInstructorId: {
-        load: async () => [],
-        loadMany: async () => [],
+        load: () => Promise.resolve([]),
+        loadMany: () => Promise.resolve([]),
         clear: () => mockCourseDataLoaders.coursesByInstructorId,
         clearAll: () => mockCourseDataLoaders.coursesByInstructorId,
         prime: () => mockCourseDataLoaders.coursesByInstructorId,
       },
       modulesByCourseId: {
-        load: async () => [],
-        loadMany: async () => [],
+        load: () => Promise.resolve([]),
+        loadMany: () => Promise.resolve([]),
         clear: () => mockCourseDataLoaders.modulesByCourseId,
         clearAll: () => mockCourseDataLoaders.modulesByCourseId,
         prime: () => mockCourseDataLoaders.modulesByCourseId,
@@ -70,22 +70,22 @@ export async function createDataLoaders(requestId: string): Promise<GraphQLConte
 
     const mockEnrollmentDataLoaders: EnrollmentDataLoaderInterface = {
       enrollmentById: {
-        load: async () => ({}),
-        loadMany: async () => [],
+        load: () => Promise.resolve({}),
+        loadMany: () => Promise.resolve([]),
         clear: () => mockEnrollmentDataLoaders.enrollmentById,
         clearAll: () => mockEnrollmentDataLoaders.enrollmentById,
         prime: () => mockEnrollmentDataLoaders.enrollmentById,
       },
       enrollmentsByStudentId: {
-        load: async () => [],
-        loadMany: async () => [],
+        load: () => Promise.resolve([]),
+        loadMany: () => Promise.resolve([]),
         clear: () => mockEnrollmentDataLoaders.enrollmentsByStudentId,
         clearAll: () => mockEnrollmentDataLoaders.enrollmentsByStudentId,
         prime: () => mockEnrollmentDataLoaders.enrollmentsByStudentId,
       },
       enrollmentsByCourseId: {
-        load: async () => [],
-        loadMany: async () => [],
+        load: () => Promise.resolve([]),
+        loadMany: () => Promise.resolve([]),
         clear: () => mockEnrollmentDataLoaders.enrollmentsByCourseId,
         clearAll: () => mockEnrollmentDataLoaders.enrollmentsByCourseId,
         prime: () => mockEnrollmentDataLoaders.enrollmentsByCourseId,
@@ -104,14 +104,14 @@ export async function createDataLoaders(requestId: string): Promise<GraphQLConte
       availableLoaders: ['users', 'courses', 'enrollments'],
     });
 
-    return dataloaders;
+    return Promise.resolve(dataloaders);
   } catch (error) {
     logger.warn('Failed to initialize DataLoader factory', {
       error: error instanceof Error ? error.message : String(error),
       requestId,
     });
 
-    return dataloaders;
+    return Promise.resolve(dataloaders);
   }
 }
 

@@ -71,7 +71,7 @@ const DEFAULT_PAGINATION_CONFIG: PaginationConfig = {
 /**
  * Creates a cursor from a record using a specified field
  */
-export function createCursor(record: any, cursorField: string = 'id'): string {
+export function createCursor(record: Record<string, unknown>, cursorField: string = 'id'): string {
   const value = record[cursorField];
   if (value === null || value === undefined) {
     throw new Error(`Cursor field '${cursorField}' is null or undefined`);
@@ -149,13 +149,13 @@ export function createConnection<T>(
 ): Connection<T> {
   validatePaginationInput(input, config);
 
-  const { first, last, after, before } = input;
+  const { first, last } = input;
   const limit = first || last || config.defaultLimit;
 
   // Create edges with cursors
   const edges: Edge<T>[] = records.map((record) => ({
     node: record,
-    cursor: createCursor(record, cursorField),
+    cursor: createCursor(record as Record<string, unknown>, cursorField),
   }));
 
   // Determine pagination info
@@ -165,8 +165,8 @@ export function createConnection<T>(
   const pageInfo: PageInfo = {
     hasNextPage,
     hasPreviousPage,
-    startCursor: edges.length > 0 ? edges[0].cursor : undefined,
-    endCursor: edges.length > 0 ? edges[edges.length - 1].cursor : undefined,
+    startCursor: edges.length > 0 ? edges[0]?.cursor : undefined,
+    endCursor: edges.length > 0 ? edges[edges.length - 1]?.cursor : undefined,
   };
 
   const connection: Connection<T> = {

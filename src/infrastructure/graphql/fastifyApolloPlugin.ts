@@ -63,10 +63,8 @@ const apolloServerPlugin: FastifyPluginAsync<ApolloServerPluginOptions> = async 
         // Create GraphQL context
         const contextValue = await createGraphQLContext({ request });
 
-        // Create HeaderMap with required __identity property for Apollo Server compatibility
-        const headerMap = new Map(Object.entries(request.headers as Record<string, string>)) as Map<string, string> & { __identity: string };
-        // Add the required __identity property for Apollo Server HeaderMap compatibility
-        (headerMap as Map<string, string> & { __identity: string }).__identity = 'HeaderMap';
+        // Create HeaderMap for Apollo Server compatibility
+        const headerMap = new Map(Object.entries(request.headers as Record<string, string>));
 
         // Execute GraphQL request
         const response = await apolloServer.executeHTTPGraphQLRequest({

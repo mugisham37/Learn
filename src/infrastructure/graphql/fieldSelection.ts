@@ -57,7 +57,7 @@ function parseSelectionSet(
 ): void {
   for (const selection of selections) {
     switch (selection.kind) {
-      case 'Field': {
+      case 'Field' as const: {
         const fieldName = selection.name.value;
         fields.add(fieldName);
 
@@ -84,7 +84,7 @@ function parseSelectionSet(
         break;
       }
 
-      case 'InlineFragment':
+      case 'InlineFragment' as const:
         // Handle inline fragments
         if (selection.selectionSet) {
           parseSelectionSet(
@@ -97,7 +97,7 @@ function parseSelectionSet(
         }
         break;
 
-      case 'FragmentSpread': {
+      case 'FragmentSpread' as const: {
         // Handle fragment spreads
         const fragmentName = selection.name.value;
         const fragment = info.fragments[fragmentName];
@@ -137,14 +137,14 @@ export function filterObjectFields<T extends Record<string, unknown>>(
         if (Array.isArray(value)) {
           // Handle arrays of objects
           filtered[key as keyof T] = value.map((item) =>
-            typeof item === 'object' ? filterObjectFields(item, nestedSelection) : item
+            typeof item === 'object' && item !== null ? filterObjectFields(item as Record<string, unknown>, nestedSelection) : item
           ) as T[keyof T];
         } else {
           // Handle nested objects
-          filtered[key as keyof T] = filterObjectFields(value, nestedSelection) as T[keyof T];
+          filtered[key as keyof T] = filterObjectFields(value as Record<string, unknown>, nestedSelection) as T[keyof T];
         }
       } else {
-        filtered[key as keyof T] = value;
+        filtered[key as keyof T] = value as T[keyof T];
       }
     }
   }
@@ -167,7 +167,7 @@ export function removeNullValues<T>(obj: T): T {
   }
 
   if (typeof obj === 'object') {
-    const cleaned: any = {};
+    const cleaned: Record<string, unknown> = {};
 
     for (const [key, value] of Object.entries(obj)) {
       if (value !== null && value !== undefined) {
@@ -175,7 +175,7 @@ export function removeNullValues<T>(obj: T): T {
       }
     }
 
-    return cleaned;
+    return cleaned as T;
   }
 
   return obj;
@@ -199,7 +199,7 @@ export function optimizeGraphQLResponse<T>(
     const selection = createFieldSelection(info);
 
     // Apply field filtering
-    let optimized = filterObjectFields(data as any, selection) as T;
+    let optimized = filterObjectFields(data as Record<string, unknown>, selection) as T;
 
     // Remove null values if requested
     if (removeNulls) {
@@ -234,16 +234,39 @@ export function optimizeGraphQLResponse<T>(
 }
 
 /**
+ * Response context interface
+ */
+interface ResponseContext {
+  response: {
+    body: {
+      kind: string;
+      singleResult?: {
+        data?: Record<string, unknown>;
+      };
+    };
+  };
+  request: {
+    operationName?: string;
+  };
+}
+
+/**
  * Middleware to automatically optimize GraphQL responses
  */
-export function createResponseOptimizationPlugin() {
+export function createResponseOptimizationPlugin(): {
+  requestDidStart: () => {
+    willSendResponse: (context: ResponseContext) => void;
+  };
+} {
   return {
-    requestDidStart() {
+    requestDidStart(): {
+      willSendResponse: (context: ResponseContext) => void;
+    } {
       return {
-        willSendResponse({ response, request }: any) {
+        willSendResponse({ response, request }: ResponseContext): void {
           try {
             // Only optimize successful responses with data
-            if (response.body.kind === 'single' && response.body.singleResult.data) {
+            if (response.body.kind === 'single' && response.body.singleResult?.data) {
               const originalData = response.body.singleResult.data;
 
               // Apply null value removal (field selection is handled at resolver level)

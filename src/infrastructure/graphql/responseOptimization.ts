@@ -256,7 +256,7 @@ export function optimizeOffsetListResponse<T>(
   info: GraphQLResolveInfo,
   totalCount: number,
   _config: ResponseOptimizationConfig = DEFAULT_CONFIG
-): any {
+): unknown {
   const paginationConfig = createPaginationConfig();
 
   return createOptimizedOffsetPagination(

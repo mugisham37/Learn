@@ -1,120 +1,123 @@
 /**
  * GraphQL Query Complexity Analysis
  *
- * This module implements query complexity analysis to prevent expensive queries
- * from overwhelming the server. It assigns complexity scores to fields and
- * rejects queries that exceed configured limits.
+ * Implements query complexity analysis to prevent resource exhaustion
+ * from overly complex GraphQL queries.
  *
- * Requirements: 15.6
+ * Requirements: 21.2
  */
 
 import { ValidationRule, GraphQLError } from 'graphql';
-import {
-  createComplexityRule,
-  fieldExtensionsEstimator,
-  simpleEstimator,
-} from 'graphql-query-complexity';
+import { createComplexityLimitRule } from 'graphql-query-complexity';
+import { ApolloServerPlugin } from '@apollo/server';
 
 import { logger } from '../../shared/utils/logger.js';
 
 import { complexityMonitor, createComplexityMetrics } from './complexityMonitoring.js';
 import {
   type GraphQLRequestContextDidResolveOperationTyped,
-  type ProcessEnv,
+  type GraphQLContext,
+  type TypedGraphQLRequestListener,
 } from './types.js';
 
 /**
- * Configuration for query complexity limits
+ * Complexity analysis configuration
  */
 export interface ComplexityConfig {
   maximumComplexity: number;
-  maximumDepth?: number;
-  scalarCost?: number;
-  objectCost?: number;
-  listFactor?: number;
-  introspectionCost?: number;
-  createError?: (max: number, actual: number) => Error;
+  maximumDepth: number;
+  scalarCost: number;
+  objectCost: number;
+  listFactor: number;
+  introspectionCost: number;
+  createError: (max: number, actual: number) => GraphQLError;
 }
 
 /**
  * Default complexity configuration
  */
-const DEFAULT_CONFIG: ComplexityConfig = {
-  maximumComplexity: 1000, // Maximum complexity score allowed
-  maximumDepth: 15, // Maximum query depth
-  scalarCost: 1, // Cost for scalar fields
-  objectCost: 2, // Cost for object fields
-  listFactor: 10, // Multiplier for list fields
-  introspectionCost: 1000, // High cost for introspection queries
+const DEFAULT_COMPLEXITY_CONFIG: ComplexityConfig = {
+  maximumComplexity: 1000,
+  maximumDepth: 15,
+  scalarCost: 1,
+  objectCost: 2,
+  listFactor: 10,
+  introspectionCost: 1000,
+  createError: (max: number, actual: number): GraphQLError => {
+    return new GraphQLError(
+      `Query complexity limit exceeded. Maximum allowed: ${max}, actual: ${actual}. ` +
+      'Please reduce the complexity of your query or use pagination.',
+      {
+        extensions: {
+          code: 'QUERY_COMPLEXITY_LIMIT_EXCEEDED',
+          maximumComplexity: max,
+          actualComplexity: actual,
+        },
+      }
+    );
+  },
 };
 
 /**
- * Custom complexity estimator that assigns scores based on field types
+ * Environment-based complexity configuration
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const customComplexityEstimator = (args: any): number => {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-  const { field, node, childComplexity } = args;
+export function getComplexityConfig(): ComplexityConfig {
+  const env = process.env as Record<string, string | undefined>;
+  
+  return {
+    ...DEFAULT_COMPLEXITY_CONFIG,
+    maximumComplexity: parseInt(env['GRAPHQL_MAX_COMPLEXITY'] || '1000', 10),
+    maximumDepth: parseInt(env['GRAPHQL_MAX_DEPTH'] || '15', 10),
+  };
+}
 
-  // Get field name and type information
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-  const fieldName = field.name;
-  // Note: fieldType is available but not used in current logic
-  // const _fieldType = field.type;
-
-  // Base complexity for the field
-  let complexity = DEFAULT_CONFIG.scalarCost || 1;
-
-  // Assign higher complexity to expensive operations
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-  if (fieldName.includes('search') || fieldName.includes('Search')) {
-    complexity = 50; // Search operations are expensive
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-  } else if (fieldName.includes('analytics') || fieldName.includes('Analytics')) {
-    complexity = 30; // Analytics operations are expensive
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-  } else if (fieldName.includes('report') || fieldName.includes('Report')) {
-    complexity = 40; // Report generation is expensive
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-  } else if (fieldName.includes('aggregate') || fieldName.includes('Aggregate')) {
-    complexity = 25; // Aggregation operations are expensive
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-  } else if (fieldName.endsWith('s') || fieldName.includes('list') || fieldName.includes('List')) {
-    // List fields have higher base complexity
-    complexity = DEFAULT_CONFIG.objectCost || 2;
-  }
-
-  // Handle pagination arguments
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-  const argsNode = node.arguments;
-  if (argsNode) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-    const firstArg = argsNode.find((arg: { name: { value: string } }) => arg.name.value === 'first');
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-    const limitArg = argsNode.find((arg: { name: { value: string } }) => arg.name.value === 'limit');
-
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    if (firstArg && firstArg.value.kind === 'IntValue') {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
-      const first = parseInt(firstArg.value.value, 10);
-      complexity *= Math.min(first, 100); // Cap at 100 to prevent abuse
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    } else if (limitArg && limitArg.value.kind === 'IntValue') {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
-      const limit = parseInt(limitArg.value.value, 10);
-      complexity *= Math.min(limit, 100); // Cap at 100 to prevent abuse
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-    } else if (fieldName.endsWith('s') || fieldName.includes('list')) {
-      // Default multiplier for lists without explicit limits
-      complexity *= DEFAULT_CONFIG.listFactor || 10;
-    }
-  }
-
-  // Add child complexity
-  complexity += childComplexity;
-
-  return complexity;
-};
+/**
+ * Custom complexity estimator for specific fields
+ */
+export function createComplexityEstimator() {
+  return {
+    // Estimate complexity based on field type and arguments
+    estimateComplexity: ({ field, node, childComplexity }: {
+      field: { name: string; type: unknown };
+      node: {
+        arguments?: Array<{
+          name: { value: string };
+          value: { kind: string; value: string };
+        }>;
+      };
+      childComplexity: number;
+    }): number => {
+      const fieldName = field.name;
+      
+      // Higher complexity for list fields with pagination
+      if (fieldName.endsWith('Connection') || fieldName.endsWith('List')) {
+        const firstArg = node.arguments?.find(arg => arg.name.value === 'first');
+        const limitArg = node.arguments?.find(arg => arg.name.value === 'limit');
+        
+        if (firstArg && firstArg.value.kind === 'IntValue') {
+          const limit = parseInt(firstArg.value.value, 10);
+          return Math.max(1, limit / 10) * childComplexity;
+        }
+        
+        if (limitArg && limitArg.value.kind === 'IntValue') {
+          const limit = parseInt(limitArg.value.value, 10);
+          return Math.max(1, limit / 10) * childComplexity;
+        }
+        
+        // Default list complexity
+        return 10 * childComplexity;
+      }
+      
+      // Higher complexity for search and analytics fields
+      if (fieldName.includes('search') || fieldName.includes('analytics')) {
+        return 5 * childComplexity;
+      }
+      
+      // Default complexity
+      return childComplexity;
+    },
+  };
+}
 
 /**
  * Creates a complexity analysis rule with custom configuration
@@ -122,156 +125,132 @@ const customComplexityEstimator = (args: any): number => {
 export function createComplexityAnalysisRule(
   config: Partial<ComplexityConfig> = {}
 ): ValidationRule {
-  const finalConfig = { ...DEFAULT_CONFIG, ...config };
-
-  return createComplexityRule({
-    maximumComplexity: finalConfig.maximumComplexity,
-    estimators: [
-      // Use field extensions if available (for custom @complexity directives)
-      fieldExtensionsEstimator(),
-
-      // Use custom estimator for intelligent complexity calculation
-      customComplexityEstimator,
-
-      // Fallback to simple estimator
-      simpleEstimator({ defaultComplexity: 1 }),
-    ],
-    createError: (max: number, actual: number) => {
-      // Log complex queries for monitoring
-      logger.warn('GraphQL query complexity limit exceeded', {
-        maximumAllowed: max,
-        actualComplexity: actual,
-        timestamp: new Date().toISOString(),
-      });
-
-      // Return GraphQLError instead of Error
-      return new GraphQLError(
-        `Query complexity limit exceeded. Maximum allowed: ${max}, actual: ${actual}. ` +
-          'Please simplify your query or reduce the number of requested fields.'
-      );
-    },
+  const finalConfig = { ...DEFAULT_COMPLEXITY_CONFIG, ...config };
+  
+  return createComplexityLimitRule(finalConfig.maximumComplexity, {
+    maximumDepth: finalConfig.maximumDepth,
+    scalarCost: finalConfig.scalarCost,
+    objectCost: finalConfig.objectCost,
+    listFactor: finalConfig.listFactor,
+    introspectionCost: finalConfig.introspectionCost,
+    createError: finalConfig.createError,
+    estimators: [createComplexityEstimator().estimateComplexity],
   });
 }
 
 /**
  * Complexity analysis plugin for Apollo Server
  */
-export function createComplexityAnalysisPlugin(_config: Partial<ComplexityConfig> = {}): {
-  requestDidStart(): Promise<{
-    didResolveOperation(requestContext: GraphQLRequestContextDidResolveOperationTyped): Promise<void>;
-  }>;
-} {
+export function createComplexityAnalysisPlugin(_config: Partial<ComplexityConfig> = {}): ApolloServerPlugin<GraphQLContext> {
   return {
-    requestDidStart(): Promise<{
-      didResolveOperation(requestContext: GraphQLRequestContextDidResolveOperationTyped): Promise<void>;
-    }> {
+    requestDidStart(): Promise<TypedGraphQLRequestListener> {
       return Promise.resolve({
-        didResolveOperation(requestContext: GraphQLRequestContextDidResolveOperationTyped): Promise<void> {
-          return new Promise<void>((resolve) => {
-            const { request, contextValue } = requestContext;
+        didResolveOperation: async (requestContext: GraphQLRequestContextDidResolveOperationTyped): Promise<void> => {
+          try {
+            const { request, document, operationName } = requestContext;
             
-            // Log query complexity for monitoring
-            try {
-              // Create metrics for monitoring
-              const metrics = createComplexityMetrics(request.query || 'Unknown query', 0, {
-                operationName: request.operationName,
-                userId: contextValue.user?.id,
-                userRole: contextValue.user?.role,
-                variables: request.variables,
-              });
-
-              // Log through monitoring system
-              complexityMonitor.logComplexity(metrics);
-            } catch (error) {
-              logger.error('Failed to calculate query complexity', {
-                error: error instanceof Error ? error.message : String(error),
-                operationName: request.operationName,
-              });
+            if (!document) {
+              return;
             }
 
-            resolve();
-          });
+            // Create complexity metrics for monitoring
+            const metrics = createComplexityMetrics({
+              query: request.query || '',
+              operationName: operationName || undefined,
+              variables: request.variables || {},
+              complexity: 0, // Will be calculated by the validation rule
+              depth: 0, // Will be calculated separately if needed
+              executionTime: 0, // Will be set later
+              timestamp: new Date(),
+              userId: requestContext.contextValue?.user?.id,
+            });
+
+            // Record the operation for monitoring
+            complexityMonitor.recordQuery(metrics);
+
+            logger.debug('Query complexity analysis completed', {
+              operationName: operationName || 'anonymous',
+              userId: requestContext.contextValue?.user?.id,
+              requestId: requestContext.contextValue?.requestId,
+            });
+          } catch (error) {
+            logger.error('Complexity analysis failed', {
+              error: error instanceof Error ? error.message : String(error),
+              operationName: requestContext.operationName || 'anonymous',
+              requestId: requestContext.contextValue?.requestId,
+            });
+          }
         },
       });
     },
   };
 }
 
-
-
-
-
 /**
- * Default complexity limits for different environments
+ * Utility to calculate query depth
  */
-export const COMPLEXITY_LIMITS = {
-  development: {
-    maximumComplexity: 2000,
-    maximumDepth: 20,
-    logThreshold: 300,
-    alertThreshold: 1500,
-    enableDetailedLogging: true,
-    enablePerformanceTracking: true,
-  },
-  staging: {
-    maximumComplexity: 1500,
-    maximumDepth: 18,
-    logThreshold: 500,
-    alertThreshold: 1200,
-    enableDetailedLogging: true,
-    enablePerformanceTracking: true,
-  },
-  production: {
-    maximumComplexity: 1000,
-    maximumDepth: 15,
-    logThreshold: 600,
-    alertThreshold: 800,
-    enableDetailedLogging: false,
-    enablePerformanceTracking: true,
-  },
-} as const;
-
-/**
- * Get complexity configuration based on environment
- */
-export function getComplexityConfig(): ComplexityConfig {
-  const env = (process.env as ProcessEnv)['NODE_ENV'] || 'development';
-
-  // Try to load from environment variables
-  const envConfig = {
-    maximumComplexity: (process.env as ProcessEnv)['GRAPHQL_MAX_COMPLEXITY']
-      ? parseInt((process.env as ProcessEnv)['GRAPHQL_MAX_COMPLEXITY']!, 10)
-      : undefined,
-    maximumDepth: (process.env as ProcessEnv)['GRAPHQL_MAX_DEPTH']
-      ? parseInt((process.env as ProcessEnv)['GRAPHQL_MAX_DEPTH']!, 10)
-      : undefined,
-    logThreshold: (process.env as ProcessEnv)['GRAPHQL_LOG_THRESHOLD']
-      ? parseInt((process.env as ProcessEnv)['GRAPHQL_LOG_THRESHOLD']!, 10)
-      : undefined,
-    alertThreshold: (process.env as ProcessEnv)['GRAPHQL_ALERT_THRESHOLD']
-      ? parseInt((process.env as ProcessEnv)['GRAPHQL_ALERT_THRESHOLD']!, 10)
-      : undefined,
-    enableDetailedLogging: (process.env as ProcessEnv)['GRAPHQL_DETAILED_LOGGING'] === 'true',
-    enablePerformanceTracking: (process.env as ProcessEnv)['GRAPHQL_PERFORMANCE_TRACKING'] !== 'false',
-  };
-
-  // Get base configuration for environment
-  let baseConfig: ComplexityConfig;
-  switch (env) {
-    case 'production':
-      baseConfig = { ...DEFAULT_CONFIG, ...COMPLEXITY_LIMITS.production };
-      break;
-    case 'staging':
-      baseConfig = { ...DEFAULT_CONFIG, ...COMPLEXITY_LIMITS.staging };
-      break;
-    default:
-      baseConfig = { ...DEFAULT_CONFIG, ...COMPLEXITY_LIMITS.development };
-      break;
+export function calculateQueryDepth(document: unknown): number {
+  // This is a simplified implementation
+  // In a real scenario, you would traverse the AST to calculate actual depth
+  try {
+    const docString = JSON.stringify(document);
+    const braceCount = (docString.match(/{/g) || []).length;
+    return Math.min(braceCount, 20); // Cap at reasonable depth
+  } catch {
+    return 1;
   }
+}
 
-  // Override with environment variables if provided
+/**
+ * Utility to estimate query complexity without validation
+ */
+export function estimateQueryComplexity(
+  query: string,
+  variables?: Record<string, unknown>
+): number {
+  try {
+    // Simple heuristic-based complexity estimation
+    let complexity = 0;
+    
+    // Count field selections
+    const fieldMatches = query.match(/\w+\s*{/g) || [];
+    complexity += fieldMatches.length * 2;
+    
+    // Count list operations
+    const listMatches = query.match(/(first|last|limit):\s*\d+/g) || [];
+    for (const match of listMatches) {
+      const numberMatch = match.match(/\d+/);
+      if (numberMatch) {
+        const limit = parseInt(numberMatch[0], 10);
+        complexity += Math.max(1, limit / 10);
+      }
+    }
+    
+    // Add complexity for variables
+    if (variables) {
+      complexity += Object.keys(variables).length;
+    }
+    
+    return Math.max(1, complexity);
+  } catch {
+    return 1;
+  }
+}
+
+/**
+ * Utility to check if query exceeds complexity limits
+ */
+export function isQueryTooComplex(
+  query: string,
+  variables?: Record<string, unknown>,
+  config: Partial<ComplexityConfig> = {}
+): { isComplex: boolean; estimated: number; limit: number } {
+  const finalConfig = { ...DEFAULT_COMPLEXITY_CONFIG, ...config };
+  const estimated = estimateQueryComplexity(query, variables);
+  
   return {
-    ...baseConfig,
-    ...Object.fromEntries(Object.entries(envConfig).filter(([_, value]) => value !== undefined)),
+    isComplex: estimated > finalConfig.maximumComplexity,
+    estimated,
+    limit: finalConfig.maximumComplexity,
   };
 }

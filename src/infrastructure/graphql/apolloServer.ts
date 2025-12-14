@@ -73,7 +73,7 @@ import { createSubscriptionServer } from './subscriptionServer.js';
 import { GraphQLContext } from './types.js';
 
 // Re-export GraphQLContext for other modules
-export { GraphQLContext } from './types.js';
+export type { GraphQLContext } from './types.js';
 
 // Helper function to safely import resolvers
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -291,7 +291,7 @@ export function createApolloServer(fastify: FastifyInstance): {
 async function createDataLoaders(
   context: Pick<GraphQLContext, 'requestId'>
 ): Promise<GraphQLContext['dataloaders']> {
-  return (await createDataLoadersFactory(context.requestId)) as GraphQLContext['dataloaders'];
+  return (await createDataLoadersFactory(context.requestId));
 }
 
 /**
