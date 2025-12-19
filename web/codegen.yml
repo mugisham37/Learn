@@ -1,0 +1,47 @@
+overwrite: true
+schema: 
+  - "schema.graphql"
+documents: "src/**/*.{ts,tsx,graphql,gql}"
+generates:
+  src/types/schema.ts:
+    plugins:
+      - "typescript"
+      - "typescript-operations"
+      - "typescript-react-apollo"
+    config:
+      withHooks: true
+      withHOC: false
+      withComponent: false
+      skipTypename: false
+      enumsAsTypes: true
+      constEnums: true
+      futureProofEnums: true
+      strictScalars: true
+      scalars:
+        DateTime: string
+        Upload: File
+        JSON: any
+      namingConvention:
+        typeNames: pascal-case#pascalCase
+        enumValues: upper-case#upperCase
+        fieldNames: camelCase
+        variableNames: camelCase
+      avoidOptionals:
+        field: true
+        inputValue: false
+        object: false
+      maybeValue: T | null | undefined
+      inputMaybeValue: T | null | undefined
+      omitOperationSuffix: false
+      operationResultSuffix: "Result"
+      documentVariableSuffix: "Document"
+      fragmentVariableSuffix: "FragmentDoc"
+      apolloReactHooksImportFrom: "@apollo/client"
+      apolloReactCommonImportFrom: "@apollo/client"
+      reactApolloVersion: 3
+      withRefetchFn: true
+      defaultScalarType: unknown
+      useTypeImports: true
+hooks:
+  afterAllFileWrite:
+    - prettier --write
