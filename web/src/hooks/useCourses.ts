@@ -16,7 +16,7 @@ import type {
   CourseConnection,
   Difficulty,
   CourseStatus,
-} from '../types/schema';
+} from '../types';
 
 // GraphQL Queries and Mutations
 const GET_COURSES = gql`
@@ -380,4 +380,187 @@ export function useCreateCourse(): MutationResult<Course> {
   
   const [createCourseMutation, { loading, error, reset }] = useMutation(CREATE_COURSE, {
     errorPolicy: 'all',
-    // Update cache afte
+    // Update cache after successful creation
+    update: (cache, { data }) => {
+      if (data?.createCourse) {
+        // Add to my courses list
+        cache.updateQuery(
+          { query: GET_MY_COURSES, variables: {} },
+          (existingData) => {
+            if (!existingData?.myCourses) return existingData;
+            
+            return {
+              myCourses: {
+                ...existingData.myCourses,
+                edges: [
+                  {
+                    node: data.createCourse,
+                    cursor: data.createCourse.id,
+                    __typename: 'CourseEdge',
+                  },
+                  ...existingData.myCourses.edges,
+                ],
+                totalCount: existingData.myCourses.totalCount + 1,
+              },
+            };
+          }
+        );
+      }
+    },
+  });
+
+  const mutate = async (variables: { input: CreateCourseInput }) => {
+    const result = await createCourseMutation({ variables });
+    return result.data?.createCourse;
+  };
+
+  return {
+    mutate,
+    loading,
+    error,
+    reset,
+  };
+}
+
+/**
+ * Hook for updating an existing course with optimistic updates
+ * 
+ * @returns Mutation function with loading state and error handling
+ * 
+ * @example
+ * ```tsx
+ * function EditCourseForm({ course }: { course: Course }) {
+ *   const { mutate: updateCourse, loading, error } = useUpdateCourse();
+ *   
+ *   const handleSubmit = async (formData: UpdateCourseInput) => {
+ *     try {
+ *       await updateCourse({ id: course.id, input: formData });
+ *       // Course updated successfully
+ *     } catch (err) {
+ *       // Handle error
+ *     }
+ *   };
+ *   
+ *   return <form onSubmit={handleSubmit}>...</form>;
+ * }
+ * ```
+ */
+export function useUpdateCourse(): MutationResult<Course> {
+  const [updateCourseMutation, { loading, error, reset }] = useMutation(UPDATE_COURSE, {
+    errorPolicy: 'all',
+    // Optimistic response for immediate UI updates
+    optimisticResponse: (variables) => ({
+      updateCourse: {
+        __typename: 'Course',
+        id: variables.id,
+        ...variables.input,
+        updatedAt: new Date().toISOString(),
+      },
+    }),
+    // Update cache after successful mutation
+    update: (cache, { data }) => {
+      if (data?.updateCourse) {
+        // Update course in cache
+        cache.updateQuery(
+          { query: GET_COURSE, variables: { id: data.updateCourse.id } },
+          (existingData) => {
+            if (!existingData?.course) return existingData;
+            
+            return {
+              course: {
+                ...existingData.course,
+                ...data.updateCourse,
+              },
+            };
+          }
+        );
+      }
+    },
+  });
+
+  const mutate = async (variables: { id: string; input: UpdateCourseInput }) => {
+    const result = await updateCourseMutation({ variables });
+    return result.data?.updateCourse;
+  };
+
+  return {
+    mutate,
+    loading,
+    error,
+    reset,
+  };
+}
+
+/**
+ * Hook for publishing a course (changing status to published)
+ * 
+ * @returns Mutation function with loading state and error handling
+ * 
+ * @example
+ * ```tsx
+ * function PublishCourseButton({ courseId }: { courseId: string }) {
+ *   const { mutate: publishCourse, loading } = usePublishCourse();
+ *   
+ *   const handlePublish = async () => {
+ *     try {
+ *       await publishCourse({ id: courseId });
+ *       // Course published successfully
+ *     } catch (err) {
+ *       // Handle error
+ *     }
+ *   };
+ *   
+ *   return (
+ *     <button onClick={handlePublish} disabled={loading}>
+ *       {loading ? 'Publishing...' : 'Publish Course'}
+ *     </button>
+ *   );
+ * }
+ * ```
+ */
+export function usePublishCourse(): MutationResult<Course> {
+  const [publishCourseMutation, { loading, error, reset }] = useMutation(PUBLISH_COURSE, {
+    errorPolicy: 'all',
+    // Optimistic response for immediate UI updates
+    optimisticResponse: (variables) => ({
+      publishCourse: {
+        __typename: 'Course',
+        id: variables.id,
+        status: 'PUBLISHED' as CourseStatus,
+        updatedAt: new Date().toISOString(),
+      },
+    }),
+    // Update cache after successful mutation
+    update: (cache, { data }) => {
+      if (data?.publishCourse) {
+        // Update course status in cache
+        cache.updateQuery(
+          { query: GET_COURSE, variables: { id: data.publishCourse.id } },
+          (existingData) => {
+            if (!existingData?.course) return existingData;
+            
+            return {
+              course: {
+                ...existingData.course,
+                status: data.publishCourse.status,
+                updatedAt: data.publishCourse.updatedAt,
+              },
+            };
+          }
+        );
+      }
+    },
+  });
+
+  const mutate = async (variables: { id: string }) => {
+    const result = await publishCourseMutation({ variables });
+    return result.data?.publishCourse;
+  };
+
+  return {
+    mutate,
+    loading,
+    error,
+    reset,
+  };
+}

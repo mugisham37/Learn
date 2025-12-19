@@ -12,7 +12,7 @@ import type {
   UpdateProfileInput,
   NotificationPreferences,
   UpdateNotificationPreferencesInput,
-} from '../types/schema';
+} from '../types';
 
 // GraphQL Queries and Mutations
 const GET_CURRENT_USER = gql`

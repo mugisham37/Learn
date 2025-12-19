@@ -8,6 +8,9 @@
 // Re-export generated GraphQL types
 export * from './schema';
 
+// Re-export domain entity types
+export * from './entities';
+
 // Re-export form types when available
 // export * from './forms';
 
@@ -134,13 +137,4 @@ export interface PerformanceMetrics {
   activeSubscriptions: number;
 }
 
-// Temporary User type until real schema is available
-export interface User {
-  id: string;
-  email: string;
-  role: 'student' | 'educator' | 'admin';
-  fullName?: string;
-  emailVerified: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
+// User type is now imported from entities.ts
