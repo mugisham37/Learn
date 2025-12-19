@@ -17,5 +17,8 @@ export * from './subscriptions';
 // File Upload System
 export * from './uploads';
 
+// Cache Management
+export * from './cache';
+
 // Configuration
 export * from './config';
