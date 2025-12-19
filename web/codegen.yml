@@ -2,6 +2,7 @@ overwrite: true
 schema: 
   - "schema.graphql"
 documents: "src/**/*.{ts,tsx,graphql,gql}"
+watch: true
 generates:
   src/types/schema.ts:
     plugins:
@@ -9,39 +10,101 @@ generates:
       - "typescript-operations"
       - "typescript-react-apollo"
     config:
+      # React Apollo Configuration
       withHooks: true
       withHOC: false
       withComponent: false
+      withMutationFn: true
+      withRefetchFn: true
+      withSubscriptionHooks: true
+      
+      # TypeScript Configuration
       skipTypename: false
       enumsAsTypes: true
       constEnums: true
       futureProofEnums: true
       strictScalars: true
+      useTypeImports: true
+      immutableTypes: true
+      
+      # Scalar Mappings
       scalars:
         DateTime: string
         Upload: File
         JSON: any
+        ID: string
+        
+      # Naming Conventions
       namingConvention:
         typeNames: pascal-case#pascalCase
         enumValues: upper-case#upperCase
         fieldNames: camelCase
         variableNames: camelCase
+        transformUnderscore: true
+        
+      # Optional Handling
       avoidOptionals:
         field: true
         inputValue: false
         object: false
+        defaultValue: false
       maybeValue: T | null | undefined
       inputMaybeValue: T | null | undefined
+      
+      # Operation Naming
       omitOperationSuffix: false
       operationResultSuffix: "Result"
       documentVariableSuffix: "Document"
       fragmentVariableSuffix: "FragmentDoc"
+      
+      # Apollo Client Integration
       apolloReactHooksImportFrom: "@apollo/client"
       apolloReactCommonImportFrom: "@apollo/client"
       reactApolloVersion: 3
-      withRefetchFn: true
+      
+      # Code Generation Options
       defaultScalarType: unknown
-      useTypeImports: true
+      nonOptionalTypename: true
+      preResolveTypes: true
+      skipTypeNameForRoot: false
+      
+      # Documentation
+      addDocBlocks: true
+      
+      # Performance
+      dedupeOperationSuffix: true
+      
+  # Generate separate types for forms and validation
+  src/types/forms.ts:
+    plugins:
+      - "typescript"
+    config:
+      onlyOperationTypes: true
+      skipTypename: true
+      scalars:
+        DateTime: string
+        Upload: File
+        JSON: any
+        ID: string
+      namingConvention:
+        typeNames: pascal-case#pascalCase
+        fieldNames: camelCase
+      avoidOptionals:
+        field: false
+        inputValue: false
+        object: false
+      maybeValue: T | null | undefined
+      inputMaybeValue: T | null | undefined
+      
+  # Generate introspection result for development tools
+  src/types/introspection.json:
+    plugins:
+      - "introspection"
+    config:
+      minify: true
+      
 hooks:
   afterAllFileWrite:
     - prettier --write
+  afterOneFileWrite:
+    - echo "Generated types for {{outputFile}}"

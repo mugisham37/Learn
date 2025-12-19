@@ -1,17 +1,47 @@
+# Placeholder GraphQL Schema
+# This is a minimal schema used when the backend server is not available.
+# Start the backend server and run "npm run codegen" to generate real types.
 
-      scalar DateTime
-      scalar Upload
-      scalar JSON
+scalar DateTime
+scalar Upload
+scalar JSON
 
-      type Query {
-        _empty: String
-      }
+type Query {
+  _empty: String
+}
 
-      type Mutation {
-        _empty: String
-      }
+type Mutation {
+  _empty: String
+}
 
-      type Subscription {
-        _empty: String
-      }
-    
+type Subscription {
+  _empty: String
+}
+
+# Basic types for development
+type User {
+  id: ID!
+  email: String!
+  role: UserRole!
+  createdAt: DateTime!
+}
+
+enum UserRole {
+  STUDENT
+  EDUCATOR
+  ADMIN
+}
+
+type Course {
+  id: ID!
+  title: String!
+  description: String!
+  status: CourseStatus!
+  createdAt: DateTime!
+}
+
+enum CourseStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}

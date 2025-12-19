@@ -1,0 +1,29 @@
+# Basic GraphQL Operations for Code Generation Testing
+# These will be replaced with real operations as we implement features
+
+# Query operations
+query GetCurrentUser {
+  _empty
+}
+
+query GetCourses {
+  _empty
+}
+
+# Mutation operations
+mutation Login($email: String!, $password: String!) {
+  _empty
+}
+
+mutation CreateCourse($input: String!) {
+  _empty
+}
+
+# Subscription operations
+subscription MessageUpdates {
+  _empty
+}
+
+subscription ProgressUpdates {
+  _empty
+}
