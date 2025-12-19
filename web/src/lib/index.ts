@@ -14,5 +14,8 @@ export * from './auth';
 // Real-time Subscriptions
 export * from './subscriptions';
 
+// File Upload System
+export * from './uploads';
+
 // Configuration
 export * from './config';
