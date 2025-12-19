@@ -23,5 +23,8 @@ export * from './cache';
 // Error Handling and Recovery System
 export * from './errors';
 
+// Utility Functions and Formatters
+export * from './utils';
+
 // Configuration
 export * from './config';
