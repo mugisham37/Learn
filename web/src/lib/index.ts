@@ -20,5 +20,8 @@ export * from './uploads';
 // Cache Management
 export * from './cache';
 
+// Error Handling and Recovery System
+export * from './errors';
+
 // Configuration
 export * from './config';
