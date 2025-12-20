@@ -107,13 +107,30 @@ export function useMessageSubscription(
 
   const handleMessageUpdate = useCallback((data: Record<string, unknown>) => {
     // Update Apollo cache with new message data
-    // In a real implementation, this would update specific conversation caches
     try {
       apolloClient.cache.modify({
         fields: {
           conversations(existingConversations = []) {
             // Update conversation cache with new message
-            return existingConversations;
+            const messageData = data as any;
+            return existingConversations.map((conversation: any) => {
+              if (conversation.id === messageData?.conversationId) {
+                return {
+                  ...conversation,
+                  lastMessage: messageData,
+                  updatedAt: new Date().toISOString(),
+                  unreadCount: conversation.unreadCount + 1,
+                };
+              }
+              return conversation;
+            });
+          },
+          messages(existingMessages = [], { args }) {
+            // Add new message to the specific conversation's message list
+            if (args?.conversationId === (data as any)?.conversationId) {
+              return [data, ...existingMessages];
+            }
+            return existingMessages;
           },
         },
       });
@@ -156,7 +173,35 @@ export function useProgressSubscription(
         fields: {
           enrollments(existingEnrollments = []) {
             // Update enrollment progress in cache
-            return existingEnrollments;
+            const progressData = data as any;
+            return existingEnrollments.map((enrollment: any) => {
+              if (enrollment.id === progressData?.enrollmentId) {
+                return {
+                  ...enrollment,
+                  progress: progressData.progress || enrollment.progress,
+                  completedLessons: progressData.completedLessons || enrollment.completedLessons,
+                  lastAccessDate: new Date().toISOString(),
+                  ...(progressData.completed && { completedAt: new Date().toISOString() }),
+                };
+              }
+              return enrollment;
+            });
+          },
+          courseProgress(existingProgress = [], { args }) {
+            // Update course-specific progress
+            if (args?.courseId === (data as any)?.courseId) {
+              return existingProgress.map((progress: any) => {
+                if (progress.enrollmentId === (data as any)?.enrollmentId) {
+                  return {
+                    ...progress,
+                    ...(data as any),
+                    updatedAt: new Date().toISOString(),
+                  };
+                }
+                return progress;
+              });
+            }
+            return existingProgress;
           },
         },
       });
@@ -198,8 +243,19 @@ export function useNotificationSubscription(
       apolloClient.cache.modify({
         fields: {
           notifications(existingNotifications = []) {
-            // Add new notification to cache
-            return existingNotifications;
+            // Add new notification to the beginning of the list
+            return [data, ...existingNotifications];
+          },
+          unreadNotificationCount(existingCount = 0) {
+            // Increment unread count
+            return existingCount + 1;
+          },
+          userNotifications(existingUserNotifications = [], { args }) {
+            // Update user-specific notifications
+            if (args?.userId === userId) {
+              return [data, ...existingUserNotifications];
+            }
+            return existingUserNotifications;
           },
         },
       });
@@ -211,7 +267,7 @@ export function useNotificationSubscription(
     if (options.onSubscriptionData) {
       options.onSubscriptionData(data);
     }
-  }, [apolloClient.cache, options]);
+  }, [apolloClient.cache, options, userId]);
 
   // For now, using a placeholder subscription document
   // In a real implementation, this would be a proper notification subscription
@@ -244,7 +300,44 @@ export function usePresenceSubscription(
         fields: {
           coursePresence(existingPresence = []) {
             // Update user presence in course
-            return existingPresence;
+            const presenceData = data as any;
+            const existingIndex = existingPresence.findIndex(
+              (presence: any) => presence.userId === presenceData?.userId
+            );
+            
+            if (existingIndex >= 0) {
+              // Update existing presence
+              const updatedPresence = [...existingPresence];
+              updatedPresence[existingIndex] = {
+                ...updatedPresence[existingIndex],
+                status: presenceData.status,
+                lastSeen: presenceData.lastSeen || new Date().toISOString(),
+                isTyping: presenceData.isTyping || false,
+              };
+              return updatedPresence;
+            } else {
+              // Add new presence
+              return [...existingPresence, {
+                userId: presenceData.userId,
+                status: presenceData.status,
+                lastSeen: presenceData.lastSeen || new Date().toISOString(),
+                isTyping: presenceData.isTyping || false,
+              }];
+            }
+          },
+          onlineUsers(existingOnlineUsers = []) {
+            // Update online users list
+            const presenceData = data as any;
+            if (presenceData.status === 'online') {
+              // Add to online users if not already present
+              if (!existingOnlineUsers.some((user: any) => user.id === presenceData.userId)) {
+                return [...existingOnlineUsers, { id: presenceData.userId }];
+              }
+            } else {
+              // Remove from online users
+              return existingOnlineUsers.filter((user: any) => user.id !== presenceData.userId);
+            }
+            return existingOnlineUsers;
           },
         },
       });

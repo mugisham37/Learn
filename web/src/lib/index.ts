@@ -38,6 +38,20 @@ export {
   // Avoid re-exporting conflicting names: SubscriptionOptions, CacheInvalidationConfig
 } from './subscriptions';
 
+// Real-time Communication Infrastructure - explicit exports to avoid conflicts
+export {
+  RealtimeProvider,
+  useRealtime,
+  useRealtimeStatus,
+  useCourseRealtime,
+  useConversationRealtime,
+  usePresenceManager,
+  useRealtimeManager,
+  socketClient,
+  SOCKET_EVENTS,
+  // Avoid re-exporting conflicting names: SocketEventHandler, RealtimeEvent
+} from './realtime';
+
 // File Upload System - explicit exports to avoid conflicts
 export {
   UploadProvider,

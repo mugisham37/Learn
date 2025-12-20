@@ -11,6 +11,7 @@ import { GraphQLWsLink } from '@apollo/client/link/subscriptions';
 import { getMainDefinition } from '@apollo/client/utilities';
 import { createClient } from 'graphql-ws';
 import { config } from '../config';
+import { tokenManager } from '../auth/tokenStorage';
 import { createAuthLink, createAuthErrorLink } from './links/authLink';
 import { createErrorLink } from './links/errorLink';
 import { createRetryLink } from './links/retryLink';
@@ -38,13 +39,41 @@ function createApolloClient() {
   const wsLink = new GraphQLWsLink(
     createClient({
       url: config.wsEndpoint,
-      connectionParams: () => {
-        // Authentication will be handled by the auth link
+      connectionParams: async () => {
+        // Get access token for WebSocket authentication
+        const accessToken = tokenManager.getAccessToken();
+        
+        if (accessToken) {
+          // Check if token needs refresh
+          if (tokenManager.isTokenExpired(accessToken)) {
+            try {
+              const refreshedToken = await tokenManager.refreshAccessToken();
+              return {
+                authorization: `Bearer ${refreshedToken}`,
+              };
+            } catch (error) {
+              console.warn('Token refresh failed for WebSocket connection:', error);
+              return {};
+            }
+          }
+          
+          return {
+            authorization: `Bearer ${accessToken}`,
+          };
+        }
+        
         return {};
       },
-      shouldRetry: () => {
-        // Retry on connection errors but not on authentication failures
-        return true;
+      shouldRetry: (closeEvent) => {
+        // Retry on connection errors but not on authentication failures (4401)
+        return closeEvent.code !== 4401;
+      },
+      retryAttempts: 5,
+      retryWait: async (retries) => {
+        // Exponential backoff with jitter
+        const delay = Math.min(1000 * Math.pow(2, retries), 30000);
+        const jitter = Math.random() * 0.1 * delay;
+        return delay + jitter;
       },
     })
   );

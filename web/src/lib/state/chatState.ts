@@ -753,7 +753,12 @@ export function useChat(): [ChatState, ChatActions] {
     }, []),
 
     startTyping: useCallback((conversationId: string) => {
-      // In a real implementation, this would send a typing indicator via WebSocket
+      // Send typing indicator via Socket.io
+      if (typeof window !== 'undefined') {
+        const { sendTypingIndicator } = require('../realtime/socketClient').default;
+        sendTypingIndicator(conversationId, true);
+      }
+      
       console.log(`Started typing in conversation ${conversationId}`);
       
       // Clear existing timeout for this conversation
@@ -763,7 +768,12 @@ export function useChat(): [ChatState, ChatActions] {
       
       // Set timeout to stop typing after 5 seconds of inactivity
       typingTimeoutRef.current[conversationId] = setTimeout(() => {
-        // In a real implementation, this would send a stop typing indicator via WebSocket
+        // Send stop typing indicator via Socket.io
+        if (typeof window !== 'undefined') {
+          const { sendTypingIndicator } = require('../realtime/socketClient').default;
+          sendTypingIndicator(conversationId, false);
+        }
+        
         console.log(`Stopped typing in conversation ${conversationId}`);
         
         if (typingTimeoutRef.current[conversationId]) {
@@ -774,7 +784,12 @@ export function useChat(): [ChatState, ChatActions] {
     }, []),
 
     stopTyping: useCallback((conversationId: string) => {
-      // In a real implementation, this would send a stop typing indicator via WebSocket
+      // Send stop typing indicator via Socket.io
+      if (typeof window !== 'undefined') {
+        const { sendTypingIndicator } = require('../realtime/socketClient').default;
+        sendTypingIndicator(conversationId, false);
+      }
+      
       console.log(`Stopped typing in conversation ${conversationId}`);
       
       if (typingTimeoutRef.current[conversationId]) {
