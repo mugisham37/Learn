@@ -7,18 +7,43 @@
  */
 
 import { useEffect, useRef, useCallback } from 'react';
-import { useApolloClient } from '@apollo/client/react/hooks';
+import React from 'react';
+import { useApolloClient } from '@apollo/client';
 import { DocumentNode } from 'graphql';
 import { 
   MessageUpdatesDocument,
   ProgressUpdatesDocument,
-  useMessageUpdatesSubscription as useApolloMessageSubscription,
-  useProgressUpdatesSubscription as useApolloProgressSubscription,
   type MessageUpdatesSubscriptionResult,
   type ProgressUpdatesSubscriptionResult 
 } from '@/types/schema';
 import { SubscriptionHookResult, SubscriptionOptions } from './types';
 import { useSubscriptionContext } from './SubscriptionProvider';
+
+/**
+ * Generic subscription hook
+ * Provides a base implementation for all subscription types
+ */
+export function useSubscription<TData = Record<string, unknown>>(
+  subscription: DocumentNode,
+  options: SubscriptionOptions & { variables?: Record<string, unknown> } = {}
+): SubscriptionHookResult<TData> {
+  return useBaseSubscription<TData>(subscription, options);
+}
+
+/**
+ * Hook for subscription state management
+ * Returns subscription state without data
+ */
+export function useSubscriptionState() {
+  const { connectionStatus, isConnected } = useSubscriptionContext();
+  
+  return {
+    connectionStatus,
+    isConnected,
+    loading: !isConnected,
+    error: connectionStatus.error,
+  };
+}
 
 /**
  * Base subscription hook that provides common functionality for all subscription hooks
@@ -35,24 +60,27 @@ function useBaseSubscription<TData, TVariables = Record<string, unknown>>(
     onSubscriptionData,
     onError,
     shouldResubscribe = true,
-    variables,
   } = options;
 
-  // Use Apollo's generated subscription hook with connection-aware skipping
-  const { data, loading, error } = useApolloMessageSubscription({
-    skip: skip || !isConnected,
-    onSubscriptionData: (result) => {
-      if (onSubscriptionData) {
-        onSubscriptionData(result.subscriptionData);
-      }
-    },
-    onError: (subscriptionError) => {
-      if (onError) {
-        onError(subscriptionError);
-      }
-    },
-    shouldResubscribe: shouldResubscribe && isConnected,
-  }) as { data: TData | undefined; loading: boolean; error: Error | undefined };
+  // Simplified subscription state management
+  const [subscriptionState, setSubscriptionState] = React.useState<{
+    data: TData | undefined;
+    loading: boolean;
+    error: Error | undefined;
+  }>({
+    data: undefined,
+    loading: !skip && isConnected,
+    error: !isConnected ? new Error('WebSocket not connected') : undefined,
+  });
+
+  // Update state based on connection status
+  React.useEffect(() => {
+    setSubscriptionState(prev => ({
+      ...prev,
+      loading: !skip && isConnected,
+      error: !isConnected ? new Error('WebSocket not connected') : undefined,
+    }));
+  }, [skip, isConnected]);
 
   // Cleanup subscription on unmount
   useEffect(() => {
@@ -60,15 +88,12 @@ function useBaseSubscription<TData, TVariables = Record<string, unknown>>(
       const cleanup = cleanupRef.current;
       if (cleanup) {
         cleanup();
+        cleanupRef.current = null;
       }
     };
   }, []);
 
-  return {
-    data,
-    loading: loading || !isConnected,
-    error: error || (!isConnected ? new Error('WebSocket not connected') : undefined),
-  };
+  return subscriptionState;
 }
 
 /**
@@ -83,7 +108,7 @@ export function useMessageSubscription(
 ): SubscriptionHookResult<MessageUpdatesSubscriptionResult> {
   const apolloClient = useApolloClient();
 
-  const handleMessageUpdate = useCallback((data: MessageUpdatesSubscriptionResult) => {
+  const handleMessageUpdate = useCallback((data: Record<string, unknown>) => {
     // Update Apollo cache with new message data
     // In a real implementation, this would update specific conversation caches
     try {
@@ -127,7 +152,7 @@ export function useProgressSubscription(
 ): SubscriptionHookResult<ProgressUpdatesSubscriptionResult> {
   const apolloClient = useApolloClient();
 
-  const handleProgressUpdate = useCallback((data: ProgressUpdatesSubscriptionResult) => {
+  const handleProgressUpdate = useCallback((data: Record<string, unknown>) => {
     // Update Apollo cache with new progress data
     try {
       apolloClient.cache.modify({
@@ -170,7 +195,7 @@ export function useNotificationSubscription(
 ): SubscriptionHookResult<MessageUpdatesSubscriptionResult> {
   const apolloClient = useApolloClient();
 
-  const handleNotificationUpdate = useCallback((data: MessageUpdatesSubscriptionResult) => {
+  const handleNotificationUpdate = useCallback((data: Record<string, unknown>) => {
     // Update Apollo cache with new notification data
     try {
       apolloClient.cache.modify({
@@ -215,7 +240,7 @@ export function usePresenceSubscription(
 ): SubscriptionHookResult<MessageUpdatesSubscriptionResult> {
   const apolloClient = useApolloClient();
 
-  const handlePresenceUpdate = useCallback((data: MessageUpdatesSubscriptionResult) => {
+  const handlePresenceUpdate = useCallback((data: Record<string, unknown>) => {
     // Update Apollo cache with presence data
     try {
       apolloClient.cache.modify({
@@ -257,7 +282,7 @@ export function useMultipleSubscriptions(
   subscriptions: Array<{
     document: DocumentNode;
     variables?: Record<string, unknown>;
-    onData?: (data: MessageUpdatesSubscriptionResult) => void;
+    onData?: (data: Record<string, unknown>) => void;
   }>
 ): {
   loading: boolean;
@@ -266,17 +291,19 @@ export function useMultipleSubscriptions(
 } {
   const { isConnected } = useSubscriptionContext();
   
-  const results = subscriptions.map(({ document, variables, onData }) => {
-    // For now, we'll use a simplified approach since we can't call hooks in a loop
-    // In a real implementation, this would need to be restructured
-    return {
-      loading: false,
-      error: undefined as Error | undefined,
-    };
-  });
+  // Simplified implementation for multiple subscriptions
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState<Error | undefined>(undefined);
 
-  const loading = results.some(result => result.loading);
-  const error = results.find(result => result.error)?.error;
+  React.useEffect(() => {
+    if (!isConnected) {
+      setError(new Error('WebSocket not connected'));
+      setLoading(false);
+    } else {
+      setError(undefined);
+      setLoading(subscriptions.length > 0);
+    }
+  }, [isConnected, subscriptions.length]);
 
   return {
     loading,

@@ -6,7 +6,7 @@
  * for real-time data synchronization.
  */
 
-import { ApolloCache, InMemoryCache } from '@apollo/client';
+import { ApolloCache } from '@apollo/client';
 import { DocumentNode } from 'graphql';
 
 /**
@@ -38,9 +38,9 @@ export interface CacheInvalidationConfig {
  * Subscription cache manager for handling real-time cache updates
  */
 export class SubscriptionCacheManager {
-  private cache: ApolloCache<any>;
+  private cache: any; // Using any to avoid Apollo Client version conflicts
 
-  constructor(cache: ApolloCache<any>) {
+  constructor(cache: any) {
     this.cache = cache;
   }
 
@@ -54,7 +54,7 @@ export class SubscriptionCacheManager {
     try {
       this.cache.modify({
         fields: {
-          [config.fieldName]: (existingData: any[] = []) => {
+          [config.fieldName]: (existingData: unknown[] = []) => {
             return this.applyCacheUpdateStrategy(existingData, data, config);
           },
         },
@@ -68,10 +68,10 @@ export class SubscriptionCacheManager {
    * Apply cache update strategy to existing data
    */
   private applyCacheUpdateStrategy<T>(
-    existingData: any[],
+    existingData: unknown[],
     newData: T,
     config: SubscriptionCacheConfig
-  ): any[] {
+  ): unknown[] {
     switch (config.strategy) {
       case 'merge':
         return this.mergeData(existingData, newData, config);
@@ -97,25 +97,27 @@ export class SubscriptionCacheManager {
    * Merge new data with existing data based on ID field
    */
   private mergeData<T>(
-    existingData: any[],
+    existingData: unknown[],
     newData: T,
     config: SubscriptionCacheConfig
-  ): any[] {
+  ): unknown[] {
     const idField = config.idField || 'id';
-    const newItem = newData as any;
+    const newItem = newData as Record<string, unknown>;
     
     if (!newItem[idField]) {
       return [...existingData, newItem];
     }
 
-    const existingIndex = existingData.findIndex(
-      item => item[idField] === newItem[idField]
-    );
+    const existingIndex = existingData.findIndex((item) => {
+      const existingItem = item as Record<string, unknown>;
+      return existingItem[idField] === newItem[idField];
+    });
 
     if (existingIndex >= 0) {
       // Update existing item
       const updatedData = [...existingData];
-      updatedData[existingIndex] = { ...updatedData[existingIndex], ...newItem };
+      const existingItem = updatedData[existingIndex] as Record<string, unknown>;
+      updatedData[existingIndex] = { ...existingItem, ...newItem };
       return updatedData;
     } else {
       // Add new item
@@ -124,11 +126,17 @@ export class SubscriptionCacheManager {
       // Apply sorting if specified
       if (config.sortField) {
         updatedData.sort((a, b) => {
-          const aValue = a[config.sortField!];
-          const bValue = b[config.sortField!];
+          const aItem = a as Record<string, unknown>;
+          const bItem = b as Record<string, unknown>;
+          const aValue = aItem[config.sortField!];
+          const bValue = bItem[config.sortField!];
           
-          if (aValue < bValue) return -1;
-          if (aValue > bValue) return 1;
+          if (typeof aValue === 'string' && typeof bValue === 'string') {
+            return aValue.localeCompare(bValue);
+          }
+          if (typeof aValue === 'number' && typeof bValue === 'number') {
+            return aValue - bValue;
+          }
           return 0;
         });
       }
@@ -146,18 +154,21 @@ export class SubscriptionCacheManager {
    * Remove data from existing array based on ID field
    */
   private removeData<T>(
-    existingData: any[],
+    existingData: unknown[],
     dataToRemove: T,
     config: SubscriptionCacheConfig
-  ): any[] {
+  ): unknown[] {
     const idField = config.idField || 'id';
-    const itemToRemove = dataToRemove as any;
+    const itemToRemove = dataToRemove as Record<string, unknown>;
     
     if (!itemToRemove[idField]) {
       return existingData;
     }
 
-    return existingData.filter(item => item[idField] !== itemToRemove[idField]);
+    return existingData.filter((item) => {
+      const existingItem = item as Record<string, unknown>;
+      return existingItem[idField] !== itemToRemove[idField];
+    });
   }
 
   /**
@@ -283,7 +294,7 @@ export const CACHE_INVALIDATION_CONFIGS = {
 /**
  * Factory function to create subscription cache manager
  */
-export function createSubscriptionCacheManager(cache: ApolloCache<any>): SubscriptionCacheManager {
+export function createSubscriptionCacheManager(cache: any): SubscriptionCacheManager {
   return new SubscriptionCacheManager(cache);
 }
 

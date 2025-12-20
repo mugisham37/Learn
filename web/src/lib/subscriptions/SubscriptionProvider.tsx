@@ -8,8 +8,8 @@
 
 'use client';
 
-import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
-import { useApolloClient } from '@apollo/client/react/hooks';
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef, useMemo } from 'react';
+import { useApolloClient } from '@apollo/client';
 import { 
   ConnectionStatus, 
   SubscriptionContextValue, 
@@ -45,7 +45,10 @@ export function SubscriptionProvider({
   const { isAuthenticated, user } = useAuth();
   
   // Merge default config with provided config
-  const config: ReconnectionConfig = { ...DEFAULT_RECONNECTION_CONFIG, ...reconnectionConfig };
+  const config: ReconnectionConfig = useMemo(() => ({ 
+    ...DEFAULT_RECONNECTION_CONFIG, 
+    ...reconnectionConfig 
+  }), [reconnectionConfig]);
   
   // Connection status state
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>({

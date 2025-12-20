@@ -232,6 +232,38 @@ export class UploadQueue {
   }
 
   /**
+   * Pauses all active uploads
+   */
+  pauseAll(): number {
+    let pausedCount = 0;
+    
+    this.activeUploads.forEach(uploadId => {
+      if (this.pauseUpload(uploadId)) {
+        pausedCount++;
+      }
+    });
+    
+    return pausedCount;
+  }
+
+  /**
+   * Resumes all paused uploads
+   */
+  resumeAll(): number {
+    let resumedCount = 0;
+    
+    this.queue.forEach((item, uploadId) => {
+      if (item.progress.status === 'paused') {
+        if (this.resumeUpload(uploadId)) {
+          resumedCount++;
+        }
+      }
+    });
+    
+    return resumedCount;
+  }
+
+  /**
    * Clears completed uploads from the queue
    */
   clearCompleted(): number {

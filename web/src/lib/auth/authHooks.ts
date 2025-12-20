@@ -14,6 +14,21 @@ import { createRoleGuard, RouteGuards, type UserRole, type Permission, type Cour
 import type { User } from '@/types';
 
 /**
+ * Hook for authentication state only (lightweight)
+ * Returns just the authentication state without actions
+ */
+export function useAuthState() {
+  const context = useAuthContext();
+  
+  return {
+    user: context.user,
+    isAuthenticated: context.isAuthenticated,
+    isLoading: context.isLoading,
+    error: context.error,
+  };
+}
+
+/**
  * Main authentication hook
  * Provides access to authentication state and actions
  */

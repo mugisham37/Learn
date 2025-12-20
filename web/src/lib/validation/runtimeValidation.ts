@@ -109,16 +109,7 @@ export const UserSchema = BaseEntitySchema.extend({
 /**
  * Course module schema (forward reference)
  */
-export const CourseModuleSchema: z.ZodLazy<z.ZodObject<{
-  id: z.ZodString;
-  createdAt: z.ZodString;
-  updatedAt: z.ZodString;
-  course: z.ZodLazy<z.ZodType<unknown>>;
-  title: z.ZodString;
-  description: z.ZodString;
-  orderIndex: z.ZodNumber;
-  lessons: z.ZodOptional<z.ZodArray<z.ZodType<unknown>>>;
-}>> = z.lazy(() => 
+export const CourseModuleSchema: z.ZodLazy<z.ZodType<unknown>> = z.lazy(() => 
   BaseEntitySchema.extend({
     course: CourseSchema,
     title: z.string(),
@@ -139,32 +130,14 @@ export const CourseReviewSchema = BaseEntitySchema.extend({
 /**
  * Course schema (forward reference to avoid circular dependency)
  */
-export const CourseSchema: z.ZodLazy<z.ZodObject<{
-  id: z.ZodString;
-  createdAt: z.ZodString;
-  updatedAt: z.ZodString;
-  instructor: z.ZodObject<z.ZodRawShape>;
-  title: z.ZodString;
-  description: z.ZodString;
-  slug: z.ZodString;
-  category: z.ZodString;
-  difficulty: z.ZodEnum<[string, ...string[]]>;
-  price: z.ZodNumber;
-  currency: z.ZodString;
-  status: z.ZodEnum<[string, ...string[]]>;
-  thumbnailUrl: z.ZodOptional<z.ZodString>;
-  modules: z.ZodOptional<z.ZodArray<z.ZodType<unknown>>>;
-  enrollmentCount: z.ZodNumber;
-  averageRating: z.ZodOptional<z.ZodNumber>;
-  reviews: z.ZodOptional<z.ZodArray<z.ZodType<unknown>>>;
-}>> = z.lazy(() => 
+export const CourseSchema: z.ZodLazy<z.ZodType<unknown>> = z.lazy(() => 
   BaseEntitySchema.extend({
     instructor: UserSchema,
     title: z.string().min(1).max(100),
     description: z.string().min(1).max(2000),
     slug: z.string(),
     category: z.string(),
-    difficulty: DifficultySchema,
+    difficulty: z.enum(['BEGINNER', 'INTERMEDIATE', 'ADVANCED']),
     price: z.number().min(0),
     currency: z.string().length(3),
     status: CourseStatusSchema,
@@ -282,17 +255,7 @@ export const MessageReadSchema = BaseEntitySchema.extend({
 /**
  * Message schema (forward reference for conversation)
  */
-export const MessageSchema: z.ZodLazy<z.ZodObject<{
-  id: z.ZodString;
-  createdAt: z.ZodString;
-  updatedAt: z.ZodString;
-  sender: z.ZodObject<z.ZodRawShape>;
-  content: z.ZodString;
-  attachments: z.ZodOptional<z.ZodArray<z.ZodType<unknown>>>;
-  readBy: z.ZodOptional<z.ZodArray<z.ZodType<unknown>>>;
-  sentAt: z.ZodString;
-  conversation: z.ZodType<unknown>;
-}>> = z.lazy(() => 
+export const MessageSchema: z.ZodLazy<z.ZodType<unknown>> = z.lazy(() => 
   BaseEntitySchema.extend({
     sender: UserSchema,
     content: z.string().min(1),
@@ -306,14 +269,7 @@ export const MessageSchema: z.ZodLazy<z.ZodObject<{
 /**
  * Conversation schema
  */
-export const ConversationSchema: z.ZodLazy<z.ZodObject<{
-  id: z.ZodString;
-  createdAt: z.ZodString;
-  updatedAt: z.ZodString;
-  participants: z.ZodArray<z.ZodObject<z.ZodRawShape>>;
-  lastMessage: z.ZodOptional<z.ZodType<unknown>>;
-  unreadCount: z.ZodNumber;
-}>> = z.lazy(() => 
+export const ConversationSchema: z.ZodLazy<z.ZodType<unknown>> = z.lazy(() => 
   BaseEntitySchema.extend({
     participants: z.array(UserSchema),
     lastMessage: MessageSchema.optional(),
@@ -448,28 +404,28 @@ export function validateUser(data: unknown): User {
  * Validate course data
  */
 export function validateCourse(data: unknown): Course {
-  return validateGraphQLResponse(data, CourseSchema, 'Course');
+  return validateGraphQLResponse(data, CourseSchema, 'Course') as Course;
 }
 
 /**
  * Validate enrollment data
  */
 export function validateEnrollment(data: unknown): Enrollment {
-  return validateGraphQLResponse(data, EnrollmentSchema, 'Enrollment');
+  return validateGraphQLResponse(data, EnrollmentSchema, 'Enrollment') as Enrollment;
 }
 
 /**
  * Validate lesson data
  */
 export function validateLesson(data: unknown): Lesson {
-  return validateGraphQLResponse(data, LessonSchema, 'Lesson');
+  return validateGraphQLResponse(data, LessonSchema, 'Lesson') as Lesson;
 }
 
 /**
  * Validate message data
  */
 export function validateMessage(data: unknown): Message {
-  return validateGraphQLResponse(data, MessageSchema, 'Message');
+  return validateGraphQLResponse(data, MessageSchema, 'Message') as Message;
 }
 
 /**
@@ -539,7 +495,11 @@ export function validateEnrollmentCreation(data: unknown): {
     paymentUrl: z.string().url().optional()
   });
   
-  return validateGraphQLResponse(data, schema, 'EnrollmentCreation');
+  return validateGraphQLResponse(data, schema, 'EnrollmentCreation') as {
+    enrollment: Enrollment;
+    paymentRequired: boolean;
+    paymentUrl?: string;
+  };
 }
 
 /**
@@ -718,7 +678,7 @@ export function createDiscriminatedUnionSchema<
 >(
   discriminator: Discriminator,
   options: Options
-): z.ZodUnion<[z.ZodObject<z.ZodRawShape>, z.ZodObject<z.ZodRawShape>]> {
+) {
   const optionsList = Object.entries(options)
     .map(([key, schema]) => {
       return schema.extend({ [discriminator]: z.literal(key) });
@@ -728,6 +688,13 @@ export function createDiscriminatedUnionSchema<
     throw new Error('Discriminated union requires at least 2 options');
   }
   
+  const firstOption = optionsList[0];
+  const secondOption = optionsList[1];
+  
+  if (!firstOption || !secondOption) {
+    throw new Error('Invalid options provided');
+  }
+  
   // Return a simple union of the first two options to avoid complex type issues
-  return z.union([optionsList[0], optionsList[1]]);
+  return z.union([firstOption, secondOption]);
 }

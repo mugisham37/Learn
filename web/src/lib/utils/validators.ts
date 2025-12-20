@@ -22,10 +22,10 @@ export interface ValidationError {
   field: string;
   message: string;
   code: string;
-  value?: any;
+  value?: unknown;
 }
 
-export interface ValidationRule<T = any> {
+export interface ValidationRule<T = unknown> {
   name: string;
   validate: (value: T, context?: ValidationContext) => boolean | string;
   message?: string;
@@ -33,8 +33,8 @@ export interface ValidationRule<T = any> {
 
 export interface ValidationContext {
   field: string;
-  allValues?: Record<string, any>;
-  user?: any;
+  allValues?: Record<string, unknown>;
+  user?: unknown;
 }
 
 export interface FormValidationOptions {
@@ -278,13 +278,14 @@ export const file = (
   validate: (value: File) => {
     if (!(value instanceof File)) return false;
     
-    const constraints = VALIDATION_CONSTRAINTS.FILE[type.toUpperCase() as keyof typeof VALIDATION_CONSTRAINTS.FILE];
+    const typeKey = type.toUpperCase() as 'IMAGE' | 'VIDEO' | 'DOCUMENT';
+    const constraints = VALIDATION_CONSTRAINTS.FILE[typeKey];
     
     // Check file size
     if (value.size > constraints.MAX_SIZE) return false;
     
     // Check file type
-    if (!constraints.ALLOWED_TYPES.includes(value.type)) return false;
+    if (!constraints.ALLOWED_TYPES.includes(value.type as never)) return false;
     
     return true;
   },
@@ -327,9 +328,9 @@ export const validateField = <T>(
 /**
  * Validates an entire form object
  */
-export const validateForm = <T extends Record<string, any>>(
+export const validateForm = <T extends Record<string, unknown>>(
   values: T,
-  schema: Record<keyof T, ValidationRule<any>[]>,
+  schema: Record<keyof T, ValidationRule<unknown>[]>,
   options: FormValidationOptions = {}
 ): ValidationResult => {
   const { abortEarly = false, context } = options;
@@ -406,19 +407,19 @@ export const ValidationSchemas = {
     email: [required(), email()],
     password: [required(), password()],
     fullName: [required(), stringLength(VALIDATION_CONSTRAINTS.USER.FULL_NAME.MIN_LENGTH, VALIDATION_CONSTRAINTS.USER.FULL_NAME.MAX_LENGTH)],
-  },
+  } as Record<string, ValidationRule<unknown>[]>,
 
   // User login
   userLogin: {
     email: [required(), email()],
     password: [required()],
-  },
+  } as Record<string, ValidationRule<unknown>[]>,
 
   // Profile update
   profileUpdate: {
     fullName: [stringLength(VALIDATION_CONSTRAINTS.USER.FULL_NAME.MIN_LENGTH, VALIDATION_CONSTRAINTS.USER.FULL_NAME.MAX_LENGTH)],
     bio: [stringLength(0, VALIDATION_CONSTRAINTS.USER.BIO.MAX_LENGTH)],
-  },
+  } as Record<string, ValidationRule<unknown>[]>,
 
   // Course creation
   courseCreation: {
@@ -427,20 +428,20 @@ export const ValidationSchemas = {
     slug: [required(), courseSlug()],
     price: [numberRange(VALIDATION_CONSTRAINTS.COURSE.PRICE.MIN, VALIDATION_CONSTRAINTS.COURSE.PRICE.MAX)],
     category: [required()],
-  },
+  } as Record<string, ValidationRule<unknown>[]>,
 
   // File upload
   imageUpload: {
     file: [required(), file('image')],
-  },
+  } as Record<string, ValidationRule<unknown>[]>,
 
   videoUpload: {
     file: [required(), file('video')],
-  },
+  } as Record<string, ValidationRule<unknown>[]>,
 
   documentUpload: {
     file: [required(), file('document')],
-  },
+  } as Record<string, ValidationRule<unknown>[]>,
 };
 
 // =============================================================================
@@ -450,8 +451,8 @@ export const ValidationSchemas = {
 /**
  * Creates a validation function for a specific schema
  */
-export const createValidator = <T extends Record<string, any>>(
-  schema: Record<keyof T, ValidationRule<any>[]>
+export const createValidator = <T extends Record<string, unknown>>(
+  schema: Record<keyof T, ValidationRule<unknown>[]>
 ) => {
   return (values: T, options?: FormValidationOptions): ValidationResult => {
     return validateForm(values, schema, options);
@@ -486,7 +487,7 @@ export const getFieldErrors = (result: ValidationResult, field: string): Validat
  */
 export const getFieldErrorMessage = (result: ValidationResult, field: string): string | null => {
   const errors = getFieldErrors(result, field);
-  return errors.length > 0 ? errors[0].message : null;
+  return errors.length > 0 ? errors[0]!.message : null;
 };
 
 // =============================================================================

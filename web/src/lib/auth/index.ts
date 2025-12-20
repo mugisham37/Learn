@@ -27,6 +27,7 @@ export type { UserRole, Permission, CourseContext } from './authGuards';
 // Authentication hooks
 export {
   useAuth,
+  useAuthState,
   useUser,
   usePermissions,
   useAuthGuard,

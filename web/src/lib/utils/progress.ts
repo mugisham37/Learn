@@ -437,12 +437,17 @@ const generateDailyProgressData = (
   const currentDate = new Date(start);
   
   while (currentDate <= end) {
-    const dateStr = currentDate.toISOString().split('T')[0] || '';
+    const dateStr = currentDate.toISOString().split('T')[0];
+    
+    if (!dateStr) {
+      currentDate.setDate(currentDate.getDate() + 1);
+      continue;
+    }
     
     // Find lessons completed on this date
     const lessonsCompletedToday = enrollment.lessonProgress.filter(progress => {
       if (!progress.completionDate) return false;
-      const completionDateStr = progress.completionDate.toISOString().split('T')[0] || '';
+      const completionDateStr = progress.completionDate.toISOString().split('T')[0];
       return completionDateStr === dateStr;
     });
 
@@ -485,7 +490,10 @@ const generateWeeklyProgressData = (dailyData: Array<{
     const weekData = dailyData.slice(i, i + 7);
     if (weekData.length === 0) continue;
     
-    const weekStart = new Date(weekData[0].date);
+    const firstDay = weekData[0];
+    if (!firstDay) continue;
+    
+    const weekStart = new Date(firstDay.date);
     const weekStr = `${weekStart.getFullYear()}-W${Math.ceil((weekStart.getTime() - new Date(weekStart.getFullYear(), 0, 1).getTime()) / (7 * 24 * 60 * 60 * 1000))}`;
     
     const lessonsCompleted = weekData.reduce((sum, day) => sum + day.lessonsCompleted, 0);
@@ -558,6 +566,8 @@ const calculateStreakData = (dailyData: Array<{
   // Calculate streaks (days with any progress)
   for (let i = dailyData.length - 1; i >= 0; i--) {
     const day = dailyData[i];
+    
+    if (!day) continue;
     
     if (day.lessonsCompleted > 0 || day.timeSpent > 0) {
       tempStreak++;

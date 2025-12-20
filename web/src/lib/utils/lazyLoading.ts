@@ -130,17 +130,17 @@ export function createLazyComponent<TProps = Record<string, unknown>>(
 
   // Wrap with error boundary if provided
   if (ErrorBoundaryComponent) {
-    const WrappedComponent: React.FC<TProps> = (props) => {
+    const WrappedComponent = React.forwardRef<unknown, TProps>((props, ref) => {
       return React.createElement(ErrorBoundaryComponent, {
         error: new Error('Component failed to load'),
         retry: () => window.location.reload()
       }, React.createElement(Suspense, {
         fallback: LoadingComponent ? React.createElement(LoadingComponent) : React.createElement('div', {}, 'Loading...')
-      }, React.createElement(LazyComponent, props)));
-    };
+      }, React.createElement(LazyComponent, { ...props, ref })));
+    });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return WrappedComponent as any;
+    WrappedComponent.displayName = `ErrorBoundary(${LazyComponent.displayName || 'LazyComponent'})`;
+    return WrappedComponent as LazyExoticComponent<ComponentType<TProps>>;
   }
 
   return LazyComponent;
@@ -163,17 +163,17 @@ export function createLazySubscriptionComponent<TProps = Record<string, unknown>
   });
 
   // Wrap with subscription lifecycle management
-  const SubscriptionWrapper: React.FC<TProps> = (props) => {
+  const SubscriptionWrapper = React.forwardRef<unknown, TProps>((props, ref) => {
     React.useEffect(() => {
       subscriptionSetup?.();
       return subscriptionCleanup;
     }, []);
 
-    return React.createElement(LazyComponent, props);
-  };
+    return React.createElement(LazyComponent, { ...props, ref });
+  });
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return SubscriptionWrapper as any;
+  SubscriptionWrapper.displayName = `SubscriptionWrapper(${LazyComponent.displayName || 'LazyComponent'})`;
+  return SubscriptionWrapper as LazyExoticComponent<ComponentType<TProps>>;
 }
 
 // =============================================================================
@@ -384,7 +384,7 @@ export function useBundleMonitor(): {
 
   const report = React.useMemo(() => {
     return BundleMonitor.getInstance().getReport();
-  }, [metrics]);
+  }, [metrics.length]); // Only depend on metrics length, not the full array
 
   return { metrics, report };
 }

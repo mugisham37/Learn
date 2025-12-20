@@ -285,7 +285,7 @@ export const groupBy = <T, K extends keyof T>(
     if (!groups[group]) {
       groups[group] = [];
     }
-    groups[group].push(item);
+    groups[group]!.push(item);
     return groups;
   }, {} as Record<string, T[]>);
 };

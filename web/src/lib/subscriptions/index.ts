@@ -15,6 +15,8 @@ export {
 
 // Core subscription hooks
 export {
+  useSubscription,
+  useSubscriptionState,
   useMessageSubscription,
   useProgressSubscription,
   useNotificationSubscription,
