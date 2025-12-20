@@ -5,19 +5,22 @@
  * Provides rollback mechanisms for failed optimistic updates.
  */
 
-import { OptimisticResponseConfig, OptimisticResponseGenerators } from './types';
+import { OptimisticResponseConfig, OptimisticResponseGenerators, CacheEntity } from './types';
+
+// Export the OptimisticResponseConfig type for use in other modules
+export type { OptimisticResponseConfig } from './types';
 
 /**
  * Generate a temporary ID for optimistic responses
  */
 function generateTempId(): string {
-  return `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  return `temp_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
 }
 
 /**
  * Generate optimistic response based on configuration
  */
-export function generateOptimisticResponse<T extends { id: string; __typename: string }>(
+export function generateOptimisticResponse<T extends CacheEntity>(
   config: OptimisticResponseConfig<T>
 ): T {
   const baseResponse = {
@@ -28,10 +31,10 @@ export function generateOptimisticResponse<T extends { id: string; __typename: s
 
   switch (config.operation) {
     case 'create':
-      return generateCreateResponse(config.typename, config.data);
+      return generateCreateResponse(config.typename, config.data) as T;
     
     case 'update':
-      return generateUpdateResponse(config.typename, config.id!, config.data) as T;
+      return { ...baseResponse, ...generateUpdateResponse(config.typename, config.id!, config.data) } as T;
     
     case 'delete':
       return generateDeleteResponse(config.typename, config.id!) as T;
@@ -44,23 +47,23 @@ export function generateOptimisticResponse<T extends { id: string; __typename: s
 /**
  * Generate optimistic response for create operations
  */
-export function generateCreateResponse<T extends { id?: string; __typename?: string }>(
+export function generateCreateResponse<T extends Partial<CacheEntity>>(
   typename: string,
   data: Partial<T>
-): T {
+): T & CacheEntity {
   return {
     __typename: typename,
     id: generateTempId(),
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     ...data,
-  } as T;
+  } as T & CacheEntity;
 }
 
 /**
  * Generate optimistic response for update operations
  */
-export function generateUpdateResponse<T>(
+export function generateUpdateResponse<T extends CacheEntity>(
   typename: string,
   id: string,
   updates: Partial<T>
@@ -99,12 +102,70 @@ export const optimisticResponseGenerators: OptimisticResponseGenerators = {
 /**
  * Common optimistic response patterns for specific entity types
  */
+/**
+ * Common optimistic response patterns for specific entity types
+ */
+
+// Define specific entity types for better type safety
+interface CourseData extends CacheEntity {
+  status?: string;
+  enrollmentCount?: number;
+  modules?: unknown[];
+  averageRating?: number | null;
+  publishedAt?: string;
+}
+
+interface EnrollmentData extends CacheEntity {
+  enrolledAt?: string;
+  progressPercentage?: number;
+  status?: string;
+  lessonProgress?: unknown[];
+  lastAccessedAt?: string;
+  completedAt?: string;
+}
+
+interface MessageData extends CacheEntity {
+  sentAt?: string;
+  status?: string;
+  readBy?: Array<{ userId: string; readAt: string }>;
+}
+
+interface AssignmentSubmissionData extends CacheEntity {
+  submittedAt?: string;
+  status?: string;
+  grade?: number | null;
+  feedback?: string | null;
+  gradedAt?: string;
+}
+
+interface UserData extends CacheEntity {
+  profile?: Record<string, unknown>;
+  notificationPreferences?: Record<string, unknown>;
+}
+
+interface DiscussionThreadData extends CacheEntity {
+  replyCount?: number;
+  lastReplyAt?: string | null;
+  isPinned?: boolean;
+  isLocked?: boolean;
+}
+
+interface DiscussionReplyData extends CacheEntity {
+  isEdited?: boolean;
+  editedAt?: string | null;
+}
+
+interface NotificationData extends CacheEntity {
+  isRead?: boolean;
+  readAt?: string;
+}
+
 export const commonOptimisticResponses = {
   /**
    * Course-related optimistic responses
    */
   course: {
-    create: (courseData: any) =>
+    create: (courseData: Partial<CourseData>) =>
       generateCreateResponse('Course', {
         ...courseData,
         status: 'DRAFT',
@@ -113,7 +174,7 @@ export const commonOptimisticResponses = {
         averageRating: null,
       }),
     
-    update: (courseId: string, updates: any) =>
+    update: (courseId: string, updates: Partial<CourseData>) =>
       generateUpdateResponse('Course', courseId, updates),
     
     publish: (courseId: string) =>
@@ -130,7 +191,7 @@ export const commonOptimisticResponses = {
    * Enrollment-related optimistic responses
    */
   enrollment: {
-    create: (enrollmentData: any) =>
+    create: (enrollmentData: Partial<EnrollmentData>) =>
       generateCreateResponse('Enrollment', {
         ...enrollmentData,
         enrolledAt: new Date().toISOString(),
@@ -139,7 +200,7 @@ export const commonOptimisticResponses = {
         lessonProgress: [],
       }),
     
-    updateProgress: (enrollmentId: string, progress: any) =>
+    updateProgress: (enrollmentId: string, progress: { percentage: number; lessons: unknown[] }) =>
       generateUpdateResponse('Enrollment', enrollmentId, {
         progressPercentage: progress.percentage,
         lessonProgress: progress.lessons,
@@ -158,7 +219,7 @@ export const commonOptimisticResponses = {
    * Message-related optimistic responses
    */
   message: {
-    send: (messageData: any) =>
+    send: (messageData: Partial<MessageData>) =>
       generateCreateResponse('Message', {
         ...messageData,
         sentAt: new Date().toISOString(),
@@ -176,7 +237,7 @@ export const commonOptimisticResponses = {
    * Assignment-related optimistic responses
    */
   assignment: {
-    submit: (submissionData: any) =>
+    submit: (submissionData: Partial<AssignmentSubmissionData>) =>
       generateCreateResponse('AssignmentSubmission', {
         ...submissionData,
         submittedAt: new Date().toISOString(),
@@ -185,7 +246,7 @@ export const commonOptimisticResponses = {
         feedback: null,
       }),
     
-    grade: (submissionId: string, gradeData: any) =>
+    grade: (submissionId: string, gradeData: Partial<AssignmentSubmissionData>) =>
       generateUpdateResponse('AssignmentSubmission', submissionId, {
         ...gradeData,
         gradedAt: new Date().toISOString(),
@@ -197,7 +258,7 @@ export const commonOptimisticResponses = {
    * User profile optimistic responses
    */
   user: {
-    updateProfile: (userId: string, profileData: any) =>
+    updateProfile: (userId: string, profileData: Record<string, unknown>) =>
       generateUpdateResponse('User', userId, {
         profile: {
           ...profileData,
@@ -205,7 +266,7 @@ export const commonOptimisticResponses = {
         },
       }),
     
-    updatePreferences: (userId: string, preferences: any) =>
+    updatePreferences: (userId: string, preferences: Record<string, unknown>) =>
       generateUpdateResponse('User', userId, {
         notificationPreferences: preferences,
       }),
@@ -215,7 +276,7 @@ export const commonOptimisticResponses = {
    * Discussion-related optimistic responses
    */
   discussion: {
-    createThread: (threadData: any) =>
+    createThread: (threadData: Partial<DiscussionThreadData>) =>
       generateCreateResponse('DiscussionThread', {
         ...threadData,
         replyCount: 0,
@@ -224,7 +285,7 @@ export const commonOptimisticResponses = {
         isLocked: false,
       }),
     
-    reply: (replyData: any) =>
+    reply: (replyData: Partial<DiscussionReplyData>) =>
       generateCreateResponse('DiscussionReply', {
         ...replyData,
         isEdited: false,

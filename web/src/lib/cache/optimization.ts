@@ -7,6 +7,7 @@
  * Requirements: 12.4
  */
 
+import React from 'react';
 import { ApolloCache, InMemoryCache, NormalizedCacheObject } from '@apollo/client';
 import { DocumentNode } from 'graphql';
 
@@ -32,7 +33,7 @@ export interface CacheEvictionStrategy {
 
 export interface CacheEntry {
   key: string;
-  data: any;
+  data: Record<string, unknown>;
   lastAccessed: Date;
   created: Date;
   accessCount: number;
@@ -43,12 +44,26 @@ export interface CacheEntry {
 export interface CacheWarmingConfig {
   criticalQueries: Array<{
     query: DocumentNode;
-    variables?: any;
+    variables?: Record<string, unknown>;
     priority: number;
   }>;
   maxConcurrent: number;
   timeout: number;
   retryFailed: boolean;
+}
+
+export interface CacheOptimizationConfig {
+  maxSize: number;
+  targetSize: number;
+  cleanupInterval: number;
+  evictionStrategies: CacheEvictionStrategy[];
+  enableMonitoring: boolean;
+  warming?: CacheWarmingConfig;
+}
+
+// Apollo Client interface for cache operations
+interface ApolloClientLike {
+  query: (options: { query: DocumentNode; variables?: Record<string, unknown>; fetchPolicy?: string }) => Promise<unknown>;
 }
 
 // =============================================================================
@@ -60,7 +75,7 @@ export interface CacheWarmingConfig {
  */
 export const LRUEvictionStrategy: CacheEvictionStrategy = {
   name: 'LRU',
-  shouldEvict: (entry, metrics) => {
+  shouldEvict: (entry, _metrics) => {
     const ageThreshold = 30 * 60 * 1000; // 30 minutes
     const age = Date.now() - entry.lastAccessed.getTime();
     return age > ageThreshold;
@@ -75,7 +90,7 @@ export const LRUEvictionStrategy: CacheEvictionStrategy = {
  */
 export const LFUEvictionStrategy: CacheEvictionStrategy = {
   name: 'LFU',
-  shouldEvict: (entry, metrics) => {
+  shouldEvict: (entry, _metrics) => {
     const minAccessThreshold = 2;
     return entry.accessCount < minAccessThreshold;
   },
@@ -89,7 +104,7 @@ export const LFUEvictionStrategy: CacheEvictionStrategy = {
  */
 export const SizeBasedEvictionStrategy: CacheEvictionStrategy = {
   name: 'Size-Based',
-  shouldEvict: (entry, metrics) => {
+  shouldEvict: (entry, _metrics) => {
     const sizeThreshold = 1024 * 1024; // 1MB
     return entry.size > sizeThreshold;
   },
@@ -103,7 +118,7 @@ export const SizeBasedEvictionStrategy: CacheEvictionStrategy = {
  */
 export const TTLEvictionStrategy: CacheEvictionStrategy = {
   name: 'TTL',
-  shouldEvict: (entry, metrics) => {
+  shouldEvict: (entry, _metrics) => {
     const ttl = 60 * 60 * 1000; // 1 hour
     const age = Date.now() - entry.created.getTime();
     return age > ttl;
@@ -212,7 +227,7 @@ export class CacheOptimizer {
   /**
    * Warm cache with critical queries
    */
-  async warmCache(client: any): Promise<void> {
+  async warmCache(client: ApolloClientLike): Promise<void> {
     if (!this.config.warming) return;
 
     const { criticalQueries, maxConcurrent, timeout, retryFailed } = this.config.warming;
@@ -354,7 +369,7 @@ class CacheMonitor {
  * Creates a cache warming configuration for common queries
  */
 export function createCacheWarmingConfig(
-  queries: Array<{ query: DocumentNode; variables?: any; priority?: number }>
+  queries: Array<{ query: DocumentNode; variables?: Record<string, unknown>; priority?: number }>
 ): CacheWarmingConfig {
   return {
     criticalQueries: queries.map(q => ({
@@ -371,7 +386,7 @@ export function createCacheWarmingConfig(
  * Preload critical data for faster user experience
  */
 export async function preloadCriticalData(
-  client: any,
+  client: ApolloClientLike,
   queries: DocumentNode[],
   options: { timeout?: number; maxConcurrent?: number } = {}
 ): Promise<void> {

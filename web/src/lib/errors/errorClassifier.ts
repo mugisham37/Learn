@@ -8,7 +8,7 @@
 
 // Simple ID generator to avoid external dependencies
 function generateId(): string {
-  return `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  return `${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
 }
 import type { 
   ClassifiedError, 
@@ -121,19 +121,20 @@ export class ErrorClassifier {
       code,
       message: error.message,
       userMessage: this.getUserMessage(type, error.extensions?.userMessage),
-      field: error.extensions?.field,
+      field: error.extensions?.field || undefined,
       retryable: RETRYABLE_ERRORS.has(type),
       retryDelay: this.getRetryDelay(type),
       maxRetries: this.getMaxRetries(type),
-      context: {
+      context: context ? {
         ...context,
         metadata: {
           path: error.path,
           locations: error.locations,
           extensions: error.extensions,
         },
-      },
+      } : undefined,
       timestamp: new Date(),
+      stack: undefined,
     };
   }
 
@@ -141,7 +142,7 @@ export class ErrorClassifier {
    * Classifies a network error
    */
   classifyNetworkError(
-    error: Error & { statusCode?: number; response?: any },
+    error: Error & { statusCode?: number; response?: Record<string, unknown> },
     details?: NetworkErrorDetails,
     context?: Partial<ErrorContext>
   ): ClassifiedError {
@@ -158,10 +159,11 @@ export class ErrorClassifier {
       code: `HTTP_${statusCode}`,
       message: error.message,
       userMessage: this.getNetworkErrorMessage(statusCode, type),
+      field: undefined,
       retryable: this.isNetworkErrorRetryable(statusCode, type),
       retryDelay: this.getRetryDelay(type),
       maxRetries: this.getMaxRetries(type),
-      context: {
+      context: context ? {
         ...context,
         metadata: {
           statusCode,
@@ -170,9 +172,9 @@ export class ErrorClassifier {
           timeout: details?.timeout,
           connectionType: details?.connectionType,
         },
-      },
+      } : undefined,
       timestamp: new Date(),
-      stack: error.stack,
+      stack: error.stack || undefined,
     };
   }
 
@@ -209,12 +211,13 @@ export class ErrorClassifier {
       code: error.name || 'RUNTIME_ERROR',
       message: error.message,
       userMessage: this.getUserMessage(type),
+      field: undefined,
       retryable: RETRYABLE_ERRORS.has(type),
       retryDelay: this.getRetryDelay(type),
       maxRetries: this.getMaxRetries(type),
       context,
       timestamp: new Date(),
-      stack: error.stack,
+      stack: error.stack || undefined,
     };
   }
 
@@ -279,11 +282,13 @@ export class ErrorClassifier {
       code: error.code || error.type || 'SUBSCRIPTION_ERROR',
       message: error.message,
       userMessage: this.getUserMessage(type),
+      field: undefined,
       retryable: true, // Most subscription errors are retryable
       retryDelay: this.getRetryDelay(type),
       maxRetries: this.getMaxRetries(type),
       context,
       timestamp: new Date(),
+      stack: undefined,
     };
   }
 

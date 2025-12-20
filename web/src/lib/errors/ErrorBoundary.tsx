@@ -10,7 +10,6 @@
 import React, { Component, ReactNode, ErrorInfo } from 'react';
 import { errorClassifier } from './errorClassifier';
 import { errorMessageMapper } from './errorMessages';
-import { errorRecoveryManager } from './errorRecovery';
 import type { ClassifiedError, ErrorBoundaryInfo } from './errorTypes';
 
 /**
@@ -72,7 +71,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     const boundaryInfo: ErrorBoundaryInfo = {
-      componentStack: errorInfo.componentStack,
+      componentStack: errorInfo.componentStack || '',
       errorBoundary: this.props.name || 'ErrorBoundary',
       errorInfo: {
         error: error.message,
@@ -115,17 +114,20 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   private reportError(error: Error, errorInfo: ErrorInfo) {
     try {
       // Report to Sentry or other error tracking service
-      if (typeof window !== 'undefined' && (window as any).Sentry) {
-        (window as any).Sentry.captureException(error, {
-          tags: {
-            errorBoundary: this.props.name || 'ErrorBoundary',
-            retryCount: this.state.retryCount,
-          },
-          extra: {
-            componentStack: errorInfo.componentStack,
-            errorInfo: this.state.errorInfo,
-          },
-        });
+      if (typeof window !== 'undefined' && (window as Record<string, unknown>).Sentry) {
+        const sentry = (window as Record<string, unknown>).Sentry as Record<string, unknown>;
+        if (typeof sentry.captureException === 'function') {
+          sentry.captureException(error, {
+            tags: {
+              errorBoundary: this.props.name || 'ErrorBoundary',
+              retryCount: this.state.retryCount,
+            },
+            extra: {
+              componentStack: errorInfo.componentStack,
+              errorInfo: this.state.errorInfo,
+            },
+          });
+        }
       }
 
       // Fallback: log to console in development
@@ -170,7 +172,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 interface DefaultErrorFallbackProps {
   error: ClassifiedError;
   errorInfo: ErrorBoundaryInfo | null;
-  onRetry?: () => void;
+  onRetry?: (() => void) | undefined;
   canRetry?: boolean;
 }
 

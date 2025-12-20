@@ -62,25 +62,25 @@ export interface ClassifiedError {
   userMessage: string;
   
   /** Field name if validation error */
-  field?: string;
+  field?: string | undefined;
   
   /** Whether this error can be retried */
   retryable: boolean;
   
   /** Suggested retry delay in milliseconds */
-  retryDelay?: number;
+  retryDelay?: number | undefined;
   
   /** Maximum retry attempts */
-  maxRetries?: number;
+  maxRetries?: number | undefined;
   
   /** Additional error context */
-  context?: ErrorContext;
+  context?: ErrorContext | undefined;
   
   /** Timestamp when error occurred */
   timestamp: Date;
   
   /** Stack trace for debugging */
-  stack?: string;
+  stack?: string | undefined;
 }
 
 /**
@@ -235,10 +235,10 @@ export interface ErrorBoundaryInfo {
   componentStack: string;
   
   /** Error boundary name */
-  errorBoundary?: string;
+  errorBoundary?: string | undefined;
   
   /** Props that caused the error */
-  errorInfo?: Record<string, unknown>;
+  errorInfo?: Record<string, unknown> | undefined;
 }
 
 /**
@@ -279,4 +279,21 @@ export interface GraphQLErrorExtensions {
   
   /** Trace ID for debugging */
   traceId?: string;
+}
+
+/**
+ * Performance metrics for error tracking
+ */
+export interface PerformanceMetrics {
+  /** Request duration in milliseconds */
+  requestDuration: number;
+  
+  /** Cache hit rate (0.0 to 1.0) */
+  cacheHitRate: number;
+  
+  /** Error rate (0.0 to 1.0) */
+  errorRate: number;
+  
+  /** Number of active subscriptions */
+  activeSubscriptions: number;
 }

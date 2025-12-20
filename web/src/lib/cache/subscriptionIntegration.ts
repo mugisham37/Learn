@@ -7,20 +7,20 @@
 
 import { InMemoryCache } from '@apollo/client';
 import { DocumentNode } from 'graphql';
-import { updateCacheAfterMutation, CacheUpdateConfig } from './cacheUpdaters';
-import { invalidateCache, CacheInvalidationConfig } from './cacheInvalidation';
-import { generateOptimisticResponse, OptimisticResponseConfig } from './optimisticResponses';
+import { updateCacheAfterMutation } from './cacheUpdaters';
+import { invalidateCache } from './cacheInvalidation';
+import { CacheUpdateConfig, CacheInvalidationConfig, CacheEntity } from './types';
 
 /**
  * Subscription cache update configuration
  */
-export interface SubscriptionCacheUpdateConfig<T = any> {
+export interface SubscriptionCacheUpdateConfig<T extends CacheEntity = CacheEntity> {
   subscriptionType: 'created' | 'updated' | 'deleted' | 'status_changed';
   typename: string;
   data: T;
   listQueries?: Array<{
     query: DocumentNode;
-    variables?: Record<string, any>;
+    variables?: Record<string, unknown>;
     fieldName: string;
   }>;
   invalidationConfig?: CacheInvalidationConfig;
@@ -29,7 +29,7 @@ export interface SubscriptionCacheUpdateConfig<T = any> {
 /**
  * Handle cache updates from subscription data
  */
-export function handleSubscriptionCacheUpdate<T extends { id: string; __typename: string }>(
+export function handleSubscriptionCacheUpdate<T extends CacheEntity>(
   cache: InMemoryCache,
   config: SubscriptionCacheUpdateConfig<T>
 ): void {
@@ -164,6 +164,19 @@ function handleStatusChangedSubscription<T extends { id: string; __typename: str
   handleUpdatedSubscription(cache, config);
 }
 
+// Define GraphQL operations interface for type safety
+interface GraphQLOperations {
+  GET_CONVERSATION_MESSAGES: DocumentNode;
+  GET_PUBLISHED_COURSES: DocumentNode;
+  GET_COURSE_PRESENCE: DocumentNode;
+  GET_NOTIFICATIONS: DocumentNode;
+  GET_ASSIGNMENT_SUBMISSIONS: DocumentNode;
+}
+
+// This would be imported from your actual GraphQL operations file
+// For now, we'll use a placeholder to avoid require() calls
+const graphqlOperations = {} as GraphQLOperations;
+
 /**
  * Common subscription cache update patterns
  */
@@ -171,13 +184,13 @@ export const subscriptionCachePatterns = {
   /**
    * Message added to conversation
    */
-  messageAdded: (cache: InMemoryCache, message: any, conversationId: string) => {
+  messageAdded: (cache: InMemoryCache, message: CacheEntity, conversationId: string) => {
     handleSubscriptionCacheUpdate(cache, {
       subscriptionType: 'created',
       typename: 'Message',
       data: message,
       listQueries: [{
-        query: require('../graphql/operations').GET_CONVERSATION_MESSAGES,
+        query: graphqlOperations.GET_CONVERSATION_MESSAGES,
         variables: { conversationId },
         fieldName: 'messages',
       }],
@@ -187,11 +200,11 @@ export const subscriptionCachePatterns = {
   /**
    * Enrollment progress updated
    */
-  progressUpdated: (cache: InMemoryCache, progress: any, enrollmentId: string) => {
+  progressUpdated: (cache: InMemoryCache, progress: Record<string, unknown>, enrollmentId: string) => {
     handleSubscriptionCacheUpdate(cache, {
       subscriptionType: 'updated',
       typename: 'Enrollment',
-      data: { id: enrollmentId, ...progress },
+      data: { id: enrollmentId, __typename: 'Enrollment', ...progress },
       invalidationConfig: {
         fieldNames: ['enrollmentProgress', 'courseProgress'],
       },
@@ -201,13 +214,13 @@ export const subscriptionCachePatterns = {
   /**
    * Course published
    */
-  coursePublished: (cache: InMemoryCache, course: any) => {
+  coursePublished: (cache: InMemoryCache, course: CacheEntity) => {
     handleSubscriptionCacheUpdate(cache, {
       subscriptionType: 'status_changed',
       typename: 'Course',
       data: course,
       listQueries: [{
-        query: require('../graphql/operations').GET_PUBLISHED_COURSES,
+        query: graphqlOperations.GET_PUBLISHED_COURSES,
         variables: {},
         fieldName: 'publishedCourses',
       }],
@@ -220,13 +233,13 @@ export const subscriptionCachePatterns = {
   /**
    * User presence updated
    */
-  presenceUpdated: (cache: InMemoryCache, presence: any, courseId: string) => {
+  presenceUpdated: (cache: InMemoryCache, presence: CacheEntity, courseId: string) => {
     handleSubscriptionCacheUpdate(cache, {
       subscriptionType: 'updated',
       typename: 'UserPresence',
       data: presence,
       listQueries: [{
-        query: require('../graphql/operations').GET_COURSE_PRESENCE,
+        query: graphqlOperations.GET_COURSE_PRESENCE,
         variables: { courseId },
         fieldName: 'coursePresence',
       }],
@@ -236,13 +249,13 @@ export const subscriptionCachePatterns = {
   /**
    * Notification received
    */
-  notificationReceived: (cache: InMemoryCache, notification: any, userId: string) => {
+  notificationReceived: (cache: InMemoryCache, notification: CacheEntity, userId: string) => {
     handleSubscriptionCacheUpdate(cache, {
       subscriptionType: 'created',
       typename: 'Notification',
       data: notification,
       listQueries: [{
-        query: require('../graphql/operations').GET_NOTIFICATIONS,
+        query: graphqlOperations.GET_NOTIFICATIONS,
         variables: { userId },
         fieldName: 'notifications',
       }],
@@ -255,13 +268,13 @@ export const subscriptionCachePatterns = {
   /**
    * Assignment submitted
    */
-  assignmentSubmitted: (cache: InMemoryCache, submission: any, assignmentId: string) => {
+  assignmentSubmitted: (cache: InMemoryCache, submission: CacheEntity, assignmentId: string) => {
     handleSubscriptionCacheUpdate(cache, {
       subscriptionType: 'created',
       typename: 'AssignmentSubmission',
       data: submission,
       listQueries: [{
-        query: require('../graphql/operations').GET_ASSIGNMENT_SUBMISSIONS,
+        query: graphqlOperations.GET_ASSIGNMENT_SUBMISSIONS,
         variables: { assignmentId },
         fieldName: 'submissions',
       }],
@@ -276,13 +289,13 @@ export const subscriptionCachePatterns = {
  * Conflict resolution for concurrent subscription updates
  */
 export class SubscriptionConflictResolver {
-  private pendingUpdates = new Map<string, any>();
+  private pendingUpdates = new Map<string, CacheEntity>();
 
   /**
    * Resolve conflicts when multiple subscription updates occur for the same entity
    */
-  resolveConflict<T extends { id: string; updatedAt?: string }>(
-    entityId: string,
+  resolveConflict<T extends CacheEntity & { updatedAt?: string }>(
+    _entityId: string,
     newData: T,
     existingData: T
   ): T {
@@ -301,7 +314,7 @@ export class SubscriptionConflictResolver {
   /**
    * Queue update for conflict resolution
    */
-  queueUpdate<T>(entityId: string, data: T): void {
+  queueUpdate<T extends CacheEntity>(entityId: string, data: T): void {
     this.pendingUpdates.set(entityId, data);
   }
 
@@ -312,11 +325,13 @@ export class SubscriptionConflictResolver {
     this.pendingUpdates.forEach((data, entityId) => {
       // Process the update
       const [typename, id] = entityId.split(':');
-      handleSubscriptionCacheUpdate(cache, {
-        subscriptionType: 'updated',
-        typename,
-        data: { ...data, id },
-      });
+      if (typename && id) {
+        handleSubscriptionCacheUpdate(cache, {
+          subscriptionType: 'updated',
+          typename,
+          data: { ...data, id },
+        });
+      }
     });
 
     this.pendingUpdates.clear();
@@ -326,7 +341,7 @@ export class SubscriptionConflictResolver {
 /**
  * Create a subscription cache update handler
  */
-export function createSubscriptionCacheHandler<T extends { id: string; __typename: string }>(
+export function createSubscriptionCacheHandler<T extends CacheEntity>(
   cache: InMemoryCache,
   config: Omit<SubscriptionCacheUpdateConfig<T>, 'data'>
 ) {

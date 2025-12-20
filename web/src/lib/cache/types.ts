@@ -4,7 +4,7 @@
  * Type definitions for cache management utilities.
  */
 
-import { InMemoryCache, Reference } from '@apollo/client';
+import { InMemoryCache } from '@apollo/client';
 import { DocumentNode } from 'graphql';
 
 /**
@@ -13,15 +13,23 @@ import { DocumentNode } from 'graphql';
 export type CacheUpdateOperation = 'create' | 'update' | 'delete' | 'append' | 'prepend' | 'merge';
 
 /**
+ * Base entity interface for cache operations
+ */
+export interface CacheEntity {
+  id: string;
+  __typename: string;
+}
+
+/**
  * Cache update configuration
  */
-export interface CacheUpdateConfig<T = any> {
+export interface CacheUpdateConfig<T extends CacheEntity = CacheEntity> {
   operation: CacheUpdateOperation;
   typename: string;
   data: T;
   id?: string;
   listQuery?: DocumentNode;
-  listVariables?: Record<string, any>;
+  listVariables?: Record<string, unknown>;
   listFieldName?: string;
 }
 
@@ -33,7 +41,7 @@ export interface CacheInvalidationConfig {
   id?: string;
   queries?: Array<{
     query: DocumentNode;
-    variables?: Record<string, any>;
+    variables?: Record<string, unknown>;
   }>;
   fieldNames?: string[];
 }
@@ -41,7 +49,7 @@ export interface CacheInvalidationConfig {
 /**
  * Optimistic response configuration
  */
-export interface OptimisticResponseConfig<T = any> {
+export interface OptimisticResponseConfig<T extends Partial<CacheEntity> = Partial<CacheEntity>> {
   operation: CacheUpdateOperation;
   typename: string;
   data: Partial<T>;
@@ -71,22 +79,22 @@ export interface CacheUpdateResult {
  * Cache helper utilities interface
  */
 export interface CacheHelpers {
-  readEntity<T>(cache: InMemoryCache, typename: string, id: string): T | null;
-  writeEntity<T>(cache: InMemoryCache, typename: string, id: string, data: T): void;
-  updateEntity<T>(cache: InMemoryCache, typename: string, id: string, updates: Partial<T>): void;
+  readEntity<T extends CacheEntity>(cache: InMemoryCache, typename: string, id: string): T | null;
+  writeEntity<T extends CacheEntity>(cache: InMemoryCache, typename: string, id: string, data: T): void;
+  updateEntity<T extends CacheEntity>(cache: InMemoryCache, typename: string, id: string, updates: Partial<T>): void;
   deleteEntity(cache: InMemoryCache, typename: string, id: string): void;
-  readList<T>(cache: InMemoryCache, query: DocumentNode, variables?: Record<string, any>): T[] | null;
-  updateList<T>(cache: InMemoryCache, query: DocumentNode, variables: Record<string, any>, updater: (list: T[]) => T[]): void;
+  readList<T extends CacheEntity>(cache: InMemoryCache, query: DocumentNode, variables?: Record<string, unknown>): T[] | null;
+  updateList<T extends CacheEntity>(cache: InMemoryCache, query: DocumentNode, variables: Record<string, unknown>, updater: (list: T[]) => T[]): void;
 }
 
 /**
  * Cache updater utilities interface
  */
 export interface CacheUpdaters {
-  updateCacheAfterMutation<T>(cache: InMemoryCache, config: CacheUpdateConfig<T>): CacheUpdateResult;
-  addToList<T>(cache: InMemoryCache, query: DocumentNode, variables: Record<string, any>, fieldName: string, item: T): void;
-  removeFromList(cache: InMemoryCache, query: DocumentNode, variables: Record<string, any>, fieldName: string, itemId: string): void;
-  updateInList<T>(cache: InMemoryCache, query: DocumentNode, variables: Record<string, any>, fieldName: string, itemId: string, updates: Partial<T>): void;
+  updateCacheAfterMutation<T extends CacheEntity>(cache: InMemoryCache, config: CacheUpdateConfig<T>): CacheUpdateResult;
+  addToList<T extends CacheEntity>(cache: InMemoryCache, query: DocumentNode, variables: Record<string, unknown>, fieldName: string, item: T): void;
+  removeFromList(cache: InMemoryCache, query: DocumentNode, variables: Record<string, unknown>, fieldName: string, itemId: string): void;
+  updateInList<T extends CacheEntity>(cache: InMemoryCache, query: DocumentNode, variables: Record<string, unknown>, fieldName: string, itemId: string, updates: Partial<T>): void;
 }
 
 /**
@@ -94,7 +102,7 @@ export interface CacheUpdaters {
  */
 export interface CacheInvalidation {
   invalidateEntity(cache: InMemoryCache, typename: string, id: string): void;
-  invalidateQueries(cache: InMemoryCache, queries: Array<{ query: DocumentNode; variables?: Record<string, any> }>): void;
+  invalidateQueries(cache: InMemoryCache, queries: Array<{ query: DocumentNode; variables?: Record<string, unknown> }>): void;
   invalidateByFieldName(cache: InMemoryCache, fieldNames: string[]): void;
   invalidateAll(cache: InMemoryCache): void;
 }
@@ -103,8 +111,8 @@ export interface CacheInvalidation {
  * Optimistic response generators interface
  */
 export interface OptimisticResponseGenerators {
-  generateOptimisticResponse<T>(config: OptimisticResponseConfig<T>): T;
-  generateCreateResponse<T>(typename: string, data: Partial<T>): T;
-  generateUpdateResponse<T>(typename: string, id: string, updates: Partial<T>): Partial<T>;
+  generateOptimisticResponse<T extends CacheEntity>(config: OptimisticResponseConfig<T>): T;
+  generateCreateResponse<T extends Partial<CacheEntity>>(typename: string, data: Partial<T>): T & CacheEntity;
+  generateUpdateResponse<T extends CacheEntity>(typename: string, id: string, updates: Partial<T>): Partial<T>;
   generateDeleteResponse(typename: string, id: string): { __typename: string; id: string };
 }

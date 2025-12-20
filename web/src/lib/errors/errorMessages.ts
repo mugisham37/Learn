@@ -8,8 +8,7 @@
 
 import type { 
   ErrorType, 
-  ClassifiedError,
-  ErrorContext 
+  ClassifiedError
 } from './errorTypes';
 
 /**

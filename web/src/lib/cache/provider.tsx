@@ -7,8 +7,7 @@
 'use client';
 
 import React, { createContext, useContext, useCallback, useState } from 'react';
-import { useApolloClient } from '@apollo/client';
-import { cacheHelpers } from './cacheHelpers';
+import { useApolloClient } from '@apollo/client/react/hooks';
 
 export interface CacheContextValue {
   /** Clear all cache data */

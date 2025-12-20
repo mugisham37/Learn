@@ -9,6 +9,9 @@ import { InMemoryCache } from '@apollo/client';
 import { DocumentNode } from 'graphql';
 import { CacheInvalidationConfig, CacheInvalidation } from './types';
 
+// Export the CacheInvalidationConfig type for use in other modules
+export type { CacheInvalidationConfig } from './types';
+
 /**
  * Invalidate a specific entity in the cache
  */

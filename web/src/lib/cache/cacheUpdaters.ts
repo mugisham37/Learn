@@ -7,13 +7,16 @@
 
 import { InMemoryCache } from '@apollo/client';
 import { DocumentNode } from 'graphql';
-import { CacheUpdateConfig, CacheUpdateResult, CacheUpdaters } from './types';
+import { CacheUpdateConfig, CacheUpdateResult, CacheUpdaters, CacheEntity } from './types';
 import { updateList, updateEntity, writeEntity, deleteEntity } from './cacheHelpers';
+
+// Export the CacheUpdateConfig type for use in other modules
+export type { CacheUpdateConfig } from './types';
 
 /**
  * Update cache after a mutation based on operation type
  */
-export function updateCacheAfterMutation<T extends { id: string; __typename: string }>(
+export function updateCacheAfterMutation<T extends CacheEntity>(
   cache: InMemoryCache,
   config: CacheUpdateConfig<T>
 ): CacheUpdateResult {
@@ -63,7 +66,7 @@ export function updateCacheAfterMutation<T extends { id: string; __typename: str
 /**
  * Handle create operation - add new entity and optionally add to lists
  */
-function handleCreateOperation<T extends { id: string; __typename: string }>(
+function handleCreateOperation<T extends CacheEntity>(
   cache: InMemoryCache,
   config: CacheUpdateConfig<T>,
   updatedEntities: string[]
@@ -87,7 +90,7 @@ function handleCreateOperation<T extends { id: string; __typename: string }>(
 /**
  * Handle update operation - update existing entity
  */
-function handleUpdateOperation<T extends { id: string; __typename: string }>(
+function handleUpdateOperation<T extends CacheEntity>(
   cache: InMemoryCache,
   config: CacheUpdateConfig<T>,
   updatedEntities: string[]
@@ -104,7 +107,7 @@ function handleUpdateOperation<T extends { id: string; __typename: string }>(
 /**
  * Handle delete operation - remove entity and from lists
  */
-function handleDeleteOperation<T>(
+function handleDeleteOperation<T extends CacheEntity>(
   cache: InMemoryCache,
   config: CacheUpdateConfig<T>,
   updatedEntities: string[]
@@ -133,7 +136,7 @@ function handleDeleteOperation<T>(
 /**
  * Handle list operations (append/prepend)
  */
-function handleListOperation<T>(
+function handleListOperation<T extends CacheEntity>(
   cache: InMemoryCache,
   config: CacheUpdateConfig<T>
 ): void {
@@ -151,7 +154,7 @@ function handleListOperation<T>(
 /**
  * Handle merge operation - merge data with existing entity
  */
-function handleMergeOperation<T extends { id: string; __typename: string }>(
+function handleMergeOperation<T extends CacheEntity>(
   cache: InMemoryCache,
   config: CacheUpdateConfig<T>,
   updatedEntities: string[]
@@ -168,17 +171,17 @@ function handleMergeOperation<T extends { id: string; __typename: string }>(
 /**
  * Add an item to a list in the cache
  */
-export function addToList<T>(
+export function addToList<T extends CacheEntity>(
   cache: InMemoryCache,
   query: DocumentNode,
   variables: Record<string, unknown>,
-  fieldName: string,
+  _fieldName: string,
   item: T
 ): void {
   updateList(cache, query, variables, (existingList) => {
     // Check if item already exists to avoid duplicates
-    const itemId = (item as Record<string, unknown>)?.id;
-    if (itemId && existingList.some((existing: unknown) => (existing as Record<string, unknown>).id === itemId)) {
+    const itemId = item.id;
+    if (itemId && existingList.some((existing: CacheEntity) => existing.id === itemId)) {
       return existingList;
     }
     
@@ -189,17 +192,17 @@ export function addToList<T>(
 /**
  * Prepend an item to a list in the cache
  */
-export function prependToList<T>(
+export function prependToList<T extends CacheEntity>(
   cache: InMemoryCache,
   query: DocumentNode,
   variables: Record<string, unknown>,
-  fieldName: string,
+  _fieldName: string,
   item: T
 ): void {
   updateList(cache, query, variables, (existingList) => {
     // Check if item already exists to avoid duplicates
-    const itemId = (item as Record<string, unknown>)?.id;
-    if (itemId && existingList.some((existing: unknown) => (existing as Record<string, unknown>).id === itemId)) {
+    const itemId = item.id;
+    if (itemId && existingList.some((existing: CacheEntity) => existing.id === itemId)) {
       return existingList;
     }
     
@@ -214,30 +217,29 @@ export function removeFromList(
   cache: InMemoryCache,
   query: DocumentNode,
   variables: Record<string, unknown>,
-  fieldName: string,
+  _fieldName: string,
   itemId: string
 ): void {
   updateList(cache, query, variables, (existingList) => {
-    return existingList.filter((item: unknown) => (item as Record<string, unknown>).id !== itemId);
+    return existingList.filter((item: CacheEntity) => item.id !== itemId);
   });
 }
 
 /**
  * Update an item in a list in the cache
  */
-export function updateInList<T>(
+export function updateInList<T extends CacheEntity>(
   cache: InMemoryCache,
   query: DocumentNode,
   variables: Record<string, unknown>,
-  fieldName: string,
+  _fieldName: string,
   itemId: string,
   updates: Partial<T>
 ): void {
   updateList(cache, query, variables, (existingList) => {
-    return existingList.map((item: unknown) => {
-      const typedItem = item as Record<string, unknown>;
-      if (typedItem.id === itemId) {
-        return { ...typedItem, ...updates };
+    return existingList.map((item: CacheEntity) => {
+      if (item.id === itemId) {
+        return { ...item, ...updates };
       }
       return item;
     });
@@ -248,7 +250,7 @@ export function updateInList<T>(
  * Cache updater utilities object
  */
 export const cacheUpdaters: CacheUpdaters = {
-  updateCacheAfterMutation: updateCacheAfterMutation as <T>(cache: InMemoryCache, config: CacheUpdateConfig<T>) => CacheUpdateResult,
+  updateCacheAfterMutation,
   addToList,
   removeFromList,
   updateInList,
@@ -262,7 +264,7 @@ export const commonCacheUpdates = {
    * Course-related cache updates
    */
   course: {
-    created: (cache: InMemoryCache, course: { id: string; __typename: string }) =>
+    created: (cache: InMemoryCache, course: CacheEntity) =>
       updateCacheAfterMutation(cache, {
         operation: 'create',
         typename: 'Course',
@@ -270,7 +272,7 @@ export const commonCacheUpdates = {
         // Could add to courses list if needed
       }),
     
-    updated: (cache: InMemoryCache, course: { id: string; __typename: string }) =>
+    updated: (cache: InMemoryCache, course: CacheEntity) =>
       updateCacheAfterMutation(cache, {
         operation: 'update',
         typename: 'Course',
@@ -290,7 +292,7 @@ export const commonCacheUpdates = {
    * Enrollment-related cache updates
    */
   enrollment: {
-    created: (cache: InMemoryCache, enrollment: { id: string; __typename: string }) =>
+    created: (cache: InMemoryCache, enrollment: CacheEntity) =>
       updateCacheAfterMutation(cache, {
         operation: 'create',
         typename: 'Enrollment',
@@ -315,7 +317,7 @@ export const commonCacheUpdates = {
    * Message-related cache updates
    */
   message: {
-    sent: (cache: InMemoryCache, message: { id: string; __typename: string }, conversationQuery: DocumentNode, variables: Record<string, unknown>) =>
+    sent: (cache: InMemoryCache, message: CacheEntity, conversationQuery: DocumentNode, variables: Record<string, unknown>) =>
       updateCacheAfterMutation(cache, {
         operation: 'prepend',
         typename: 'Message',

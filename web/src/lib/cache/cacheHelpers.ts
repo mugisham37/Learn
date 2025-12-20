@@ -5,14 +5,14 @@
  * Provides type-safe cache operations with error handling.
  */
 
-import { InMemoryCache, Reference } from '@apollo/client';
+import { InMemoryCache, gql } from '@apollo/client';
 import { DocumentNode } from 'graphql';
-import { CacheHelpers } from './types';
+import { CacheHelpers, CacheEntity } from './types';
 
 /**
  * Read a single entity from the cache by typename and id
  */
-export function readEntity<T>(
+export function readEntity<T extends CacheEntity>(
   cache: InMemoryCache,
   typename: string,
   id: string
@@ -39,7 +39,7 @@ export function readEntity<T>(
 /**
  * Write a single entity to the cache
  */
-export function writeEntity<T extends { id: string; __typename: string }>(
+export function writeEntity<T extends CacheEntity>(
   cache: InMemoryCache,
   typename: string,
   id: string,
@@ -74,7 +74,7 @@ export function writeEntity<T extends { id: string; __typename: string }>(
 /**
  * Update a single entity in the cache with partial data
  */
-export function updateEntity<T>(
+export function updateEntity<T extends CacheEntity>(
   cache: InMemoryCache,
   typename: string,
   id: string,
@@ -135,10 +135,10 @@ export function deleteEntity(
 /**
  * Read a list from a query result
  */
-export function readList<T>(
+export function readList<T extends CacheEntity>(
   cache: InMemoryCache,
   query: DocumentNode,
-  variables: Record<string, any> = {}
+  variables: Record<string, unknown> = {}
 ): T[] | null {
   try {
     const result = cache.readQuery({
@@ -148,7 +148,13 @@ export function readList<T>(
 
     // Extract the list from the query result
     // Assumes the query has a single root field that contains the list
-    const rootField = Object.keys(result || {})[0];
+    const rootFields = Object.keys(result || {});
+    const rootField = rootFields[0];
+    
+    if (!rootField) {
+      return null;
+    }
+
     return result?.[rootField] || null;
   } catch (error) {
     console.warn('Failed to read list from cache', error);
@@ -159,10 +165,10 @@ export function readList<T>(
 /**
  * Update a list in the cache using an updater function
  */
-export function updateList<T>(
+export function updateList<T extends CacheEntity>(
   cache: InMemoryCache,
   query: DocumentNode,
-  variables: Record<string, any>,
+  variables: Record<string, unknown>,
   updater: (list: T[]) => T[]
 ): void {
   try {
@@ -172,7 +178,14 @@ export function updateList<T>(
         if (!existingData) return existingData;
 
         // Find the list field in the query result
-        const rootField = Object.keys(existingData)[0];
+        const rootFields = Object.keys(existingData);
+        const rootField = rootFields[0];
+        
+        if (!rootField) {
+          console.warn('Query result does not contain any fields');
+          return existingData;
+        }
+
         const existingList = existingData[rootField];
 
         if (!Array.isArray(existingList)) {
@@ -238,6 +251,3 @@ export {
   readList as readCacheList,
   updateList as updateCacheList,
 };
-
-// Import gql from @apollo/client for fragment definitions
-import { gql } from '@apollo/client';
