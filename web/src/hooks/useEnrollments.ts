@@ -5,7 +5,7 @@
  * progress tracking, and lesson completion.
  */
 
-import { useQuery, useMutation } from '@apollo/client/react';
+import { useQuery, useMutation } from '@apollo/client';
 import { gql } from '@apollo/client';
 import type {
   Enrollment,
@@ -446,7 +446,7 @@ export function useUpdateLessonProgress(): MutationResult<LessonProgress, { inpu
         },
       }),
       // Update cache after successful mutation
-      update: (cache, { data }) => {
+      update: (cache: any, { data }: { data?: any }) => {
         if (data?.updateLessonProgress) {
           const enrollmentId = data.updateLessonProgress.enrollment.id;
           

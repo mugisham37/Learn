@@ -265,7 +265,7 @@ export function useAuthActions() {
     try {
       await logout();
       router.push(redirectTo);
-    } catch (error) {
+    } catch {
       // Even if logout fails, redirect to home
       router.push(redirectTo);
     }

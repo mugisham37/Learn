@@ -5,7 +5,7 @@
  * notification preferences, and user data fetching.
  */
 
-import { useQuery, useMutation } from '@apollo/client/react';
+import { useQuery, useMutation } from '@apollo/client';
 import { gql } from '@apollo/client';
 import type {
   User,
@@ -209,7 +209,7 @@ export function useUpdateProfile(): MutationResult<User, { input: UpdateProfileI
       },
     }),
     // Update cache after successful mutation
-    update: (cache, { data }) => {
+    update: (cache: any, { data }: { data?: any }) => {
       if (data?.updateProfile) {
         cache.updateQuery({ query: GET_CURRENT_USER }, (existingData: { currentUser?: User } | undefined) => {
           if (!existingData?.currentUser) return existingData;
@@ -285,7 +285,7 @@ export function useNotificationPreferences(): MutationResult<User, { input: Upda
         },
       }),
       // Update cache after successful mutation
-      update: (cache, { data }) => {
+      update: (cache: any, { data }: { data?: any }) => {
         if (data?.updateNotificationPreferences) {
           cache.updateQuery({ query: GET_CURRENT_USER }, (existingData: { currentUser?: User } | undefined) => {
             if (!existingData?.currentUser) return existingData;

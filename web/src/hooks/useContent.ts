@@ -8,7 +8,7 @@
  * for improved functionality and consistency.
  */
 
-import { useMutation } from '@apollo/client/react';
+import { useMutation } from '@apollo/client';
 import { gql } from '@apollo/client';
 import { useCallback } from 'react';
 import type {

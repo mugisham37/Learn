@@ -5,7 +5,7 @@
  * discussions, announcements, and real-time chat functionality.
  */
 
-import { useQuery, useMutation, useSubscription } from '@apollo/client/react';
+import { useQuery, useMutation, useSubscription } from '@apollo/client';
 import { gql } from '@apollo/client';
 import { useState, useCallback, useRef, useEffect } from 'react';
 import type {

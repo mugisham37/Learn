@@ -376,7 +376,7 @@ export function useQuizSession(attemptId: string): QuizSession {
   const [timeRemaining, setTimeRemaining] = useState(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const { data: attemptData, loading, error, refetch } = useQuery(GET_QUIZ_ATTEMPT, {
+  const { data: attemptData, loading, error } = useQuery(GET_QUIZ_ATTEMPT, {
     variables: { id: attemptId },
     skip: !attemptId,
     errorPolicy: 'all',
