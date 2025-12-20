@@ -5,7 +5,7 @@
  * notification preferences, and user data fetching.
  */
 
-import { useQuery, useMutation } from '@apollo/client/react/hooks';
+import { useQuery, useMutation } from '@apollo/client';
 import { gql } from '@apollo/client';
 import type {
   User,

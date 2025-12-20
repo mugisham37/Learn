@@ -5,7 +5,7 @@
  * progress tracking, and lesson completion.
  */
 
-import { useQuery, useMutation } from '@apollo/client/react/hooks';
+import { useQuery, useMutation } from '@apollo/client';
 import { gql } from '@apollo/client';
 import type {
   Enrollment,

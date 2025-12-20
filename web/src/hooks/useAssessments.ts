@@ -5,7 +5,7 @@
  * assignment submissions, and grading workflows.
  */
 
-import { useQuery, useMutation } from '@apollo/client/react/hooks';
+import { useQuery, useMutation } from '@apollo/client';
 import { gql } from '@apollo/client';
 import { useState, useCallback, useRef, useEffect } from 'react';
 import type {
@@ -250,8 +250,8 @@ interface QueryResult<T> {
   refetch: () => Promise<unknown>;
 }
 
-interface MutationResult<T> {
-  mutate: (variables: Record<string, unknown>) => Promise<T>;
+interface MutationResult<T, V = Record<string, unknown>> {
+  mutate: (variables: V) => Promise<T>;
   loading: boolean;
   error: Error | undefined;
   reset: () => void;
@@ -303,7 +303,7 @@ interface QuizSession {
  * }
  * ```
  */
-export function useStartQuiz(): MutationResult<QuizAttempt> {
+export function useStartQuiz(): MutationResult<QuizAttempt, { input: StartQuizInput }> {
   const [startQuizMutation, { loading, error, reset }] = useMutation(START_QUIZ, {
     errorPolicy: 'all',
   });
@@ -506,7 +506,7 @@ export function useQuizSession(attemptId: string): QuizSession {
  * }
  * ```
  */
-export function useSubmitAssignment(): MutationResult<AssignmentSubmission> {
+export function useSubmitAssignment(): MutationResult<AssignmentSubmission, { input: SubmitAssignmentInput }> {
   const [submitAssignmentMutation, { loading, error, reset }] = useMutation(SUBMIT_ASSIGNMENT, {
     errorPolicy: 'all',
     // Update cache after successful submission

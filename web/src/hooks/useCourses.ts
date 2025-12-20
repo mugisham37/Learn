@@ -5,7 +5,7 @@
  * filtering, pagination, and educator course management.
  */
 
-import { useQuery, useMutation } from '@apollo/client/react/hooks';
+import { useQuery, useMutation } from '@apollo/client';
 import { gql } from '@apollo/client';
 import type {
   Course,
