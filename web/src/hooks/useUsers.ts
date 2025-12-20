@@ -5,13 +5,20 @@
  * notification preferences, and user data fetching.
  */
 
-import { useQuery, useMutation } from '@apollo/client';
+import { useQuery, useMutation } from '@apollo/client/react';
 import { gql } from '@apollo/client';
+import type { ApolloCache, FetchResult } from '@apollo/client';
 import type {
   User,
   UpdateProfileInput,
   UpdateNotificationPreferencesInput,
 } from '../types';
+import type {
+  GetCurrentUserResponse,
+  GetUserByIdResponse,
+  UpdateProfileResponse,
+  UpdateNotificationPreferencesResponse,
+} from '../types/graphql-responses';
 
 // GraphQL Queries and Mutations
 const GET_CURRENT_USER = gql`
@@ -124,7 +131,7 @@ interface MutationResult<T, V = Record<string, unknown>> {
  * ```
  */
 export function useCurrentUser(): QueryResult<User> {
-  const { data, loading, error, refetch } = useQuery(GET_CURRENT_USER, {
+  const { data, loading, error, refetch } = useQuery<GetCurrentUserResponse>(GET_CURRENT_USER, {
     errorPolicy: 'all',
     notifyOnNetworkStatusChange: true,
   });
@@ -156,7 +163,7 @@ export function useCurrentUser(): QueryResult<User> {
  * ```
  */
 export function useUserById(id: string): QueryResult<User> {
-  const { data, loading, error, refetch } = useQuery(GET_USER_BY_ID, {
+  const { data, loading, error, refetch } = useQuery<GetUserByIdResponse>(GET_USER_BY_ID, {
     variables: { id },
     skip: !id,
     errorPolicy: 'all',
@@ -194,7 +201,7 @@ export function useUserById(id: string): QueryResult<User> {
  * ```
  */
 export function useUpdateProfile(): MutationResult<User, { input: UpdateProfileInput }> {
-  const [updateProfileMutation, { loading, error, reset }] = useMutation(UPDATE_PROFILE, {
+  const [updateProfileMutation, { loading, error, reset }] = useMutation<UpdateProfileResponse>(UPDATE_PROFILE, {
     errorPolicy: 'all',
     // Optimistic response for immediate UI updates
     optimisticResponse: (variables: { input: UpdateProfileInput }) => ({
@@ -209,9 +216,9 @@ export function useUpdateProfile(): MutationResult<User, { input: UpdateProfileI
       },
     }),
     // Update cache after successful mutation
-    update: (cache: any, { data }: { data?: any }) => {
+    update: (cache: ApolloCache<unknown>, { data }: FetchResult<UpdateProfileResponse>) => {
       if (data?.updateProfile) {
-        cache.updateQuery({ query: GET_CURRENT_USER }, (existingData: { currentUser?: User } | undefined) => {
+        cache.updateQuery<GetCurrentUserResponse>({ query: GET_CURRENT_USER }, (existingData) => {
           if (!existingData?.currentUser) return existingData;
           
           return {
@@ -263,7 +270,7 @@ export function useUpdateProfile(): MutationResult<User, { input: UpdateProfileI
  * ```
  */
 export function useNotificationPreferences(): MutationResult<User, { input: UpdateNotificationPreferencesInput }> {
-  const [updatePreferencesMutation, { loading, error, reset }] = useMutation(
+  const [updatePreferencesMutation, { loading, error, reset }] = useMutation<UpdateNotificationPreferencesResponse>(
     UPDATE_NOTIFICATION_PREFERENCES,
     {
       errorPolicy: 'all',
@@ -285,9 +292,9 @@ export function useNotificationPreferences(): MutationResult<User, { input: Upda
         },
       }),
       // Update cache after successful mutation
-      update: (cache: any, { data }: { data?: any }) => {
+      update: (cache: ApolloCache<unknown>, { data }: FetchResult<UpdateNotificationPreferencesResponse>) => {
         if (data?.updateNotificationPreferences) {
-          cache.updateQuery({ query: GET_CURRENT_USER }, (existingData: { currentUser?: User } | undefined) => {
+          cache.updateQuery<GetCurrentUserResponse>({ query: GET_CURRENT_USER }, (existingData) => {
             if (!existingData?.currentUser) return existingData;
             
             return {

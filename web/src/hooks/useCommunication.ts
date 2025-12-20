@@ -5,8 +5,9 @@
  * discussions, announcements, and real-time chat functionality.
  */
 
-import { useQuery, useMutation, useSubscription } from '@apollo/client';
+import { useQuery, useMutation, useSubscription } from '@apollo/client/react';
 import { gql } from '@apollo/client';
+import type { ApolloCache, FetchResult } from '@apollo/client';
 import { useState, useCallback, useRef, useEffect } from 'react';
 import type {
   Message,
@@ -764,7 +765,7 @@ export function useCreateThread(): MutationResult<DiscussionThread, { input: Cre
   const [createThreadMutation, { loading, error, reset }] = useMutation<CreateThreadResponse>(CREATE_THREAD, {
     errorPolicy: 'all',
     // Update cache after successful creation
-    update: (cache, { data }) => {
+    update: (cache: ApolloCache<unknown>, { data }: FetchResult<CreateThreadResponse>) => {
       if (data?.createDiscussionThread) {
         const courseId = data.createDiscussionThread.course.id;
         
@@ -849,7 +850,7 @@ export function useReplyToThread(): MutationResult<DiscussionReply, { input: Rep
   const [replyToThreadMutation, { loading, error, reset }] = useMutation<ReplyToThreadResponse>(REPLY_TO_THREAD, {
     errorPolicy: 'all',
     // Update cache after successful reply
-    update: (cache, { data }) => {
+    update: (cache: ApolloCache<unknown>, { data }: FetchResult<ReplyToThreadResponse>) => {
       if (data?.replyToThread) {
         const threadId = data.replyToThread.thread.id;
         

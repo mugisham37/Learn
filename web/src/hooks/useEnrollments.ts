@@ -5,8 +5,9 @@
  * progress tracking, and lesson completion.
  */
 
-import { useQuery, useMutation } from '@apollo/client';
+import { useQuery, useMutation } from '@apollo/client/react';
 import { gql } from '@apollo/client';
+import type { ApolloCache, FetchResult } from '@apollo/client';
 import type {
   Enrollment,
   EnrollmentFilter,
@@ -329,7 +330,7 @@ export function useEnrollInCourse(): MutationResult<Enrollment, { input: EnrollI
   const [enrollInCourseMutation, { loading, error, reset }] = useMutation<EnrollInCourseResponse>(ENROLL_IN_COURSE, {
     errorPolicy: 'all',
     // Update cache after successful enrollment
-    update: (cache, { data }) => {
+    update: (cache: ApolloCache<unknown>, { data }: FetchResult<EnrollInCourseResponse>) => {
       if (data?.enrollInCourse) {
         // Add to my enrollments list
         cache.updateQuery<GetMyEnrollmentsResponse>(
@@ -452,7 +453,7 @@ export function useUpdateLessonProgress(): MutationResult<LessonProgress, { inpu
         },
       }),
       // Update cache after successful mutation
-      update: (cache, { data }) => {
+      update: (cache: ApolloCache<unknown>, { data }: FetchResult<UpdateLessonProgressResponse>) => {
         if (data?.updateLessonProgress) {
           const enrollmentId = data.updateLessonProgress.enrollment.id;
           

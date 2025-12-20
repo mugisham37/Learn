@@ -5,8 +5,9 @@
  * assignment submissions, and grading workflows.
  */
 
-import { useQuery, useMutation } from '@apollo/client';
+import { useQuery, useMutation } from '@apollo/client/react';
 import { gql } from '@apollo/client';
+import type { ApolloCache, FetchResult } from '@apollo/client';
 import { useState, useCallback, useRef, useEffect } from 'react';
 import type {
   Quiz,
@@ -317,9 +318,12 @@ export function useStartQuiz(): MutationResult<QuizAttempt, { input: StartQuizIn
     errorPolicy: 'all',
   });
 
-  const mutate = useCallback(async (variables: { input: StartQuizInput }) => {
+  const mutate = useCallback(async (variables: { input: StartQuizInput }): Promise<QuizAttempt> => {
     const result = await startQuizMutation({ variables });
-    return result.data?.startQuiz;
+    if (!result.data?.startQuiz) {
+      throw new Error('Failed to start quiz');
+    }
+    return result.data.startQuiz;
   }, [startQuizMutation]);
 
   return {
@@ -519,7 +523,7 @@ export function useSubmitAssignment(): MutationResult<AssignmentSubmission, { in
   const [submitAssignmentMutation, { loading, error, reset }] = useMutation<SubmitAssignmentResponse>(SUBMIT_ASSIGNMENT, {
     errorPolicy: 'all',
     // Update cache after successful submission
-    update: (cache, { data }) => {
+    update: (cache: ApolloCache<unknown>, { data }: FetchResult<SubmitAssignmentResponse>) => {
       if (data?.submitAssignment) {
         const assignmentId = data.submitAssignment.assignment.id;
         
@@ -607,7 +611,7 @@ export function useGradeAssignment(): MutationResult<AssignmentSubmission, { inp
   const [gradeAssignmentMutation, { loading, error, reset }] = useMutation<GradeAssignmentResponse>(GRADE_ASSIGNMENT, {
     errorPolicy: 'all',
     // Update cache after successful grading
-    update: (cache, { data }) => {
+    update: (cache: ApolloCache<unknown>, { data }: FetchResult<GradeAssignmentResponse>) => {
       if (data?.gradeAssignment) {
         // Update submission in cache
         cache.modify({

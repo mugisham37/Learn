@@ -5,8 +5,9 @@
  * filtering, pagination, and educator course management.
  */
 
-import { useQuery, useMutation } from '@apollo/client';
+import { useQuery, useMutation } from '@apollo/client/react';
 import { gql } from '@apollo/client';
+import type { ApolloCache, FetchResult } from '@apollo/client';
 import type {
   Course,
   CourseFilter,
@@ -386,7 +387,7 @@ export function useCreateCourse(): MutationResult<Course, { input: CreateCourseI
   const [createCourseMutation, { loading, error, reset }] = useMutation<CreateCourseResponse>(CREATE_COURSE, {
     errorPolicy: 'all',
     // Update cache after successful creation
-    update: (cache, { data }) => {
+    update: (cache: ApolloCache<unknown>, { data }: FetchResult<CreateCourseResponse>) => {
       if (data?.createCourse) {
         // Add to my courses list
         cache.updateQuery<GetMyCoursesResponse>(
@@ -463,7 +464,7 @@ export function useUpdateCourse(): MutationResult<Course, { id: string; input: U
       },
     }),
     // Update cache after successful mutation
-    update: (cache, { data }) => {
+    update: (cache: ApolloCache<unknown>, { data }: FetchResult<UpdateCourseResponse>) => {
       if (data?.updateCourse) {
         // Update course in cache
         cache.updateQuery<GetCourseResponse>(
@@ -536,7 +537,7 @@ export function usePublishCourse(): MutationResult<Course, { id: string }> {
       },
     }),
     // Update cache after successful mutation
-    update: (cache, { data }) => {
+    update: (cache: ApolloCache<unknown>, { data }: FetchResult<PublishCourseResponse>) => {
       if (data?.publishCourse) {
         // Update course status in cache
         cache.updateQuery<GetCourseResponse>(

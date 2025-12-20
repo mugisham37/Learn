@@ -8,6 +8,9 @@
 // Re-export generated GraphQL types
 export * from './schema';
 
+// Re-export GraphQL response types
+export * from './graphql-responses';
+
 // Re-export domain entity types (with explicit re-exports to avoid conflicts)
 export type {
   ID,

@@ -125,7 +125,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         // Extract user from valid token
         const user = tokenManager.getUserFromToken(accessToken);
         if (user && typeof user === 'object' && 'id' in user) {
-          dispatch({ type: 'AUTH_SUCCESS', payload: { user: user as User } });
+          dispatch({ type: 'AUTH_SUCCESS', payload: { user: user as unknown as User } });
           return;
         }
       }
@@ -137,7 +137,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
           const newAccessToken = await tokenManager.refreshAccessToken();
           const user = tokenManager.getUserFromToken(newAccessToken);
           if (user && typeof user === 'object' && 'id' in user) {
-            dispatch({ type: 'AUTH_SUCCESS', payload: { user: user as User } });
+            dispatch({ type: 'AUTH_SUCCESS', payload: { user: user as unknown as User } });
             return;
           }
         } catch (refreshError) {
