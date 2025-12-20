@@ -319,10 +319,13 @@ export function useStreamingUrl(): MutationResult<StreamingUrl> {
     errorPolicy: 'all',
   });
 
-  const mutate = useCallback(async (variables: unknown) => {
+  const mutate = useCallback(async (variables: unknown): Promise<StreamingUrl> => {
     const typedVariables = variables as { fileKey: string; quality?: string };
     const result = await getStreamingUrlMutation({ variables: typedVariables });
-    return result.data?.getStreamingUrl;
+    if (!result.data?.getStreamingUrl) {
+      throw new Error('Failed to get streaming URL');
+    }
+    return result.data.getStreamingUrl;
   }, [getStreamingUrlMutation]);
 
   return {

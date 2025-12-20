@@ -6,8 +6,7 @@
  */
 
 import { useQuery, useMutation } from '@apollo/client/react';
-import { gql } from '@apollo/client';
-import type { ApolloCache, FetchResult } from '@apollo/client';
+import { gql, type ApolloCache, type MutationResult as ApolloMutationResult } from '@apollo/client';
 import type {
   User,
   UpdateProfileInput,
@@ -203,22 +202,10 @@ export function useUserById(id: string): QueryResult<User> {
 export function useUpdateProfile(): MutationResult<User, { input: UpdateProfileInput }> {
   const [updateProfileMutation, { loading, error, reset }] = useMutation<UpdateProfileResponse>(UPDATE_PROFILE, {
     errorPolicy: 'all',
-    // Optimistic response for immediate UI updates
-    optimisticResponse: (variables: { input: UpdateProfileInput }) => ({
-      updateProfile: {
-        __typename: 'User',
-        id: 'temp-id', // Will be replaced by real response
-        profile: {
-          __typename: 'UserProfile',
-          ...variables.input,
-        },
-        updatedAt: new Date().toISOString(),
-      },
-    }),
     // Update cache after successful mutation
-    update: (cache: ApolloCache<unknown>, { data }: FetchResult<UpdateProfileResponse>) => {
+    update: (cache: ApolloCache, { data }: ApolloMutationResult<UpdateProfileResponse>) => {
       if (data?.updateProfile) {
-        cache.updateQuery<GetCurrentUserResponse>({ query: GET_CURRENT_USER }, (existingData) => {
+        cache.updateQuery<GetCurrentUserResponse>({ query: GET_CURRENT_USER }, (existingData: GetCurrentUserResponse | null) => {
           if (!existingData?.currentUser) return existingData;
           
           return {
@@ -236,9 +223,12 @@ export function useUpdateProfile(): MutationResult<User, { input: UpdateProfileI
     },
   });
 
-  const mutate = async (variables: { input: UpdateProfileInput }) => {
+  const mutate = async (variables: { input: UpdateProfileInput }): Promise<User> => {
     const result = await updateProfileMutation({ variables });
-    return result.data?.updateProfile;
+    if (!result.data?.updateProfile) {
+      throw new Error('Failed to update profile');
+    }
+    return result.data.updateProfile;
   };
 
   return {
@@ -274,27 +264,10 @@ export function useNotificationPreferences(): MutationResult<User, { input: Upda
     UPDATE_NOTIFICATION_PREFERENCES,
     {
       errorPolicy: 'all',
-      // Optimistic response for immediate UI updates
-      optimisticResponse: (variables: { input: UpdateNotificationPreferencesInput }) => ({
-        updateNotificationPreferences: {
-          __typename: 'User',
-          id: 'temp-id',
-          notificationPreferences: {
-            __typename: 'NotificationPreferences',
-            emailNotifications: true,
-            pushNotifications: true,
-            courseUpdates: true,
-            messageNotifications: true,
-            assignmentReminders: true,
-            ...variables.input,
-          },
-          updatedAt: new Date().toISOString(),
-        },
-      }),
       // Update cache after successful mutation
-      update: (cache: ApolloCache<unknown>, { data }: FetchResult<UpdateNotificationPreferencesResponse>) => {
+      update: (cache: ApolloCache, { data }: ApolloMutationResult<UpdateNotificationPreferencesResponse>) => {
         if (data?.updateNotificationPreferences) {
-          cache.updateQuery<GetCurrentUserResponse>({ query: GET_CURRENT_USER }, (existingData) => {
+          cache.updateQuery<GetCurrentUserResponse>({ query: GET_CURRENT_USER }, (existingData: GetCurrentUserResponse | null) => {
             if (!existingData?.currentUser) return existingData;
             
             return {
@@ -313,9 +286,12 @@ export function useNotificationPreferences(): MutationResult<User, { input: Upda
     }
   );
 
-  const mutate = async (variables: { input: UpdateNotificationPreferencesInput }) => {
+  const mutate = async (variables: { input: UpdateNotificationPreferencesInput }): Promise<User> => {
     const result = await updatePreferencesMutation({ variables });
-    return result.data?.updateNotificationPreferences;
+    if (!result.data?.updateNotificationPreferences) {
+      throw new Error('Failed to update notification preferences');
+    }
+    return result.data.updateNotificationPreferences;
   };
 
   return {

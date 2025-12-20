@@ -6,8 +6,7 @@
  */
 
 import { useQuery, useMutation, useSubscription } from '@apollo/client/react';
-import { gql } from '@apollo/client';
-import type { ApolloCache, FetchResult } from '@apollo/client';
+import { gql, type ApolloCache, type MutationResult as ApolloMutationResult } from '@apollo/client';
 import { useState, useCallback, useRef, useEffect } from 'react';
 import type {
   Message,
@@ -515,12 +514,12 @@ export function useChatSession(conversationId: string): ChatSession {
   useSubscription<MessageAddedSubscription>(MESSAGE_SUBSCRIPTION, {
     variables: { conversationId },
     skip: !conversationId,
-    onData: ({ subscriptionData, client }) => {
-      if (subscriptionData.data?.messageAdded) {
+    onData: ({ data, client }) => {
+      if (data.data?.messageAdded) {
         // Update cache with new message
         client.cache.updateQuery<GetConversationMessagesResponse>(
           { query: GET_CONVERSATION_MESSAGES, variables: { conversationId } },
-          (existingData) => {
+          (existingData: GetConversationMessagesResponse | null) => {
             if (!existingData?.conversation?.messages?.edges) return existingData;
             
             return {
@@ -530,8 +529,8 @@ export function useChatSession(conversationId: string): ChatSession {
                   ...existingData.conversation.messages,
                   edges: [
                     {
-                      node: subscriptionData.data.messageAdded,
-                      cursor: subscriptionData.data.messageAdded.id,
+                      node: data.data!.messageAdded,
+                      cursor: data.data!.messageAdded.id,
                       __typename: 'MessageEdge',
                     },
                     ...existingData.conversation.messages.edges,
@@ -549,9 +548,9 @@ export function useChatSession(conversationId: string): ChatSession {
   useSubscription<UserTypingSubscription>(TYPING_SUBSCRIPTION, {
     variables: { conversationId },
     skip: !conversationId,
-    onData: ({ subscriptionData }) => {
-      if (subscriptionData.data?.userTyping) {
-        const { userId, isTyping } = subscriptionData.data.userTyping;
+    onData: ({ data }) => {
+      if (data.data?.userTyping) {
+        const { userId, isTyping } = data.data.userTyping;
         
         setTypingUsers(prev => {
           if (isTyping) {
@@ -592,7 +591,7 @@ export function useChatSession(conversationId: string): ChatSession {
               profile: {
                 __typename: 'UserProfile',
                 fullName: 'You',
-                avatarUrl: null,
+                avatarUrl: '',
               },
             },
             conversation: {
@@ -765,14 +764,14 @@ export function useCreateThread(): MutationResult<DiscussionThread, { input: Cre
   const [createThreadMutation, { loading, error, reset }] = useMutation<CreateThreadResponse>(CREATE_THREAD, {
     errorPolicy: 'all',
     // Update cache after successful creation
-    update: (cache: ApolloCache<unknown>, { data }: FetchResult<CreateThreadResponse>) => {
+    update: (cache: ApolloCache, { data }: ApolloMutationResult<CreateThreadResponse>) => {
       if (data?.createDiscussionThread) {
         const courseId = data.createDiscussionThread.course.id;
         
         // Add to threads list
         cache.updateQuery<GetDiscussionThreadsResponse>(
           { query: GET_DISCUSSION_THREADS, variables: { courseId } },
-          (existingData) => {
+          (existingData: GetDiscussionThreadsResponse | null) => {
             if (!existingData?.discussionThreads) return existingData;
             
             return {
@@ -795,9 +794,12 @@ export function useCreateThread(): MutationResult<DiscussionThread, { input: Cre
     },
   });
 
-  const mutate = useCallback(async (variables: { input: CreateThreadInput }) => {
+  const mutate = useCallback(async (variables: { input: CreateThreadInput }): Promise<DiscussionThread> => {
     const result = await createThreadMutation({ variables });
-    return result.data?.createDiscussionThread;
+    if (!result.data?.createDiscussionThread) {
+      throw new Error('Failed to create thread');
+    }
+    return result.data.createDiscussionThread;
   }, [createThreadMutation]);
 
   return {
@@ -850,14 +852,14 @@ export function useReplyToThread(): MutationResult<DiscussionReply, { input: Rep
   const [replyToThreadMutation, { loading, error, reset }] = useMutation<ReplyToThreadResponse>(REPLY_TO_THREAD, {
     errorPolicy: 'all',
     // Update cache after successful reply
-    update: (cache: ApolloCache<unknown>, { data }: FetchResult<ReplyToThreadResponse>) => {
+    update: (cache: ApolloCache, { data }: ApolloMutationResult<ReplyToThreadResponse>) => {
       if (data?.replyToThread) {
         const threadId = data.replyToThread.thread.id;
         
         // Add to thread replies
         cache.updateQuery<GetThreadRepliesResponse>(
           { query: GET_THREAD_REPLIES, variables: { threadId } },
-          (existingData) => {
+          (existingData: GetThreadRepliesResponse | null) => {
             if (!existingData?.discussionThread?.replies?.edges) return existingData;
             
             return {
@@ -890,9 +892,12 @@ export function useReplyToThread(): MutationResult<DiscussionReply, { input: Rep
     },
   });
 
-  const mutate = useCallback(async (variables: { input: ReplyToThreadInput }) => {
+  const mutate = useCallback(async (variables: { input: ReplyToThreadInput }): Promise<DiscussionReply> => {
     const result = await replyToThreadMutation({ variables });
-    return result.data?.replyToThread;
+    if (!result.data?.replyToThread) {
+      throw new Error('Failed to reply to thread');
+    }
+    return result.data.replyToThread;
   }, [replyToThreadMutation]);
 
   return {

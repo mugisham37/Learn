@@ -6,8 +6,7 @@
  */
 
 import { useQuery, useMutation } from '@apollo/client/react';
-import { gql } from '@apollo/client';
-import type { ApolloCache, FetchResult } from '@apollo/client';
+import { gql, type ApolloCache, type MutationResult as ApolloMutationResult } from '@apollo/client';
 import type {
   Enrollment,
   EnrollmentFilter,
@@ -330,12 +329,12 @@ export function useEnrollInCourse(): MutationResult<Enrollment, { input: EnrollI
   const [enrollInCourseMutation, { loading, error, reset }] = useMutation<EnrollInCourseResponse>(ENROLL_IN_COURSE, {
     errorPolicy: 'all',
     // Update cache after successful enrollment
-    update: (cache: ApolloCache<unknown>, { data }: FetchResult<EnrollInCourseResponse>) => {
+    update: (cache: ApolloCache, { data }: ApolloMutationResult<EnrollInCourseResponse>) => {
       if (data?.enrollInCourse) {
         // Add to my enrollments list
         cache.updateQuery<GetMyEnrollmentsResponse>(
           { query: GET_MY_ENROLLMENTS, variables: {} },
-          (existingData) => {
+          (existingData: GetMyEnrollmentsResponse | null) => {
             if (!existingData?.myEnrollments) return existingData;
             
             return {
@@ -369,9 +368,12 @@ export function useEnrollInCourse(): MutationResult<Enrollment, { input: EnrollI
     },
   });
 
-  const mutate = async (variables: { input: EnrollInCourseInput }) => {
+  const mutate = async (variables: { input: EnrollInCourseInput }): Promise<Enrollment> => {
     const result = await enrollInCourseMutation({ variables });
-    return result.data?.enrollInCourse;
+    if (!result.data?.enrollInCourse) {
+      throw new Error('Failed to enroll in course');
+    }
+    return result.data.enrollInCourse;
   };
 
   return {
@@ -429,38 +431,15 @@ export function useUpdateLessonProgress(): MutationResult<LessonProgress, { inpu
     UPDATE_LESSON_PROGRESS,
     {
       errorPolicy: 'all',
-      // Optimistic response for immediate UI updates
-      optimisticResponse: (variables: { input: UpdateLessonProgressInput }) => ({
-        updateLessonProgress: {
-          __typename: 'LessonProgress',
-          id: `temp-${variables.input.lessonId}`,
-          lesson: {
-            __typename: 'Lesson',
-            id: variables.input.lessonId,
-            title: 'Loading...',
-          },
-          completedAt: variables.input.completedAt || null,
-          timeSpent: variables.input.timeSpent || 0,
-          isCompleted: variables.input.isCompleted || false,
-          lastAccessedAt: variables.input.lastAccessedAt || new Date().toISOString(),
-          enrollment: {
-            __typename: 'Enrollment',
-            id: variables.input.enrollmentId,
-            progressPercentage: 0, // Will be calculated by server
-            status: 'ACTIVE' as const,
-            completedAt: null,
-          },
-        },
-      }),
       // Update cache after successful mutation
-      update: (cache: ApolloCache<unknown>, { data }: FetchResult<UpdateLessonProgressResponse>) => {
+      update: (cache: ApolloCache, { data }: ApolloMutationResult<UpdateLessonProgressResponse>) => {
         if (data?.updateLessonProgress) {
           const enrollmentId = data.updateLessonProgress.enrollment.id;
           
           // Update enrollment progress in cache
           cache.updateQuery<GetEnrollmentProgressResponse>(
             { query: GET_ENROLLMENT_PROGRESS, variables: { enrollmentId } },
-            (existingData) => {
+            (existingData: GetEnrollmentProgressResponse | null) => {
               if (!existingData?.enrollment) return existingData;
               
               // Update lesson progress in the list
@@ -487,9 +466,12 @@ export function useUpdateLessonProgress(): MutationResult<LessonProgress, { inpu
     }
   );
 
-  const mutate = async (variables: { input: UpdateLessonProgressInput }) => {
+  const mutate = async (variables: { input: UpdateLessonProgressInput }): Promise<LessonProgress> => {
     const result = await updateProgressMutation({ variables });
-    return result.data?.updateLessonProgress;
+    if (!result.data?.updateLessonProgress) {
+      throw new Error('Failed to update lesson progress');
+    }
+    return result.data.updateLessonProgress;
   };
 
   return {

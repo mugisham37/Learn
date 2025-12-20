@@ -6,8 +6,7 @@
  */
 
 import { useQuery, useMutation } from '@apollo/client/react';
-import { gql } from '@apollo/client';
-import type { ApolloCache, FetchResult } from '@apollo/client';
+import { gql, type ApolloCache, type MutationResult as ApolloMutationResult } from '@apollo/client';
 import type {
   Course,
   CourseFilter,
@@ -387,12 +386,12 @@ export function useCreateCourse(): MutationResult<Course, { input: CreateCourseI
   const [createCourseMutation, { loading, error, reset }] = useMutation<CreateCourseResponse>(CREATE_COURSE, {
     errorPolicy: 'all',
     // Update cache after successful creation
-    update: (cache: ApolloCache<unknown>, { data }: FetchResult<CreateCourseResponse>) => {
+    update: (cache: ApolloCache, { data }: ApolloMutationResult<CreateCourseResponse>) => {
       if (data?.createCourse) {
         // Add to my courses list
         cache.updateQuery<GetMyCoursesResponse>(
           { query: GET_MY_COURSES, variables: {} },
-          (existingData) => {
+          (existingData: GetMyCoursesResponse | null) => {
             if (!existingData?.myCourses) return existingData;
             
             return {
@@ -415,9 +414,12 @@ export function useCreateCourse(): MutationResult<Course, { input: CreateCourseI
     },
   });
 
-  const mutate = async (variables: { input: CreateCourseInput }) => {
+  const mutate = async (variables: { input: CreateCourseInput }): Promise<Course> => {
     const result = await createCourseMutation({ variables });
-    return result.data?.createCourse;
+    if (!result.data?.createCourse) {
+      throw new Error('Failed to create course');
+    }
+    return result.data.createCourse;
   };
 
   return {
@@ -454,22 +456,13 @@ export function useCreateCourse(): MutationResult<Course, { input: CreateCourseI
 export function useUpdateCourse(): MutationResult<Course, { id: string; input: UpdateCourseInput }> {
   const [updateCourseMutation, { loading, error, reset }] = useMutation<UpdateCourseResponse>(UPDATE_COURSE, {
     errorPolicy: 'all',
-    // Optimistic response for immediate UI updates
-    optimisticResponse: (variables: { id: string; input: UpdateCourseInput }) => ({
-      updateCourse: {
-        __typename: 'Course',
-        id: variables.id,
-        ...variables.input,
-        updatedAt: new Date().toISOString(),
-      },
-    }),
     // Update cache after successful mutation
-    update: (cache: ApolloCache<unknown>, { data }: FetchResult<UpdateCourseResponse>) => {
+    update: (cache: ApolloCache, { data }: ApolloMutationResult<UpdateCourseResponse>) => {
       if (data?.updateCourse) {
         // Update course in cache
         cache.updateQuery<GetCourseResponse>(
           { query: GET_COURSE, variables: { id: data.updateCourse.id } },
-          (existingData) => {
+          (existingData: GetCourseResponse | null) => {
             if (!existingData?.course) return existingData;
             
             return {
@@ -484,9 +477,12 @@ export function useUpdateCourse(): MutationResult<Course, { id: string; input: U
     },
   });
 
-  const mutate = async (variables: { id: string; input: UpdateCourseInput }) => {
+  const mutate = async (variables: { id: string; input: UpdateCourseInput }): Promise<Course> => {
     const result = await updateCourseMutation({ variables });
-    return result.data?.updateCourse;
+    if (!result.data?.updateCourse) {
+      throw new Error('Failed to update course');
+    }
+    return result.data.updateCourse;
   };
 
   return {
@@ -527,22 +523,13 @@ export function useUpdateCourse(): MutationResult<Course, { id: string; input: U
 export function usePublishCourse(): MutationResult<Course, { id: string }> {
   const [publishCourseMutation, { loading, error, reset }] = useMutation<PublishCourseResponse>(PUBLISH_COURSE, {
     errorPolicy: 'all',
-    // Optimistic response for immediate UI updates
-    optimisticResponse: (variables: { id: string }) => ({
-      publishCourse: {
-        __typename: 'Course',
-        id: variables.id,
-        status: 'PUBLISHED' as CourseStatus,
-        updatedAt: new Date().toISOString(),
-      },
-    }),
     // Update cache after successful mutation
-    update: (cache: ApolloCache<unknown>, { data }: FetchResult<PublishCourseResponse>) => {
+    update: (cache: ApolloCache, { data }: ApolloMutationResult<PublishCourseResponse>) => {
       if (data?.publishCourse) {
         // Update course status in cache
         cache.updateQuery<GetCourseResponse>(
           { query: GET_COURSE, variables: { id: data.publishCourse.id } },
-          (existingData) => {
+          (existingData: GetCourseResponse | null) => {
             if (!existingData?.course) return existingData;
             
             return {
@@ -558,9 +545,12 @@ export function usePublishCourse(): MutationResult<Course, { id: string }> {
     },
   });
 
-  const mutate = async (variables: { id: string }) => {
+  const mutate = async (variables: { id: string }): Promise<Course> => {
     const result = await publishCourseMutation({ variables });
-    return result.data?.publishCourse;
+    if (!result.data?.publishCourse) {
+      throw new Error('Failed to publish course');
+    }
+    return result.data.publishCourse;
   };
 
   return {

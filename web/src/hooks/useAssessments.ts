@@ -6,8 +6,7 @@
  */
 
 import { useQuery, useMutation } from '@apollo/client/react';
-import { gql } from '@apollo/client';
-import type { ApolloCache, FetchResult } from '@apollo/client';
+import { gql, type ApolloCache } from '@apollo/client';
 import { useState, useCallback, useRef, useEffect } from 'react';
 import type {
   Quiz,
@@ -393,12 +392,19 @@ export function useQuizSession(attemptId: string): QuizSession {
     variables: { id: attemptId },
     skip: !attemptId,
     errorPolicy: 'all',
-    onCompleted: (data: GetQuizAttemptResponse) => {
-      if (data?.quizAttempt?.timeRemaining) {
-        setTimeRemaining(data.quizAttempt.timeRemaining);
-      }
-    },
   });
+
+  // Set initial time remaining when data loads
+  useEffect(() => {
+    if (attemptData?.quizAttempt?.timeRemaining !== undefined) {
+      setTimeRemaining(prev => {
+        // Only update if the value has actually changed to avoid cascading renders
+        return prev !== attemptData.quizAttempt.timeRemaining 
+          ? attemptData.quizAttempt.timeRemaining 
+          : prev;
+      });
+    }
+  }, [attemptData?.quizAttempt?.timeRemaining]);
 
   // Timer management
   useEffect(() => {
@@ -457,11 +463,17 @@ export function useQuizSession(attemptId: string): QuizSession {
   }, [attemptId, submitQuizMutation]);
 
   return {
-    attempt: attemptData?.quizAttempt,
+    attempt: attemptData?.quizAttempt || null,
     timeRemaining,
     autoSave: true,
     submitAnswer,
-    submitQuiz,
+    submitQuiz: async () => {
+      const result = await submitQuiz();
+      if (!result) {
+        throw new Error('Failed to submit quiz');
+      }
+      return result;
+    },
     loading: loading || submitLoading,
     error: error || submitError,
   };
@@ -523,14 +535,14 @@ export function useSubmitAssignment(): MutationResult<AssignmentSubmission, { in
   const [submitAssignmentMutation, { loading, error, reset }] = useMutation<SubmitAssignmentResponse>(SUBMIT_ASSIGNMENT, {
     errorPolicy: 'all',
     // Update cache after successful submission
-    update: (cache: ApolloCache<unknown>, { data }: FetchResult<SubmitAssignmentResponse>) => {
+    update: (cache: ApolloCache, { data }: ApolloMutationResult<SubmitAssignmentResponse>) => {
       if (data?.submitAssignment) {
         const assignmentId = data.submitAssignment.assignment.id;
         
         // Update assignment submissions list
         cache.updateQuery<GetAssignmentResponse>(
           { query: GET_ASSIGNMENT, variables: { id: assignmentId } },
-          (existingData) => {
+          (existingData: GetAssignmentResponse | null) => {
             if (!existingData?.assignment) return existingData;
             
             return {
@@ -548,9 +560,12 @@ export function useSubmitAssignment(): MutationResult<AssignmentSubmission, { in
     },
   });
 
-  const mutate = useCallback(async (variables: { input: SubmitAssignmentInput }) => {
+  const mutate = useCallback(async (variables: { input: SubmitAssignmentInput }): Promise<AssignmentSubmission> => {
     const result = await submitAssignmentMutation({ variables });
-    return result.data?.submitAssignment;
+    if (!result.data?.submitAssignment) {
+      throw new Error('Failed to submit assignment');
+    }
+    return result.data.submitAssignment;
   }, [submitAssignmentMutation]);
 
   return {
@@ -611,7 +626,7 @@ export function useGradeAssignment(): MutationResult<AssignmentSubmission, { inp
   const [gradeAssignmentMutation, { loading, error, reset }] = useMutation<GradeAssignmentResponse>(GRADE_ASSIGNMENT, {
     errorPolicy: 'all',
     // Update cache after successful grading
-    update: (cache: ApolloCache<unknown>, { data }: FetchResult<GradeAssignmentResponse>) => {
+    update: (cache: ApolloCache, { data }: ApolloMutationResult<GradeAssignmentResponse>) => {
       if (data?.gradeAssignment) {
         // Update submission in cache
         cache.modify({
@@ -628,9 +643,12 @@ export function useGradeAssignment(): MutationResult<AssignmentSubmission, { inp
     },
   });
 
-  const mutate = useCallback(async (variables: { input: GradeAssignmentInput }) => {
+  const mutate = useCallback(async (variables: { input: GradeAssignmentInput }): Promise<AssignmentSubmission> => {
     const result = await gradeAssignmentMutation({ variables });
-    return result.data?.gradeAssignment;
+    if (!result.data?.gradeAssignment) {
+      throw new Error('Failed to grade assignment');
+    }
+    return result.data.gradeAssignment;
   }, [gradeAssignmentMutation]);
 
   return {
