@@ -112,6 +112,46 @@ export interface UpdateNotificationPreferencesResponse {
   updateNotificationPreferences: User;
 }
 
+// Authentication responses
+export interface LoginResponse {
+  login: {
+    accessToken: string;
+    refreshToken: string;
+    user: User;
+  };
+}
+
+export interface RegisterResponse {
+  register: {
+    accessToken: string;
+    refreshToken: string;
+    user: User;
+  };
+}
+
+export interface LogoutResponse {
+  logout: boolean;
+}
+
+export interface VerifyEmailResponse {
+  verifyEmail: boolean;
+}
+
+export interface RequestPasswordResetResponse {
+  requestPasswordReset: boolean;
+}
+
+export interface ResetPasswordResponse {
+  resetPassword: boolean;
+}
+
+export interface RefreshTokenResponse {
+  refreshToken: {
+    accessToken: string;
+    refreshToken: string;
+  };
+}
+
 // Communication responses
 export interface GetConversationsResponse {
   conversations: ConversationConnection;

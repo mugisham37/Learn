@@ -12,6 +12,17 @@ export {
   useUserById,
   useUpdateProfile,
   useNotificationPreferences,
+  // Authentication Hooks
+  useLogin,
+  useRegister,
+  useLogout,
+  useVerifyEmail,
+  useRequestPasswordReset,
+  useResetPassword,
+  useRefreshToken,
+  // Permission and Role Hooks
+  useUserPermissions,
+  useUserOwnership,
 } from './useUsers';
 
 // Course Management Hooks
