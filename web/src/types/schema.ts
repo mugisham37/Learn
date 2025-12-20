@@ -17,7 +17,6 @@ export type MakeEmpty<T extends { [key: string]: unknown }, K extends keyof T> =
 export type Incremental<T> =
   | T
   | { [P in keyof T]?: P extends ' $fragmentName' | '__typename' ? T[P] : never };
-const defaultOptions = {} as const;
 /** All built-in and custom scalars, mapped to their actual values */
 export type Scalars = {
   ID: { input: string; output: string };
@@ -140,7 +139,7 @@ export function useGetCurrentUserQuery(
     GetCurrentUserQueryVariables
   >
 ) {
-  const options = { ...defaultOptions, ...baseOptions };
+  const options = baseOptions || {};
   return useQuery<GetCurrentUserQueryResult, GetCurrentUserQueryVariables>(
     GetCurrentUserDocument,
     options
@@ -152,7 +151,7 @@ export function useGetCurrentUserLazyQuery(
     GetCurrentUserQueryVariables
   >
 ) {
-  const options = { ...defaultOptions, ...baseOptions };
+  const options = baseOptions || {};
   return useLazyQuery<GetCurrentUserQueryResult, GetCurrentUserQueryVariables>(
     GetCurrentUserDocument,
     options
@@ -188,7 +187,7 @@ export const GetCoursesDocument = gql`
 export function useGetCoursesQuery(
   baseOptions?: ApolloReactCommon.QueryOptions<GetCoursesQueryResult, GetCoursesQueryVariables>
 ) {
-  const options = { ...defaultOptions, ...baseOptions };
+  const options = baseOptions || {};
   return useQuery<GetCoursesQueryResult, GetCoursesQueryVariables>(
     GetCoursesDocument,
     options
@@ -200,7 +199,7 @@ export function useGetCoursesLazyQuery(
     GetCoursesQueryVariables
   >
 ) {
-  const options = { ...defaultOptions, ...baseOptions };
+  const options = baseOptions || {};
   return useLazyQuery<GetCoursesQueryResult, GetCoursesQueryVariables>(
     GetCoursesDocument,
     options
@@ -240,7 +239,7 @@ export type LoginMutationFn = ReturnType<typeof useLoginMutation>[0];
 export function useLoginMutation(
   baseOptions?: ApolloReactCommon.MutationOptions<LoginMutationResult, LoginMutationVariables>
 ) {
-  const options = { ...defaultOptions, ...baseOptions };
+  const options = baseOptions || {};
   return useMutation<LoginMutationResult, LoginMutationVariables>(
     LoginDocument,
     options
@@ -282,7 +281,7 @@ export function useCreateCourseMutation(
     CreateCourseMutationVariables
   >
 ) {
-  const options = { ...defaultOptions, ...baseOptions };
+  const options = baseOptions || {};
   return useMutation<CreateCourseMutationResult, CreateCourseMutationVariables>(
     CreateCourseDocument,
     options
@@ -321,7 +320,7 @@ export function useMessageUpdatesSubscription(
     MessageUpdatesSubscriptionVariables
   >
 ) {
-  const options = { ...defaultOptions, ...baseOptions };
+  const options = baseOptions || {};
   return useSubscription<
     MessageUpdatesSubscriptionResult,
     MessageUpdatesSubscriptionVariables
@@ -356,7 +355,7 @@ export function useProgressUpdatesSubscription(
     ProgressUpdatesSubscriptionVariables
   >
 ) {
-  const options = { ...defaultOptions, ...baseOptions };
+  const options = baseOptions || {};
   return useSubscription<
     ProgressUpdatesSubscriptionResult,
     ProgressUpdatesSubscriptionVariables
