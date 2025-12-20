@@ -19,16 +19,10 @@ import type {
   Quiz,
   Assignment,
   QuizAttempt,
-  QuizAttemptStatus,
   AssignmentSubmission,
-  AssignmentSubmissionStatus,
-  Message,
-  DiscussionThread,
-  DiscussionReply,
   VideoProcessingStatus,
   Connection,
   Edge,
-  PageInfo
 } from '@/types/entities';
 
 // =============================================================================
@@ -406,7 +400,7 @@ export function assertLessonType<T extends LessonType>(
 /**
  * Validate that an object has required properties
  */
-export function validateRequiredProperties<T extends Record<string, any>>(
+export function validateRequiredProperties<T extends Record<string, unknown>>(
   obj: T,
   requiredProps: (keyof T)[],
   objectName = 'object'
@@ -435,23 +429,25 @@ export function validateEnumValue<T extends string>(
  * Validate that a GraphQL connection is properly formed
  */
 export function validateConnection<T>(
-  connection: any,
+  connection: unknown,
   connectionName = 'connection'
 ): asserts connection is Connection<T> {
   if (!connection || typeof connection !== 'object') {
     throw new Error(`${connectionName} must be an object`);
   }
   
-  if (!Array.isArray(connection.edges)) {
+  const conn = connection as Record<string, unknown>;
+  
+  if (!Array.isArray(conn.edges)) {
     throw new Error(`${connectionName}.edges must be an array`);
   }
   
-  if (!connection.pageInfo || typeof connection.pageInfo !== 'object') {
+  if (!conn.pageInfo || typeof conn.pageInfo !== 'object') {
     throw new Error(`${connectionName}.pageInfo must be an object`);
   }
   
   validateRequiredProperties(
-    connection.pageInfo,
+    conn.pageInfo as Record<string, unknown>,
     ['hasNextPage', 'hasPreviousPage'],
     `${connectionName}.pageInfo`
   );
@@ -485,7 +481,7 @@ export function findNonNull<T>(arr: (T | null | undefined)[]): T | undefined {
 /**
  * Type-safe object key checking
  */
-export function hasProperty<T extends Record<string, any>, K extends string>(
+export function hasProperty<T extends Record<string, unknown>, K extends string>(
   obj: T,
   key: K
 ): obj is T & Record<K, unknown> {
@@ -495,7 +491,7 @@ export function hasProperty<T extends Record<string, any>, K extends string>(
 /**
  * Type-safe property access with default
  */
-export function getProperty<T extends Record<string, any>, K extends keyof T>(
+export function getProperty<T extends Record<string, unknown>, K extends keyof T>(
   obj: T,
   key: K,
   defaultValue: T[K]

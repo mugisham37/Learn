@@ -8,6 +8,7 @@
 import { apolloClient } from './graphql/client';
 import { tokenManager } from './auth/tokenStorage';
 import { config, authConfig, uploadConfig, cacheConfig } from './config';
+import { gql } from '@apollo/client';
 import type { FoundationConfig, InitializationResult } from '@/types';
 
 /**
@@ -185,7 +186,7 @@ async function initializeServices(devMode: boolean): Promise<void> {
   try {
     // Apollo client is already initialized, just verify it's working
     await apolloClient.query({
-      query: require('graphql-tag')`query { __typename }`,
+      query: gql`query { __typename }`,
       errorPolicy: 'ignore',
     });
     foundationState.services.graphql = true;

@@ -21,26 +21,19 @@ export {
   isYesterday,
   startOfDay,
   endOfDay,
-  DateFormatters,
   
   // Currency formatting
   formatCurrency,
   parseCurrency,
-  CurrencyFormatters,
   
   // Duration formatting
   formatDuration,
   parseDuration,
-  DurationFormatters,
   
   // Number formatting
   formatNumber,
   formatPercentage,
   formatFileSize,
-  NumberFormatters,
-  
-  // Combined formatters
-  Formatters,
   
   // Types
   type DateFormatOptions,
@@ -59,11 +52,7 @@ export {
 // =============================================================================
 
 export {
-  // Validation rules
-  ValidationRules,
-  
   // Validation helpers
-  ValidationHelpers,
   validateField,
   validateForm,
   createValidator,
@@ -73,16 +62,9 @@ export {
   getFieldErrorMessage,
   
   // Sanitization
-  SanitizationUtils,
   sanitizeHtml,
   sanitizeInput,
   escapeHtml,
-  
-  // Combined validators
-  Validators,
-  
-  // Schemas
-  ValidationSchemas,
   
   // Types
   type ValidationResult,
@@ -101,7 +83,6 @@ export {
 
 export {
   // Progress calculators
-  ProgressCalculators,
   calculateCourseProgress,
   calculateModuleProgress,
   calculateLessonCompletionPercentage,
@@ -129,10 +110,6 @@ export {
 
 export {
   // Performance optimization
-  PerformanceUtils,
-  memoize,
-  memoizeAsync,
-  clearMemoizationCaches,
   debounce,
   throttle,
   createRequestDeduplicator,
@@ -140,18 +117,34 @@ export {
   measureAsyncPerformance,
   createBatchProcessor,
   
-  // Enhanced performance utilities
-  GraphQLDeduplicationUtils,
-  MemoizationUtils,
-  LazyLoadingUtils,
-  CacheOptimizationUtils,
-  
   // Types
-  type MemoizeOptions,
   type DebounceOptions,
   type ThrottleOptions,
   type PerformanceMetrics,
 } from './performance';
+
+// =============================================================================
+// Memoization Utilities
+// =============================================================================
+
+export {
+  // Memoization utilities from performance module
+  memoize,
+  memoizeAsync,
+  clearMemoizationCaches,
+  
+  // Types
+  type MemoizeOptions,
+} from './performance';
+
+// =============================================================================
+// Lazy Loading Utilities
+// =============================================================================
+
+export {
+  // Lazy loading utilities
+  createLazyComponent,
+} from './lazyLoading';
 
 // =============================================================================
 // Common Utilities
@@ -197,7 +190,7 @@ export const deepClone = <T>(obj: T): T => {
 /**
  * Checks if two objects are deeply equal
  */
-export const deepEqual = (a: any, b: any): boolean => {
+export const deepEqual = (a: unknown, b: unknown): boolean => {
   if (a === b) return true;
   if (a == null || b == null) return false;
   if (typeof a !== typeof b) return false;
@@ -205,14 +198,14 @@ export const deepEqual = (a: any, b: any): boolean => {
   if (typeof a === 'object') {
     if (Array.isArray(a) !== Array.isArray(b)) return false;
     
-    const keysA = Object.keys(a);
-    const keysB = Object.keys(b);
+    const keysA = Object.keys(a as Record<string, unknown>);
+    const keysB = Object.keys(b as Record<string, unknown>);
     
     if (keysA.length !== keysB.length) return false;
     
     for (const key of keysA) {
       if (!keysB.includes(key)) return false;
-      if (!deepEqual(a[key], b[key])) return false;
+      if (!deepEqual((a as Record<string, unknown>)[key], (b as Record<string, unknown>)[key])) return false;
     }
     
     return true;
@@ -234,7 +227,7 @@ export const capitalize = (str: string): string => {
  */
 export const toTitleCase = (str: string): string => {
   return str.replace(/\w\S*/g, (txt) => 
-    txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase()
+    txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase()
   );
 };
 
@@ -270,7 +263,7 @@ export const truncate = (str: string, length: number, suffix = '...'): string =>
 /**
  * Removes undefined values from an object
  */
-export const removeUndefined = <T extends Record<string, any>>(obj: T): Partial<T> => {
+export const removeUndefined = <T extends Record<string, unknown>>(obj: T): Partial<T> => {
   const result: Partial<T> = {};
   for (const key in obj) {
     if (obj[key] !== undefined) {
@@ -340,8 +333,10 @@ export const chunk = <T>(array: T[], size: number): T[][] => {
 /**
  * Gets a random item from an array
  */
-export const randomItem = <T>(array: T[]): T => {
-  return array[Math.floor(Math.random() * array.length)];
+export const randomItem = <T>(array: T[]): T | undefined => {
+  if (array.length === 0) return undefined;
+  const item = array[Math.floor(Math.random() * array.length)];
+  return item;
 };
 
 /**
@@ -351,7 +346,12 @@ export const shuffle = <T>(array: T[]): T[] => {
   const shuffled = [...array];
   for (let i = shuffled.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    const itemI = shuffled[i];
+    const itemJ = shuffled[j];
+    if (itemI !== undefined && itemJ !== undefined) {
+      shuffled[i] = itemJ;
+      shuffled[j] = itemI;
+    }
   }
   return shuffled;
 };
@@ -414,17 +414,4 @@ export const CommonUtils = {
   shuffle,
   sleep,
   retry,
-};
-
-// Default export with all utilities
-export default {
-  ...Formatters,
-  ...Validators,
-  ...ProgressCalculators,
-  ...PerformanceUtils,
-  ...GraphQLDeduplicationUtils,
-  ...MemoizationUtils,
-  ...LazyLoadingUtils,
-  ...CacheOptimizationUtils,
-  ...CommonUtils,
 };

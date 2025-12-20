@@ -170,7 +170,7 @@ export const formatRelativeDate = memoize((
  */
 export const parseFormattedDate = (
   dateString: string,
-  timezone: string = DEFAULT_TIMEZONE
+  _timezone: string = DEFAULT_TIMEZONE
 ): Date => {
   // Try parsing as ISO string first
   const isoDate = new Date(dateString);
@@ -223,7 +223,7 @@ export const formatCurrency = memoize((
  */
 export const parseCurrency = (
   currencyString: string,
-  locale: string = DEFAULT_LOCALE
+  _locale: string = DEFAULT_LOCALE
 ): number => {
   // Remove currency symbols and parse
   const cleanString = currencyString.replace(/[^\d.,\-+]/g, '');
@@ -274,7 +274,14 @@ export const formatDuration = memoize((
     }
     
     // Stop at specified precision
-    if (unit === precision) break;
+    const precisionMap: Record<string, string> = {
+      'seconds': 'second',
+      'minutes': 'minute', 
+      'hours': 'hour',
+      'days': 'day'
+    };
+    
+    if (precisionMap[precision] === unit) break;
   }
 
   if (parts.length === 0) {
@@ -324,17 +331,24 @@ export const parseDuration = (durationString: string): number => {
   let match;
 
   while ((match = regex.exec(durationString)) !== null) {
-    const value = parseInt(match[1], 10);
-    const unit = match[2].toLowerCase();
+    const valueStr = match[1];
+    const unit = match[2];
+    
+    if (!valueStr || !unit) {
+      continue;
+    }
+    
+    const value = parseInt(valueStr, 10);
+    const unitLower = unit.toLowerCase();
 
     const unitMs = 
-      unit.startsWith('y') ? DURATION_UNITS.year :
-      unit.startsWith('mo') ? DURATION_UNITS.month :
-      unit.startsWith('w') ? DURATION_UNITS.week :
-      unit.startsWith('d') ? DURATION_UNITS.day :
-      unit.startsWith('h') ? DURATION_UNITS.hour :
-      unit.startsWith('m') ? DURATION_UNITS.minute :
-      unit.startsWith('s') ? DURATION_UNITS.second :
+      unitLower.startsWith('y') ? DURATION_UNITS.year :
+      unitLower.startsWith('mo') ? DURATION_UNITS.month :
+      unitLower.startsWith('w') ? DURATION_UNITS.week :
+      unitLower.startsWith('d') ? DURATION_UNITS.day :
+      unitLower.startsWith('h') ? DURATION_UNITS.hour :
+      unitLower.startsWith('m') ? DURATION_UNITS.minute :
+      unitLower.startsWith('s') ? DURATION_UNITS.second :
       0;
 
     if (unitMs === 0) {
@@ -402,7 +416,7 @@ export const formatPercentage = memoize((
  */
 export const formatFileSize = memoize((
   bytes: number,
-  locale: string = DEFAULT_LOCALE
+  _locale: string = DEFAULT_LOCALE
 ): string => {
   if (bytes === 0) return '0 B';
 
@@ -412,7 +426,7 @@ export const formatFileSize = memoize((
   const size = bytes / Math.pow(base, unitIndex);
 
   return `${formatNumber(size, { 
-    locale, 
+    locale: _locale, 
     maximumFractionDigits: unitIndex === 0 ? 0 : 1 
   })} ${units[unitIndex]}`;
 });

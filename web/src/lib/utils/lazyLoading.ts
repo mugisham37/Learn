@@ -28,7 +28,7 @@ export interface LazyLoadOptions {
   loadingComponent?: React.ComponentType<{ progress?: number }>;
 }
 
-export interface DynamicImportOptions<T = any> {
+export interface DynamicImportOptions<T = unknown> {
   /** Loading state component */
   loading?: React.ComponentType;
   /** Error state component */
@@ -38,7 +38,7 @@ export interface DynamicImportOptions<T = any> {
   /** Enable retry on failure */
   retry?: boolean;
   /** Custom module resolver */
-  resolver?: (module: any) => T;
+  resolver?: (module: unknown) => T;
 }
 
 export interface BundleMetrics {
@@ -72,12 +72,11 @@ export interface LazyComponentState {
 /**
  * Creates a lazy-loaded component with enhanced error handling and retry logic
  */
-export function createLazyComponent<TProps = {}>(
+export function createLazyComponent<TProps = Record<string, unknown>>(
   importFn: () => Promise<{ default: ComponentType<TProps> }>,
   options: LazyLoadOptions = {}
 ): LazyExoticComponent<ComponentType<TProps>> {
   const {
-    fallback: FallbackComponent,
     errorBoundary: ErrorBoundaryComponent,
     retryAttempts = 3,
     retryDelay = 1000,
@@ -86,18 +85,18 @@ export function createLazyComponent<TProps = {}>(
   } = options;
 
   let retryCount = 0;
-  let preloadPromise: Promise<any> | null = null;
+  let preloadPromise: Promise<unknown> | null = null;
 
   // Enhanced import function with retry logic
   const enhancedImportFn = async (): Promise<{ default: ComponentType<TProps> }> => {
     try {
       const startTime = performance.now();
-      const module = await importFn();
+      const loadedModule = await importFn();
       const loadTime = performance.now() - startTime;
 
       // Track bundle metrics
       BundleMonitor.getInstance().recordLoad({
-        name: module.default.displayName || module.default.name || 'Anonymous',
+        name: loadedModule.default.displayName || loadedModule.default.name || 'Anonymous',
         size: 0, // Would need webpack plugin to get actual size
         loadTime,
         cached: loadTime < 50, // Heuristic for cached bundles
@@ -105,7 +104,7 @@ export function createLazyComponent<TProps = {}>(
       });
 
       retryCount = 0; // Reset retry count on success
-      return module;
+      return loadedModule;
     } catch (error) {
       if (retryCount < retryAttempts) {
         retryCount++;
@@ -120,6 +119,7 @@ export function createLazyComponent<TProps = {}>(
 
   // Add preload capability
   if (preload) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (LazyComponent as any).preload = () => {
       if (!preloadPromise) {
         preloadPromise = enhancedImportFn();
@@ -139,6 +139,7 @@ export function createLazyComponent<TProps = {}>(
       }, React.createElement(LazyComponent, props)));
     };
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return WrappedComponent as any;
   }
 
@@ -148,7 +149,7 @@ export function createLazyComponent<TProps = {}>(
 /**
  * Creates a lazy-loaded subscription component with connection management
  */
-export function createLazySubscriptionComponent<TProps = {}>(
+export function createLazySubscriptionComponent<TProps = Record<string, unknown>>(
   importFn: () => Promise<{ default: ComponentType<TProps> }>,
   subscriptionSetup?: () => void,
   subscriptionCleanup?: () => void
@@ -171,6 +172,7 @@ export function createLazySubscriptionComponent<TProps = {}>(
     return React.createElement(LazyComponent, props);
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return SubscriptionWrapper as any;
 }
 
@@ -181,7 +183,7 @@ export function createLazySubscriptionComponent<TProps = {}>(
 /**
  * Enhanced dynamic import with loading states and error handling
  */
-export function useDynamicImport<T = any>(
+export function useDynamicImport<T = unknown>(
   importFn: () => Promise<T>,
   options: DynamicImportOptions<T> = {}
 ): {
@@ -193,7 +195,7 @@ export function useDynamicImport<T = any>(
   const {
     timeout = 30000,
     retry = true,
-    resolver = (module) => module,
+    resolver = (module) => module as T,
   } = options;
 
   const [state, setState] = React.useState<{
@@ -216,8 +218,8 @@ export function useDynamicImport<T = any>(
         setTimeout(() => reject(new Error('Import timeout')), timeout);
       });
 
-      const module = await Promise.race([importFn(), timeoutPromise]);
-      const resolvedData = resolver(module);
+      const loadedModule = await Promise.race([importFn(), timeoutPromise]);
+      const resolvedData = resolver(loadedModule);
 
       setState({
         data: resolvedData,
@@ -373,7 +375,7 @@ export function useBundleMonitor(): {
     const monitor = BundleMonitor.getInstance();
     setMetrics(monitor.getMetrics());
 
-    const unsubscribe = monitor.subscribe((newMetrics) => {
+    const unsubscribe = monitor.subscribe(() => {
       setMetrics(monitor.getMetrics());
     });
 
@@ -394,7 +396,7 @@ export function useBundleMonitor(): {
 /**
  * HOC for adding lazy loading capabilities to any component
  */
-export function withLazyLoading<TProps extends object>(
+export function withLazyLoading<TProps extends Record<string, unknown>>(
   Component: ComponentType<TProps>,
   options: LazyLoadOptions = {}
 ): ComponentType<TProps> {

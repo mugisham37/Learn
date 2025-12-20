@@ -11,7 +11,6 @@ import type {
   UploadQueueStats,
   UploadProgress,
   UploadOptions,
-  UploadError,
 } from './uploadTypes';
 import { UploadErrorHandler, UploadUtils } from './uploadHelpers';
 
@@ -60,6 +59,7 @@ export class UploadQueue {
         timeRemaining: 0,
         status: 'pending',
         fileName: file.name,
+        error: undefined,
       },
       retryCount: 0,
       maxRetries: this.config.maxRetries,

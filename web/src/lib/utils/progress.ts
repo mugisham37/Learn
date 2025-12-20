@@ -179,7 +179,7 @@ export const calculateCourseProgress = memoize((
     progressPercentage: Math.round(progressPercentage * 100) / 100, // Round to 2 decimal places
     estimatedTimeRemaining,
     lastActivityDate: enrollment.lastAccessDate,
-    completionDate: enrollment.completedAt,
+    ...(enrollment.completedAt && { completionDate: enrollment.completedAt }),
     certificateEarned,
   };
 });
@@ -220,7 +220,7 @@ export const calculateModuleProgress = memoize((
     progressPercentage: Math.round(progressPercentage * 100) / 100,
     lessons: moduleLessonProgress,
     isCompleted,
-    completionDate,
+    ...(completionDate && { completionDate }),
   };
 });
 

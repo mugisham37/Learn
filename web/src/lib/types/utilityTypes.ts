@@ -14,7 +14,6 @@ import type {
   Lesson,
   Quiz,
   Assignment,
-  Message,
   Connection,
   Edge,
   PageInfo
@@ -116,7 +115,7 @@ export type ConnectionVariables = {
 /**
  * Type for GraphQL connection with variables
  */
-export type ConnectionWithVariables<T, V = {}> = {
+export type ConnectionWithVariables<T, V = Record<string, unknown>> = {
   connection: Connection<T>;
   variables: V & ConnectionVariables;
 };
@@ -129,7 +128,7 @@ export type MutationResult<T> = {
   errors?: Array<{
     message: string;
     path?: string[];
-    extensions?: Record<string, any>;
+    extensions?: Record<string, unknown>;
   }>;
 };
 
@@ -427,12 +426,12 @@ export type KeysOfType<T, U> = {
 /**
  * Extract function parameter types
  */
-export type Parameters<T> = T extends (...args: infer P) => any ? P : never;
+export type Parameters<T> = T extends (...args: infer P) => unknown ? P : never;
 
 /**
  * Extract function return type
  */
-export type ReturnType<T> = T extends (...args: any[]) => infer R ? R : never;
+export type ReturnType<T> = T extends (...args: unknown[]) => infer R ? R : never;
 
 /**
  * Extract promise resolved type
@@ -447,7 +446,7 @@ export type Brand<T, B> = T & { __brand: B };
 /**
  * Remove brand from branded type
  */
-export type Unbrand<T> = T extends Brand<infer U, any> ? U : T;
+export type Unbrand<T> = T extends Brand<infer U, unknown> ? U : T;
 
 // =============================================================================
 // Conditional Types for Complex Logic
@@ -472,14 +471,14 @@ export type IsUnknown<T> = IsAny<T> extends true ? false : unknown extends T ? t
  * Get optional keys from a type
  */
 export type OptionalKeys<T> = {
-  [K in keyof T]-?: {} extends Pick<T, K> ? K : never;
+  [K in keyof T]-?: Record<string, unknown> extends Pick<T, K> ? K : never;
 }[keyof T];
 
 /**
  * Get required keys from a type
  */
 export type RequiredKeys<T> = {
-  [K in keyof T]-?: {} extends Pick<T, K> ? never : K;
+  [K in keyof T]-?: Record<string, unknown> extends Pick<T, K> ? never : K;
 }[keyof T];
 
 /**

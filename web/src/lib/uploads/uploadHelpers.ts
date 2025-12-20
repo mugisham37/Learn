@@ -7,9 +7,7 @@
 
 import type {
   UploadProgress,
-  UploadOptions,
   UploadError,
-  UploadResult,
   PresignedUploadData,
   FileValidationOptions,
   FileValidationResult,
@@ -201,7 +199,7 @@ export class UploadErrorHandler {
     code: string,
     message: string,
     retryable: boolean = false,
-    details?: any
+    details?: Record<string, unknown>
   ): UploadError {
     return {
       uploadId,
@@ -284,7 +282,7 @@ export class UploadUtils {
    * Generates a unique upload ID
    */
   static generateUploadId(): string {
-    return `upload-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    return `upload-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
   }
 
   /**

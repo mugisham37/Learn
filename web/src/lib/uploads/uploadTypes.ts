@@ -13,8 +13,8 @@ export interface UploadProgress {
   speed: number;
   timeRemaining: number;
   status: UploadStatus;
-  error?: string;
-  fileName?: string;
+  error?: string | undefined;
+  fileName?: string | undefined;
 }
 
 export type UploadStatus = 
@@ -43,7 +43,7 @@ export interface UploadError {
   code: string;
   message: string;
   retryable: boolean;
-  details?: any;
+  details?: Record<string, unknown> | undefined;
 }
 
 export interface UploadResult {

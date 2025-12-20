@@ -7,7 +7,8 @@
  */
 
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { useMutation } from '@apollo/client';
+import { useMutation } from '@apollo/client/react';
+import { gql } from '@apollo/client';
 import type {
   UploadProgress,
   UploadOptions,
@@ -25,8 +26,6 @@ import {
   UploadUtils,
 } from './uploadHelpers';
 import { UploadQueue } from './uploadQueue';
-
-import { gql } from '@apollo/client';
 
 // GraphQL mutations
 const GET_PRESIGNED_UPLOAD_URL = gql`
@@ -54,6 +53,28 @@ const COMPLETE_FILE_UPLOAD = gql`
   }
 `;
 
+// GraphQL response types
+interface GetPresignedUploadUrlResponse {
+  getPresignedUploadUrl: {
+    uploadUrl: string;
+    fileKey: string;
+    fields: Record<string, string>;
+    expiresAt: string;
+  };
+}
+
+interface CompleteFileUploadResponse {
+  completeFileUpload: {
+    id: string;
+    fileKey: string;
+    originalName: string;
+    mimeType: string;
+    fileSize: number;
+    url: string;
+    createdAt: string;
+  };
+}
+
 // Hook return types
 interface FileUploadHookResult {
   uploadFile: (file: File, options?: UploadOptions) => Promise<UploadResult>;
@@ -68,7 +89,11 @@ interface FileUploadHookResult {
 
 interface VideoUploadHookResult extends FileUploadHookResult {
   uploadVideo: (file: File, lessonId: string, options?: UploadOptions) => Promise<UploadResult>;
-  processingStatus: unknown; // TODO: Define proper video processing status type
+  processingStatus: {
+    fileKey?: string;
+    status: 'processing' | 'completed' | 'failed';
+    progress: number;
+  } | null;
 }
 
 interface UploadQueueHookResult {
@@ -143,8 +168,8 @@ interface UploadProgressHookResult {
 export function useFileUpload(
   validationOptions: FileValidationOptions = {}
 ): FileUploadHookResult {
-  const [getPresignedUrl] = useMutation(GET_PRESIGNED_UPLOAD_URL);
-  const [completeUpload] = useMutation(COMPLETE_FILE_UPLOAD);
+  const [getPresignedUrl] = useMutation<GetPresignedUploadUrlResponse>(GET_PRESIGNED_UPLOAD_URL);
+  const [completeUpload] = useMutation<CompleteFileUploadResponse>(COMPLETE_FILE_UPLOAD);
   
   const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null);
   const [loading, setLoading] = useState(false);
@@ -488,7 +513,11 @@ export function useVideoUpload(
     ],
   });
 
-  const [processingStatus, setProcessingStatus] = useState<any>(null);
+  const [processingStatus, setProcessingStatus] = useState<{
+    fileKey?: string;
+    status: 'processing' | 'completed' | 'failed';
+    progress: number;
+  } | null>(null);
 
   const uploadVideo = useCallback(async (
     file: File,
