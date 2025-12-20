@@ -113,8 +113,18 @@ function createApolloClient() {
     splitLink,
   ]);
 
-  // Create cache configuration
+  // Create cache configuration with backend integration
   const cache = createCacheConfig();
+
+  // Load persisted cache if enabled
+  if (config.features.realTime && cacheConfig.enablePersistence) {
+    try {
+      const { cachePersistence } = await import('./cache');
+      cachePersistence.loadFromStorage(cache, 'lms-apollo-cache');
+    } catch (error) {
+      console.warn('Failed to load persisted cache:', error);
+    }
+  }
 
   // Create Apollo Client instance
   const client = new ApolloClient({
