@@ -11,7 +11,6 @@ import { useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthContext } from './authProvider';
 import { createRoleGuard, RouteGuards, type UserRole, type Permission, type CourseContext } from './authGuards';
-import type { User } from '@/types';
 
 /**
  * Hook for authentication state only (lightweight)
@@ -253,9 +252,9 @@ export function useAuthActions() {
     try {
       await login(email, password);
       router.push(redirectTo);
-    } catch (error) {
+    } catch (err) {
       // Error is handled by the auth context
-      throw error;
+      throw err;
     }
   }, [login, router]);
   
@@ -284,9 +283,9 @@ export function useAuthActions() {
     try {
       await register(email, password, fullName);
       router.push(redirectTo);
-    } catch (error) {
+    } catch (err) {
       // Error is handled by the auth context
-      throw error;
+      throw err;
     }
   }, [register, router]);
   

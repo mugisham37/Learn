@@ -65,6 +65,8 @@ const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'analytics:view',
     'admin:access',
   ],
+  // Handle future added values
+  '%future added value': [],
 };
 
 /**

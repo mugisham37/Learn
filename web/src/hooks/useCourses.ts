@@ -5,7 +5,7 @@
  * filtering, pagination, and educator course management.
  */
 
-import { useQuery, useMutation, useApolloClient } from '@apollo/client';
+import { useQuery, useMutation } from '@apollo/client/react/hooks';
 import { gql } from '@apollo/client';
 import type {
   Course,
@@ -14,7 +14,6 @@ import type {
   UpdateCourseInput,
   PaginationInput,
   CourseConnection,
-  Difficulty,
   CourseStatus,
 } from '../types';
 
@@ -204,15 +203,15 @@ const PUBLISH_COURSE = gql`
 interface QueryResult<T> {
   data: T | undefined;
   loading: boolean;
-  error: any;
-  refetch: () => Promise<any>;
-  fetchMore?: (options: any) => Promise<any>;
+  error: Error | undefined;
+  refetch: () => Promise<unknown>;
+  fetchMore?: (options: Record<string, unknown>) => Promise<unknown>;
 }
 
 interface MutationResult<T> {
-  mutate: (variables: any) => Promise<T>;
+  mutate: (variables: Record<string, unknown>) => Promise<T>;
   loading: boolean;
-  error: any;
+  error: Error | undefined;
   reset: () => void;
 }
 
@@ -376,8 +375,6 @@ export function useMyCourses(
  * ```
  */
 export function useCreateCourse(): MutationResult<Course> {
-  const client = useApolloClient();
-  
   const [createCourseMutation, { loading, error, reset }] = useMutation(CREATE_COURSE, {
     errorPolicy: 'all',
     // Update cache after successful creation
@@ -386,7 +383,7 @@ export function useCreateCourse(): MutationResult<Course> {
         // Add to my courses list
         cache.updateQuery(
           { query: GET_MY_COURSES, variables: {} },
-          (existingData) => {
+          (existingData: { myCourses?: CourseConnection }) => {
             if (!existingData?.myCourses) return existingData;
             
             return {
@@ -449,7 +446,7 @@ export function useUpdateCourse(): MutationResult<Course> {
   const [updateCourseMutation, { loading, error, reset }] = useMutation(UPDATE_COURSE, {
     errorPolicy: 'all',
     // Optimistic response for immediate UI updates
-    optimisticResponse: (variables) => ({
+    optimisticResponse: (variables: { id: string; input: UpdateCourseInput }) => ({
       updateCourse: {
         __typename: 'Course',
         id: variables.id,
@@ -463,7 +460,7 @@ export function useUpdateCourse(): MutationResult<Course> {
         // Update course in cache
         cache.updateQuery(
           { query: GET_COURSE, variables: { id: data.updateCourse.id } },
-          (existingData) => {
+          (existingData: { course?: Course }) => {
             if (!existingData?.course) return existingData;
             
             return {
@@ -522,7 +519,7 @@ export function usePublishCourse(): MutationResult<Course> {
   const [publishCourseMutation, { loading, error, reset }] = useMutation(PUBLISH_COURSE, {
     errorPolicy: 'all',
     // Optimistic response for immediate UI updates
-    optimisticResponse: (variables) => ({
+    optimisticResponse: (variables: { id: string }) => ({
       publishCourse: {
         __typename: 'Course',
         id: variables.id,
@@ -536,7 +533,7 @@ export function usePublishCourse(): MutationResult<Course> {
         // Update course status in cache
         cache.updateQuery(
           { query: GET_COURSE, variables: { id: data.publishCourse.id } },
-          (existingData) => {
+          (existingData: { course?: Course }) => {
             if (!existingData?.course) return existingData;
             
             return {

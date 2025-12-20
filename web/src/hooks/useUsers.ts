@@ -5,12 +5,11 @@
  * notification preferences, and user data fetching.
  */
 
-import { useQuery, useMutation, useApolloClient } from '@apollo/client';
+import { useQuery, useMutation } from '@apollo/client/react/hooks';
 import { gql } from '@apollo/client';
 import type {
   User,
   UpdateProfileInput,
-  NotificationPreferences,
   UpdateNotificationPreferencesInput,
 } from '../types';
 
@@ -96,14 +95,14 @@ const UPDATE_NOTIFICATION_PREFERENCES = gql`
 interface QueryResult<T> {
   data: T | undefined;
   loading: boolean;
-  error: any;
-  refetch: () => Promise<any>;
+  error: Error | undefined;
+  refetch: () => Promise<unknown>;
 }
 
 interface MutationResult<T> {
-  mutate: (variables: any) => Promise<T>;
+  mutate: (variables: Record<string, unknown>) => Promise<T>;
   loading: boolean;
-  error: any;
+  error: Error | undefined;
   reset: () => void;
 }
 
@@ -195,12 +194,10 @@ export function useUserById(id: string): QueryResult<User> {
  * ```
  */
 export function useUpdateProfile(): MutationResult<User> {
-  const client = useApolloClient();
-  
   const [updateProfileMutation, { loading, error, reset }] = useMutation(UPDATE_PROFILE, {
     errorPolicy: 'all',
     // Optimistic response for immediate UI updates
-    optimisticResponse: (variables) => ({
+    optimisticResponse: (variables: { input: UpdateProfileInput }) => ({
       updateProfile: {
         __typename: 'User',
         id: 'temp-id', // Will be replaced by real response
@@ -214,7 +211,7 @@ export function useUpdateProfile(): MutationResult<User> {
     // Update cache after successful mutation
     update: (cache, { data }) => {
       if (data?.updateProfile) {
-        cache.updateQuery({ query: GET_CURRENT_USER }, (existingData) => {
+        cache.updateQuery({ query: GET_CURRENT_USER }, (existingData: { currentUser?: User }) => {
           if (!existingData?.currentUser) return existingData;
           
           return {
@@ -271,7 +268,7 @@ export function useNotificationPreferences(): MutationResult<User> {
     {
       errorPolicy: 'all',
       // Optimistic response for immediate UI updates
-      optimisticResponse: (variables) => ({
+      optimisticResponse: (variables: { input: UpdateNotificationPreferencesInput }) => ({
         updateNotificationPreferences: {
           __typename: 'User',
           id: 'temp-id',
@@ -290,7 +287,7 @@ export function useNotificationPreferences(): MutationResult<User> {
       // Update cache after successful mutation
       update: (cache, { data }) => {
         if (data?.updateNotificationPreferences) {
-          cache.updateQuery({ query: GET_CURRENT_USER }, (existingData) => {
+          cache.updateQuery({ query: GET_CURRENT_USER }, (existingData: { currentUser?: User }) => {
             if (!existingData?.currentUser) return existingData;
             
             return {

@@ -9,7 +9,7 @@
 
 import React, { createContext, useContext, useReducer, useEffect, useCallback } from 'react';
 import { tokenManager } from './tokenStorage';
-import type { AuthState, AuthError, User, TokenPair } from '@/types';
+import type { AuthState, AuthError, User } from '@/types';
 
 /**
  * Authentication context interface
@@ -125,7 +125,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         // Extract user from valid token
         const user = tokenManager.getUserFromToken(accessToken);
         if (user) {
-          dispatch({ type: 'AUTH_SUCCESS', payload: { user } });
+          dispatch({ type: 'AUTH_SUCCESS', payload: { user: user as User } });
           return;
         }
       }
@@ -137,18 +137,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
           const newAccessToken = await tokenManager.refreshAccessToken();
           const user = tokenManager.getUserFromToken(newAccessToken);
           if (user) {
-            dispatch({ type: 'AUTH_SUCCESS', payload: { user } });
+            dispatch({ type: 'AUTH_SUCCESS', payload: { user: user as User } });
             return;
           }
-        } catch (error) {
-          console.warn('Token refresh failed during initialization:', error);
+        } catch (refreshError) {
+          console.warn('Token refresh failed during initialization:', refreshError);
         }
       }
 
       // No valid authentication found
       dispatch({ type: 'AUTH_LOGOUT' });
-    } catch (error) {
-      console.error('Auth initialization failed:', error);
+    } catch (initError) {
+      console.error('Auth initialization failed:', initError);
       dispatch({ type: 'AUTH_LOGOUT' });
     }
   }, []);
@@ -207,8 +207,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
         method: 'POST',
         credentials: 'include',
       });
-    } catch (error) {
-      console.warn('Logout API call failed:', error);
+    } catch (logoutError) {
+      console.warn('Logout API call failed:', logoutError);
       // Continue with client-side logout even if server call fails
     }
 
@@ -278,8 +278,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       const userData = await response.json();
       dispatch({ type: 'AUTH_SUCCESS', payload: { user: userData } });
-    } catch (error) {
-      console.error('Failed to refresh user data:', error);
+    } catch (refreshError) {
+      console.error('Failed to refresh user data:', refreshError);
       // Don't logout on refresh failure, just log the error
     }
   }, [state.isAuthenticated]);
@@ -309,6 +309,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
         window.removeEventListener('auth:token-expired', handleTokenExpired);
       };
     }
+    
+    return undefined;
   }, []);
 
   /**

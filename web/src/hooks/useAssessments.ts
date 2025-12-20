@@ -5,7 +5,7 @@
  * assignment submissions, and grading workflows.
  */
 
-import { useQuery, useMutation, useApolloClient } from '@apollo/client';
+import { useQuery, useMutation } from '@apollo/client/react/hooks';
 import { gql } from '@apollo/client';
 import { useState, useCallback, useRef, useEffect } from 'react';
 import type {
@@ -13,14 +13,9 @@ import type {
   QuizAttempt,
   Assignment,
   AssignmentSubmission,
-  Question,
-  QuizAnswer,
   StartQuizInput,
-  SubmitQuizAnswerInput,
   SubmitAssignmentInput,
   GradeAssignmentInput,
-  QuizAttemptStatus,
-  AssignmentSubmissionStatus,
 } from '../types';
 
 // GraphQL Queries and Mutations
@@ -251,14 +246,14 @@ const GRADE_ASSIGNMENT = gql`
 interface QueryResult<T> {
   data: T | undefined;
   loading: boolean;
-  error: any;
-  refetch: () => Promise<any>;
+  error: Error | undefined;
+  refetch: () => Promise<unknown>;
 }
 
 interface MutationResult<T> {
-  mutate: (variables: any) => Promise<T>;
+  mutate: (variables: Record<string, unknown>) => Promise<T>;
   loading: boolean;
-  error: any;
+  error: Error | undefined;
   reset: () => void;
 }
 
@@ -266,10 +261,10 @@ interface QuizSession {
   attempt: QuizAttempt | null;
   timeRemaining: number;
   autoSave: boolean;
-  submitAnswer: (questionId: string, answer: any) => Promise<void>;
+  submitAnswer: (questionId: string, answer: string | string[]) => Promise<void>;
   submitQuiz: () => Promise<QuizAttempt>;
   loading: boolean;
-  error: any;
+  error: Error | undefined;
 }
 
 /**
@@ -414,14 +409,14 @@ export function useQuizSession(attemptId: string): QuizSession {
     };
   }, [attemptData?.quizAttempt?.status, timeRemaining, attemptId, submitQuizMutation]);
 
-  const submitAnswer = useCallback(async (questionId: string, answer: any) => {
+  const submitAnswer = useCallback(async (questionId: string, answer: string | string[]) => {
     try {
       await submitAnswerMutation({
         variables: {
           input: {
             attemptId,
             questionId,
-            answer,
+            answer: typeof answer === 'string' ? answer : answer.join(','),
           },
         },
       });
@@ -522,7 +517,7 @@ export function useSubmitAssignment(): MutationResult<AssignmentSubmission> {
         // Update assignment submissions list
         cache.updateQuery(
           { query: GET_ASSIGNMENT, variables: { id: assignmentId } },
-          (existingData) => {
+          (existingData: { assignment?: Assignment }) => {
             if (!existingData?.assignment) return existingData;
             
             return {

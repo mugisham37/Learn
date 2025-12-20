@@ -5,14 +5,13 @@
  * discussions, announcements, and real-time chat functionality.
  */
 
-import { useQuery, useMutation, useSubscription } from '@apollo/client';
+import { useQuery, useMutation, useSubscription } from '@apollo/client/react/hooks';
 import { gql } from '@apollo/client';
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import type {
   Message,
   DiscussionThread,
   DiscussionReply,
-  SendMessageInput,
   CreateThreadInput,
   ReplyToThreadInput,
   ConversationFilter,
@@ -352,12 +351,12 @@ interface QueryResult<T> {
   data: T | undefined;
   loading: boolean;
   error: Error | undefined;
-  refetch: () => Promise<any>;
-  fetchMore?: (options: any) => Promise<any>;
+  refetch: () => Promise<unknown>;
+  fetchMore?: (options: Record<string, unknown>) => Promise<unknown>;
 }
 
 interface MutationResult<T> {
-  mutate: (variables: any) => Promise<T>;
+  mutate: (variables: Record<string, unknown>) => Promise<T>;
   loading: boolean;
   error: Error | undefined;
   reset: () => void;
@@ -490,25 +489,26 @@ export function useChatSession(conversationId: string): ChatSession {
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
   const [sendMessageMutation, { loading: sendLoading, error: sendError }] = useMutation(SEND_MESSAGE);
   const [markReadMutation] = useMutation(MARK_MESSAGES_READ);
+  const setTypingRef = useRef<((isTyping: boolean) => void) | null>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Fetch conversation messages
-  const { data: conversationData, loading, error, fetchMore } = useQuery(GET_CONVERSATION_MESSAGES, {
+  const { data: conversationData, loading, error } = useQuery(GET_CONVERSATION_MESSAGES, {
     variables: { conversationId, pagination: { first: 50 } },
     skip: !conversationId,
     errorPolicy: 'all',
   });
 
   // Subscribe to new messages
-  const { data: newMessageData } = useSubscription(MESSAGE_SUBSCRIPTION, {
+  useSubscription(MESSAGE_SUBSCRIPTION, {
     variables: { conversationId },
     skip: !conversationId,
-    onSubscriptionData: ({ subscriptionData, client }) => {
+    onData: ({ subscriptionData, client }) => {
       if (subscriptionData.data?.messageAdded) {
         // Update cache with new message
         client.cache.updateQuery(
           { query: GET_CONVERSATION_MESSAGES, variables: { conversationId } },
-          (existingData) => {
+          (existingData: { conversation?: { messages?: { edges?: Array<{ node: Message; cursor: string }> } } }) => {
             if (!existingData?.conversation?.messages) return existingData;
             
             return {
@@ -534,10 +534,10 @@ export function useChatSession(conversationId: string): ChatSession {
   });
 
   // Subscribe to typing indicators
-  const { data: typingData } = useSubscription(TYPING_SUBSCRIPTION, {
+  useSubscription(TYPING_SUBSCRIPTION, {
     variables: { conversationId },
     skip: !conversationId,
-    onSubscriptionData: ({ subscriptionData }) => {
+    onData: ({ subscriptionData }) => {
       if (subscriptionData.data?.userTyping) {
         const { userId, isTyping } = subscriptionData.data.userTyping;
         
@@ -555,7 +555,7 @@ export function useChatSession(conversationId: string): ChatSession {
   const sendMessage = useCallback(async (content: string, attachments?: File[]) => {
     try {
       // Upload attachments first if any
-      const uploadedAttachments = [];
+      const uploadedAttachments: Array<{ fileName: string; fileKey: string; fileSize: number }> = [];
       if (attachments && attachments.length > 0) {
         // TODO: Implement file upload for attachments
         // This would use the useFileUpload hook
@@ -611,8 +611,6 @@ export function useChatSession(conversationId: string): ChatSession {
       console.error('Failed to mark messages as read:', err);
     }
   }, [conversationId, markReadMutation]);
-
-  const setTypingRef = useRef<((isTyping: boolean) => void) | null>(null);
   
   const setTyping = useCallback((isTyping: boolean) => {
     // Clear existing timeout
@@ -635,10 +633,13 @@ export function useChatSession(conversationId: string): ChatSession {
       // TODO: Implement stop typing mutation
     }
   }, []);
-  
-  setTypingRef.current = setTyping;
 
-  const messages = conversationData?.conversation?.messages?.edges?.map(edge => edge.node) || [];
+  // Set the ref in useEffect to avoid setting it during render
+  useEffect(() => {
+    setTypingRef.current = setTyping;
+  }, [setTyping]);
+
+  const messages = conversationData?.conversation?.messages?.edges?.map((edge: { node: Message }) => edge.node) || [];
 
   return {
     messages,
@@ -759,7 +760,7 @@ export function useCreateThread(): MutationResult<DiscussionThread> {
         // Add to threads list
         cache.updateQuery(
           { query: GET_DISCUSSION_THREADS, variables: { courseId } },
-          (existingData) => {
+          (existingData: { discussionThreads?: ThreadConnection }) => {
             if (!existingData?.discussionThreads) return existingData;
             
             return {
@@ -844,7 +845,7 @@ export function useReplyToThread(): MutationResult<DiscussionReply> {
         // Add to thread replies
         cache.updateQuery(
           { query: GET_THREAD_REPLIES, variables: { threadId } },
-          (existingData) => {
+          (existingData: { discussionThread?: { replies?: { edges?: Array<{ node: DiscussionReply; cursor: string }> } } }) => {
             if (!existingData?.discussionThread?.replies) return existingData;
             
             return {

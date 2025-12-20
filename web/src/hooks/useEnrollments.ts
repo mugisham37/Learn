@@ -5,7 +5,7 @@
  * progress tracking, and lesson completion.
  */
 
-import { useQuery, useMutation, useApolloClient } from '@apollo/client';
+import { useQuery, useMutation } from '@apollo/client/react/hooks';
 import { gql } from '@apollo/client';
 import type {
   Enrollment,
@@ -13,7 +13,6 @@ import type {
   EnrollInCourseInput,
   UpdateLessonProgressInput,
   LessonProgress,
-  EnrollmentStatus,
   PaginationInput,
   EnrollmentConnection,
 } from '../types';
@@ -173,15 +172,15 @@ const UPDATE_LESSON_PROGRESS = gql`
 interface QueryResult<T> {
   data: T | undefined;
   loading: boolean;
-  error: any;
-  refetch: () => Promise<any>;
-  fetchMore?: (options: any) => Promise<any>;
+  error: Error | undefined;
+  refetch: () => Promise<unknown>;
+  fetchMore?: (options: Record<string, unknown>) => Promise<unknown>;
 }
 
 interface MutationResult<T> {
-  mutate: (variables: any) => Promise<T>;
+  mutate: (variables: Record<string, unknown>) => Promise<T>;
   loading: boolean;
-  error: any;
+  error: Error | undefined;
   reset: () => void;
 }
 
@@ -321,8 +320,6 @@ export function useEnrollmentProgress(enrollmentId: string): QueryResult<Enrollm
  * ```
  */
 export function useEnrollInCourse(): MutationResult<Enrollment> {
-  const client = useApolloClient();
-  
   const [enrollInCourseMutation, { loading, error, reset }] = useMutation(ENROLL_IN_COURSE, {
     errorPolicy: 'all',
     // Update cache after successful enrollment
@@ -331,7 +328,7 @@ export function useEnrollInCourse(): MutationResult<Enrollment> {
         // Add to my enrollments list
         cache.updateQuery(
           { query: GET_MY_ENROLLMENTS, variables: {} },
-          (existingData) => {
+          (existingData: { myEnrollments?: EnrollmentConnection }) => {
             if (!existingData?.myEnrollments) return existingData;
             
             return {
@@ -426,7 +423,7 @@ export function useUpdateLessonProgress(): MutationResult<LessonProgress> {
     {
       errorPolicy: 'all',
       // Optimistic response for immediate UI updates
-      optimisticResponse: (variables) => ({
+      optimisticResponse: (variables: { input: UpdateLessonProgressInput }) => ({
         updateLessonProgress: {
           __typename: 'LessonProgress',
           id: `temp-${variables.input.lessonId}`,
@@ -443,7 +440,7 @@ export function useUpdateLessonProgress(): MutationResult<LessonProgress> {
             __typename: 'Enrollment',
             id: variables.input.enrollmentId,
             progressPercentage: 0, // Will be calculated by server
-            status: 'ACTIVE' as EnrollmentStatus,
+            status: 'ACTIVE' as const,
             completedAt: null,
           },
         },
@@ -456,7 +453,7 @@ export function useUpdateLessonProgress(): MutationResult<LessonProgress> {
           // Update enrollment progress in cache
           cache.updateQuery(
             { query: GET_ENROLLMENT_PROGRESS, variables: { enrollmentId } },
-            (existingData) => {
+            (existingData: { enrollment?: Enrollment }) => {
               if (!existingData?.enrollment) return existingData;
               
               // Update lesson progress in the list

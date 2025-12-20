@@ -118,14 +118,18 @@ export class TokenManager {
   /**
    * Parses a JWT token and returns the payload
    */
-  parseToken(token: string): any {
+  parseToken(token: string): Record<string, unknown> {
     try {
       const parts = token.split('.');
       if (parts.length !== 3) {
         throw new Error('Invalid token format');
       }
-      return JSON.parse(atob(parts[1]));
-    } catch (error) {
+      const payload = parts[1];
+      if (!payload) {
+        throw new Error('Invalid token payload');
+      }
+      return JSON.parse(atob(payload));
+    } catch {
       throw new Error('Failed to parse token');
     }
   }
@@ -137,12 +141,12 @@ export class TokenManager {
     try {
       const payload = this.parseToken(token);
       const currentTime = Math.floor(Date.now() / 1000);
-      const expirationTime = payload.exp;
+      const expirationTime = payload.exp as number;
       
       // Consider token expired if it expires within the buffer time
       return expirationTime <= currentTime + (authConfig.tokenExpirationBuffer / 1000);
-    } catch (error) {
-      console.warn('Failed to check token expiration:', error);
+    } catch {
+      console.warn('Failed to check token expiration');
       return true; // Treat invalid tokens as expired
     }
   }
@@ -150,7 +154,7 @@ export class TokenManager {
   /**
    * Extracts user information from a JWT token
    */
-  getUserFromToken(token: string): any {
+  getUserFromToken(token: string): Record<string, unknown> | null {
     try {
       const payload = this.parseToken(token);
       return {
@@ -160,8 +164,8 @@ export class TokenManager {
         fullName: payload.fullName,
         emailVerified: payload.emailVerified,
       };
-    } catch (error) {
-      console.warn('Failed to extract user from token:', error);
+    } catch {
+      console.warn('Failed to extract user from token');
       return null;
     }
   }
