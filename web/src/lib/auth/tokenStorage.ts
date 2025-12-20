@@ -2,7 +2,7 @@
  * Token Storage Utilities
  * 
  * Secure token storage with httpOnly cookie support and localStorage fallback.
- * Handles JWT token generation, validation, and automatic refresh.
+ * Handles JWT token generation, validation, and automatic refresh with backend integration.
  */
 
 import { authConfig } from '../config';
@@ -33,7 +33,7 @@ export class SecureTokenStorage implements TokenStorage {
   getAccessToken(): string | null {
     if (this.useHttpOnlyCookies) {
       // In production, tokens are handled server-side via httpOnly cookies
-      // The client doesn't directly access them
+      // The client doesn't directly access them for security
       return null;
     }
 
@@ -91,7 +91,7 @@ export class SecureTokenStorage implements TokenStorage {
 }
 
 /**
- * JWT token utilities for validation and parsing
+ * JWT token utilities for validation and parsing with backend integration
  */
 export class TokenManager {
   private storage: TokenStorage;
@@ -171,7 +171,7 @@ export class TokenManager {
   }
 
   /**
-   * Refreshes the access token using the refresh token
+   * Refreshes the access token using the refresh token with backend integration
    */
   async refreshAccessToken(): Promise<string> {
     // Prevent multiple simultaneous refresh attempts
@@ -180,7 +180,7 @@ export class TokenManager {
     }
 
     const refreshToken = this.getRefreshToken();
-    if (!refreshToken) {
+    if (!refreshToken && process.env.NODE_ENV !== 'production') {
       throw new Error('No refresh token available');
     }
 
@@ -195,9 +195,9 @@ export class TokenManager {
   }
 
   /**
-   * Performs the actual token refresh API call
+   * Performs the actual token refresh API call with backend integration
    */
-  private async performTokenRefresh(refreshToken: string): Promise<string> {
+  private async performTokenRefresh(refreshToken: string | null): Promise<string> {
     try {
       const response = await fetch('/api/auth/refresh', {
         method: 'POST',
@@ -218,8 +218,8 @@ export class TokenManager {
         throw new Error('No access token in refresh response');
       }
 
-      // Store the new tokens
-      this.storage.setTokens(data.accessToken, data.refreshToken || refreshToken);
+      // Store the new tokens (backend handles token rotation)
+      this.storage.setTokens(data.accessToken, data.refreshToken || refreshToken || '');
       
       return data.accessToken;
     } catch (error) {
@@ -250,6 +250,86 @@ export class TokenManager {
   isAuthenticated(): boolean {
     const token = this.getAccessToken();
     return token !== null && !this.isTokenExpired(token);
+  }
+
+  /**
+   * Sends email verification request
+   */
+  async sendEmailVerification(email: string): Promise<void> {
+    const response = await fetch('/api/auth/verify-email', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email }),
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to send verification email');
+    }
+  }
+
+  /**
+   * Verifies email with token
+   */
+  async verifyEmail(token: string, email: string): Promise<{ success: boolean; user?: any }> {
+    const response = await fetch('/api/auth/verify-email', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ token, email }),
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Email verification failed');
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Requests password reset
+   */
+  async requestPasswordReset(email: string): Promise<void> {
+    const response = await fetch('/api/auth/reset-password', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email }),
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to request password reset');
+    }
+  }
+
+  /**
+   * Resets password with token
+   */
+  async resetPassword(token: string, email: string, newPassword: string): Promise<{ success: boolean; user?: any }> {
+    const response = await fetch('/api/auth/reset-password', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ token, email, newPassword }),
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Password reset failed');
+    }
+
+    return response.json();
   }
 }
 

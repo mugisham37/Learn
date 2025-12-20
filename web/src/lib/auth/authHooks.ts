@@ -234,11 +234,22 @@ export function useAuthGuard() {
 }
 
 /**
- * Hook for login state management
- * Provides utilities for login/logout flows
+ * Hook for login state management and extended authentication actions
+ * Provides utilities for login/logout flows, email verification, and password reset
  */
 export function useAuthActions() {
-  const { login, logout, register, clearError, error, isLoading } = useAuth();
+  const { 
+    login, 
+    logout, 
+    register, 
+    clearError, 
+    error, 
+    isLoading,
+    sendEmailVerification,
+    verifyEmail,
+    requestPasswordReset,
+    resetPassword
+  } = useAuth();
   const router = useRouter();
   
   /**
@@ -288,16 +299,96 @@ export function useAuthActions() {
       throw err;
     }
   }, [register, router]);
+
+  /**
+   * Send email verification with error handling
+   */
+  const sendVerificationEmail = useCallback(async (email: string) => {
+    try {
+      await sendEmailVerification(email);
+      return { success: true, message: 'Verification email sent successfully' };
+    } catch (err) {
+      // Error is handled by the auth context
+      throw err;
+    }
+  }, [sendEmailVerification]);
+
+  /**
+   * Verify email with redirect on success
+   */
+  const verifyEmailWithRedirect = useCallback(async (
+    token: string, 
+    email: string,
+    redirectTo: string = '/dashboard'
+  ) => {
+    try {
+      const result = await verifyEmail(token, email);
+      if (result.success) {
+        router.push(redirectTo);
+      }
+      return result;
+    } catch (err) {
+      // Error is handled by the auth context
+      throw err;
+    }
+  }, [verifyEmail, router]);
+
+  /**
+   * Request password reset with success feedback
+   */
+  const requestPasswordResetWithFeedback = useCallback(async (email: string) => {
+    try {
+      await requestPasswordReset(email);
+      return { 
+        success: true, 
+        message: 'If an account with that email exists, a password reset link has been sent' 
+      };
+    } catch (err) {
+      // Error is handled by the auth context
+      throw err;
+    }
+  }, [requestPasswordReset]);
+
+  /**
+   * Reset password with redirect on success
+   */
+  const resetPasswordWithRedirect = useCallback(async (
+    token: string,
+    email: string,
+    newPassword: string,
+    redirectTo: string = '/login'
+  ) => {
+    try {
+      const result = await resetPassword(token, email, newPassword);
+      if (result.success) {
+        router.push(redirectTo);
+      }
+      return result;
+    } catch (err) {
+      // Error is handled by the auth context
+      throw err;
+    }
+  }, [resetPassword, router]);
   
   return {
-    // Actions
+    // Basic actions
     login,
     logout,
     register,
+    clearError,
+    
+    // Actions with redirect
     loginWithRedirect,
     logoutWithRedirect,
     registerWithRedirect,
-    clearError,
+    
+    // Email verification actions
+    sendVerificationEmail,
+    verifyEmailWithRedirect,
+    
+    // Password reset actions
+    requestPasswordResetWithFeedback,
+    resetPasswordWithRedirect,
     
     // State
     error,

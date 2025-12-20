@@ -1,7 +1,8 @@
 /**
  * Authentication Components
  * 
- * React components for protecting routes and rendering content based on authentication state.
+ * React components for protecting routes, rendering content based on authentication state,
+ * email verification, and password reset workflows.
  */
 
 'use client';
@@ -10,6 +11,10 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthGuard } from './authHooks';
 import type { UserRole, Permission } from './authGuards';
+
+// Re-export email verification and password reset components
+export { EmailVerificationForm, EmailVerificationHandler } from './components/EmailVerification';
+export { PasswordResetRequestForm, PasswordResetConfirmForm } from './components/PasswordReset';
 
 export interface AuthGuardProps {
   children: React.ReactNode;
