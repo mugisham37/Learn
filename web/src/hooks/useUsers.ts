@@ -6,7 +6,7 @@
  */
 
 import { useQuery, useMutation } from '@apollo/client/react';
-import { gql, type ApolloCache, type MutationResult as ApolloMutationResult } from '@apollo/client';
+import { gql, type ApolloCache } from '@apollo/client';
 import type {
   User,
   UpdateProfileInput,
@@ -203,7 +203,7 @@ export function useUpdateProfile(): MutationResult<User, { input: UpdateProfileI
   const [updateProfileMutation, { loading, error, reset }] = useMutation<UpdateProfileResponse>(UPDATE_PROFILE, {
     errorPolicy: 'all',
     // Update cache after successful mutation
-    update: (cache: ApolloCache, { data }: ApolloMutationResult<UpdateProfileResponse>) => {
+    update: (cache: ApolloCache, { data }) => {
       if (data?.updateProfile) {
         cache.updateQuery<GetCurrentUserResponse>({ query: GET_CURRENT_USER }, (existingData: GetCurrentUserResponse | null) => {
           if (!existingData?.currentUser) return existingData;
@@ -265,7 +265,7 @@ export function useNotificationPreferences(): MutationResult<User, { input: Upda
     {
       errorPolicy: 'all',
       // Update cache after successful mutation
-      update: (cache: ApolloCache, { data }: ApolloMutationResult<UpdateNotificationPreferencesResponse>) => {
+      update: (cache: ApolloCache, { data }) => {
         if (data?.updateNotificationPreferences) {
           cache.updateQuery<GetCurrentUserResponse>({ query: GET_CURRENT_USER }, (existingData: GetCurrentUserResponse | null) => {
             if (!existingData?.currentUser) return existingData;

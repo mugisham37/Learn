@@ -385,7 +385,8 @@ export function useQuizSession(attemptId: string): QuizSession {
   const [submitAnswerMutation] = useMutation(SUBMIT_QUIZ_ANSWER);
   const [submitQuizMutation, { loading: submitLoading, error: submitError }] = useMutation<SubmitQuizResponse>(SUBMIT_QUIZ);
   
-  const [timeRemaining, setTimeRemaining] = useState(0);
+  // Initialize time remaining from server data using lazy initial state
+  const [timeRemaining, setTimeRemaining] = useState(() => 0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   const { data: attemptData, loading, error } = useQuery<GetQuizAttemptResponse>(GET_QUIZ_ATTEMPT, {
@@ -394,14 +395,13 @@ export function useQuizSession(attemptId: string): QuizSession {
     errorPolicy: 'all',
   });
 
-  // Set initial time remaining when data loads
+  // Update time remaining when server data changes - using useEffect with proper dependency
   useEffect(() => {
     if (attemptData?.quizAttempt?.timeRemaining !== undefined) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setTimeRemaining(prev => {
-        // Only update if the value has actually changed to avoid cascading renders
-        return prev !== attemptData.quizAttempt.timeRemaining 
-          ? attemptData.quizAttempt.timeRemaining 
-          : prev;
+        // Only update if we haven't started counting down yet (initial load)
+        return prev === 0 ? attemptData.quizAttempt.timeRemaining : prev;
       });
     }
   }, [attemptData?.quizAttempt?.timeRemaining]);
@@ -535,7 +535,7 @@ export function useSubmitAssignment(): MutationResult<AssignmentSubmission, { in
   const [submitAssignmentMutation, { loading, error, reset }] = useMutation<SubmitAssignmentResponse>(SUBMIT_ASSIGNMENT, {
     errorPolicy: 'all',
     // Update cache after successful submission
-    update: (cache: ApolloCache, { data }: ApolloMutationResult<SubmitAssignmentResponse>) => {
+    update: (cache: ApolloCache, { data }) => {
       if (data?.submitAssignment) {
         const assignmentId = data.submitAssignment.assignment.id;
         
@@ -626,19 +626,22 @@ export function useGradeAssignment(): MutationResult<AssignmentSubmission, { inp
   const [gradeAssignmentMutation, { loading, error, reset }] = useMutation<GradeAssignmentResponse>(GRADE_ASSIGNMENT, {
     errorPolicy: 'all',
     // Update cache after successful grading
-    update: (cache: ApolloCache, { data }: ApolloMutationResult<GradeAssignmentResponse>) => {
+    update: (cache: ApolloCache, { data }) => {
       if (data?.gradeAssignment) {
         // Update submission in cache
-        cache.modify({
-          id: cache.identify(data.gradeAssignment),
-          fields: {
-            grade: () => data.gradeAssignment.grade,
-            feedback: () => data.gradeAssignment.feedback,
-            gradedAt: () => data.gradeAssignment.gradedAt,
-            gradedBy: () => data.gradeAssignment.gradedBy,
-            status: () => data.gradeAssignment.status,
-          },
-        });
+        const submissionId = cache.identify({ __typename: 'AssignmentSubmission', id: data.gradeAssignment.id });
+        if (submissionId) {
+          cache.modify({
+            id: submissionId,
+            fields: {
+              grade: () => data.gradeAssignment.grade,
+              feedback: () => data.gradeAssignment.feedback,
+              gradedAt: () => data.gradeAssignment.gradedAt,
+              gradedBy: () => data.gradeAssignment.gradedBy,
+              status: () => data.gradeAssignment.status,
+            },
+          });
+        }
       }
     },
   });

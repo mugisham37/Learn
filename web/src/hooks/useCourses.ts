@@ -6,7 +6,7 @@
  */
 
 import { useQuery, useMutation } from '@apollo/client/react';
-import { gql, type ApolloCache, type MutationResult as ApolloMutationResult } from '@apollo/client';
+import { gql, type ApolloCache } from '@apollo/client';
 import type {
   Course,
   CourseFilter,
@@ -14,7 +14,6 @@ import type {
   UpdateCourseInput,
   PaginationInput,
   CourseConnection,
-  CourseStatus,
 } from '../types';
 import type {
   GetCoursesResponse,
@@ -386,7 +385,7 @@ export function useCreateCourse(): MutationResult<Course, { input: CreateCourseI
   const [createCourseMutation, { loading, error, reset }] = useMutation<CreateCourseResponse>(CREATE_COURSE, {
     errorPolicy: 'all',
     // Update cache after successful creation
-    update: (cache: ApolloCache, { data }: ApolloMutationResult<CreateCourseResponse>) => {
+    update: (cache: ApolloCache, { data }) => {
       if (data?.createCourse) {
         // Add to my courses list
         cache.updateQuery<GetMyCoursesResponse>(
@@ -457,7 +456,7 @@ export function useUpdateCourse(): MutationResult<Course, { id: string; input: U
   const [updateCourseMutation, { loading, error, reset }] = useMutation<UpdateCourseResponse>(UPDATE_COURSE, {
     errorPolicy: 'all',
     // Update cache after successful mutation
-    update: (cache: ApolloCache, { data }: ApolloMutationResult<UpdateCourseResponse>) => {
+    update: (cache: ApolloCache, { data }) => {
       if (data?.updateCourse) {
         // Update course in cache
         cache.updateQuery<GetCourseResponse>(
@@ -524,7 +523,7 @@ export function usePublishCourse(): MutationResult<Course, { id: string }> {
   const [publishCourseMutation, { loading, error, reset }] = useMutation<PublishCourseResponse>(PUBLISH_COURSE, {
     errorPolicy: 'all',
     // Update cache after successful mutation
-    update: (cache: ApolloCache, { data }: ApolloMutationResult<PublishCourseResponse>) => {
+    update: (cache: ApolloCache, { data }) => {
       if (data?.publishCourse) {
         // Update course status in cache
         cache.updateQuery<GetCourseResponse>(

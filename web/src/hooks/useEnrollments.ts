@@ -6,7 +6,7 @@
  */
 
 import { useQuery, useMutation } from '@apollo/client/react';
-import { gql, type ApolloCache, type MutationResult as ApolloMutationResult } from '@apollo/client';
+import { gql, type ApolloCache } from '@apollo/client';
 import type {
   Enrollment,
   EnrollmentFilter,
@@ -329,7 +329,7 @@ export function useEnrollInCourse(): MutationResult<Enrollment, { input: EnrollI
   const [enrollInCourseMutation, { loading, error, reset }] = useMutation<EnrollInCourseResponse>(ENROLL_IN_COURSE, {
     errorPolicy: 'all',
     // Update cache after successful enrollment
-    update: (cache: ApolloCache, { data }: ApolloMutationResult<EnrollInCourseResponse>) => {
+    update: (cache: ApolloCache, { data }) => {
       if (data?.enrollInCourse) {
         // Add to my enrollments list
         cache.updateQuery<GetMyEnrollmentsResponse>(
@@ -356,14 +356,17 @@ export function useEnrollInCourse(): MutationResult<Enrollment, { input: EnrollI
 
         // Update course enrollment count in cache
         const courseId = data.enrollInCourse.course.id;
-        cache.modify({
-          id: cache.identify({ __typename: 'Course', id: courseId }),
-          fields: {
-            enrollmentCount(existingCount = 0) {
-              return existingCount + 1;
+        const courseCacheId = cache.identify({ __typename: 'Course', id: courseId });
+        if (courseCacheId) {
+          cache.modify({
+            id: courseCacheId,
+            fields: {
+              enrollmentCount(existingCount = 0) {
+                return existingCount + 1;
+              },
             },
-          },
-        });
+          });
+        }
       }
     },
   });
@@ -432,7 +435,7 @@ export function useUpdateLessonProgress(): MutationResult<LessonProgress, { inpu
     {
       errorPolicy: 'all',
       // Update cache after successful mutation
-      update: (cache: ApolloCache, { data }: ApolloMutationResult<UpdateLessonProgressResponse>) => {
+      update: (cache: ApolloCache, { data }) => {
         if (data?.updateLessonProgress) {
           const enrollmentId = data.updateLessonProgress.enrollment.id;
           
@@ -455,10 +458,10 @@ export function useUpdateLessonProgress(): MutationResult<LessonProgress, { inpu
                   ...existingData.enrollment,
                   progressPercentage: data.updateLessonProgress.enrollment.progressPercentage,
                   status: data.updateLessonProgress.enrollment.status,
-                  completedAt: data.updateLessonProgress.enrollment.completedAt,
+                  completedAt: data.updateLessonProgress.enrollment.completedAt || existingData.enrollment.completedAt || null,
                   lessonProgress: updatedLessonProgress,
                 },
-              };
+              } as GetEnrollmentProgressResponse;
             }
           );
         }

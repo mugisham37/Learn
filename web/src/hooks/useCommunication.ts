@@ -6,7 +6,7 @@
  */
 
 import { useQuery, useMutation, useSubscription } from '@apollo/client/react';
-import { gql, type ApolloCache, type MutationResult as ApolloMutationResult } from '@apollo/client';
+import { gql, type ApolloCache } from '@apollo/client';
 import { useState, useCallback, useRef, useEffect } from 'react';
 import type {
   Message,
@@ -580,29 +580,6 @@ export function useChatSession(conversationId: string): ChatSession {
             attachments: uploadedAttachments,
           },
         },
-        optimisticResponse: {
-          sendMessage: {
-            __typename: 'Message',
-            id: `temp-${Date.now()}`,
-            content,
-            sender: {
-              __typename: 'User',
-              id: 'current-user', // Would be replaced with actual user ID
-              profile: {
-                __typename: 'UserProfile',
-                fullName: 'You',
-                avatarUrl: '',
-              },
-            },
-            conversation: {
-              __typename: 'Conversation',
-              id: conversationId,
-              updatedAt: new Date().toISOString(),
-            },
-            sentAt: new Date().toISOString(),
-            attachments: [],
-          },
-        },
       });
     } catch (err) {
       console.error('Failed to send message:', err);
@@ -764,7 +741,7 @@ export function useCreateThread(): MutationResult<DiscussionThread, { input: Cre
   const [createThreadMutation, { loading, error, reset }] = useMutation<CreateThreadResponse>(CREATE_THREAD, {
     errorPolicy: 'all',
     // Update cache after successful creation
-    update: (cache: ApolloCache, { data }: ApolloMutationResult<CreateThreadResponse>) => {
+    update: (cache: ApolloCache, { data }) => {
       if (data?.createDiscussionThread) {
         const courseId = data.createDiscussionThread.course.id;
         
@@ -852,7 +829,7 @@ export function useReplyToThread(): MutationResult<DiscussionReply, { input: Rep
   const [replyToThreadMutation, { loading, error, reset }] = useMutation<ReplyToThreadResponse>(REPLY_TO_THREAD, {
     errorPolicy: 'all',
     // Update cache after successful reply
-    update: (cache: ApolloCache, { data }: ApolloMutationResult<ReplyToThreadResponse>) => {
+    update: (cache: ApolloCache, { data }) => {
       if (data?.replyToThread) {
         const threadId = data.replyToThread.thread.id;
         
@@ -882,12 +859,15 @@ export function useReplyToThread(): MutationResult<DiscussionReply, { input: Rep
         );
 
         // Update thread reply count
-        cache.modify({
-          id: cache.identify({ __typename: 'DiscussionThread', id: threadId }),
-          fields: {
-            replyCount: () => data.replyToThread.thread.replyCount,
-          },
-        });
+        const threadCacheId = cache.identify({ __typename: 'DiscussionThread', id: threadId });
+        if (threadCacheId) {
+          cache.modify({
+            id: threadCacheId,
+            fields: {
+              replyCount: () => data.replyToThread.thread.replyCount,
+            },
+          });
+        }
       }
     },
   });
