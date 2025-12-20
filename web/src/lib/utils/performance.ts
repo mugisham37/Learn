@@ -477,3 +477,9 @@ export const PerformanceUtils = {
   measureAsyncPerformance,
   createBatchProcessor,
 };
+
+// Re-export enhanced utilities
+export { GraphQLDeduplicationUtils } from '../graphql/deduplication';
+export { MemoizationUtils } from './memoization';
+export { LazyLoadingUtils } from './lazyLoading';
+export { CacheOptimizationUtils } from '../cache/optimization';

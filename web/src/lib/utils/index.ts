@@ -140,6 +140,12 @@ export {
   measureAsyncPerformance,
   createBatchProcessor,
   
+  // Enhanced performance utilities
+  GraphQLDeduplicationUtils,
+  MemoizationUtils,
+  LazyLoadingUtils,
+  CacheOptimizationUtils,
+  
   // Types
   type MemoizeOptions,
   type DebounceOptions,
@@ -416,5 +422,9 @@ export default {
   ...Validators,
   ...ProgressCalculators,
   ...PerformanceUtils,
+  ...GraphQLDeduplicationUtils,
+  ...MemoizationUtils,
+  ...LazyLoadingUtils,
+  ...CacheOptimizationUtils,
   ...CommonUtils,
 };
