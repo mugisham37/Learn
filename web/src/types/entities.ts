@@ -8,7 +8,7 @@
 // Base types
 export type ID = string;
 export type DateTime = string;
-export type JSON = any;
+export type JSON = Record<string, unknown>;
 export type Upload = File;
 
 // Enums
@@ -35,10 +35,10 @@ export interface User {
 
 export interface UserProfile {
   fullName: string;
-  bio?: string;
+  bio: string;
   timezone: string;
   language: string;
-  avatarUrl?: string;
+  avatarUrl: string;
 }
 
 export interface NotificationPreferences {
@@ -87,8 +87,8 @@ export interface Lesson {
   title: string;
   description: string;
   type: LessonType;
-  content?: string;
-  videoUrl?: string;
+  content: string;
+  videoUrl: string;
   duration?: number;
   orderIndex: number;
   quiz?: Quiz;
@@ -309,9 +309,9 @@ export interface VideoProcessingStatus {
   status: 'pending' | 'processing' | 'completed' | 'failed';
   progress: number;
   outputFormats: VideoFormat[];
-  thumbnailUrl?: string;
-  duration?: number;
-  error?: string;
+  thumbnailUrl: string;
+  duration: number;
+  error: string;
   updatedAt: DateTime;
 }
 
@@ -331,8 +331,8 @@ export interface StreamingUrl {
 export interface PageInfo {
   hasNextPage: boolean;
   hasPreviousPage: boolean;
-  startCursor?: string;
-  endCursor?: string;
+  startCursor: string;
+  endCursor: string;
 }
 
 export interface Connection<T> {

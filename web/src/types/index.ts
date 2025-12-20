@@ -8,8 +8,81 @@
 // Re-export generated GraphQL types
 export * from './schema';
 
-// Re-export domain entity types
-export * from './entities';
+// Re-export domain entity types (with explicit re-exports to avoid conflicts)
+export type {
+  ID,
+  DateTime,
+  JSON,
+  Upload,
+  Difficulty,
+  QuestionType,
+  QuizAttemptStatus,
+  AssignmentSubmissionStatus,
+  LessonType,
+  UserProfile,
+  NotificationPreferences,
+  CourseModule,
+  Lesson,
+  CourseReview,
+  Enrollment,
+  LessonProgress,
+  Certificate,
+  Quiz,
+  Question,
+  QuizAttempt,
+  QuizAnswer,
+  Assignment,
+  AssignmentSubmission,
+  SubmissionFile,
+  Conversation,
+  Message,
+  MessageAttachment,
+  MessageRead,
+  DiscussionThread,
+  DiscussionReply,
+  Announcement,
+  PresignedUploadUrl,
+  VideoProcessingStatus,
+  VideoFormat,
+  StreamingUrl,
+  PageInfo,
+  Connection,
+  Edge,
+  CourseConnection,
+  EnrollmentConnection,
+  ConversationConnection,
+  MessageConnection,
+  ThreadConnection,
+  UpdateProfileInput,
+  UpdateNotificationPreferencesInput,
+  CreateCourseInput,
+  UpdateCourseInput,
+  EnrollInCourseInput,
+  UpdateLessonProgressInput,
+  FileUploadInput,
+  VideoUploadInput,
+  FileMetadataInput,
+  StartQuizInput,
+  SubmitQuizAnswerInput,
+  SubmitAssignmentInput,
+  SubmissionFileInput,
+  GradeAssignmentInput,
+  SendMessageInput,
+  MessageAttachmentInput,
+  CreateThreadInput,
+  ReplyToThreadInput,
+  CourseFilter,
+  EnrollmentFilter,
+  ConversationFilter,
+  ThreadFilter,
+  PaginationInput
+} from './entities';
+
+// Import User and Course from entities with different names to avoid conflicts
+import type { User as EntityUser, Course as EntityCourse } from './entities';
+
+// Re-export with original names for backward compatibility
+export type { EntityUser as User, EntityCourse as Course };
 
 // Re-export form types when available
 // export * from './forms';
@@ -23,14 +96,14 @@ export interface FoundationConfig {
 
 export interface ErrorContext {
   operation: string;
-  variables?: any;
-  user?: any;
+  variables?: Record<string, unknown>;
+  user?: EntityUser;
   requestId: string;
 }
 
 // Authentication types
 export interface AuthState {
-  user: User | null;
+  user: EntityUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   error: AuthError | null;
@@ -51,22 +124,22 @@ export interface TokenPair {
 export interface QueryResult<T> {
   data: T | undefined;
   loading: boolean;
-  error: any | undefined;
-  refetch: () => Promise<any>;
-  fetchMore?: (options: any) => Promise<any>;
+  error: Error | undefined;
+  refetch: () => Promise<unknown>;
+  fetchMore?: (options: Record<string, unknown>) => Promise<unknown>;
 }
 
 export interface MutationResult<T> {
-  mutate: (variables?: any) => Promise<T>;
+  mutate: (variables?: Record<string, unknown>) => Promise<T>;
   loading: boolean;
-  error: any | undefined;
+  error: Error | undefined;
   reset: () => void;
 }
 
 export interface SubscriptionResult<T> {
   data: T | undefined;
   loading: boolean;
-  error: any | undefined;
+  error: Error | undefined;
 }
 
 // Upload types
@@ -165,5 +238,3 @@ export interface SecurityAuditResult {
   fileUploadSecure: boolean;
   issues: string[];
 }
-
-// User type is now imported from entities.ts

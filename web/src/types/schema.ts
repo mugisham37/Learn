@@ -21,7 +21,7 @@ export type Scalars = {
   Int: { input: number; output: number };
   Float: { input: number; output: number };
   DateTime: { input: string; output: string };
-  JSON: { input: any; output: any };
+  JSON: { input: Record<string, unknown>; output: Record<string, unknown> };
   Upload: { input: File; output: File };
 };
 
@@ -153,7 +153,6 @@ export function useGetCurrentUserLazyQuery(
     options
   );
 }
-// @ts-ignore
 export function useGetCurrentUserSuspenseQuery(
   baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
     GetCurrentUserQueryResult,
@@ -193,7 +192,7 @@ export type GetCurrentUserLazyQueryHookResult = ReturnType<typeof useGetCurrentU
 export type GetCurrentUserSuspenseQueryHookResult = ReturnType<
   typeof useGetCurrentUserSuspenseQuery
 >;
-export type GetCurrentUserQueryResult = ApolloReactCommon.QueryResult<
+export type GetCurrentUserQueryResultType = ApolloReactCommon.QueryResult<
   GetCurrentUserQueryResult,
   GetCurrentUserQueryVariables
 >;
@@ -242,7 +241,6 @@ export function useGetCoursesLazyQuery(
     options
   );
 }
-// @ts-ignore
 export function useGetCoursesSuspenseQuery(
   baseOptions?: ApolloReactHooks.SuspenseQueryHookOptions<
     GetCoursesQueryResult,
@@ -274,7 +272,7 @@ export function useGetCoursesSuspenseQuery(
 export type GetCoursesQueryHookResult = ReturnType<typeof useGetCoursesQuery>;
 export type GetCoursesLazyQueryHookResult = ReturnType<typeof useGetCoursesLazyQuery>;
 export type GetCoursesSuspenseQueryHookResult = ReturnType<typeof useGetCoursesSuspenseQuery>;
-export type GetCoursesQueryResult = ApolloReactCommon.QueryResult<
+export type GetCoursesQueryResultType = ApolloReactCommon.QueryResult<
   GetCoursesQueryResult,
   GetCoursesQueryVariables
 >;
@@ -286,10 +284,10 @@ export const LoginDocument = gql`
     _empty
   }
 `;
-export type LoginMutationFn = ApolloReactCommon.MutationFunction<
+export type LoginMutationFn = ApolloReactCommon.MutationTuple<
   LoginMutationResult,
   LoginMutationVariables
->;
+>[0];
 
 /**
  * __useLoginMutation__
@@ -319,8 +317,8 @@ export function useLoginMutation(
   );
 }
 export type LoginMutationHookResult = ReturnType<typeof useLoginMutation>;
-export type LoginMutationResult = ApolloReactCommon.MutationResult<LoginMutationResult>;
-export type LoginMutationOptions = ApolloReactCommon.BaseMutationOptions<
+export type LoginMutationResultType = ApolloReactCommon.MutationResult<LoginMutationResult>;
+export type LoginMutationOptions = ApolloReactCommon.MutationHookOptions<
   LoginMutationResult,
   LoginMutationVariables
 >;
@@ -329,10 +327,10 @@ export const CreateCourseDocument = gql`
     _empty
   }
 `;
-export type CreateCourseMutationFn = ApolloReactCommon.MutationFunction<
+export type CreateCourseMutationFn = ApolloReactCommon.MutationTuple<
   CreateCourseMutationResult,
   CreateCourseMutationVariables
->;
+>[0];
 
 /**
  * __useCreateCourseMutation__
@@ -364,9 +362,9 @@ export function useCreateCourseMutation(
   );
 }
 export type CreateCourseMutationHookResult = ReturnType<typeof useCreateCourseMutation>;
-export type CreateCourseMutationResult =
+export type CreateCourseMutationResultType =
   ApolloReactCommon.MutationResult<CreateCourseMutationResult>;
-export type CreateCourseMutationOptions = ApolloReactCommon.BaseMutationOptions<
+export type CreateCourseMutationOptions = ApolloReactCommon.MutationHookOptions<
   CreateCourseMutationResult,
   CreateCourseMutationVariables
 >;
@@ -404,7 +402,7 @@ export function useMessageUpdatesSubscription(
   >(MessageUpdatesDocument, options);
 }
 export type MessageUpdatesSubscriptionHookResult = ReturnType<typeof useMessageUpdatesSubscription>;
-export type MessageUpdatesSubscriptionResult =
+export type MessageUpdatesSubscriptionResultType =
   ApolloReactCommon.SubscriptionResult<MessageUpdatesSubscriptionResult>;
 export const ProgressUpdatesDocument = gql`
   subscription ProgressUpdates {
@@ -442,5 +440,5 @@ export function useProgressUpdatesSubscription(
 export type ProgressUpdatesSubscriptionHookResult = ReturnType<
   typeof useProgressUpdatesSubscription
 >;
-export type ProgressUpdatesSubscriptionResult =
+export type ProgressUpdatesSubscriptionResultType =
   ApolloReactCommon.SubscriptionResult<ProgressUpdatesSubscriptionResult>;
