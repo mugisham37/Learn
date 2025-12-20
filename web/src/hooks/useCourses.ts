@@ -16,6 +16,14 @@ import type {
   CourseConnection,
   CourseStatus,
 } from '../types';
+import type {
+  GetCoursesResponse,
+  GetCourseResponse,
+  GetMyCoursesResponse,
+  CreateCourseResponse,
+  UpdateCourseResponse,
+  PublishCourseResponse,
+} from '../types/graphql-responses';
 
 // GraphQL Queries and Mutations
 const GET_COURSES = gql`
@@ -252,7 +260,7 @@ export function useCourses(
   filter?: CourseFilter,
   pagination?: PaginationInput
 ): QueryResult<CourseConnection> {
-  const { data, loading, error, refetch, fetchMore } = useQuery(GET_COURSES, {
+  const { data, loading, error, refetch, fetchMore } = useQuery<GetCoursesResponse>(GET_COURSES, {
     variables: { filter, pagination },
     errorPolicy: 'all',
     notifyOnNetworkStatusChange: true,
@@ -292,7 +300,7 @@ export function useCourses(
  * ```
  */
 export function useCourse(id: string): QueryResult<Course> {
-  const { data, loading, error, refetch } = useQuery(GET_COURSE, {
+  const { data, loading, error, refetch } = useQuery<GetCourseResponse>(GET_COURSE, {
     variables: { id },
     skip: !id,
     errorPolicy: 'all',
@@ -336,7 +344,7 @@ export function useMyCourses(
   filter?: CourseFilter,
   pagination?: PaginationInput
 ): QueryResult<CourseConnection> {
-  const { data, loading, error, refetch, fetchMore } = useQuery(GET_MY_COURSES, {
+  const { data, loading, error, refetch, fetchMore } = useQuery<GetMyCoursesResponse>(GET_MY_COURSES, {
     variables: { filter, pagination },
     errorPolicy: 'all',
     notifyOnNetworkStatusChange: true,
@@ -375,15 +383,15 @@ export function useMyCourses(
  * ```
  */
 export function useCreateCourse(): MutationResult<Course, { input: CreateCourseInput }> {
-  const [createCourseMutation, { loading, error, reset }] = useMutation(CREATE_COURSE, {
+  const [createCourseMutation, { loading, error, reset }] = useMutation<CreateCourseResponse>(CREATE_COURSE, {
     errorPolicy: 'all',
     // Update cache after successful creation
-    update: (cache: any, { data }: { data?: any }) => {
+    update: (cache, { data }) => {
       if (data?.createCourse) {
         // Add to my courses list
-        cache.updateQuery(
+        cache.updateQuery<GetMyCoursesResponse>(
           { query: GET_MY_COURSES, variables: {} },
-          (existingData: { myCourses?: CourseConnection } | undefined) => {
+          (existingData) => {
             if (!existingData?.myCourses) return existingData;
             
             return {
@@ -443,7 +451,7 @@ export function useCreateCourse(): MutationResult<Course, { input: CreateCourseI
  * ```
  */
 export function useUpdateCourse(): MutationResult<Course, { id: string; input: UpdateCourseInput }> {
-  const [updateCourseMutation, { loading, error, reset }] = useMutation(UPDATE_COURSE, {
+  const [updateCourseMutation, { loading, error, reset }] = useMutation<UpdateCourseResponse>(UPDATE_COURSE, {
     errorPolicy: 'all',
     // Optimistic response for immediate UI updates
     optimisticResponse: (variables: { id: string; input: UpdateCourseInput }) => ({
@@ -455,12 +463,12 @@ export function useUpdateCourse(): MutationResult<Course, { id: string; input: U
       },
     }),
     // Update cache after successful mutation
-    update: (cache: any, { data }: { data?: any }) => {
+    update: (cache, { data }) => {
       if (data?.updateCourse) {
         // Update course in cache
-        cache.updateQuery(
+        cache.updateQuery<GetCourseResponse>(
           { query: GET_COURSE, variables: { id: data.updateCourse.id } },
-          (existingData: { course?: Course } | undefined) => {
+          (existingData) => {
             if (!existingData?.course) return existingData;
             
             return {
@@ -516,7 +524,7 @@ export function useUpdateCourse(): MutationResult<Course, { id: string; input: U
  * ```
  */
 export function usePublishCourse(): MutationResult<Course, { id: string }> {
-  const [publishCourseMutation, { loading, error, reset }] = useMutation(PUBLISH_COURSE, {
+  const [publishCourseMutation, { loading, error, reset }] = useMutation<PublishCourseResponse>(PUBLISH_COURSE, {
     errorPolicy: 'all',
     // Optimistic response for immediate UI updates
     optimisticResponse: (variables: { id: string }) => ({
@@ -528,12 +536,12 @@ export function usePublishCourse(): MutationResult<Course, { id: string }> {
       },
     }),
     // Update cache after successful mutation
-    update: (cache: any, { data }: { data?: any }) => {
+    update: (cache, { data }) => {
       if (data?.publishCourse) {
         // Update course status in cache
-        cache.updateQuery(
+        cache.updateQuery<GetCourseResponse>(
           { query: GET_COURSE, variables: { id: data.publishCourse.id } },
-          (existingData: { course?: Course } | undefined) => {
+          (existingData) => {
             if (!existingData?.course) return existingData;
             
             return {

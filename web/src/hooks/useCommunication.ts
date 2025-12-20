@@ -20,6 +20,17 @@ import type {
   ConversationConnection,
   ThreadConnection,
 } from '../types';
+import type {
+  GetConversationsResponse,
+  GetConversationMessagesResponse,
+  GetDiscussionThreadsResponse,
+  GetThreadRepliesResponse,
+  SendMessageResponse,
+  CreateThreadResponse,
+  ReplyToThreadResponse,
+  MessageAddedSubscription,
+  UserTypingSubscription,
+} from '../types/graphql-responses';
 
 // GraphQL Queries and Mutations
 const GET_CONVERSATIONS = gql`
@@ -409,7 +420,7 @@ export function useConversations(
   filter?: ConversationFilter,
   pagination?: PaginationInput
 ): QueryResult<ConversationConnection> {
-  const { data, loading, error, refetch, fetchMore } = useQuery(GET_CONVERSATIONS, {
+  const { data, loading, error, refetch, fetchMore } = useQuery<GetConversationsResponse>(GET_CONVERSATIONS, {
     variables: { filter, pagination },
     errorPolicy: 'all',
     notifyOnNetworkStatusChange: true,
@@ -487,28 +498,28 @@ export function useConversations(
  */
 export function useChatSession(conversationId: string): ChatSession {
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
-  const [sendMessageMutation, { loading: sendLoading, error: sendError }] = useMutation(SEND_MESSAGE);
+  const [sendMessageMutation, { loading: sendLoading, error: sendError }] = useMutation<SendMessageResponse>(SEND_MESSAGE);
   const [markReadMutation] = useMutation(MARK_MESSAGES_READ);
   const setTypingRef = useRef<((isTyping: boolean) => void) | null>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Fetch conversation messages
-  const { data: conversationData, loading, error } = useQuery(GET_CONVERSATION_MESSAGES, {
+  const { data: conversationData, loading, error } = useQuery<GetConversationMessagesResponse>(GET_CONVERSATION_MESSAGES, {
     variables: { conversationId, pagination: { first: 50 } },
     skip: !conversationId,
     errorPolicy: 'all',
   });
 
   // Subscribe to new messages
-  useSubscription(MESSAGE_SUBSCRIPTION, {
+  useSubscription<MessageAddedSubscription>(MESSAGE_SUBSCRIPTION, {
     variables: { conversationId },
     skip: !conversationId,
-    onData: ({ subscriptionData, client }: { subscriptionData: any; client: any }) => {
+    onData: ({ subscriptionData, client }) => {
       if (subscriptionData.data?.messageAdded) {
         // Update cache with new message
-        client.cache.updateQuery(
+        client.cache.updateQuery<GetConversationMessagesResponse>(
           { query: GET_CONVERSATION_MESSAGES, variables: { conversationId } },
-          (existingData: { conversation?: { messages?: { edges?: Array<{ node: Message; cursor: string }> } } } | undefined) => {
+          (existingData) => {
             if (!existingData?.conversation?.messages?.edges) return existingData;
             
             return {
@@ -534,10 +545,10 @@ export function useChatSession(conversationId: string): ChatSession {
   });
 
   // Subscribe to typing indicators
-  useSubscription(TYPING_SUBSCRIPTION, {
+  useSubscription<UserTypingSubscription>(TYPING_SUBSCRIPTION, {
     variables: { conversationId },
     skip: !conversationId,
-    onData: ({ subscriptionData }: { subscriptionData: any }) => {
+    onData: ({ subscriptionData }) => {
       if (subscriptionData.data?.userTyping) {
         const { userId, isTyping } = subscriptionData.data.userTyping;
         
@@ -692,7 +703,7 @@ export function useDiscussionThreads(
   filter?: ThreadFilter,
   pagination?: PaginationInput
 ): QueryResult<ThreadConnection> {
-  const { data, loading, error, refetch, fetchMore } = useQuery(GET_DISCUSSION_THREADS, {
+  const { data, loading, error, refetch, fetchMore } = useQuery<GetDiscussionThreadsResponse>(GET_DISCUSSION_THREADS, {
     variables: { courseId, filter, pagination },
     skip: !courseId,
     errorPolicy: 'all',
@@ -750,17 +761,17 @@ export function useDiscussionThreads(
  * ```
  */
 export function useCreateThread(): MutationResult<DiscussionThread, { input: CreateThreadInput }> {
-  const [createThreadMutation, { loading, error, reset }] = useMutation(CREATE_THREAD, {
+  const [createThreadMutation, { loading, error, reset }] = useMutation<CreateThreadResponse>(CREATE_THREAD, {
     errorPolicy: 'all',
     // Update cache after successful creation
-    update: (cache: any, { data }: { data?: any }) => {
+    update: (cache, { data }) => {
       if (data?.createDiscussionThread) {
         const courseId = data.createDiscussionThread.course.id;
         
         // Add to threads list
-        cache.updateQuery(
+        cache.updateQuery<GetDiscussionThreadsResponse>(
           { query: GET_DISCUSSION_THREADS, variables: { courseId } },
-          (existingData: { discussionThreads?: ThreadConnection } | undefined) => {
+          (existingData) => {
             if (!existingData?.discussionThreads) return existingData;
             
             return {
@@ -835,17 +846,17 @@ export function useCreateThread(): MutationResult<DiscussionThread, { input: Cre
  * ```
  */
 export function useReplyToThread(): MutationResult<DiscussionReply, { input: ReplyToThreadInput }> {
-  const [replyToThreadMutation, { loading, error, reset }] = useMutation(REPLY_TO_THREAD, {
+  const [replyToThreadMutation, { loading, error, reset }] = useMutation<ReplyToThreadResponse>(REPLY_TO_THREAD, {
     errorPolicy: 'all',
     // Update cache after successful reply
-    update: (cache: any, { data }: { data?: any }) => {
+    update: (cache, { data }) => {
       if (data?.replyToThread) {
         const threadId = data.replyToThread.thread.id;
         
         // Add to thread replies
-        cache.updateQuery(
+        cache.updateQuery<GetThreadRepliesResponse>(
           { query: GET_THREAD_REPLIES, variables: { threadId } },
-          (existingData: { discussionThread?: { replies?: { edges?: Array<{ node: DiscussionReply; cursor: string }> } } } | undefined) => {
+          (existingData) => {
             if (!existingData?.discussionThread?.replies?.edges) return existingData;
             
             return {

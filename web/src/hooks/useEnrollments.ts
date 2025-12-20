@@ -16,6 +16,12 @@ import type {
   PaginationInput,
   EnrollmentConnection,
 } from '../types';
+import type {
+  GetMyEnrollmentsResponse,
+  GetEnrollmentProgressResponse,
+  EnrollInCourseResponse,
+  UpdateLessonProgressResponse,
+} from '../types/graphql-responses';
 
 // GraphQL Queries and Mutations
 const GET_MY_ENROLLMENTS = gql`
@@ -222,7 +228,7 @@ export function useMyEnrollments(
   filter?: EnrollmentFilter,
   pagination?: PaginationInput
 ): QueryResult<EnrollmentConnection> {
-  const { data, loading, error, refetch, fetchMore } = useQuery(GET_MY_ENROLLMENTS, {
+  const { data, loading, error, refetch, fetchMore } = useQuery<GetMyEnrollmentsResponse>(GET_MY_ENROLLMENTS, {
     variables: { filter, pagination },
     errorPolicy: 'all',
     notifyOnNetworkStatusChange: true,
@@ -266,7 +272,7 @@ export function useMyEnrollments(
  * ```
  */
 export function useEnrollmentProgress(enrollmentId: string): QueryResult<Enrollment> {
-  const { data, loading, error, refetch } = useQuery(GET_ENROLLMENT_PROGRESS, {
+  const { data, loading, error, refetch } = useQuery<GetEnrollmentProgressResponse>(GET_ENROLLMENT_PROGRESS, {
     variables: { enrollmentId },
     skip: !enrollmentId,
     errorPolicy: 'all',
@@ -320,15 +326,15 @@ export function useEnrollmentProgress(enrollmentId: string): QueryResult<Enrollm
  * ```
  */
 export function useEnrollInCourse(): MutationResult<Enrollment, { input: EnrollInCourseInput }> {
-  const [enrollInCourseMutation, { loading, error, reset }] = useMutation(ENROLL_IN_COURSE, {
+  const [enrollInCourseMutation, { loading, error, reset }] = useMutation<EnrollInCourseResponse>(ENROLL_IN_COURSE, {
     errorPolicy: 'all',
     // Update cache after successful enrollment
-    update: (cache: any, { data }: { data?: any }) => {
+    update: (cache, { data }) => {
       if (data?.enrollInCourse) {
         // Add to my enrollments list
-        cache.updateQuery(
+        cache.updateQuery<GetMyEnrollmentsResponse>(
           { query: GET_MY_ENROLLMENTS, variables: {} },
-          (existingData: { myEnrollments?: EnrollmentConnection } | undefined) => {
+          (existingData) => {
             if (!existingData?.myEnrollments) return existingData;
             
             return {
@@ -418,7 +424,7 @@ export function useEnrollInCourse(): MutationResult<Enrollment, { input: EnrollI
  * ```
  */
 export function useUpdateLessonProgress(): MutationResult<LessonProgress, { input: UpdateLessonProgressInput }> {
-  const [updateProgressMutation, { loading, error, reset }] = useMutation(
+  const [updateProgressMutation, { loading, error, reset }] = useMutation<UpdateLessonProgressResponse>(
     UPDATE_LESSON_PROGRESS,
     {
       errorPolicy: 'all',
@@ -446,14 +452,14 @@ export function useUpdateLessonProgress(): MutationResult<LessonProgress, { inpu
         },
       }),
       // Update cache after successful mutation
-      update: (cache: any, { data }: { data?: any }) => {
+      update: (cache, { data }) => {
         if (data?.updateLessonProgress) {
           const enrollmentId = data.updateLessonProgress.enrollment.id;
           
           // Update enrollment progress in cache
-          cache.updateQuery(
+          cache.updateQuery<GetEnrollmentProgressResponse>(
             { query: GET_ENROLLMENT_PROGRESS, variables: { enrollmentId } },
-            (existingData: { enrollment?: Enrollment } | undefined) => {
+            (existingData) => {
               if (!existingData?.enrollment) return existingData;
               
               // Update lesson progress in the list

@@ -5,7 +5,7 @@
  * assignment submissions, and grading workflows.
  */
 
-import { useQuery, useMutation } from '@apollo/client/react';
+import { useQuery, useMutation } from '@apollo/client';
 import { gql } from '@apollo/client';
 import { useState, useCallback, useRef, useEffect } from 'react';
 import type {
@@ -17,6 +17,15 @@ import type {
   SubmitAssignmentInput,
   GradeAssignmentInput,
 } from '../types';
+import type {
+  GetQuizResponse,
+  GetQuizAttemptResponse,
+  GetAssignmentResponse,
+  StartQuizResponse,
+  SubmitQuizResponse,
+  SubmitAssignmentResponse,
+  GradeAssignmentResponse,
+} from '../types/graphql-responses';
 
 // GraphQL Queries and Mutations
 const GET_QUIZ = gql`
@@ -304,7 +313,7 @@ interface QuizSession {
  * ```
  */
 export function useStartQuiz(): MutationResult<QuizAttempt, { input: StartQuizInput }> {
-  const [startQuizMutation, { loading, error, reset }] = useMutation(START_QUIZ, {
+  const [startQuizMutation, { loading, error, reset }] = useMutation<StartQuizResponse>(START_QUIZ, {
     errorPolicy: 'all',
   });
 
@@ -371,16 +380,16 @@ export function useStartQuiz(): MutationResult<QuizAttempt, { input: StartQuizIn
  */
 export function useQuizSession(attemptId: string): QuizSession {
   const [submitAnswerMutation] = useMutation(SUBMIT_QUIZ_ANSWER);
-  const [submitQuizMutation, { loading: submitLoading, error: submitError }] = useMutation(SUBMIT_QUIZ);
+  const [submitQuizMutation, { loading: submitLoading, error: submitError }] = useMutation<SubmitQuizResponse>(SUBMIT_QUIZ);
   
   const [timeRemaining, setTimeRemaining] = useState(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const { data: attemptData, loading, error } = useQuery(GET_QUIZ_ATTEMPT, {
+  const { data: attemptData, loading, error } = useQuery<GetQuizAttemptResponse>(GET_QUIZ_ATTEMPT, {
     variables: { id: attemptId },
     skip: !attemptId,
     errorPolicy: 'all',
-    onCompleted: (data) => {
+    onCompleted: (data: GetQuizAttemptResponse) => {
       if (data?.quizAttempt?.timeRemaining) {
         setTimeRemaining(data.quizAttempt.timeRemaining);
       }
@@ -507,17 +516,17 @@ export function useQuizSession(attemptId: string): QuizSession {
  * ```
  */
 export function useSubmitAssignment(): MutationResult<AssignmentSubmission, { input: SubmitAssignmentInput }> {
-  const [submitAssignmentMutation, { loading, error, reset }] = useMutation(SUBMIT_ASSIGNMENT, {
+  const [submitAssignmentMutation, { loading, error, reset }] = useMutation<SubmitAssignmentResponse>(SUBMIT_ASSIGNMENT, {
     errorPolicy: 'all',
     // Update cache after successful submission
-    update: (cache: any, { data }: { data?: any }) => {
+    update: (cache, { data }) => {
       if (data?.submitAssignment) {
         const assignmentId = data.submitAssignment.assignment.id;
         
         // Update assignment submissions list
-        cache.updateQuery(
+        cache.updateQuery<GetAssignmentResponse>(
           { query: GET_ASSIGNMENT, variables: { id: assignmentId } },
-          (existingData: { assignment?: Assignment } | undefined) => {
+          (existingData) => {
             if (!existingData?.assignment) return existingData;
             
             return {
@@ -595,10 +604,10 @@ export function useSubmitAssignment(): MutationResult<AssignmentSubmission, { in
  * ```
  */
 export function useGradeAssignment(): MutationResult<AssignmentSubmission, { input: GradeAssignmentInput }> {
-  const [gradeAssignmentMutation, { loading, error, reset }] = useMutation(GRADE_ASSIGNMENT, {
+  const [gradeAssignmentMutation, { loading, error, reset }] = useMutation<GradeAssignmentResponse>(GRADE_ASSIGNMENT, {
     errorPolicy: 'all',
     // Update cache after successful grading
-    update: (cache: any, { data }: { data?: any }) => {
+    update: (cache, { data }) => {
       if (data?.gradeAssignment) {
         // Update submission in cache
         cache.modify({
@@ -635,7 +644,7 @@ export function useGradeAssignment(): MutationResult<AssignmentSubmission, { inp
  * @returns Query result with quiz data
  */
 export function useQuiz(quizId: string): QueryResult<Quiz> {
-  const { data, loading, error, refetch } = useQuery(GET_QUIZ, {
+  const { data, loading, error, refetch } = useQuery<GetQuizResponse>(GET_QUIZ, {
     variables: { id: quizId },
     skip: !quizId,
     errorPolicy: 'all',
@@ -656,7 +665,7 @@ export function useQuiz(quizId: string): QueryResult<Quiz> {
  * @returns Query result with assignment data
  */
 export function useAssignment(assignmentId: string): QueryResult<Assignment> {
-  const { data, loading, error, refetch } = useQuery(GET_ASSIGNMENT, {
+  const { data, loading, error, refetch } = useQuery<GetAssignmentResponse>(GET_ASSIGNMENT, {
     variables: { id: assignmentId },
     skip: !assignmentId,
     errorPolicy: 'all',

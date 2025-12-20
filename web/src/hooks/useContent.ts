@@ -15,6 +15,9 @@ import type {
   VideoProcessingStatus,
   StreamingUrl,
 } from '../types';
+import type {
+  GetStreamingUrlResponse,
+} from '../types/graphql-responses';
 import {
   useFileUpload as useFileUploadCore,
   useVideoUpload as useVideoUploadCore,
@@ -312,7 +315,7 @@ export function useVideoUpload(): VideoUploadResult {
  * ```
  */
 export function useStreamingUrl(): MutationResult<StreamingUrl> {
-  const [getStreamingUrlMutation, { loading, error, reset }] = useMutation(GET_STREAMING_URL, {
+  const [getStreamingUrlMutation, { loading, error, reset }] = useMutation<GetStreamingUrlResponse>(GET_STREAMING_URL, {
     errorPolicy: 'all',
   });
 
