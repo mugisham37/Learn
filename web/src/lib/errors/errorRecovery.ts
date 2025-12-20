@@ -343,16 +343,16 @@ export class ErrorRecoveryManager {
    * Handles custom recovery strategies
    */
   private async handleCustomRecovery(
-    _error: ClassifiedError,
+    error: ClassifiedError,
     strategy: ErrorRecoveryStrategy,
-    _originalOperation?: () => Promise<unknown>
+    originalOperation?: () => Promise<unknown>
   ): Promise<ErrorHandlerResult> {
     if (strategy.customRecovery) {
       try {
-        await strategy.customRecovery(_error);
+        await strategy.customRecovery(error);
         return {
           handled: true,
-          shouldRetry: false,
+          shouldRetry: !!originalOperation,
           userMessage: 'Error recovered successfully.',
           actions: ['custom_recovery_success'],
         };
@@ -361,13 +361,13 @@ export class ErrorRecoveryManager {
         return {
           handled: false,
           shouldRetry: false,
-          userMessage: _error.userMessage,
+          userMessage: error.userMessage,
           actions: ['custom_recovery_failed'],
         };
       }
     }
 
-    return this.handleShowError(_error);
+    return this.handleShowError(error);
   }
 
   /**

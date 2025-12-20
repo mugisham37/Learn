@@ -8,7 +8,7 @@
  */
 
 import React from 'react';
-import { ApolloCache, NormalizedCacheObject } from '@apollo/client';
+import { InMemoryCache } from '@apollo/client';
 import { DocumentNode } from 'graphql';
 
 // =============================================================================
@@ -248,7 +248,7 @@ export class CacheOptimizer {
           await Promise.race([
             client.query({ 
               query, 
-              variables: variables || undefined, 
+              ...(variables && { variables }), 
               fetchPolicy: 'cache-first' 
             }),
             timeoutPromise,
@@ -263,7 +263,7 @@ export class CacheOptimizer {
             try {
               await client.query({ 
                 query, 
-                variables: variables || undefined, 
+                ...(variables && { variables }), 
                 fetchPolicy: 'network-only' 
               });
             } catch (retryError) {
@@ -409,7 +409,6 @@ export async function preloadCriticalData(
       await Promise.race([
         client.query({ 
           query, 
-          variables: variables || undefined, 
           fetchPolicy: 'cache-first' 
         }),
         timeoutPromise,

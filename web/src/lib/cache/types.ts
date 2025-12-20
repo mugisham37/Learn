@@ -24,6 +24,36 @@ export interface CacheEntity {
   status?: string;
   progressPercentage?: number;
   readBy?: Array<{ userId: string; readAt: string }>;
+  // Course-specific fields
+  publishedAt?: string;
+  enrollmentCount?: number;
+  modules?: unknown[];
+  averageRating?: number | null;
+  // Enrollment-specific fields
+  enrolledAt?: string;
+  lessonProgress?: unknown[];
+  lastAccessedAt?: string;
+  completedAt?: string;
+  // Message-specific fields
+  sentAt?: string;
+  // Assignment-specific fields
+  submittedAt?: string;
+  grade?: number | null;
+  feedback?: string | null;
+  gradedAt?: string;
+  // User-specific fields
+  profile?: Record<string, unknown>;
+  notificationPreferences?: Record<string, unknown>;
+  // Discussion-specific fields
+  replyCount?: number;
+  lastReplyAt?: string | null;
+  isPinned?: boolean;
+  isLocked?: boolean;
+  isEdited?: boolean;
+  editedAt?: string | null;
+  // Notification-specific fields
+  isRead?: boolean;
+  readAt?: string;
 }
 
 /**

@@ -38,6 +38,13 @@ export {
   type SupportedLocale
 } from './errorMessages';
 
+// Error recovery strategies
+export { 
+  ErrorRecoveryManager,
+  NetworkErrorRecovery,
+  errorRecoveryManager 
+} from './errorRecovery';
+
 // Error tracking integration
 export { 
   ErrorTrackingManager,
@@ -51,13 +58,6 @@ export {
   errorHandler,
   errorHandlerUtils 
 } from './errorHandler';
-
-// Error recovery strategies
-export { 
-  ErrorRecoveryManager,
-  NetworkErrorRecovery,
-  errorRecoveryManager 
-} from './errorRecovery';
 
 // React error boundary components
 export {
@@ -109,12 +109,17 @@ export async function initializeErrorHandling(config?: {
   } = config || {};
 
   try {
+    // Import the instances dynamically to avoid circular dependencies
+    const { errorTrackingManager } = await import('./errorTracking');
+    const { errorHandler } = await import('./errorHandler');
+    const { NetworkErrorRecovery } = await import('./errorRecovery');
+
     // Initialize error tracking
     if (enableTracking) {
       await errorTrackingManager.initialize({
-        dsn: sentryDsn,
+        ...(sentryDsn && { dsn: sentryDsn }),
         environment,
-        version,
+        ...(version && { version }),
         sampleRate,
         tracesSampleRate,
         enabled: enableTracking && (environment === 'production' ? !!sentryDsn : true),
@@ -140,6 +145,27 @@ export async function initializeErrorHandling(config?: {
   }
 }
 
+// Define error types for better type safety
+interface ApolloError {
+  graphQLErrors?: Array<{
+    message: string;
+    extensions?: import('./errorTypes').GraphQLErrorExtensions;
+    path?: (string | number)[];
+    locations?: { line: number; column: number }[];
+  }>;
+  networkError?: Error & { statusCode?: number; response?: Record<string, unknown> };
+}
+
+interface UploadError extends Error {
+  code?: string;
+}
+
+interface SubscriptionError {
+  message: string;
+  code?: string;
+  type?: string;
+}
+
 /**
  * Quick error handling utilities for common use cases
  */
@@ -148,13 +174,15 @@ export const quickErrorHandling = {
    * Handle GraphQL errors from Apollo Client
    */
   handleApolloError: async (error: ApolloError, operationName: string, variables?: Record<string, unknown>) => {
+    const { errorHandler } = await import('./errorHandler');
+    
     const context = {
       operation: operationName,
-      variables,
+      ...(variables && { variables }),
       requestId: `apollo_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
     };
 
-    if (error.graphQLErrors?.length > 0) {
+    if (error.graphQLErrors && error.graphQLErrors.length > 0) {
       for (const gqlError of error.graphQLErrors) {
         await errorHandler.handleGraphQLError(gqlError, context);
       }
@@ -171,6 +199,8 @@ export const quickErrorHandling = {
    * Handle upload errors
    */
   handleUploadError: async (error: UploadError, uploadId: string, fileName?: string) => {
+    const { errorHandler } = await import('./errorHandler');
+    
     const context = {
       operation: 'file_upload',
       metadata: { uploadId, fileName },
@@ -178,7 +208,12 @@ export const quickErrorHandling = {
     };
 
     if (error.code && error.message) {
-      return errorHandler.handleUploadError(error, context);
+      return errorHandler.handleUploadError({
+        code: error.code,
+        message: error.message,
+        uploadId,
+        ...(fileName && { fileName }),
+      }, context);
     } else {
       return errorHandler.handleRuntimeError(error, context);
     }
@@ -188,6 +223,8 @@ export const quickErrorHandling = {
    * Handle subscription errors
    */
   handleSubscriptionError: async (error: SubscriptionError, subscriptionName: string) => {
+    const { errorHandler } = await import('./errorHandler');
+    
     const context = {
       operation: subscriptionName,
       requestId: `sub_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
@@ -200,6 +237,8 @@ export const quickErrorHandling = {
    * Handle general runtime errors
    */
   handleRuntimeError: async (error: Error, operation?: string) => {
+    const { errorHandler } = await import('./errorHandler');
+    
     const context = {
       operation: operation || 'runtime',
       requestId: `runtime_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
@@ -208,27 +247,6 @@ export const quickErrorHandling = {
     return errorHandler.handleRuntimeError(error, context);
   },
 };
-
-// Define error types for better type safety
-interface ApolloError {
-  graphQLErrors?: Array<{
-    message: string;
-    extensions?: GraphQLErrorExtensions;
-    path?: (string | number)[];
-    locations?: { line: number; column: number }[];
-  }>;
-  networkError?: Error & { statusCode?: number; response?: Record<string, unknown> };
-}
-
-interface UploadError extends Error {
-  code?: string;
-}
-
-interface SubscriptionError {
-  message: string;
-  code?: string;
-  type?: string;
-}
 
 /**
  * Error handling hooks for React components

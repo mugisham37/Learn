@@ -148,14 +148,17 @@ class SentryTrackingService implements ErrorTrackingService {
     try {
       // Dynamically import Sentry to avoid bundling if not needed
       // Note: This requires @sentry/nextjs to be installed
-      const sentryModule = await import('@sentry/nextjs').catch(() => null);
-      if (!sentryModule) {
+      let sentryModule;
+      try {
+        // Use eval to prevent TypeScript from checking the import at compile time
+        sentryModule = await eval('import("@sentry/nextjs")') as SentryModule;
+      } catch {
         console.warn('Sentry package not found, error tracking disabled');
         this.enabled = false;
         return;
       }
       
-      this.sentry = sentryModule as unknown as SentryModule;
+      this.sentry = sentryModule;
 
       sentryModule.init({
         dsn: config.dsn,
@@ -197,6 +200,25 @@ class SentryTrackingService implements ErrorTrackingService {
         scope.setTag('error.category', error.category);
         scope.setTag('error.severity', error.severity);
         scope.setTag('error.retryable', error.retryable.toString());
+
+        // Set context information if available
+        if (context) {
+          if (context.operation) {
+            scope.setTag('operation', context.operation);
+          }
+          if (context.userId) {
+            scope.setTag('userId', context.userId);
+          }
+          if (context.requestId) {
+            scope.setTag('requestId', context.requestId);
+          }
+          if (context.variables) {
+            scope.setContext('variables', context.variables);
+          }
+          if (context.metadata) {
+            scope.setContext('metadata', context.metadata);
+          }
+        }
 
         // Set error level based on severity
         const level = this.mapSeverityToLevel(error.severity);

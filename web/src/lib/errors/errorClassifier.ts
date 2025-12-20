@@ -16,7 +16,6 @@ import type {
   ErrorCategory, 
   ErrorSeverity,
   ErrorContext,
-  ErrorHandlingConfig,
   NetworkErrorDetails,
   GraphQLErrorExtensions
 } from './errorTypes';

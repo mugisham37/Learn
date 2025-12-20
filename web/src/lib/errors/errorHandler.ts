@@ -343,7 +343,7 @@ export const errorHandlerUtils = {
     return async (error: GraphQLError, variables?: Record<string, unknown>) => {
       const context: Partial<ErrorContext> = {
         operation: operationName,
-        variables: variables || undefined,
+        ...(variables && { variables }),
         requestId: `gql_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
       };
 
@@ -381,7 +381,7 @@ export const errorHandlerUtils = {
           code: error.code,
           message: error.message,
           uploadId,
-          fileName,
+          ...(fileName && { fileName }),
         }, context);
       } else {
         return errorHandler.handleRuntimeError(error, context);
