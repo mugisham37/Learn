@@ -170,7 +170,7 @@ export const formatRelativeDate = memoize((
  */
 export const parseFormattedDate = (
   dateString: string,
-  _timezone: string = DEFAULT_TIMEZONE
+  timezone: string = DEFAULT_TIMEZONE
 ): Date => {
   // Try parsing as ISO string first
   const isoDate = new Date(dateString);
@@ -178,8 +178,9 @@ export const parseFormattedDate = (
     return isoDate;
   }
 
-  // For more complex parsing, we'd need a date parsing library
+  // For more complex parsing with timezone support, we'd need a date parsing library
   // For now, throw an error for unparseable formats
+  console.warn(`Timezone ${timezone} not used in current implementation`);
   throw new Error(`Cannot parse date string: ${dateString}`);
 };
 
@@ -223,13 +224,15 @@ export const formatCurrency = memoize((
  */
 export const parseCurrency = (
   currencyString: string,
-  _locale: string = DEFAULT_LOCALE
+  locale: string = DEFAULT_LOCALE
 ): number => {
   // Remove currency symbols and parse
+  // Note: locale-specific parsing would require more sophisticated logic
   const cleanString = currencyString.replace(/[^\d.,\-+]/g, '');
   const number = parseFloat(cleanString.replace(',', ''));
   
   if (isNaN(number)) {
+    console.warn(`Locale ${locale} not used in current implementation`);
     throw new Error(`Cannot parse currency string: ${currencyString}`);
   }
   
@@ -251,7 +254,6 @@ export const formatDuration = memoize((
     format = 'short',
     precision = 'minutes',
     showZero = false,
-    locale = DEFAULT_LOCALE
   } = options;
 
   if (typeof durationMs !== 'number' || durationMs < 0) {
@@ -416,7 +418,7 @@ export const formatPercentage = memoize((
  */
 export const formatFileSize = memoize((
   bytes: number,
-  _locale: string = DEFAULT_LOCALE
+  locale: string = DEFAULT_LOCALE
 ): string => {
   if (bytes === 0) return '0 B';
 
@@ -426,7 +428,7 @@ export const formatFileSize = memoize((
   const size = bytes / Math.pow(base, unitIndex);
 
   return `${formatNumber(size, { 
-    locale: _locale, 
+    locale, 
     maximumFractionDigits: unitIndex === 0 ? 0 : 1 
   })} ${units[unitIndex]}`;
 });

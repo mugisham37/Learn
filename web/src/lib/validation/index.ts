@@ -14,7 +14,7 @@ export * from './runtimeValidation';
 export { validateGraphQLResponse } from './runtimeValidation';
 
 // Create runtime validator function
-export function createRuntimeValidator<T>(schema: any) {
+export function createRuntimeValidator<T>(schema: import('zod').ZodType<T>) {
   return (data: unknown): T => {
     return schema.parse(data);
   };

@@ -287,7 +287,6 @@ export function createCacheAwareMemo<TArgs extends unknown[], TResult>(
 
   let cachedResult: TResult | undefined;
   let cachedArgs: TArgs | undefined;
-  let cacheVersion = 0;
 
   // Set up cache invalidation if Apollo cache is provided
   if (cache) {
@@ -305,7 +304,10 @@ export function createCacheAwareMemo<TArgs extends unknown[], TResult>(
       if (shouldInvalidateResult) {
         cachedResult = undefined;
         cachedArgs = undefined;
-        cacheVersion++;
+        // Cache version tracking for debugging
+        if (process.env.NODE_ENV === 'development') {
+          console.debug('Cache invalidated');
+        }
       }
 
       return result;

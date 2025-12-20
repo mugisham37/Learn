@@ -164,14 +164,15 @@ export const QuestionSchema = BaseEntitySchema.extend({
 /**
  * Quiz schema
  */
-export const QuizSchema = BaseEntitySchema.extend({
+export const QuizSchema: z.ZodLazy<z.ZodTypeAny> = z.lazy(() => BaseEntitySchema.extend({
+  lesson: z.lazy(() => LessonSchema),
   title: z.string().min(1).max(100),
   description: z.string(),
   timeLimit: z.number().int().min(1).optional(),
   maxAttempts: z.number().int().min(1).max(10),
   passingScore: z.number().min(0).max(100),
   questions: z.array(QuestionSchema).optional()
-});
+}));
 
 /**
  * Assignment schema
@@ -189,7 +190,7 @@ export const AssignmentSchema = BaseEntitySchema.extend({
 /**
  * Lesson schema
  */
-export const LessonSchema = BaseEntitySchema.extend({
+export const LessonSchema: z.ZodLazy<z.ZodTypeAny> = z.lazy(() => BaseEntitySchema.extend({
   title: z.string().min(1).max(100),
   description: z.string().min(1),
   type: LessonTypeSchema,
@@ -200,7 +201,7 @@ export const LessonSchema = BaseEntitySchema.extend({
   quiz: QuizSchema.optional(),
   assignment: AssignmentSchema.optional(),
   module: CourseModuleSchema
-});
+}));
 
 /**
  * Lesson progress schema
@@ -216,15 +217,16 @@ export const LessonProgressSchema = BaseEntitySchema.extend({
 /**
  * Certificate schema
  */
-export const CertificateSchema = BaseEntitySchema.extend({
+export const CertificateSchema: z.ZodLazy<z.ZodTypeAny> = z.lazy(() => BaseEntitySchema.extend({
+  enrollment: z.lazy(() => EnrollmentSchema),
   issuedAt: z.string(),
   certificateUrl: z.string()
-});
+}));
 
 /**
  * Enrollment schema
  */
-export const EnrollmentSchema = BaseEntitySchema.extend({
+export const EnrollmentSchema: z.ZodLazy<z.ZodTypeAny> = z.lazy(() => BaseEntitySchema.extend({
   student: UserSchema,
   course: CourseSchema,
   enrolledAt: z.string(),
@@ -233,7 +235,7 @@ export const EnrollmentSchema = BaseEntitySchema.extend({
   status: EnrollmentStatusSchema,
   certificate: CertificateSchema.optional(),
   lessonProgress: z.array(LessonProgressSchema).optional()
-});
+}));
 
 /**
  * Message attachment schema
@@ -411,14 +413,14 @@ export function validateCourse(data: unknown): Course {
  * Validate enrollment data
  */
 export function validateEnrollment(data: unknown): Enrollment {
-  return validateGraphQLResponse(data, EnrollmentSchema, 'Enrollment') as Enrollment;
+  return validateGraphQLResponse(data, EnrollmentSchema, 'Enrollment') as unknown as Enrollment;
 }
 
 /**
  * Validate lesson data
  */
 export function validateLesson(data: unknown): Lesson {
-  return validateGraphQLResponse(data, LessonSchema, 'Lesson') as Lesson;
+  return validateGraphQLResponse(data, LessonSchema, 'Lesson') as unknown as Lesson;
 }
 
 /**
@@ -495,7 +497,7 @@ export function validateEnrollmentCreation(data: unknown): {
     paymentUrl: z.string().url().optional()
   });
   
-  return validateGraphQLResponse(data, schema, 'EnrollmentCreation') as {
+  return validateGraphQLResponse(data, schema, 'EnrollmentCreation') as unknown as {
     enrollment: Enrollment;
     paymentRequired: boolean;
     paymentUrl?: string;

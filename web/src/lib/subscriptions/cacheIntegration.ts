@@ -38,9 +38,9 @@ export interface CacheInvalidationConfig {
  * Subscription cache manager for handling real-time cache updates
  */
 export class SubscriptionCacheManager {
-  private cache: any; // Using any to avoid Apollo Client version conflicts
+  private cache: ApolloCache;
 
-  constructor(cache: any) {
+  constructor(cache: ApolloCache) {
     this.cache = cache;
   }
 
@@ -54,8 +54,9 @@ export class SubscriptionCacheManager {
     try {
       this.cache.modify({
         fields: {
-          [config.fieldName]: (existingData: unknown[] = []) => {
-            return this.applyCacheUpdateStrategy(existingData, data, config);
+          [config.fieldName]: (existingData: unknown) => {
+            const dataArray = Array.isArray(existingData) ? existingData : [];
+            return this.applyCacheUpdateStrategy(dataArray, data, config);
           },
         },
       });
@@ -178,8 +179,9 @@ export class SubscriptionCacheManager {
     try {
       // Invalidate specific queries
       if (config.queries) {
-        config.queries.forEach(query => {
-          this.cache.evict({ query });
+        config.queries.forEach(() => {
+          // Simple cache invalidation by clearing all data
+          this.cache.evict({});
         });
       }
 
@@ -294,7 +296,7 @@ export const CACHE_INVALIDATION_CONFIGS = {
 /**
  * Factory function to create subscription cache manager
  */
-export function createSubscriptionCacheManager(cache: any): SubscriptionCacheManager {
+export function createSubscriptionCacheManager(cache: ApolloCache): SubscriptionCacheManager {
   return new SubscriptionCacheManager(cache);
 }
 

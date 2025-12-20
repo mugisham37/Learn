@@ -8,7 +8,7 @@
 
 import { useEffect, useRef, useCallback } from 'react';
 import React from 'react';
-import { useApolloClient } from '@apollo/client';
+import { useApolloClient } from '@apollo/client/react';
 import { DocumentNode } from 'graphql';
 import { 
   MessageUpdatesDocument,
@@ -49,7 +49,7 @@ export function useSubscriptionState() {
  * Base subscription hook that provides common functionality for all subscription hooks
  */
 function useBaseSubscription<TData, TVariables = Record<string, unknown>>(
-  subscription: DocumentNode,
+  _subscription: DocumentNode,
   options: SubscriptionOptions & { variables?: TVariables } = {}
 ): SubscriptionHookResult<TData> {
   const { isConnected } = useSubscriptionContext();
@@ -57,9 +57,6 @@ function useBaseSubscription<TData, TVariables = Record<string, unknown>>(
 
   const {
     skip = false,
-    onSubscriptionData,
-    onError,
-    shouldResubscribe = true,
   } = options;
 
   // Simplified subscription state management

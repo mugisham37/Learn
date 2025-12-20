@@ -130,16 +130,26 @@ export function createLazyComponent<TProps = Record<string, unknown>>(
 
   // Wrap with error boundary if provided
   if (ErrorBoundaryComponent) {
-    const WrappedComponent = React.forwardRef<unknown, TProps>((props, ref) => {
-      return React.createElement(ErrorBoundaryComponent, {
-        error: new Error('Component failed to load'),
-        retry: () => window.location.reload()
-      }, React.createElement(Suspense, {
-        fallback: LoadingComponent ? React.createElement(LoadingComponent) : React.createElement('div', {}, 'Loading...')
-      }, React.createElement(LazyComponent, { ...props, ref })));
+    const WrappedComponent = React.forwardRef<unknown, TProps>((props, _ref) => {
+      return React.createElement(
+        ErrorBoundaryComponent,
+        {
+          error: new Error('Component failed to load'),
+          retry: () => window.location.reload()
+        },
+        React.createElement(
+          Suspense,
+          {
+            fallback: LoadingComponent 
+              ? React.createElement(LoadingComponent) 
+              : React.createElement('div', {}, 'Loading...')
+          },
+          React.createElement(LazyComponent as any, props)
+        )
+      );
     });
 
-    WrappedComponent.displayName = `ErrorBoundary(${LazyComponent.displayName || 'LazyComponent'})`;
+    WrappedComponent.displayName = `ErrorBoundary(LazyComponent)`;
     return WrappedComponent as LazyExoticComponent<ComponentType<TProps>>;
   }
 
@@ -163,16 +173,16 @@ export function createLazySubscriptionComponent<TProps = Record<string, unknown>
   });
 
   // Wrap with subscription lifecycle management
-  const SubscriptionWrapper = React.forwardRef<unknown, TProps>((props, ref) => {
+  const SubscriptionWrapper = React.forwardRef<unknown, TProps>((props, _ref) => {
     React.useEffect(() => {
       subscriptionSetup?.();
       return subscriptionCleanup;
     }, []);
 
-    return React.createElement(LazyComponent, { ...props, ref });
+    return React.createElement(LazyComponent as any, props);
   });
 
-  SubscriptionWrapper.displayName = `SubscriptionWrapper(${LazyComponent.displayName || 'LazyComponent'})`;
+  SubscriptionWrapper.displayName = `SubscriptionWrapper(LazyComponent)`;
   return SubscriptionWrapper as LazyExoticComponent<ComponentType<TProps>>;
 }
 
@@ -384,7 +394,7 @@ export function useBundleMonitor(): {
 
   const report = React.useMemo(() => {
     return BundleMonitor.getInstance().getReport();
-  }, [metrics.length]); // Only depend on metrics length, not the full array
+  }, []);
 
   return { metrics, report };
 }

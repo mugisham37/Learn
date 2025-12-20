@@ -15,8 +15,7 @@ import type {
   Quiz,
   Assignment,
   Connection,
-  Edge,
-  PageInfo
+  Edge
 } from '@/types/entities';
 
 // =============================================================================
