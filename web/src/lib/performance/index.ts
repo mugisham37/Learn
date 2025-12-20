@@ -479,4 +479,4 @@ export const PerformanceOptimization = {
 };
 
 // Re-export deduplication utilities
-expor
+export * from '../graphql/deduplication';
