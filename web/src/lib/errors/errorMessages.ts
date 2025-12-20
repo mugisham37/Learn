@@ -307,12 +307,18 @@ export class ErrorMessageMapper {
 
     // Try to get contextual message first
     if (context && messages.contexts?.[context]) {
-      return this.interpolateMessage(messages.contexts[context], error);
+      const contextMessage = messages.contexts[context];
+      if (contextMessage) {
+        return this.interpolateMessage(contextMessage, error);
+      }
     }
 
     // Try to get field-specific message
     if (error.field && messages.fields?.[error.field]) {
-      return this.interpolateMessage(messages.fields[error.field], error);
+      const fieldMessage = messages.fields[error.field];
+      if (fieldMessage) {
+        return this.interpolateMessage(fieldMessage, error);
+      }
     }
 
     // Fall back to default message

@@ -9,7 +9,6 @@
 import type { 
   ClassifiedError, 
   ErrorContext,
-  ErrorTrackingConfig,
   PerformanceMetrics
 } from './errorTypes';
 
@@ -47,7 +46,7 @@ interface PerformanceTransaction {
   setStatus(status: 'ok' | 'cancelled' | 'unknown_error' | 'invalid_argument'): void;
   
   /** Set transaction data */
-  setData(key: string, value: any): void;
+  setData(key: string, value: unknown): void;
   
   /** Start child span */
   startChild(operation: string, description?: string): PerformanceSpan;
@@ -61,7 +60,7 @@ interface PerformanceTransaction {
  */
 interface PerformanceSpan {
   /** Set span data */
-  setData(key: string, value: any): void;
+  setData(key: string, value: unknown): void;
   
   /** Set span status */
   setStatus(status: 'ok' | 'cancelled' | 'unknown_error'): void;
@@ -93,16 +92,46 @@ interface ErrorTrackingServiceConfig {
   enabled: boolean;
   
   /** Additional configuration */
-  additionalConfig?: Record<string, any>;
+  additionalConfig?: Record<string, unknown>;
 }
 
+// Sentry types for better type safety
+interface SentryScope {
+  setTag(key: string, value: string): void;
+  setContext(key: string, context: Record<string, unknown>): void;
+  setLevel(level: 'fatal' | 'error' | 'warning' | 'info'): void;
+}
+
+interface SentryModule {
+  init(config: Record<string, unknown>): void;
+  configureScope(callback: (scope: SentryScope) => void): void;
+  withScope(callback: (scope: SentryScope) => void): void;
+  captureException(error: Error): void;
+  setMeasurement(name: string, value: number, unit: string): void;
+  setUser(user: { id: string; email?: string; role?: string }): void;
+  addBreadcrumb(breadcrumb: { message: string; category: string; level: string; timestamp: number }): void;
+  startTransaction(options: { name: string; op: string }): SentryTransaction;
+}
+
+interface SentryTransaction {
+  setStatus(status: string): void;
+  setData(key: string, value: unknown): void;
+  startChild(options: { op: string; description?: string }): SentrySpan;
+  finish(): void;
+}
+
+interface SentrySpan {
+  setData(key: string, value: unknown): void;
+  setStatus(status: string): void;
+  finish(): void;
+}
 /**
  * Sentry error tracking service implementation
  */
 class SentryTrackingService implements ErrorTrackingService {
   private isInitialized = false;
   private enabled = false;
-  private sentry: any = null;
+  private sentry: SentryModule | null = null;
 
   async initialize(config: ErrorTrackingServiceConfig): Promise<void> {
     if (this.isInitialized) {
@@ -118,10 +147,10 @@ class SentryTrackingService implements ErrorTrackingService {
 
     try {
       // Dynamically import Sentry to avoid bundling if not needed
-      const { init, configureScope } = await import('@sentry/nextjs');
-      this.sentry = await import('@sentry/nextjs');
+      const sentryModule = await import('@sentry/nextjs') as SentryModule;
+      this.sentry = sentryModule;
 
-      init({
+      sentryModule.init({
         dsn: config.dsn,
         environment: config.environment,
         release: config.version,
@@ -133,7 +162,7 @@ class SentryTrackingService implements ErrorTrackingService {
       });
 
       // Set initial context
-      configureScope((scope) => {
+      sentryModule.configureScope((scope: SentryScope) => {
         scope.setTag('component', 'frontend-foundation');
         scope.setContext('app', {
           name: 'Learning Platform Frontend',
@@ -155,48 +184,26 @@ class SentryTrackingService implements ErrorTrackingService {
     }
 
     try {
-      this.sentry.withScope((scope: any) => {
+      this.sentry?.withScope((scope: SentryScope) => {
         // Set error classification tags
         scope.setTag('error.type', error.type);
         scope.setTag('error.category', error.category);
         scope.setTag('error.severity', error.severity);
-        scope.setTag('error.retryable', error.retryable);
+        scope.setTag('error.retryable', error.retryable.toString());
 
         // Set error level based on severity
         const level = this.mapSeverityToLevel(error.severity);
         scope.setLevel(level);
 
-        // Add error context
-        if (context) {
-          scope.setContext('error_context', {
-            operation: context.operation,
-            variables: context.variables,
-            userId: context.userId,
-            requestId: context.requestId,
-            url: context.url,
-            userAgent: context.userAgent,
-            metadata: context.metadata,
-          });
-        }
-
-        // Add error details
-        scope.setContext('error_details', {
-          id: error.id,
-          code: error.code,
-          userMessage: error.userMessage,
-          field: error.field,
-          timestamp: error.timestamp,
-          retryDelay: error.retryDelay,
-          maxRetries: error.maxRetries,
-        });
-
         // Create error object
         const errorObj = new Error(error.message);
         errorObj.name = error.code;
-        errorObj.stack = error.stack;
+        if (error.stack) {
+          errorObj.stack = error.stack;
+        }
 
         // Capture exception
-        this.sentry.captureException(errorObj);
+        this.sentry?.captureException(errorObj);
       });
     } catch (trackingError) {
       console.error('Failed to report error to tracking service:', trackingError);
@@ -259,7 +266,7 @@ class SentryTrackingService implements ErrorTrackingService {
 
     try {
       const transaction = this.sentry.startTransaction({ name, op: operation });
-      return new SentryTransaction(transaction);
+      return new SentryTransactionWrapper(transaction);
     } catch (error) {
       console.error('Failed to start transaction:', error);
       return new NoOpTransaction();
@@ -270,31 +277,33 @@ class SentryTrackingService implements ErrorTrackingService {
     return this.enabled;
   }
 
-  private beforeSend(event: any): any {
+  private beforeSend(event: Record<string, unknown>): Record<string, unknown> {
     // Filter out sensitive information
-    if (event.request?.data) {
-      event.request.data = this.sanitizeData(event.request.data);
+    const request = event.request as Record<string, unknown> | undefined;
+    if (request?.data) {
+      request.data = this.sanitizeData(request.data);
     }
 
-    if (event.extra?.variables) {
-      event.extra.variables = this.sanitizeData(event.extra.variables);
+    const extra = event.extra as Record<string, unknown> | undefined;
+    if (extra?.variables) {
+      extra.variables = this.sanitizeData(extra.variables);
     }
 
     return event;
   }
 
-  private beforeSendTransaction(event: any): any {
+  private beforeSendTransaction(event: Record<string, unknown>): Record<string, unknown> {
     // Filter out sensitive transaction data
     return event;
   }
 
-  private sanitizeData(data: any): any {
+  private sanitizeData(data: unknown): unknown {
     if (!data || typeof data !== 'object') {
       return data;
     }
 
     const sensitiveFields = ['password', 'token', 'secret', 'key', 'authorization'];
-    const sanitized = { ...data };
+    const sanitized = { ...data as Record<string, unknown> };
 
     for (const field of sensitiveFields) {
       if (field in sanitized) {
@@ -324,20 +333,20 @@ class SentryTrackingService implements ErrorTrackingService {
 /**
  * Sentry transaction wrapper
  */
-class SentryTransaction implements PerformanceTransaction {
-  constructor(private transaction: any) {}
+class SentryTransactionWrapper implements PerformanceTransaction {
+  constructor(private transaction: SentryTransaction) {}
 
   setStatus(status: 'ok' | 'cancelled' | 'unknown_error' | 'invalid_argument'): void {
     this.transaction.setStatus(status);
   }
 
-  setData(key: string, value: any): void {
+  setData(key: string, value: unknown): void {
     this.transaction.setData(key, value);
   }
 
   startChild(operation: string, description?: string): PerformanceSpan {
     const span = this.transaction.startChild({ op: operation, description });
-    return new SentrySpan(span);
+    return new SentrySpanWrapper(span);
   }
 
   finish(): void {
@@ -348,10 +357,10 @@ class SentryTransaction implements PerformanceTransaction {
 /**
  * Sentry span wrapper
  */
-class SentrySpan implements PerformanceSpan {
-  constructor(private span: any) {}
+class SentrySpanWrapper implements PerformanceSpan {
+  constructor(private span: SentrySpan) {}
 
-  setData(key: string, value: any): void {
+  setData(key: string, value: unknown): void {
     this.span.setData(key, value);
   }
 
@@ -575,7 +584,7 @@ export class ErrorTrackingManager {
   /**
    * Tracks GraphQL operation performance
    */
-  trackGraphQLOperation(operationName: string, variables?: any): PerformanceTransaction {
+  trackGraphQLOperation(operationName: string, variables?: Record<string, unknown>): PerformanceTransaction {
     const transaction = this.startTransaction(operationName, 'graphql');
     
     if (variables) {

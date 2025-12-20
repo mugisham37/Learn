@@ -97,9 +97,9 @@ export async function initializeErrorHandling(config?: {
   /** Sample rate for performance monitoring (0.0 to 1.0) */
   tracesSampleRate?: number;
 }) {
+  const environment = config?.environment || process.env.NODE_ENV || 'development';
   const {
     sentryDsn,
-    environment = process.env.NODE_ENV || 'development',
     version = process.env.NEXT_PUBLIC_APP_VERSION,
     locale = 'en',
     enableTracking = true,
@@ -147,11 +147,11 @@ export const quickErrorHandling = {
   /**
    * Handle GraphQL errors from Apollo Client
    */
-  handleApolloError: async (error: any, operationName: string, variables?: any) => {
+  handleApolloError: async (error: ApolloError, operationName: string, variables?: Record<string, unknown>) => {
     const context = {
       operation: operationName,
       variables,
-      requestId: `apollo_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      requestId: `apollo_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
     };
 
     if (error.graphQLErrors?.length > 0) {
@@ -170,7 +170,7 @@ export const quickErrorHandling = {
   /**
    * Handle upload errors
    */
-  handleUploadError: async (error: any, uploadId: string, fileName?: string) => {
+  handleUploadError: async (error: UploadError, uploadId: string, fileName?: string) => {
     const context = {
       operation: 'file_upload',
       metadata: { uploadId, fileName },
@@ -187,10 +187,10 @@ export const quickErrorHandling = {
   /**
    * Handle subscription errors
    */
-  handleSubscriptionError: async (error: any, subscriptionName: string) => {
+  handleSubscriptionError: async (error: SubscriptionError, subscriptionName: string) => {
     const context = {
       operation: subscriptionName,
-      requestId: `sub_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      requestId: `sub_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
     };
 
     return errorHandler.handleSubscriptionError(error, context);
@@ -202,12 +202,33 @@ export const quickErrorHandling = {
   handleRuntimeError: async (error: Error, operation?: string) => {
     const context = {
       operation: operation || 'runtime',
-      requestId: `runtime_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      requestId: `runtime_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
     };
 
     return errorHandler.handleRuntimeError(error, context);
   },
 };
+
+// Define error types for better type safety
+interface ApolloError {
+  graphQLErrors?: Array<{
+    message: string;
+    extensions?: GraphQLErrorExtensions;
+    path?: (string | number)[];
+    locations?: { line: number; column: number }[];
+  }>;
+  networkError?: Error & { statusCode?: number; response?: Record<string, unknown> };
+}
+
+interface UploadError extends Error {
+  code?: string;
+}
+
+interface SubscriptionError {
+  message: string;
+  code?: string;
+  type?: string;
+}
 
 /**
  * Error handling hooks for React components

@@ -6,7 +6,7 @@
  */
 
 import { errorClassifier } from './errorClassifier';
-import { errorMessageMapper } from './errorMessages';
+import { errorMessageMapper, type SupportedLocale } from './errorMessages';
 import { errorRecoveryManager } from './errorRecovery';
 import { errorTrackingManager } from './errorTracking';
 import type { 
@@ -54,7 +54,7 @@ export class ErrorHandler {
 
     // Set locale for error messages
     if (this.config.locale && errorMessageMapper.isLocaleSupported(this.config.locale)) {
-      errorMessageMapper.setLocale(this.config.locale as any);
+      errorMessageMapper.setLocale(this.config.locale as SupportedLocale);
     }
   }
 
@@ -69,7 +69,7 @@ export class ErrorHandler {
       locations?: { line: number; column: number }[];
     },
     context?: Partial<ErrorContext>,
-    originalOperation?: () => Promise<any>
+    originalOperation?: () => Promise<unknown>
   ): Promise<ErrorHandlerResult> {
     // Classify the error
     const classifiedError = errorClassifier.classifyGraphQLError(error, context);
@@ -81,10 +81,10 @@ export class ErrorHandler {
    * Handles a network error
    */
   async handleNetworkError(
-    error: Error & { statusCode?: number; response?: any },
+    error: Error & { statusCode?: number; response?: Record<string, unknown> },
     details?: NetworkErrorDetails,
     context?: Partial<ErrorContext>,
-    originalOperation?: () => Promise<any>
+    originalOperation?: () => Promise<unknown>
   ): Promise<ErrorHandlerResult> {
     // Classify the error
     const classifiedError = errorClassifier.classifyNetworkError(error, details, context);
@@ -98,7 +98,7 @@ export class ErrorHandler {
   async handleRuntimeError(
     error: Error,
     context?: Partial<ErrorContext>,
-    originalOperation?: () => Promise<any>
+    originalOperation?: () => Promise<unknown>
   ): Promise<ErrorHandlerResult> {
     // Classify the error
     const classifiedError = errorClassifier.classifyRuntimeError(error, context);
@@ -117,7 +117,7 @@ export class ErrorHandler {
       fileName?: string;
     },
     context?: Partial<ErrorContext>,
-    originalOperation?: () => Promise<any>
+    originalOperation?: () => Promise<unknown>
   ): Promise<ErrorHandlerResult> {
     // Classify the error
     const classifiedError = errorClassifier.classifyUploadError(error, context);
@@ -135,7 +135,7 @@ export class ErrorHandler {
       type?: string;
     },
     context?: Partial<ErrorContext>,
-    originalOperation?: () => Promise<any>
+    originalOperation?: () => Promise<unknown>
   ): Promise<ErrorHandlerResult> {
     // Classify the error
     const classifiedError = errorClassifier.classifySubscriptionError(error, context);
@@ -148,7 +148,7 @@ export class ErrorHandler {
    */
   async handleClassifiedError(
     error: ClassifiedError,
-    originalOperation?: () => Promise<any>
+    originalOperation?: () => Promise<unknown>
   ): Promise<ErrorHandlerResult> {
     // Add breadcrumb for tracking
     if (this.config.enableTracking) {
@@ -161,13 +161,16 @@ export class ErrorHandler {
 
     // Check for custom handler
     if (this.config.customHandlers?.[error.type]) {
-      try {
-        const result = await this.config.customHandlers[error.type](error);
-        await this.postProcessError(error, result);
-        return result;
-      } catch (customHandlerError) {
-        console.error('Custom error handler failed:', customHandlerError);
-        // Fall through to default handling
+      const customHandler = this.config.customHandlers[error.type];
+      if (customHandler) {
+        try {
+          const result = await customHandler(error);
+          await this.postProcessError(error, result);
+          return result;
+        } catch (customHandlerError) {
+          console.error('Custom error handler failed:', customHandlerError);
+          // Fall through to default handling
+        }
       }
     }
 
@@ -251,8 +254,9 @@ export class ErrorHandler {
     }
 
     // Use Next.js router if available, otherwise fallback to window.location
-    if ((window as any).next?.router) {
-      (window as any).next.router.push(redirectTo);
+    const windowWithNext = window as Window & { next?: { router?: { push: (url: string) => void } } };
+    if (windowWithNext.next?.router) {
+      windowWithNext.next.router.push(redirectTo);
     } else {
       window.location.href = redirectTo;
     }
@@ -293,7 +297,7 @@ export class ErrorHandler {
 
     // Update locale if changed
     if (config.locale && errorMessageMapper.isLocaleSupported(config.locale)) {
-      errorMessageMapper.setLocale(config.locale as any);
+      errorMessageMapper.setLocale(config.locale as SupportedLocale);
     }
   }
 
@@ -312,7 +316,7 @@ export const errorHandlerUtils = {
   /**
    * Wraps an async function with error handling
    */
-  withErrorHandling: <T extends any[], R>(
+  withErrorHandling: <T extends unknown[], R>(
     fn: (...args: T) => Promise<R>,
     errorHandler: ErrorHandler,
     context?: Partial<ErrorContext>
@@ -336,11 +340,11 @@ export const errorHandlerUtils = {
     errorHandler: ErrorHandler,
     operationName: string
   ) => {
-    return async (error: any, variables?: any) => {
+    return async (error: GraphQLError, variables?: Record<string, unknown>) => {
       const context: Partial<ErrorContext> = {
         operation: operationName,
         variables,
-        requestId: `gql_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        requestId: `gql_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
       };
 
       if (error.graphQLErrors?.length > 0) {
@@ -365,7 +369,7 @@ export const errorHandlerUtils = {
     uploadId: string,
     fileName?: string
   ) => {
-    return async (error: any) => {
+    return async (error: UploadError) => {
       const context: Partial<ErrorContext> = {
         operation: 'file_upload',
         metadata: { uploadId, fileName },
@@ -387,16 +391,37 @@ export const errorHandlerUtils = {
     errorHandler: ErrorHandler,
     subscriptionName: string
   ) => {
-    return async (error: any) => {
+    return async (error: SubscriptionError) => {
       const context: Partial<ErrorContext> = {
         operation: subscriptionName,
-        requestId: `sub_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        requestId: `sub_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
       };
 
       return errorHandler.handleSubscriptionError(error, context);
     };
   },
 };
+
+// Define error types for better type safety
+interface GraphQLError {
+  graphQLErrors?: Array<{
+    message: string;
+    extensions?: GraphQLErrorExtensions;
+    path?: (string | number)[];
+    locations?: { line: number; column: number }[];
+  }>;
+  networkError?: Error & { statusCode?: number; response?: Record<string, unknown> };
+}
+
+interface UploadError extends Error {
+  code?: string;
+}
+
+interface SubscriptionError {
+  message: string;
+  code?: string;
+  type?: string;
+}
 
 // Export singleton instance
 export const errorHandler = new ErrorHandler();

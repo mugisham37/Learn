@@ -9,9 +9,7 @@
 import type { 
   ClassifiedError, 
   ErrorHandlerResult,
-  ErrorRecoveryStrategy,
-  RecoveryAction,
-  ErrorContext
+  ErrorRecoveryStrategy
 } from './errorTypes';
 
 /**
@@ -140,7 +138,7 @@ export class ErrorRecoveryManager {
    */
   async handleError(
     error: ClassifiedError,
-    originalOperation?: () => Promise<any>
+    originalOperation?: () => Promise<unknown>
   ): Promise<ErrorHandlerResult> {
     const strategy = RECOVERY_STRATEGIES[error.type];
     
@@ -179,7 +177,7 @@ export class ErrorRecoveryManager {
    */
   private async handleRetryRecovery(
     error: ClassifiedError,
-    originalOperation?: () => Promise<any>
+    originalOperation?: () => Promise<unknown>
   ): Promise<ErrorHandlerResult> {
     const retryConfig = DEFAULT_RETRY_CONFIGS[error.type];
     
@@ -242,7 +240,7 @@ export class ErrorRecoveryManager {
    */
   private async handleAuthRecovery(
     error: ClassifiedError,
-    originalOperation?: () => Promise<any>
+    originalOperation?: () => Promise<unknown>
   ): Promise<ErrorHandlerResult> {
     // Prevent multiple simultaneous token refresh attempts
     if (this.authTokenRefreshPromise) {
@@ -345,13 +343,13 @@ export class ErrorRecoveryManager {
    * Handles custom recovery strategies
    */
   private async handleCustomRecovery(
-    error: ClassifiedError,
+    _error: ClassifiedError,
     strategy: ErrorRecoveryStrategy,
-    originalOperation?: () => Promise<any>
+    _originalOperation?: () => Promise<unknown>
   ): Promise<ErrorHandlerResult> {
     if (strategy.customRecovery) {
       try {
-        await strategy.customRecovery(error);
+        await strategy.customRecovery(_error);
         return {
           handled: true,
           shouldRetry: false,
@@ -363,13 +361,13 @@ export class ErrorRecoveryManager {
         return {
           handled: false,
           shouldRetry: false,
-          userMessage: error.userMessage,
+          userMessage: _error.userMessage,
           actions: ['custom_recovery_failed'],
         };
       }
     }
 
-    return this.handleShowError(error);
+    return this.handleShowError(_error);
   }
 
   /**

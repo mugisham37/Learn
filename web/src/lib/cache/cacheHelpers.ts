@@ -151,11 +151,12 @@ export function readList<T extends CacheEntity>(
     const rootFields = Object.keys(result || {});
     const rootField = rootFields[0];
     
-    if (!rootField) {
+    if (!rootField || !result) {
       return null;
     }
 
-    return result?.[rootField] || null;
+    const resultData = result as Record<string, unknown>;
+    return (resultData[rootField] as T[]) || null;
   } catch (error) {
     console.warn('Failed to read list from cache', error);
     return null;
@@ -186,14 +187,15 @@ export function updateList<T extends CacheEntity>(
           return existingData;
         }
 
-        const existingList = existingData[rootField];
+        const existingDataTyped = existingData as Record<string, unknown>;
+        const existingList = existingDataTyped[rootField];
 
         if (!Array.isArray(existingList)) {
           console.warn('Query result does not contain a list');
           return existingData;
         }
 
-        const updatedList = updater(existingList);
+        const updatedList = updater(existingList as T[]);
 
         return {
           ...existingData,

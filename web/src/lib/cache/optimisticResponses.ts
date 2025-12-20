@@ -57,7 +57,7 @@ export function generateCreateResponse<T extends Partial<CacheEntity>>(
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     ...data,
-  } as T & CacheEntity;
+  } as unknown as T & CacheEntity;
 }
 
 /**
@@ -138,7 +138,7 @@ interface AssignmentSubmissionData extends CacheEntity {
   gradedAt?: string;
 }
 
-interface UserData extends CacheEntity {
+interface UserProfileData extends CacheEntity {
   profile?: Record<string, unknown>;
   notificationPreferences?: Record<string, unknown>;
 }
@@ -155,7 +155,7 @@ interface DiscussionReplyData extends CacheEntity {
   editedAt?: string | null;
 }
 
-interface NotificationData extends CacheEntity {
+interface NotificationUpdateData extends CacheEntity {
   isRead?: boolean;
   readAt?: string;
 }
@@ -264,12 +264,12 @@ export const commonOptimisticResponses = {
           ...profileData,
           updatedAt: new Date().toISOString(),
         },
-      }),
+      } as Partial<UserProfileData>),
     
     updatePreferences: (userId: string, preferences: Record<string, unknown>) =>
       generateUpdateResponse('User', userId, {
         notificationPreferences: preferences,
-      }),
+      } as Partial<UserProfileData>),
   },
 
   /**
@@ -301,7 +301,7 @@ export const commonOptimisticResponses = {
       generateUpdateResponse('Notification', notificationId, {
         isRead: true,
         readAt: new Date().toISOString(),
-      }),
+      } as Partial<NotificationUpdateData>),
     
     markAllAsRead: (userId: string) => ({
       __typename: 'NotificationBatch',
