@@ -121,7 +121,7 @@ export interface ChatState {
 export interface ChatActions {
   // Conversation operations
   loadConversations: () => Promise<void>;
-  createConversation: (participants: User[], type: Conversation['type'], metadata?: any) => Promise<string>;
+  createConversation: (participants: User[], type: Conversation['type'], metadata?: Record<string, unknown>) => Promise<string>;
   archiveConversation: (conversationId: string) => void;
   muteConversation: (conversationId: string, muted: boolean) => void;
   setActiveConversation: (conversationId: string | null) => void;
@@ -211,7 +211,7 @@ const initialState: ChatState = {
 
 // Utility Functions
 function generateId(): string {
-  return Math.random().toString(36).substr(2, 9);
+  return Math.random().toString(36).substring(2, 11);
 }
 
 function sortConversationsByLastMessage(conversations: Conversation[]): Conversation[] {
@@ -297,8 +297,7 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
         (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
       );
       
-      // Update conversation's last message and unread count
-      const conversationsWithNewMessage = state.conversations.map(conv => {
+        const conversationsWithNewMessage = state.conversations.map(conv => {
         if (conv.id === conversationId) {
           return {
             ...conv,
@@ -326,11 +325,14 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
       const updatedMessagesByConv = { ...state.messagesByConversation };
       
       Object.keys(updatedMessagesByConv).forEach(convId => {
-        updatedMessagesByConv[convId] = updatedMessagesByConv[convId].map(message =>
-          message.id === action.payload.id
-            ? { ...message, ...action.payload.updates }
-            : message
-        );
+        const messages = updatedMessagesByConv[convId];
+        if (messages) {
+          updatedMessagesByConv[convId] = messages.map(message =>
+            message.id === action.payload.id
+              ? { ...message, ...action.payload.updates }
+              : message
+          );
+        }
       });
       
       return {
@@ -342,9 +344,12 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
       const filteredMessagesByConv = { ...state.messagesByConversation };
       
       Object.keys(filteredMessagesByConv).forEach(convId => {
-        filteredMessagesByConv[convId] = filteredMessagesByConv[convId].filter(
-          message => message.id !== action.payload
-        );
+        const messages = filteredMessagesByConv[convId];
+        if (messages) {
+          filteredMessagesByConv[convId] = messages.filter(
+            message => message.id !== action.payload
+          );
+        }
       });
       
       return {
@@ -368,7 +373,8 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
       };
 
     case 'CLEAR_DRAFT':
-      const { [action.payload]: removed, ...remainingDrafts } = state.drafts;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { [action.payload]: _removedDraft, ...remainingDrafts } = state.drafts;
       return {
         ...state,
         drafts: remainingDrafts,
@@ -454,7 +460,8 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
       };
 
     case 'REMOVE_UPLOADING_FILE':
-      const { [`${action.payload.conversationId}-${action.payload.fileName}`]: removedFile, ...remainingFiles } = state.uploadingFiles;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { [`${action.payload.conversationId}-${action.payload.fileName}`]: _removedFile, ...remainingFiles } = state.uploadingFiles;
       return {
         ...state,
         uploadingFiles: remainingFiles,
@@ -469,7 +476,7 @@ function chatReducer(state: ChatState, action: ChatAction): ChatState {
 export function useChat(): [ChatState, ChatActions] {
   const [state, dispatch] = useReducer(chatReducer, initialState);
   const typingTimeoutRef = useRef<Record<string, NodeJS.Timeout>>({});
-  const draftSaveTimeoutRef = useRef<NodeJS.Timeout>();
+  const draftSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Load drafts from localStorage on mount
   useEffect(() => {
@@ -477,10 +484,11 @@ export function useChat(): [ChatState, ChatActions] {
     if (savedDrafts) {
       try {
         const drafts = JSON.parse(savedDrafts);
-        Object.entries(drafts).forEach(([conversationId, draft]: [string, any]) => {
+        Object.entries(drafts).forEach(([, draft]) => {
+          const typedDraft = draft as MessageDraft & { lastUpdated: string };
           dispatch({ type: 'SAVE_DRAFT', payload: {
-            ...draft,
-            lastUpdated: new Date(draft.lastUpdated),
+            ...typedDraft,
+            lastUpdated: new Date(typedDraft.lastUpdated),
           }});
         });
       } catch (error) {
@@ -539,7 +547,7 @@ export function useChat(): [ChatState, ChatActions] {
       }
     }, []),
 
-    createConversation: useCallback(async (participants: User[], type: Conversation['type'], metadata?: any) => {
+    createConversation: useCallback(async (participants: User[], type: Conversation['type'], metadata?: Record<string, unknown>) => {
       try {
         // In a real implementation, this would call the GraphQL mutation
         await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
@@ -553,7 +561,7 @@ export function useChat(): [ChatState, ChatActions] {
           isMuted: false,
           createdAt: new Date(),
           updatedAt: new Date(),
-          metadata,
+          ...(metadata && { metadata }),
         };
         
         dispatch({ type: 'ADD_CONVERSATION', payload: newConversation });
@@ -597,7 +605,7 @@ export function useChat(): [ChatState, ChatActions] {
       }});
     }, []),
 
-    loadMessages: useCallback(async (conversationId: string, before?: string) => {
+    loadMessages: useCallback(async (conversationId: string) => {
       dispatch({ type: 'SET_LOADING_MESSAGES', payload: true });
       
       try {
@@ -644,7 +652,7 @@ export function useChat(): [ChatState, ChatActions] {
         timestamp: new Date(),
         reactions: [],
         status: 'sending',
-        replyTo,
+        ...(replyTo && { replyTo }),
       };
       
       dispatch({ type: 'ADD_MESSAGE', payload: optimisticMessage });
@@ -728,8 +736,8 @@ export function useChat(): [ChatState, ChatActions] {
         const draft: MessageDraft = {
           conversationId,
           content,
-          replyTo,
           lastUpdated: new Date(),
+          ...(replyTo && { replyTo }),
         };
         
         dispatch({ type: 'SAVE_DRAFT', payload: draft });
@@ -755,7 +763,13 @@ export function useChat(): [ChatState, ChatActions] {
       
       // Set timeout to stop typing after 5 seconds of inactivity
       typingTimeoutRef.current[conversationId] = setTimeout(() => {
-        actions.stopTyping(conversationId);
+        // In a real implementation, this would send a stop typing indicator via WebSocket
+        console.log(`Stopped typing in conversation ${conversationId}`);
+        
+        if (typingTimeoutRef.current[conversationId]) {
+          clearTimeout(typingTimeoutRef.current[conversationId]);
+          delete typingTimeoutRef.current[conversationId];
+        }
       }, 5000);
     }, []),
 
@@ -890,16 +904,25 @@ export function useChat(): [ChatState, ChatActions] {
     }, []),
 
     handleConnectionStatusChange: useCallback((connected: boolean, error?: string) => {
-      dispatch({ type: 'SET_CONNECTION_STATUS', payload: { connected, error } });
+      dispatch({ 
+        type: 'SET_CONNECTION_STATUS', 
+        payload: { 
+          connected, 
+          ...(error !== undefined && { error })
+        } 
+      });
     }, []),
   };
 
   // Cleanup on unmount
   useEffect(() => {
+    const typingTimeouts = typingTimeoutRef.current;
+    const draftSaveTimeout = draftSaveTimeoutRef.current;
+    
     return () => {
-      Object.values(typingTimeoutRef.current).forEach(timeout => clearTimeout(timeout));
-      if (draftSaveTimeoutRef.current) {
-        clearTimeout(draftSaveTimeoutRef.current);
+      Object.values(typingTimeouts).forEach(timeout => clearTimeout(timeout));
+      if (draftSaveTimeout) {
+        clearTimeout(draftSaveTimeout);
       }
     };
   }, []);

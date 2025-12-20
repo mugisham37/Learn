@@ -72,7 +72,7 @@ export interface LazyComponentState {
 /**
  * Creates a lazy-loaded component with enhanced error handling and retry logic
  */
-export function createLazyComponent<TProps = Record<string, unknown>>(
+export function createLazyComponent<TProps extends Record<string, unknown> = Record<string, unknown>>(
   importFn: () => Promise<{ default: ComponentType<TProps> }>,
   options: LazyLoadOptions = {}
 ): LazyExoticComponent<ComponentType<TProps>> {
@@ -130,7 +130,7 @@ export function createLazyComponent<TProps = Record<string, unknown>>(
 
   // Wrap with error boundary if provided
   if (ErrorBoundaryComponent) {
-    const WrappedComponent = React.forwardRef<unknown, TProps>((props, _ref) => {
+    const WrappedComponent = React.forwardRef<unknown, TProps>((props) => {
       return React.createElement(
         ErrorBoundaryComponent,
         {
@@ -144,7 +144,7 @@ export function createLazyComponent<TProps = Record<string, unknown>>(
               ? React.createElement(LoadingComponent) 
               : React.createElement('div', {}, 'Loading...')
           },
-          React.createElement(LazyComponent as any, props)
+          React.createElement(LazyComponent, props)
         )
       );
     });
@@ -159,7 +159,7 @@ export function createLazyComponent<TProps = Record<string, unknown>>(
 /**
  * Creates a lazy-loaded subscription component with connection management
  */
-export function createLazySubscriptionComponent<TProps = Record<string, unknown>>(
+export function createLazySubscriptionComponent<TProps extends Record<string, unknown> = Record<string, unknown>>(
   importFn: () => Promise<{ default: ComponentType<TProps> }>,
   subscriptionSetup?: () => void,
   subscriptionCleanup?: () => void
@@ -173,13 +173,13 @@ export function createLazySubscriptionComponent<TProps = Record<string, unknown>
   });
 
   // Wrap with subscription lifecycle management
-  const SubscriptionWrapper = React.forwardRef<unknown, TProps>((props, _ref) => {
+  const SubscriptionWrapper = React.forwardRef<unknown, TProps>((props) => {
     React.useEffect(() => {
       subscriptionSetup?.();
       return subscriptionCleanup;
     }, []);
 
-    return React.createElement(LazyComponent as any, props);
+    return React.createElement(LazyComponent, props);
   });
 
   SubscriptionWrapper.displayName = `SubscriptionWrapper(LazyComponent)`;

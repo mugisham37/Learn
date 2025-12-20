@@ -7,25 +7,35 @@
 'use client';
 
 import React, { createContext, useContext, useReducer, useCallback } from 'react';
+import { User } from '../../types/entities';
 
 // =============================================================================
 // Types
 // =============================================================================
 
+export interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  type: 'info' | 'success' | 'warning' | 'error';
+  timestamp: Date;
+  read: boolean;
+}
+
 export interface AppState {
-  user: any | null;
+  user: User | null;
   theme: 'light' | 'dark';
   language: string;
-  notifications: any[];
+  notifications: Notification[];
   loading: boolean;
   error: string | null;
 }
 
 export type AppAction = 
-  | { type: 'SET_USER'; payload: any }
+  | { type: 'SET_USER'; payload: User | null }
   | { type: 'SET_THEME'; payload: 'light' | 'dark' }
   | { type: 'SET_LANGUAGE'; payload: string }
-  | { type: 'ADD_NOTIFICATION'; payload: any }
+  | { type: 'ADD_NOTIFICATION'; payload: Notification }
   | { type: 'REMOVE_NOTIFICATION'; payload: string }
   | { type: 'SET_LOADING'; payload: boolean }
   | { type: 'SET_ERROR'; payload: string | null }
@@ -34,10 +44,10 @@ export type AppAction =
 export interface StateContextValue {
   state: AppState;
   dispatch: React.Dispatch<AppAction>;
-  setUser: (user: any) => void;
+  setUser: (user: User | null) => void;
   setTheme: (theme: 'light' | 'dark') => void;
   setLanguage: (language: string) => void;
-  addNotification: (notification: any) => void;
+  addNotification: (notification: Notification) => void;
   removeNotification: (id: string) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
@@ -104,7 +114,7 @@ export function StateProvider({ children, initialState: customInitialState }: St
     ...customInitialState,
   });
 
-  const setUser = useCallback((user: any) => {
+  const setUser = useCallback((user: User | null) => {
     dispatch({ type: 'SET_USER', payload: user });
   }, []);
 
@@ -116,7 +126,7 @@ export function StateProvider({ children, initialState: customInitialState }: St
     dispatch({ type: 'SET_LANGUAGE', payload: language });
   }, []);
 
-  const addNotification = useCallback((notification: any) => {
+  const addNotification = useCallback((notification: Notification) => {
     dispatch({ type: 'ADD_NOTIFICATION', payload: notification });
   }, []);
 

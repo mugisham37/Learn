@@ -14,6 +14,15 @@ import { useCallback, useReducer, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 
 // Search Types
+export interface SearchResult {
+  id: string;
+  title: string;
+  description: string;
+  type: 'course' | 'lesson' | 'user' | 'discussion';
+  url: string;
+  thumbnailUrl?: string;
+  metadata?: Record<string, unknown>;
+}
 export interface SearchFilters {
   query: string;
   category?: string;
@@ -68,7 +77,7 @@ export interface SearchState {
   facets: SearchFacets | null;
   
   // Search results
-  results: any[]; // Would be typed based on search result type
+  results: SearchResult[]; // Properly typed search results
   totalCount: number;
   isLoading: boolean;
   error: string | null;
@@ -127,14 +136,14 @@ export interface SearchActions {
 // Action Types
 type SearchAction =
   | { type: 'SET_QUERY'; payload: string }
-  | { type: 'SET_FILTER'; payload: { key: keyof SearchFilters; value: any } }
+  | { type: 'SET_FILTER'; payload: { key: keyof SearchFilters; value: SearchFilters[keyof SearchFilters] } }
   | { type: 'CLEAR_FILTER'; payload: keyof SearchFilters }
   | { type: 'CLEAR_ALL_FILTERS' }
   | { type: 'APPLY_FILTERS'; payload: Partial<SearchFilters> }
   | { type: 'SET_LOADING'; payload: boolean }
   | { type: 'SET_ERROR'; payload: string | null }
-  | { type: 'SET_RESULTS'; payload: { results: any[]; totalCount: number; hasNextPage: boolean } }
-  | { type: 'APPEND_RESULTS'; payload: { results: any[]; hasNextPage: boolean } }
+  | { type: 'SET_RESULTS'; payload: { results: SearchResult[]; totalCount: number; hasNextPage: boolean } }
+  | { type: 'APPEND_RESULTS'; payload: { results: SearchResult[]; hasNextPage: boolean } }
   | { type: 'SET_FACETS'; payload: SearchFacets }
   | { type: 'SET_PAGE'; payload: number }
   | { type: 'ADD_TO_HISTORY'; payload: SearchHistory }
@@ -175,7 +184,7 @@ const initialState: SearchState = {
 
 // Utility Functions
 function generateId(): string {
-  return Math.random().toString(36).substr(2, 9);
+  return Math.random().toString(36).substring(2, 11);
 }
 
 function countActiveFilters(filters: SearchFilters): number {
@@ -286,11 +295,19 @@ function searchReducer(state: SearchState, action: SearchAction): SearchState {
       };
 
     case 'CLEAR_FILTER':
-      const { [action.payload]: removed, ...remainingFilters } = state.filters;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { [action.payload]: _removedFilter, ...remainingFilters } = state.filters;
+      // Ensure required properties are present
+      const clearedFilters: SearchFilters = { 
+        query: '',
+        sortBy: 'relevance',
+        sortOrder: 'desc',
+        ...remainingFilters,
+      };
       return {
         ...state,
-        filters: remainingFilters,
-        activeFilterCount: countActiveFilters(remainingFilters),
+        filters: clearedFilters,
+        activeFilterCount: countActiveFilters(clearedFilters),
         currentPage: 1,
       };
 
@@ -431,8 +448,8 @@ function searchReducer(state: SearchState, action: SearchAction): SearchState {
 export function useSearch(): [SearchState, SearchActions] {
   const [state, dispatch] = useReducer(searchReducer, initialState);
   const router = useRouter();
-  const urlSyncTimeoutRef = useRef<NodeJS.Timeout>();
-  const searchTimeoutRef = useRef<NodeJS.Timeout>();
+  const urlSyncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Load saved data on mount
   useEffect(() => {
@@ -440,15 +457,15 @@ export function useSearch(): [SearchState, SearchActions] {
     const savedHistory = localStorage.getItem('search-history');
     if (savedHistory) {
       try {
-        const history = JSON.parse(savedHistory).map((item: any) => ({
+        const history = JSON.parse(savedHistory).map((item: SearchHistory & { timestamp: string }) => ({
           ...item,
           timestamp: new Date(item.timestamp),
         }));
         history.forEach((item: SearchHistory) => {
           dispatch({ type: 'ADD_TO_HISTORY', payload: item });
         });
-      } catch (error) {
-        console.error('Failed to load search history:', error);
+      } catch (_error) {
+        console.error('Failed to load search history:', _error);
       }
     }
 
@@ -456,14 +473,14 @@ export function useSearch(): [SearchState, SearchActions] {
     const savedSearches = localStorage.getItem('saved-searches');
     if (savedSearches) {
       try {
-        const searches = JSON.parse(savedSearches).map((item: any) => ({
+        const searches = JSON.parse(savedSearches).map((item: SavedSearch & { createdAt: string; lastUsed: string }) => ({
           ...item,
           createdAt: new Date(item.createdAt),
           lastUsed: new Date(item.lastUsed),
         }));
         dispatch({ type: 'SET_SAVED_SEARCHES', payload: searches });
-      } catch (error) {
-        console.error('Failed to load saved searches:', error);
+      } catch (_error) {
+        console.error('Failed to load saved searches:', _error);
       }
     }
 
@@ -514,26 +531,6 @@ export function useSearch(): [SearchState, SearchActions] {
     };
   }, [state.filters, state.isUrlSynced, router]);
 
-  // Auto-search with debouncing
-  useEffect(() => {
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
-    }
-
-    searchTimeoutRef.current = setTimeout(() => {
-      if (state.filters.query || state.activeFilterCount > 0) {
-        // Auto-trigger search after user stops typing/filtering
-        actions.search();
-      }
-    }, 1000);
-
-    return () => {
-      if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current);
-      }
-    };
-  }, [state.filters]);
-
   // Actions
   const actions: SearchActions = {
     setQuery: useCallback((query: string) => {
@@ -564,10 +561,12 @@ export function useSearch(): [SearchState, SearchActions] {
         await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
         
         // Mock results
-        const mockResults = Array.from({ length: state.pageSize }, (_, i) => ({
+        const mockResults: SearchResult[] = Array.from({ length: state.pageSize }, (_, i) => ({
           id: `result-${i}`,
           title: `Course ${i + 1}`,
           description: 'Mock course description',
+          type: 'course',
+          url: `/course/${i + 1}`,
         }));
         
         const mockFacets: SearchFacets = {
@@ -603,7 +602,8 @@ export function useSearch(): [SearchState, SearchActions] {
         };
         dispatch({ type: 'ADD_TO_HISTORY', payload: historyItem });
         
-      } catch (error) {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      } catch (_error) {
         dispatch({ type: 'SET_ERROR', payload: 'Search failed. Please try again.' });
       }
     }, [state.filters, state.pageSize]),
@@ -618,10 +618,12 @@ export function useSearch(): [SearchState, SearchActions] {
         await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
         
         // Mock additional results
-        const mockResults = Array.from({ length: state.pageSize }, (_, i) => ({
+        const mockResults: SearchResult[] = Array.from({ length: state.pageSize }, (_, i) => ({
           id: `result-${state.results.length + i}`,
           title: `Course ${state.results.length + i + 1}`,
           description: 'Mock course description',
+          type: 'course',
+          url: `/course/${state.results.length + i + 1}`,
         }));
         
         dispatch({ type: 'APPEND_RESULTS', payload: { 
@@ -629,15 +631,41 @@ export function useSearch(): [SearchState, SearchActions] {
           hasNextPage: state.results.length + mockResults.length < state.totalCount 
         }});
         
-      } catch (error) {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      } catch (_error) {
         dispatch({ type: 'SET_ERROR', payload: 'Failed to load more results.' });
       }
     }, [state.hasNextPage, state.isLoading, state.pageSize, state.results.length, state.totalCount]),
 
     refresh: useCallback(async () => {
       dispatch({ type: 'SET_PAGE', payload: 1 });
-      await actions.search();
-    }, []),
+      // Trigger search by dispatching loading state
+      dispatch({ type: 'SET_LOADING', payload: true });
+      
+      try {
+        // In a real implementation, this would call the GraphQL search query
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+        
+        // Mock results
+        const mockResults = Array.from({ length: state.pageSize }, (_, i) => ({
+          id: `result-${i}`,
+          title: `Course ${i + 1}`,
+          description: 'Mock course description',
+          type: 'course' as const,
+          url: `/course/${i + 1}`,
+        }));
+        
+        dispatch({ type: 'SET_RESULTS', payload: { 
+          results: mockResults, 
+          totalCount: 200, 
+          hasNextPage: true 
+        }});
+        
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      } catch (_error) {
+        dispatch({ type: 'SET_ERROR', payload: 'Search failed. Please try again.' });
+      }
+    }, [state.pageSize]),
 
     addToHistory: useCallback((resultCount: number) => {
       const historyItem: SearchHistory = {
@@ -716,6 +744,27 @@ export function useSearch(): [SearchState, SearchActions] {
       router.replace(newUrl, undefined, { shallow: true });
     }, [state.filters, router]),
   };
+
+  // Auto-search with debouncing - now that actions are defined
+  useEffect(() => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    searchTimeoutRef.current = setTimeout(() => {
+      if (state.filters.query || state.activeFilterCount > 0) {
+        // Auto-trigger search after user stops typing/filtering
+        actions.search();
+      }
+    }, 1000);
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.filters.query, state.activeFilterCount]); // actions intentionally omitted to prevent infinite re-renders
 
   // Cleanup on unmount
   useEffect(() => {

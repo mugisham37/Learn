@@ -12,7 +12,6 @@
 
 import { useCallback, useReducer, useRef, useEffect } from 'react';
 import { Course, CourseModule, Lesson } from '../../types/entities';
-import { CreateCourseInput, UpdateCourseInput } from '../../types/forms';
 
 // State Types
 export interface CourseEditorState {
@@ -59,7 +58,7 @@ export interface CourseEditorActions {
   reorderModules: (moduleIds: string[]) => void;
   
   // Lesson operations
-  addLesson: (moduleId: string, lesson: Omit<Lesson, 'id' | 'moduleId'>) => void;
+  addLesson: (moduleId: string, lesson: Omit<Lesson, 'id' | 'module' | 'createdAt' | 'updatedAt'>) => void;
   updateLesson: (lessonId: string, updates: Partial<Lesson>) => void;
   deleteLesson: (lessonId: string) => void;
   reorderLessons: (moduleId: string, lessonIds: string[]) => void;
@@ -123,7 +122,7 @@ const initialState: CourseEditorState = {
 
 // Utility Functions
 function generateId(): string {
-  return Math.random().toString(36).substr(2, 9);
+  return Math.random().toString(36).substring(2, 11);
 }
 
 function createSnapshot(action: string, course: Partial<Course>): CourseSnapshot {
@@ -166,11 +165,11 @@ function courseEditorReducer(state: CourseEditorState, action: CourseEditorActio
       };
 
     case 'CREATE_NEW_COURSE':
-      const newCourse = {
+      const newCourse: Partial<Course> = {
         title: '',
         description: '',
         category: '',
-        difficulty: 'beginner' as const,
+        difficulty: 'BEGINNER' as const,
         modules: [],
       };
       return {
@@ -244,9 +243,9 @@ function courseEditorReducer(state: CourseEditorState, action: CourseEditorActio
     case 'REORDER_MODULES':
       if (!state.course?.modules) return state;
       
-      const reorderedModules = action.payload.map(moduleId =>
-        state.course!.modules!.find(module => module.id === moduleId)!
-      ).filter(Boolean);
+      const reorderedModules = action.payload
+        .map(moduleId => state.course?.modules?.find(module => module.id === moduleId))
+        .filter((module): module is CourseModule => module !== undefined);
       
       const courseWithReorderedModules = { ...state.course, modules: reorderedModules };
       const reorderedState = addToHistory(state, 'REORDER_MODULES', courseWithReorderedModules);
@@ -320,9 +319,9 @@ function courseEditorReducer(state: CourseEditorState, action: CourseEditorActio
         module.id === action.payload.moduleId
           ? {
               ...module,
-              lessons: action.payload.lessonIds.map(lessonId =>
-                module.lessons?.find(lesson => lesson.id === lessonId)!
-              ).filter(Boolean),
+              lessons: action.payload.lessonIds
+                .map(lessonId => module.lessons?.find(lesson => lesson.id === lessonId))
+                .filter((lesson): lesson is Lesson => lesson !== undefined),
             }
           : module
       );
@@ -342,6 +341,8 @@ function courseEditorReducer(state: CourseEditorState, action: CourseEditorActio
       const prevIndex = state.historyIndex - 1;
       const prevSnapshot = state.history[prevIndex];
       
+      if (!prevSnapshot) return state;
+      
       return {
         ...state,
         course: { ...prevSnapshot.course },
@@ -354,6 +355,8 @@ function courseEditorReducer(state: CourseEditorState, action: CourseEditorActio
       
       const nextIndex = state.historyIndex + 1;
       const nextSnapshot = state.history[nextIndex];
+      
+      if (!nextSnapshot) return state;
       
       return {
         ...state,
@@ -434,8 +437,8 @@ function courseEditorReducer(state: CourseEditorState, action: CourseEditorActio
 // Custom Hook
 export function useCourseEditor(): [CourseEditorState, CourseEditorActions] {
   const [state, dispatch] = useReducer(courseEditorReducer, initialState);
-  const autoSaveTimeoutRef = useRef<NodeJS.Timeout>();
-  const conflictCheckIntervalRef = useRef<NodeJS.Timeout>();
+  const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const conflictCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Auto-save functionality
   const autoSave = useCallback(async () => {
@@ -493,15 +496,17 @@ export function useCourseEditor(): [CourseEditorState, CourseEditorActions] {
       dispatch({ type: 'UPDATE_COURSE', payload: updates });
     }, []),
 
-    addModule: useCallback((module: Omit<CourseModule, 'id' | 'courseId'>) => {
+    addModule: useCallback((module: Omit<CourseModule, 'id' | 'course' | 'createdAt' | 'updatedAt'>) => {
       const newModule: CourseModule = {
         ...module,
         id: generateId(),
-        courseId: state.course?.id || '',
+        course: state.course as Course,
         lessons: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       };
       dispatch({ type: 'ADD_MODULE', payload: newModule });
-    }, [state.course?.id]),
+    }, [state.course]),
 
     updateModule: useCallback((moduleId: string, updates: Partial<CourseModule>) => {
       dispatch({ type: 'UPDATE_MODULE', payload: { moduleId, updates } });
@@ -515,14 +520,19 @@ export function useCourseEditor(): [CourseEditorState, CourseEditorActions] {
       dispatch({ type: 'REORDER_MODULES', payload: moduleIds });
     }, []),
 
-    addLesson: useCallback((moduleId: string, lesson: Omit<Lesson, 'id' | 'moduleId'>) => {
+    addLesson: useCallback((moduleId: string, lesson: Omit<Lesson, 'id' | 'module' | 'createdAt' | 'updatedAt'>) => {
+      const targetModule = state.course?.modules?.find(m => m.id === moduleId);
+      if (!targetModule) return;
+      
       const newLesson: Lesson = {
         ...lesson,
         id: generateId(),
-        moduleId,
+        module: targetModule,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       };
       dispatch({ type: 'ADD_LESSON', payload: { moduleId, lesson: newLesson } });
-    }, []),
+    }, [state.course?.modules]),
 
     updateLesson: useCallback((lessonId: string, updates: Partial<Lesson>) => {
       dispatch({ type: 'UPDATE_LESSON', payload: { lessonId, updates } });
@@ -620,12 +630,15 @@ export function useCourseEditor(): [CourseEditorState, CourseEditorActions] {
 
   // Cleanup on unmount
   useEffect(() => {
+    const autoSaveTimeout = autoSaveTimeoutRef.current;
+    const conflictCheckInterval = conflictCheckIntervalRef.current;
+    
     return () => {
-      if (autoSaveTimeoutRef.current) {
-        clearTimeout(autoSaveTimeoutRef.current);
+      if (autoSaveTimeout) {
+        clearTimeout(autoSaveTimeout);
       }
-      if (conflictCheckIntervalRef.current) {
-        clearInterval(conflictCheckIntervalRef.current);
+      if (conflictCheckInterval) {
+        clearInterval(conflictCheckInterval);
       }
     };
   }, []);
