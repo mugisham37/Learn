@@ -85,7 +85,7 @@ function handleCreatedSubscription<T extends { id: string; __typename: string }>
         ...cacheConfig,
         operation: 'prepend', // New items typically go to the top
         listQuery: listQuery.query,
-        listVariables: listQuery.variables,
+        listVariables: listQuery.variables || {},
         listFieldName: listQuery.fieldName,
       });
     });
@@ -117,7 +117,7 @@ function handleUpdatedSubscription<T extends { id: string; __typename: string }>
         ...cacheConfig,
         operation: 'merge',
         listQuery: listQuery.query,
-        listVariables: listQuery.variables,
+        listVariables: listQuery.variables || {},
         listFieldName: listQuery.fieldName,
       });
     });
@@ -144,7 +144,7 @@ function handleDeletedSubscription<T extends { id: string; __typename: string }>
       updateCacheAfterMutation(cache, {
         ...cacheConfig,
         listQuery: listQuery.query,
-        listVariables: listQuery.variables,
+        listVariables: listQuery.variables || {},
         listFieldName: listQuery.fieldName,
       });
     });

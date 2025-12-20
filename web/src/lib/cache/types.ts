@@ -18,6 +18,12 @@ export type CacheUpdateOperation = 'create' | 'update' | 'delete' | 'append' | '
 export interface CacheEntity {
   id: string;
   __typename: string;
+  createdAt?: string;
+  updatedAt?: string;
+  // Common fields that might be present in entities
+  status?: string;
+  progressPercentage?: number;
+  readBy?: Array<{ userId: string; readAt: string }>;
 }
 
 /**

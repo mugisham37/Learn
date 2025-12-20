@@ -42,7 +42,14 @@ export function createErrorLink() {
 
     // Handle network errors using the new error handling system
     if (networkError) {
-      errorHandler.handleNetworkError(networkError as ServerError, undefined, context);
+      const networkErrorWithDetails = {
+        ...networkError,
+        statusCode: (networkError as ServerError).statusCode,
+        response: (networkError as ServerError).response ? 
+          JSON.parse(JSON.stringify((networkError as ServerError).response)) : 
+          undefined,
+      };
+      errorHandler.handleNetworkError(networkErrorWithDetails, undefined, context);
     }
   });
 }

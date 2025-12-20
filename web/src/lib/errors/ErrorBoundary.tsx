@@ -114,8 +114,8 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   private reportError(error: Error, errorInfo: ErrorInfo) {
     try {
       // Report to Sentry or other error tracking service
-      if (typeof window !== 'undefined' && (window as Record<string, unknown>).Sentry) {
-        const sentry = (window as Record<string, unknown>).Sentry as Record<string, unknown>;
+      if (typeof window !== 'undefined' && (window as unknown as Record<string, unknown>).Sentry) {
+        const sentry = (window as unknown as Record<string, unknown>).Sentry as Record<string, unknown>;
         if (typeof sentry.captureException === 'function') {
           sentry.captureException(error, {
             tags: {

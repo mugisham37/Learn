@@ -38,13 +38,6 @@ export {
   type SupportedLocale
 } from './errorMessages';
 
-// Error recovery strategies
-export { 
-  ErrorRecoveryManager,
-  NetworkErrorRecovery,
-  errorRecoveryManager 
-} from './errorRecovery';
-
 // Error tracking integration
 export { 
   ErrorTrackingManager,
@@ -58,6 +51,13 @@ export {
   errorHandler,
   errorHandlerUtils 
 } from './errorHandler';
+
+// Error recovery strategies
+export { 
+  ErrorRecoveryManager,
+  NetworkErrorRecovery,
+  errorRecoveryManager 
+} from './errorRecovery';
 
 // React error boundary components
 export {

@@ -8,7 +8,7 @@
  */
 
 import React from 'react';
-import { ApolloCache, InMemoryCache, NormalizedCacheObject } from '@apollo/client';
+import { ApolloCache, NormalizedCacheObject } from '@apollo/client';
 import { DocumentNode } from 'graphql';
 
 // =============================================================================
@@ -75,10 +75,10 @@ interface ApolloClientLike {
  */
 export const LRUEvictionStrategy: CacheEvictionStrategy = {
   name: 'LRU',
-  shouldEvict: (entry, _metrics) => {
+  shouldEvict: (entry, metrics) => {
     const ageThreshold = 30 * 60 * 1000; // 30 minutes
     const age = Date.now() - entry.lastAccessed.getTime();
-    return age > ageThreshold;
+    return age > ageThreshold && metrics.memoryUsage > 0.8;
   },
   priority: (entry) => {
     return Date.now() - entry.lastAccessed.getTime();
@@ -90,9 +90,9 @@ export const LRUEvictionStrategy: CacheEvictionStrategy = {
  */
 export const LFUEvictionStrategy: CacheEvictionStrategy = {
   name: 'LFU',
-  shouldEvict: (entry, _metrics) => {
+  shouldEvict: (entry, metrics) => {
     const minAccessThreshold = 2;
-    return entry.accessCount < minAccessThreshold;
+    return entry.accessCount < minAccessThreshold && metrics.memoryUsage > 0.7;
   },
   priority: (entry) => {
     return 1 / (entry.accessCount + 1);
@@ -104,9 +104,9 @@ export const LFUEvictionStrategy: CacheEvictionStrategy = {
  */
 export const SizeBasedEvictionStrategy: CacheEvictionStrategy = {
   name: 'Size-Based',
-  shouldEvict: (entry, _metrics) => {
+  shouldEvict: (entry, metrics) => {
     const sizeThreshold = 1024 * 1024; // 1MB
-    return entry.size > sizeThreshold;
+    return entry.size > sizeThreshold && metrics.memoryUsage > 0.6;
   },
   priority: (entry) => {
     return entry.size;
@@ -118,10 +118,10 @@ export const SizeBasedEvictionStrategy: CacheEvictionStrategy = {
  */
 export const TTLEvictionStrategy: CacheEvictionStrategy = {
   name: 'TTL',
-  shouldEvict: (entry, _metrics) => {
+  shouldEvict: (entry, metrics) => {
     const ttl = 60 * 60 * 1000; // 1 hour
     const age = Date.now() - entry.created.getTime();
-    return age > ttl;
+    return age > ttl && metrics.memoryUsage > 0.5;
   },
   priority: (entry) => {
     return Date.now() - entry.created.getTime();
@@ -133,13 +133,13 @@ export const TTLEvictionStrategy: CacheEvictionStrategy = {
 // =============================================================================
 
 export class CacheOptimizer {
-  private cache: ApolloCache<NormalizedCacheObject>;
+  private cache: InMemoryCache;
   private monitor: CacheMonitor;
   private config: CacheOptimizationConfig;
   private cleanupInterval: NodeJS.Timeout | null = null;
 
   constructor(
-    cache: ApolloCache<NormalizedCacheObject>,
+    cache: InMemoryCache,
     config: Partial<CacheOptimizationConfig> = {}
   ) {
     this.cache = cache;
@@ -246,7 +246,11 @@ export class CacheOptimizer {
           });
 
           await Promise.race([
-            client.query({ query, variables, fetchPolicy: 'cache-first' }),
+            client.query({ 
+              query, 
+              variables: variables || undefined, 
+              fetchPolicy: 'cache-first' 
+            }),
             timeoutPromise,
           ]);
 
@@ -257,7 +261,11 @@ export class CacheOptimizer {
           if (retryFailed) {
             // Retry once
             try {
-              await client.query({ query, variables, fetchPolicy: 'network-only' });
+              await client.query({ 
+                query, 
+                variables: variables || undefined, 
+                fetchPolicy: 'network-only' 
+              });
             } catch (retryError) {
               console.warn(`[Cache] Failed to warm query after retry:`, retryError);
             }
@@ -335,7 +343,7 @@ export class CacheOptimizer {
 // =============================================================================
 
 class CacheMonitor {
-  private cache: ApolloCache<NormalizedCacheObject>;
+  private cache: InMemoryCache;
   private metrics: CacheMetrics = {
     totalObjects: 0,
     estimatedSize: 0,
@@ -346,7 +354,7 @@ class CacheMonitor {
     lastCleanup: new Date(),
   };
 
-  constructor(cache: ApolloCache<NormalizedCacheObject>) {
+  constructor(cache: InMemoryCache) {
     this.cache = cache;
   }
 
@@ -399,7 +407,11 @@ export async function preloadCriticalData(
       });
 
       await Promise.race([
-        client.query({ query, fetchPolicy: 'cache-first' }),
+        client.query({ 
+          query, 
+          variables: variables || undefined, 
+          fetchPolicy: 'cache-first' 
+        }),
         timeoutPromise,
       ]);
     } catch (error) {

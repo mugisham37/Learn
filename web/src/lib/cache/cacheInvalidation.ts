@@ -162,7 +162,7 @@ export const commonInvalidations = {
   /**
    * Invalidate after course enrollment
    */
-  courseEnrolled: (cache: InMemoryCache, courseId: string, _userId: string) => {
+  courseEnrolled: (cache: InMemoryCache, courseId: string, userId: string) => {
     invalidateCache(cache, {
       fieldNames: [
         'myEnrollments',
@@ -173,6 +173,8 @@ export const commonInvalidations = {
     
     // Also invalidate the specific course to update enrollment count
     invalidateEntity(cache, 'Course', courseId);
+    // Also invalidate user data
+    invalidateEntity(cache, 'User', userId);
   },
 
   /**
@@ -189,16 +191,19 @@ export const commonInvalidations = {
   /**
    * Invalidate after message sent
    */
-  messageSent: (cache: InMemoryCache, _conversationId: string) => {
+  messageSent: (cache: InMemoryCache, conversationId: string) => {
     invalidateCache(cache, {
       fieldNames: ['conversations', 'conversationMessages'],
     });
+    
+    // Also invalidate the specific conversation
+    invalidateEntity(cache, 'Conversation', conversationId);
   },
 
   /**
    * Invalidate after assignment submission
    */
-  assignmentSubmitted: (cache: InMemoryCache, _assignmentId: string, _studentId: string) => {
+  assignmentSubmitted: (cache: InMemoryCache, assignmentId: string, studentId: string) => {
     invalidateCache(cache, {
       fieldNames: [
         'assignmentSubmissions',
@@ -206,12 +211,16 @@ export const commonInvalidations = {
         'assignmentProgress',
       ],
     });
+    
+    // Also invalidate specific entities
+    invalidateEntity(cache, 'Assignment', assignmentId);
+    invalidateEntity(cache, 'User', studentId);
   },
 
   /**
    * Invalidate after payment completion
    */
-  paymentCompleted: (cache: InMemoryCache, courseId: string, _userId: string) => {
+  paymentCompleted: (cache: InMemoryCache, courseId: string, userId: string) => {
     invalidateCache(cache, {
       fieldNames: [
         'myEnrollments',
@@ -221,6 +230,9 @@ export const commonInvalidations = {
     });
     
     // Update course enrollment count
+    invalidateEntity(cache, 'Course', courseId);
+    // Update user payment history
+    invalidateEntity(cache, 'User', userId);
     invalidateEntity(cache, 'Course', courseId);
   },
 

@@ -147,8 +147,15 @@ class SentryTrackingService implements ErrorTrackingService {
 
     try {
       // Dynamically import Sentry to avoid bundling if not needed
-      const sentryModule = await import('@sentry/nextjs') as SentryModule;
-      this.sentry = sentryModule;
+      // Note: This requires @sentry/nextjs to be installed
+      const sentryModule = await import('@sentry/nextjs').catch(() => null);
+      if (!sentryModule) {
+        console.warn('Sentry package not found, error tracking disabled');
+        this.enabled = false;
+        return;
+      }
+      
+      this.sentry = sentryModule as unknown as SentryModule;
 
       sentryModule.init({
         dsn: config.dsn,
@@ -234,8 +241,8 @@ class SentryTrackingService implements ErrorTrackingService {
     try {
       this.sentry.setUser({
         id: user.id,
-        email: user.email,
-        role: user.role,
+        ...(user.email && { email: user.email }),
+        ...(user.role && { role: user.role }),
       });
     } catch (error) {
       console.error('Failed to set user context:', error);
@@ -345,7 +352,10 @@ class SentryTransactionWrapper implements PerformanceTransaction {
   }
 
   startChild(operation: string, description?: string): PerformanceSpan {
-    const span = this.transaction.startChild({ op: operation, description });
+    const span = this.transaction.startChild({ 
+      op: operation, 
+      ...(description && { description }) 
+    });
     return new SentrySpanWrapper(span);
   }
 
@@ -461,7 +471,7 @@ class ConsoleTransaction implements PerformanceTransaction {
     }
   }
 
-  setData(key: string, value: any): void {
+  setData(key: string, value: unknown): void {
     if (this.enabled) {
       console.info(`Transaction ${this.name} data:`, { [key]: value });
     }
@@ -492,7 +502,7 @@ class ConsoleSpan implements PerformanceSpan {
     }
   }
 
-  setData(key: string, value: any): void {
+  setData(key: string, value: unknown): void {
     if (this.enabled) {
       console.info(`Span ${this.operation} data:`, { [key]: value });
     }
