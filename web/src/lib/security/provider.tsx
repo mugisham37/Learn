@@ -77,7 +77,9 @@ export function SecurityProvider({ children, config: customConfig }: SecurityPro
   // Generate CSRF token on mount
   useEffect(() => {
     if (config.enableCSRFProtection) {
-      setCSRFToken(generateRandomToken());
+      // Use a callback to avoid direct state update in effect
+      const updateToken = () => setCSRFToken(generateRandomToken());
+      updateToken();
     }
   }, [config.enableCSRFProtection]);
 

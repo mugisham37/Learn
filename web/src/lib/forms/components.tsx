@@ -221,12 +221,20 @@ export function FormField({
             {required && <span className="required">*</span>}
           </label>
         )}
-        {React.cloneElement(children as React.ReactElement, {
+        {React.cloneElement(children as React.ReactElement<{ 
+          id?: string; 
+          name?: string; 
+          value?: unknown; 
+          onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void; 
+          onBlur?: () => void; 
+          disabled?: boolean; 
+        }>, {
+          id: name,
           name,
           value,
           onChange: (e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value),
           onBlur,
-          disabled,
+          ...(disabled !== undefined && { disabled }),
         })}
         {hasError && <div className="form-error">{error}</div>}
       </div>
@@ -245,7 +253,7 @@ export function FormField({
         id={name}
         name={name}
         type={type}
-        value={value}
+        value={typeof value === 'string' || typeof value === 'number' ? String(value) : ''}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
         onBlur={onBlur}

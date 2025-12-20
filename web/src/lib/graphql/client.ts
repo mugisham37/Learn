@@ -6,7 +6,7 @@
  * error handling, and retry logic.
  */
 
-import { ApolloClient, from, createHttpLink, split } from '@apollo/client';
+import { ApolloClient, ApolloLink, createHttpLink, split } from '@apollo/client';
 import { GraphQLWsLink } from '@apollo/client/link/subscriptions';
 import { getMainDefinition } from '@apollo/client/utilities';
 import { createClient } from 'graphql-ws';
@@ -76,7 +76,7 @@ function createApolloClient() {
 
   // Combine all links in the correct order
   // Order matters: auth -> auth-error -> error -> retry -> transport
-  const link = from([
+  const link = ApolloLink.from([
     authLink,
     authErrorLink,
     errorLink,
@@ -104,8 +104,6 @@ function createApolloClient() {
     },
     // Enable Apollo DevTools in development
     ...(config.enableDevTools && { connectToDevTools: true }),
-    // Custom name for debugging
-    version: '1.0.0',
   });
 
   return client;

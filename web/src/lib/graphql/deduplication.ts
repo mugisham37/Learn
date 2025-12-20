@@ -8,7 +8,7 @@
  */
 
 import { DocumentNode, OperationDefinitionNode, print } from 'graphql';
-import { ApolloLink, Operation, NextLink, Observable, FetchResult } from '@apollo/client';
+import { ApolloLink, Operation, Observable, FetchResult } from '@apollo/client';
 
 // =============================================================================
 // Types and Interfaces
@@ -29,18 +29,18 @@ export interface GraphQLDeduplicationOptions {
   keyGenerator?: (operation: Operation) => string;
 }
 
-export interface CachedRequest<T = any> {
+export interface CachedRequest<T = Record<string, unknown>> {
   observable: Observable<FetchResult<T>>;
   timestamp: number;
   operationName: string;
-  variables: any;
+  variables: Record<string, unknown>;
 }
 
 export interface BatchedRequest {
   operation: Operation;
   observer: {
     next: (value: FetchResult) => void;
-    error: (error: any) => void;
+    error: (error: unknown) => void;
     complete: () => void;
   };
 }
@@ -180,15 +180,20 @@ export class GraphQLRequestDeduplicator {
       if (!groupedOperations.has(queryKey)) {
         groupedOperations.set(queryKey, []);
       }
-      groupedOperations.get(queryKey)!.push(request);
+      const group = groupedOperations.get(queryKey);
+      if (group) {
+        group.push(request);
+      }
     });
 
     // Process each group
     groupedOperations.forEach(requests => {
       if (requests.length === 1) {
         // Single request - process normally
-        const { operation, observer } = requests[0];
-        this.executeOperation(operation).subscribe(observer);
+        const request = requests[0];
+        if (request) {
+          this.executeOperation(request.operation).subscribe(request.observer);
+        }
       } else {
         // Multiple requests with same query - batch them
         this.executeBatchedOperations(requests);
@@ -204,15 +209,15 @@ export class GraphQLRequestDeduplicator {
   private executeBatchedOperations(requests: BatchedRequest[]): void {
     // For now, execute individually
     // In a real implementation, you'd modify the query to accept multiple variable sets
-    requests.forEach(({ operation, observer }) => {
-      this.executeOperation(operation).subscribe(observer);
+    requests.forEach((request) => {
+      this.executeOperation(request.operation).subscribe(request.observer);
     });
   }
 
   /**
    * Execute a single GraphQL operation
    */
-  private executeOperation(operation: Operation): Observable<FetchResult> {
+  private executeOperation(_operation: Operation): Observable<FetchResult> {
     // This would normally forward to the next link in the chain
     // For now, return a placeholder observable
     return new Observable(observer => {
@@ -227,7 +232,7 @@ export class GraphQLRequestDeduplicator {
   /**
    * Deduplicate a GraphQL request
    */
-  public deduplicate(operation: Operation, forward: NextLink): Observable<FetchResult> {
+  public deduplicate(operation: Operation, forward: (operation: Operation) => Observable<FetchResult>): Observable<FetchResult> {
     this.metrics.totalRequests++;
 
     // Check if operation should be deduplicated
@@ -344,7 +349,7 @@ export function createGraphQLDeduplicationLink(
 /**
  * Create a request cache with TTL for non-GraphQL requests
  */
-export function createRequestCache<TArgs extends any[], TReturn>(
+export function createRequestCache<TArgs extends unknown[], TReturn>(
   requestFn: (...args: TArgs) => Promise<TReturn>,
   options: {
     ttl?: number;
@@ -376,8 +381,10 @@ export function createRequestCache<TArgs extends any[], TReturn>(
     // Manage cache size
     if (cache.size >= maxSize) {
       const entries = Array.from(cache.entries());
-      const oldest = entries.sort((a, b) => a[1].timestamp - b[1].timestamp)[0];
-      cache.delete(oldest[0]);
+      const oldestEntry = entries.sort((a, b) => a[1].timestamp - b[1].timestamp)[0];
+      if (oldestEntry) {
+        cache.delete(oldestEntry[0]);
+      }
     }
 
     // Cache the promise
@@ -399,12 +406,20 @@ export function mergeGraphQLQueries(queries: DocumentNode[]): DocumentNode {
   }
 
   if (queries.length === 1) {
-    return queries[0];
+    const firstQuery = queries[0];
+    if (!firstQuery) {
+      throw new Error('First query is undefined');
+    }
+    return firstQuery;
   }
 
   // For now, return the first query
   // A full implementation would merge the selection sets
-  return queries[0];
+  const firstQuery = queries[0];
+  if (!firstQuery) {
+    throw new Error('First query is undefined');
+  }
+  return firstQuery;
 }
 
 // =============================================================================

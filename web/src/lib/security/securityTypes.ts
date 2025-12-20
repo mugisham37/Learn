@@ -25,7 +25,7 @@ export interface TokenEncryption {
 export interface TokenValidationResult {
   valid: boolean;
   expired: boolean;
-  payload?: any;
+  payload?: Record<string, unknown>;
   error?: string;
 }
 
@@ -152,7 +152,7 @@ export interface SecurityConfig {
 export interface SecurityEvent {
   type: 'token_refresh' | 'xss_attempt' | 'csrf_violation' | 'malicious_file' | 'security_error';
   timestamp: Date;
-  details: any;
+  details: Record<string, unknown>;
   severity: 'low' | 'medium' | 'high' | 'critical';
   userId?: string;
   sessionId?: string;

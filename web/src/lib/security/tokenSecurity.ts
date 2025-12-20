@@ -418,7 +418,16 @@ export class TokenValidator {
       }
 
       // Decode payload
-      const payload = JSON.parse(atob(parts[1]));
+      const payloadStr = parts[1];
+      if (!payloadStr) {
+        return {
+          valid: false,
+          expired: false,
+          error: 'Invalid JWT payload',
+        };
+      }
+      
+      const payload = JSON.parse(atob(payloadStr));
       const currentTime = Math.floor(Date.now() / 1000);
       const expirationTime = payload.exp;
       const bufferTime = securityConfig.tokenStorage.tokenExpirationBuffer / 1000;
@@ -443,7 +452,7 @@ export class TokenValidator {
   /**
    * Extract user information from token
    */
-  static extractUserInfo(token: string): any {
+  static extractUserInfo(token: string): Record<string, unknown> | null {
     const validation = this.validateToken(token);
     if (!validation.valid || !validation.payload) {
       return null;
@@ -501,7 +510,7 @@ export class TokenSecurityAuditor {
   /**
    * Audit suspicious token activity
    */
-  static auditSuspiciousActivity(details: any): void {
+  static auditSuspiciousActivity(details: Record<string, unknown>): void {
     const event: SecurityEvent = {
       type: 'security_error',
       timestamp: new Date(),

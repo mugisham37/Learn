@@ -56,7 +56,7 @@ export function FoundationProvider({ children }: FoundationProviderProps) {
  */
 export function FoundationProviderWithConfig({ 
   children, 
-  config 
+  config: _config 
 }: FoundationProviderProps & { config: FoundationConfig }) {
   // Create Apollo client with custom config
   const customApolloClient = React.useMemo(() => {
@@ -97,7 +97,7 @@ export const ProviderUtils = {
    * Creates a provider composition for testing
    * Includes mock providers for isolated testing
    */
-  createTestProvider: (children: React.ReactNode, mocks?: Record<string, unknown>) => (
+  createTestProvider: (children: React.ReactNode, _mocks?: Record<string, unknown>) => (
     <ApolloProvider client={apolloClient}>
       <AuthProvider>
         {children}

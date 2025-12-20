@@ -6,7 +6,7 @@
  */
 
 import { setContext } from '@apollo/client/link/context';
-import { onError } from '@apollo/client/link/error';
+import { onError, ErrorResponse } from '@apollo/client/link/error';
 import { Observable } from '@apollo/client/utilities';
 import { tokenManager } from '../../auth/tokenStorage';
 
@@ -45,7 +45,9 @@ export function createAuthLink() {
  * Creates an error link that handles authentication errors
  */
 export function createAuthErrorLink() {
-  return onError(({ graphQLErrors, networkError, operation, forward }) => {
+  return onError((errorResponse: ErrorResponse) => {
+    const { graphQLErrors, networkError, operation, forward } = errorResponse;
+    
     // Handle GraphQL authentication errors
     if (graphQLErrors) {
       for (const error of graphQLErrors) {

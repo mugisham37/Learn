@@ -10,12 +10,9 @@
 import type {
   User,
   Course,
-  Enrollment,
   Lesson,
   Quiz,
   Assignment,
-  Message,
-  DiscussionThread,
   CreateCourseInput,
   UpdateCourseInput,
   UpdateProfileInput,
@@ -31,7 +28,6 @@ import type {
   SendMessageInput,
   CreateThreadInput,
   ReplyToThreadInput,
-  Difficulty,
   LessonType,
   QuestionType
 } from '@/types/entities';
@@ -41,9 +37,11 @@ import type {
   FormFieldState,
   FormState,
   FormErrors,
-  FormSubmissionState,
-  FormEventHandlers
+  FormSubmissionState
 } from '@/lib/types/utilityTypes';
+
+// Re-export commonly used types for easier access
+export type { FormErrors, FormSubmissionState } from '@/lib/types/utilityTypes';
 
 // =============================================================================
 // Form Input Types Matching GraphQL Mutations
@@ -72,6 +70,7 @@ export type CourseCreationFormInput = FormInput<CreateCourseInput> & {
  * Course update form input
  */
 export type CourseUpdateFormInput = FormInput<UpdateCourseInput> & {
+  id: string; // Required for updates
   // Additional form-specific fields
   thumbnailFile?: File | null;
   modules?: ModuleFormInput[];
@@ -309,8 +308,8 @@ export type ValidationRule<T> = {
   min?: number;
   max?: number;
   pattern?: RegExp;
-  custom?: (value: T) => string | null;
-  message?: string;
+  custom?: (value: T, formData?: Record<string, unknown>) => string | null;
+  message?: string | undefined;
 };
 
 /**

@@ -7,7 +7,6 @@
  * Requirements: 2.5 - Type-safe form submission utilities
  */
 
-import type { ApolloError, MutationResult } from '@apollo/client';
 import type {
   FormErrors,
   FormSubmissionState,
@@ -24,7 +23,7 @@ import type {
   ThreadReplyFormInput
 } from './formTypes';
 
-import { validateForm, serverErrorsToFormErrors } from './formValidation';
+import { validateForm } from './formValidation';
 import type { ValidationSchema } from './formTypes';
 
 // =============================================================================
@@ -36,7 +35,7 @@ import type { ValidationSchema } from './formTypes';
  */
 export type FormSubmissionOptions<T> = {
   validationSchema?: ValidationSchema<T>;
-  onSuccess?: (data: any) => void;
+  onSuccess?: (data: unknown) => void;
   onError?: (error: FormSubmissionError) => void;
   optimisticUpdate?: boolean;
   showSuccessMessage?: boolean;
@@ -60,7 +59,7 @@ export type FormSubmissionError = {
 export type FormSubmissionResult<T> = {
   success: boolean;
   data?: T;
-  errors?: FormErrors<any>;
+  errors?: FormErrors<Record<string, unknown>>;
   error?: FormSubmissionError;
 };
 
@@ -70,7 +69,7 @@ export type FormSubmissionResult<T> = {
 export type MutationFunction<TData, TVariables> = (options?: {
   variables?: TVariables;
   optimisticResponse?: TData;
-  update?: (cache: any, result: { data?: TData }) => void;
+  update?: (cache: unknown, result: { data?: TData }) => void;
 }) => Promise<{ data?: TData }>;
 
 // =============================================================================
@@ -80,14 +79,13 @@ export type MutationFunction<TData, TVariables> = (options?: {
 /**
  * Create a type-safe form submission handler
  */
-export function createFormSubmissionHandler<TFormData, TMutationData, TMutationVariables>(
+export function createFormSubmissionHandler<TFormData extends Record<string, unknown>, TMutationData, TMutationVariables>(
   mutationFn: MutationFunction<TMutationData, TMutationVariables>,
   transformFormData: (formData: TFormData) => TMutationVariables,
   options: FormSubmissionOptions<TFormData> = {}
 ) {
   return async (
-    formData: TFormData,
-    submissionState: FormSubmissionState
+    formData: TFormData
   ): Promise<FormSubmissionResult<TMutationData>> => {
     try {
       // Validate form data if schema provided
@@ -116,10 +114,15 @@ export function createFormSubmissionHandler<TFormData, TMutationData, TMutationV
       const variables = transformFormData(formData);
 
       // Execute mutation
-      const result = await mutationFn({
+      const mutationOptions: {
+        variables: TMutationVariables;
+        optimisticResponse?: TMutationData;
+      } = {
         variables,
-        optimisticResponse: options.optimisticUpdate ? createOptimisticResponse(formData) : undefined
-      });
+        ...(options.optimisticUpdate && { optimisticResponse: createOptimisticResponse(formData) as TMutationData })
+      };
+      
+      const result = await mutationFn(mutationOptions);
 
       // Handle success
       if (result.data) {
@@ -159,7 +162,7 @@ export function createFormSubmissionHandler<TFormData, TMutationData, TMutationV
       return {
         success: false,
         error,
-        errors: error.fieldErrors
+        errors: error.fieldErrors as FormErrors<Record<string, unknown>>
       };
     }
   };
@@ -168,18 +171,35 @@ export function createFormSubmissionHandler<TFormData, TMutationData, TMutationV
 /**
  * Handle form submission errors
  */
-function handleSubmissionError(err: any): FormSubmissionError {
+function handleSubmissionError(err: unknown): FormSubmissionError {
+  // Type guard for error with networkError
+  const hasNetworkError = (error: unknown): error is { networkError: unknown } => {
+    return typeof error === 'object' && error !== null && 'networkError' in error;
+  };
+
+  // Type guard for error with graphQLErrors
+  const hasGraphQLErrors = (error: unknown): error is { graphQLErrors: Array<{ message: string; extensions?: { code?: string; fieldErrors?: Record<string, string> } }> } => {
+    return typeof error === 'object' && error !== null && 'graphQLErrors' in error && Array.isArray((error as { graphQLErrors: unknown }).graphQLErrors);
+  };
+
   // GraphQL/Apollo errors
-  if (err.networkError) {
+  if (hasNetworkError(err)) {
     return {
       type: 'network',
       message: 'Network error. Please check your connection and try again.',
-      originalError: err
+      originalError: err instanceof Error ? err : new Error(String(err))
     };
   }
 
-  if (err.graphQLErrors && err.graphQLErrors.length > 0) {
+  if (hasGraphQLErrors(err) && err.graphQLErrors.length > 0) {
     const graphQLError = err.graphQLErrors[0];
+    if (!graphQLError) {
+      return {
+        type: 'server',
+        message: 'Server error occurred',
+        originalError: err instanceof Error ? err : new Error(String(err))
+      };
+    }
     
     // Check for validation errors
     if (graphQLError.extensions?.code === 'VALIDATION_ERROR') {
@@ -188,7 +208,7 @@ function handleSubmissionError(err: any): FormSubmissionError {
         type: 'validation',
         message: 'Please fix the validation errors',
         fieldErrors,
-        originalError: err
+        originalError: err instanceof Error ? err : new Error(String(err))
       };
     }
     
@@ -196,7 +216,7 @@ function handleSubmissionError(err: any): FormSubmissionError {
     return {
       type: 'server',
       message: graphQLError.message || 'Server error occurred',
-      originalError: err
+      originalError: err instanceof Error ? err : new Error(String(err))
     };
   }
 
@@ -213,14 +233,14 @@ function handleSubmissionError(err: any): FormSubmissionError {
   return {
     type: 'unknown',
     message: 'An unexpected error occurred',
-    originalError: err
+    originalError: err instanceof Error ? err : new Error(String(err))
   };
 }
 
 /**
  * Create optimistic response for mutations
  */
-function createOptimisticResponse<T>(formData: T): any {
+function createOptimisticResponse<T>(formData: T): Record<string, unknown> {
   // This is a generic implementation - specific forms may need custom logic
   return {
     __typename: 'Mutation',
@@ -239,7 +259,7 @@ function createOptimisticResponse<T>(formData: T): any {
  * Profile form submission handler
  */
 export function createProfileSubmissionHandler(
-  updateProfileMutation: MutationFunction<any, any>,
+  updateProfileMutation: MutationFunction<Record<string, unknown>, Record<string, unknown>>,
   options: FormSubmissionOptions<ProfileFormInput> = {}
 ) {
   return createFormSubmissionHandler(
@@ -261,7 +281,7 @@ export function createProfileSubmissionHandler(
  * Course creation form submission handler
  */
 export function createCourseCreationSubmissionHandler(
-  createCourseMutation: MutationFunction<any, any>,
+  createCourseMutation: MutationFunction<Record<string, unknown>, Record<string, unknown>>,
   options: FormSubmissionOptions<CourseCreationFormInput> = {}
 ) {
   return createFormSubmissionHandler(
@@ -286,7 +306,7 @@ export function createCourseCreationSubmissionHandler(
  * Course update form submission handler
  */
 export function createCourseUpdateSubmissionHandler(
-  updateCourseMutation: MutationFunction<any, any>,
+  updateCourseMutation: MutationFunction<Record<string, unknown>, Record<string, unknown>>,
   options: FormSubmissionOptions<CourseUpdateFormInput> = {}
 ) {
   return createFormSubmissionHandler(
@@ -312,7 +332,7 @@ export function createCourseUpdateSubmissionHandler(
  * Lesson form submission handler
  */
 export function createLessonSubmissionHandler(
-  createOrUpdateLessonMutation: MutationFunction<any, any>,
+  createOrUpdateLessonMutation: MutationFunction<Record<string, unknown>, Record<string, unknown>>,
   options: FormSubmissionOptions<LessonFormInput> = {}
 ) {
   return createFormSubmissionHandler(
@@ -337,7 +357,7 @@ export function createLessonSubmissionHandler(
  * Quiz form submission handler
  */
 export function createQuizSubmissionHandler(
-  createOrUpdateQuizMutation: MutationFunction<any, any>,
+  createOrUpdateQuizMutation: MutationFunction<Record<string, unknown>, Record<string, unknown>>,
   options: FormSubmissionOptions<QuizFormInput> = {}
 ) {
   return createFormSubmissionHandler(
@@ -369,7 +389,7 @@ export function createQuizSubmissionHandler(
  * Assignment form submission handler
  */
 export function createAssignmentSubmissionHandler(
-  createOrUpdateAssignmentMutation: MutationFunction<any, any>,
+  createOrUpdateAssignmentMutation: MutationFunction<Record<string, unknown>, Record<string, unknown>>,
   options: FormSubmissionOptions<AssignmentFormInput> = {}
 ) {
   return createFormSubmissionHandler(
@@ -394,7 +414,7 @@ export function createAssignmentSubmissionHandler(
  * Login form submission handler
  */
 export function createLoginSubmissionHandler(
-  loginMutation: MutationFunction<any, any>,
+  loginMutation: MutationFunction<Record<string, unknown>, Record<string, unknown>>,
   options: FormSubmissionOptions<LoginFormInput> = {}
 ) {
   return createFormSubmissionHandler(
@@ -411,7 +431,7 @@ export function createLoginSubmissionHandler(
  * Registration form submission handler
  */
 export function createRegistrationSubmissionHandler(
-  registerMutation: MutationFunction<any, any>,
+  registerMutation: MutationFunction<Record<string, unknown>, Record<string, unknown>>,
   options: FormSubmissionOptions<RegistrationFormInput> = {}
 ) {
   return createFormSubmissionHandler(
@@ -432,7 +452,7 @@ export function createRegistrationSubmissionHandler(
  * Message form submission handler
  */
 export function createMessageSubmissionHandler(
-  sendMessageMutation: MutationFunction<any, any>,
+  sendMessageMutation: MutationFunction<Record<string, unknown>, Record<string, unknown>>,
   options: FormSubmissionOptions<MessageFormInput> = {}
 ) {
   return createFormSubmissionHandler(
@@ -452,7 +472,7 @@ export function createMessageSubmissionHandler(
  * Thread creation form submission handler
  */
 export function createThreadSubmissionHandler(
-  createThreadMutation: MutationFunction<any, any>,
+  createThreadMutation: MutationFunction<Record<string, unknown>, Record<string, unknown>>,
   options: FormSubmissionOptions<ThreadFormInput> = {}
 ) {
   return createFormSubmissionHandler(
@@ -473,7 +493,7 @@ export function createThreadSubmissionHandler(
  * Thread reply form submission handler
  */
 export function createThreadReplySubmissionHandler(
-  replyToThreadMutation: MutationFunction<any, any>,
+  replyToThreadMutation: MutationFunction<Record<string, unknown>, Record<string, unknown>>,
   options: FormSubmissionOptions<ThreadReplyFormInput> = {}
 ) {
   return createFormSubmissionHandler(
@@ -590,7 +610,7 @@ function hasRequiredFields<T>(values: T): boolean {
   
   return commonRequiredFields.some(field => {
     if (valueKeys.includes(field)) {
-      const value = (values as any)[field];
+      const value = (values as Record<string, unknown>)[field];
       return value != null && value !== '';
     }
     return true; // Field not present, assume not required

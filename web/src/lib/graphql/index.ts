@@ -23,10 +23,8 @@ export type {
   ApolloClient,
   InMemoryCache,
   ApolloQueryResult,
-  MutationHookOptions,
-  QueryHookOptions,
-  SubscriptionHookOptions,
-  WatchQueryOptions,
   MutationOptions,
+  QueryOptions,
   SubscriptionOptions,
+  WatchQueryOptions,
 } from '@apollo/client';

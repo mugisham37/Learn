@@ -7,7 +7,7 @@
  * This link integrates with the comprehensive error handling system.
  */
 
-import { onError } from '@apollo/client/link/error';
+import { onError, ErrorResponse } from '@apollo/client/link/error';
 import { ServerError } from '@apollo/client';
 import { errorHandler } from '../../errors';
 import type { ClassifiedError, ErrorType } from '../../../types';
@@ -19,7 +19,9 @@ import type { ClassifiedError, ErrorType } from '../../../types';
  * Creates the error handling link
  */
 export function createErrorLink() {
-  return onError(({ graphQLErrors, networkError, operation }) => {
+  return onError((errorResponse: ErrorResponse) => {
+    const { graphQLErrors, networkError, operation } = errorResponse;
+    
     const operationName = operation.operationName;
     const variables = operation.variables;
 
@@ -31,7 +33,7 @@ export function createErrorLink() {
 
     // Handle GraphQL errors using the new error handling system
     if (graphQLErrors) {
-      graphQLErrors.forEach(async (error: any) => {
+      graphQLErrors.forEach(async (error: { message: string; extensions?: { code?: string; field?: string } }) => {
         await errorHandler.handleGraphQLError(error, context);
       });
     }
