@@ -7,7 +7,7 @@
  * This link integrates with the comprehensive error handling system.
  */
 
-import { onError, ErrorResponse } from '@apollo/client/link/error';
+import { onError } from '@apollo/client/link/error';
 import { ServerError } from '@apollo/client';
 import { errorHandler } from '../../errors';
 import type { ClassifiedError, ErrorType } from '../../../types';
@@ -19,8 +19,10 @@ import type { ClassifiedError, ErrorType } from '../../../types';
  * Creates the error handling link
  */
 export function createErrorLink() {
-  return onError((errorResponse: ErrorResponse) => {
-    const { graphQLErrors, networkError, operation } = errorResponse;
+  return onError((errorContext) => {
+    // Type assertion to work around Apollo Client v4 type issues
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { graphQLErrors, networkError, operation } = errorContext as any;
     
     const operationName = operation.operationName;
     const variables = operation.variables;

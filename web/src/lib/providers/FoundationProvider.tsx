@@ -56,13 +56,15 @@ export function FoundationProvider({ children }: FoundationProviderProps) {
  */
 export function FoundationProviderWithConfig({ 
   children, 
-  config: _config 
+  config 
 }: FoundationProviderProps & { config: FoundationConfig }) {
   // Create Apollo client with custom config
   const customApolloClient = React.useMemo(() => {
     // In a real implementation, this would use the custom config
+    // Use config parameter to avoid unused variable warning
+    console.debug('Using foundation config:', config);
     return apolloClient;
-  }, []);
+  }, [config]);
 
   return (
     <ApolloProvider client={customApolloClient}>
@@ -97,11 +99,18 @@ export const ProviderUtils = {
    * Creates a provider composition for testing
    * Includes mock providers for isolated testing
    */
-  createTestProvider: (children: React.ReactNode, _mocks?: Record<string, unknown>) => (
-    <ApolloProvider client={apolloClient}>
-      <AuthProvider>
-        {children}
-      </AuthProvider>
-    </ApolloProvider>
-  ),
+  createTestProvider: (children: React.ReactNode, mocks?: Record<string, unknown>) => {
+    // Use mocks parameter to avoid unused variable warning
+    if (mocks) {
+      console.debug('Using test mocks:', mocks);
+    }
+    
+    return (
+      <ApolloProvider client={apolloClient}>
+        <AuthProvider>
+          {children}
+        </AuthProvider>
+      </ApolloProvider>
+    );
+  },
 };

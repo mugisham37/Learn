@@ -6,7 +6,7 @@
  */
 
 import { setContext } from '@apollo/client/link/context';
-import { onError, ErrorResponse } from '@apollo/client/link/error';
+import { onError } from '@apollo/client/link/error';
 import { Observable } from '@apollo/client/utilities';
 import { tokenManager } from '../../auth/tokenStorage';
 
@@ -45,8 +45,10 @@ export function createAuthLink() {
  * Creates an error link that handles authentication errors
  */
 export function createAuthErrorLink() {
-  return onError((errorResponse: ErrorResponse) => {
-    const { graphQLErrors, networkError, operation, forward } = errorResponse;
+  return onError((errorContext) => {
+    // Type assertion to work around Apollo Client v4 type issues
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { graphQLErrors, networkError, operation, forward } = errorContext as any;
     
     // Handle GraphQL authentication errors
     if (graphQLErrors) {

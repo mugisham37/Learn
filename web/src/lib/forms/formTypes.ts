@@ -34,10 +34,8 @@ import type {
 
 import type {
   FormInput,
-  FormFieldState,
   FormState,
   FormErrors,
-  FormSubmissionState
 } from '@/lib/types/utilityTypes';
 
 // Re-export commonly used types for easier access

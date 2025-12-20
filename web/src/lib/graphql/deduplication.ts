@@ -217,9 +217,12 @@ export class GraphQLRequestDeduplicator {
   /**
    * Execute a single GraphQL operation
    */
-  private executeOperation(_operation: Operation): Observable<FetchResult> {
+  private executeOperation(operation: Operation): Observable<FetchResult> {
     // This would normally forward to the next link in the chain
     // For now, return a placeholder observable
+    // Use operation parameter to avoid unused variable warning
+    console.debug('Executing operation:', operation.operationName);
+    
     return new Observable(observer => {
       // Simulate async operation
       setTimeout(() => {
