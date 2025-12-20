@@ -9,7 +9,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
-import { useApolloClient } from '@apollo/client';
+import { useApolloClient } from '@apollo/client/react/hooks';
 import { 
   ConnectionStatus, 
   SubscriptionContextValue, 

@@ -186,7 +186,7 @@ export class PerformanceManager {
   /**
    * Create lazy-loaded component with performance optimizations
    */
-  createLazyComponent<TProps = {}>(
+  createLazyComponent<TProps = Record<string, unknown>>(
     importFn: () => Promise<{ default: React.ComponentType<TProps> }>,
     options: {
       preload?: boolean;
@@ -198,17 +198,19 @@ export class PerformanceManager {
       return React.lazy(importFn);
     }
 
-    return LazyLoadingUtils.createLazyComponent(importFn, {
-      preload: options.preload ?? this.config.lazyLoadingOptions?.preloadOnHover,
-      retryAttempts: options.retryAttempts ?? this.config.lazyLoadingOptions?.retryAttempts,
+    const lazyOptions = {
+      preload: options.preload ?? this.config.lazyLoadingOptions?.preloadOnHover ?? false,
+      retryAttempts: options.retryAttempts ?? this.config.lazyLoadingOptions?.retryAttempts ?? 3,
       loadingComponent: options.loadingComponent,
-    });
+    };
+
+    return LazyLoadingUtils.createLazyComponent(importFn, lazyOptions);
   }
 
   /**
    * Create memoized selector
    */
-  createSelector<TState, TArgs extends any[], TResult>(
+  createSelector<TState, TArgs extends unknown[], TResult>(
     selector: (state: TState, ...args: TArgs) => TResult,
     options: {
       maxSize?: number;
@@ -219,24 +221,27 @@ export class PerformanceManager {
       return selector;
     }
 
-    return MemoizationUtils.createMemoizedSelector(selector, {
-      maxSize: options.maxSize ?? this.config.memoizationOptions?.maxSelectorCacheSize,
-      trackInvalidation: this.config.enableMonitoring,
-    });
+    const selectorOptions = {
+      maxSize: options.maxSize ?? this.config.memoizationOptions?.maxSelectorCacheSize ?? 100,
+      trackInvalidation: Boolean(this.config.enableMonitoring),
+    };
+
+    return MemoizationUtils.createMemoizedSelector(selector, selectorOptions);
   }
 
   /**
    * Warm cache with critical queries
    */
   async warmCache(
-    client: ApolloClient<any>,
-    queries: Array<{ query: any; variables?: any; priority?: number }>
+    client: ApolloClient<unknown>,
+    queries: Array<{ query: DocumentNode; variables?: Record<string, unknown>; priority?: number }>
   ): Promise<void> {
     if (!this.config.enableCacheOptimization || !this.cacheOptimizer) {
       return;
     }
 
-    const warmingConfig = CacheOptimizationUtils.createCacheWarmingConfig(queries);
+    // Create warming config but don't store it since it's not used
+    CacheOptimizationUtils.createCacheWarmingConfig(queries);
     await this.cacheOptimizer.warmCache(client);
   }
 
@@ -451,7 +456,7 @@ export function usePerformanceMetrics(): {
  * Initialize performance optimizations for the entire application
  */
 export function initializePerformanceOptimizations(
-  client: ApolloClient<any>,
+  client: ApolloClient<unknown>,
   config?: PerformanceConfig
 ): PerformanceManager {
   const manager = PerformanceManager.getInstance(config);
@@ -475,9 +480,9 @@ export function initializePerformanceOptimizations(
  * Create a performance-optimized Apollo Client
  */
 export function createOptimizedApolloClient(
-  baseClient: ApolloClient<any>,
+  baseClient: ApolloClient<unknown>,
   config?: PerformanceConfig
-): ApolloClient<any> {
+): ApolloClient<unknown> {
   const manager = PerformanceManager.getInstance(config);
   return manager.configureApolloClient(baseClient);
 }

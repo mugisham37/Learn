@@ -8,7 +8,7 @@
 'use client';
 
 import React from 'react';
-import { ApolloProvider } from '@apollo/client';
+import { ApolloProvider } from '@apollo/client/react';
 import { AuthProvider } from '../auth/authProvider';
 import { SubscriptionProvider } from '../subscriptions/SubscriptionProvider';
 import { apolloClient } from '../graphql/client';
@@ -36,7 +36,7 @@ interface FoundationProviderProps {
  * }
  * ```
  */
-export function FoundationProvider({ children, config }: FoundationProviderProps) {
+export function FoundationProvider({ children }: FoundationProviderProps) {
   return (
     <ApolloProvider client={apolloClient}>
       <AuthProvider>
@@ -60,8 +60,9 @@ export function FoundationProviderWithConfig({
 }: FoundationProviderProps & { config: FoundationConfig }) {
   // Create Apollo client with custom config
   const customApolloClient = React.useMemo(() => {
-    return apolloClient; // In a real implementation, this would use the custom config
-  }, [config]);
+    // In a real implementation, this would use the custom config
+    return apolloClient;
+  }, []);
 
   return (
     <ApolloProvider client={customApolloClient}>
@@ -96,7 +97,7 @@ export const ProviderUtils = {
    * Creates a provider composition for testing
    * Includes mock providers for isolated testing
    */
-  createTestProvider: (children: React.ReactNode, mocks?: any) => (
+  createTestProvider: (children: React.ReactNode, mocks?: Record<string, unknown>) => (
     <ApolloProvider client={apolloClient}>
       <AuthProvider>
         {children}
