@@ -5,6 +5,10 @@
  * Exports all modules and utilities for easy consumption.
  */
 
+// Foundation Layer Initialization and Providers
+export * from './foundation';
+export * from './providers';
+
 // GraphQL Client
 export * from './graphql';
 
@@ -34,6 +38,15 @@ export * from './forms';
 
 // Runtime Validation
 export * from './validation';
+
+// State Management Patterns
+export * from './state';
+
+// Security Implementation
+export * from './security';
+
+// Performance Optimization
+export * from './performance';
 
 // Configuration
 export * from './config';

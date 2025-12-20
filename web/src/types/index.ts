@@ -137,4 +137,33 @@ export interface PerformanceMetrics {
   activeSubscriptions: number;
 }
 
+// Foundation Layer Initialization Types
+export interface InitializationResult {
+  success: boolean;
+  errors: string[];
+  services: {
+    graphql: boolean;
+    auth: boolean;
+    subscriptions: boolean;
+    uploads: boolean;
+  };
+}
+
+// Service Status Types
+export interface ServiceStatus {
+  name: string;
+  status: 'healthy' | 'degraded' | 'unhealthy';
+  lastCheck: Date;
+  error?: string;
+}
+
+// Security Audit Types
+export interface SecurityAuditResult {
+  tokenStorageSecure: boolean;
+  xssProtectionEnabled: boolean;
+  csrfProtectionEnabled: boolean;
+  fileUploadSecure: boolean;
+  issues: string[];
+}
+
 // User type is now imported from entities.ts
