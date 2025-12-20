@@ -14,7 +14,7 @@ export { GraphQLProvider, useGraphQLClient } from './provider';
 export { createCacheConfig, cacheHelpers } from './cache';
 
 // Link utilities
-export { tokenManager, createAuthLink, createAuthErrorLink } from './links/authLink';
+export { createAuthLink, createAuthErrorLink } from './links/authLink';
 export { createErrorLink, errorUtils } from './links/errorLink';
 export { createRetryLink, retryUtils } from './links/retryLink';
 
@@ -22,11 +22,10 @@ export { createRetryLink, retryUtils } from './links/retryLink';
 export type {
   ApolloClient,
   InMemoryCache,
-  ApolloError,
   ApolloQueryResult,
-  MutationResult,
-  SubscriptionResult,
-  QueryResult,
+  MutationHookOptions,
+  QueryHookOptions,
+  SubscriptionHookOptions,
   WatchQueryOptions,
   MutationOptions,
   SubscriptionOptions,

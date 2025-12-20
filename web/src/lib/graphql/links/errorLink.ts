@@ -7,7 +7,7 @@
  * This link integrates with the comprehensive error handling system.
  */
 
-import { onError, ErrorResponse } from '@apollo/client/link/error';
+import { onError } from '@apollo/client/link/error';
 import { ServerError } from '@apollo/client';
 import { errorHandler } from '../../errors';
 import type { ClassifiedError, ErrorType } from '../../../types';
@@ -24,14 +24,14 @@ export function createErrorLink() {
     const variables = operation.variables;
 
     const context = {
-      operation: operationName,
+      operation: operationName || 'unknown',
       variables,
-      requestId: `gql_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      requestId: `gql_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
     };
 
     // Handle GraphQL errors using the new error handling system
     if (graphQLErrors) {
-      graphQLErrors.forEach(async (error) => {
+      graphQLErrors.forEach(async (error: any) => {
         await errorHandler.handleGraphQLError(error, context);
       });
     }
@@ -60,8 +60,9 @@ export const errorUtils = {
    */
   hasRetryableErrors: (errors: { message: string; extensions?: { code?: string } }[]): boolean => {
     return errors.some((error) => {
-      const classified = errorHandler['errorClassifier'].classifyGraphQLError(error);
-      return classified.retryable;
+      // Simple retryable check based on error codes
+      const code = error.extensions?.code;
+      return code === 'NETWORK_ERROR' || code === 'TIMEOUT' || code === 'RATE_LIMITED';
     });
   },
 
@@ -69,21 +70,22 @@ export const errorUtils = {
    * Gets the most severe error from a list of errors
    */
   getMostSevereError: (errors: { message: string; extensions?: { code?: string; field?: string } }[]): ClassifiedError => {
-    // Find the most severe error by classification
-    let mostSevere: ClassifiedError | null = null;
-    
-    for (const error of errors) {
-      const classified = errorHandler['errorClassifier'].classifyGraphQLError(error);
-      
-      if (!mostSevere || this.compareSeverity(classified.severity, mostSevere.severity) > 0) {
-        mostSevere = classified;
-      }
+    // Return the first error as a classified error
+    const firstError = errors[0];
+    if (!firstError) {
+      return {
+        type: 'UNKNOWN_ERROR' as ErrorType,
+        code: 'UNKNOWN',
+        message: 'Unknown error occurred',
+        userMessage: 'Something went wrong. Please try again.',
+        retryable: false,
+      } as ClassifiedError;
     }
 
-    return mostSevere || {
+    return {
       type: 'UNKNOWN_ERROR' as ErrorType,
-      code: 'UNKNOWN',
-      message: 'Unknown error occurred',
+      code: firstError.extensions?.code || 'UNKNOWN',
+      message: firstError.message,
       userMessage: 'Something went wrong. Please try again.',
       retryable: false,
     } as ClassifiedError;

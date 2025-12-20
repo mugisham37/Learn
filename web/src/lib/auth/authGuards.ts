@@ -5,12 +5,12 @@
  * Provides helpers for course ownership, enrollment checking, and route protection.
  */
 
-import type { User } from '@/types';
+import type { User, UserRole as EntityUserRole } from '@/types';
 
 /**
- * User roles in the system
+ * User roles in the system - using GraphQL schema types
  */
-export type UserRole = 'student' | 'educator' | 'admin';
+export type UserRole = EntityUserRole;
 
 /**
  * Permission types for different resources
@@ -34,12 +34,12 @@ export type Permission =
  * Role-based permission matrix
  */
 const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
-  student: [
+  STUDENT: [
     'course:view',
     'course:enroll',
     'assignment:submit',
   ],
-  educator: [
+  EDUCATOR: [
     'course:create',
     'course:edit',
     'course:delete',
@@ -50,7 +50,7 @@ const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'assignment:grade',
     'analytics:view',
   ],
-  admin: [
+  ADMIN: [
     'course:create',
     'course:edit',
     'course:delete',
@@ -97,7 +97,7 @@ export class RoleGuard {
    * Check if user has any of the specified roles
    */
   hasAnyRole(roles: UserRole[]): boolean {
-    if (!this.user) return false;
+    if (!this.user?.role) return false;
     return roles.includes(this.user.role);
   }
 
@@ -105,7 +105,7 @@ export class RoleGuard {
    * Check if user has a specific permission
    */
   hasPermission(permission: Permission): boolean {
-    if (!this.user) return false;
+    if (!this.user?.role) return false;
     
     const userPermissions = ROLE_PERMISSIONS[this.user.role] || [];
     return userPermissions.includes(permission);
@@ -125,7 +125,7 @@ export class RoleGuard {
     if (!this.user) return false;
 
     // Admins can access any course
-    if (this.hasRole('admin')) return true;
+    if (this.hasRole('ADMIN')) return true;
 
     // Course instructors can access their courses
     if (courseContext.instructorId === this.user.id) return true;
@@ -134,7 +134,7 @@ export class RoleGuard {
     if (courseContext.enrolledStudentIds?.includes(this.user.id)) return true;
 
     // Educators can view courses for reference
-    if (this.hasRole('educator') && this.hasPermission('course:view')) return true;
+    if (this.hasRole('EDUCATOR') && this.hasPermission('course:view')) return true;
 
     return false;
   }
@@ -146,7 +146,7 @@ export class RoleGuard {
     if (!this.user) return false;
 
     // Admins can edit any course
-    if (this.hasRole('admin')) return true;
+    if (this.hasRole('ADMIN')) return true;
 
     // Course instructors can edit their own courses
     if (courseContext.instructorId === this.user.id && this.hasPermission('course:edit')) {
@@ -163,7 +163,7 @@ export class RoleGuard {
     if (!this.user) return false;
 
     // Admins can delete any course
-    if (this.hasRole('admin')) return true;
+    if (this.hasRole('ADMIN')) return true;
 
     // Course instructors can delete their own courses
     if (courseContext.instructorId === this.user.id && this.hasPermission('course:delete')) {
@@ -180,7 +180,7 @@ export class RoleGuard {
     if (!this.user) return false;
 
     // Admins can publish any course
-    if (this.hasRole('admin')) return true;
+    if (this.hasRole('ADMIN')) return true;
 
     // Course instructors can publish their own courses
     if (courseContext.instructorId === this.user.id && this.hasPermission('course:publish')) {
@@ -213,7 +213,7 @@ export class RoleGuard {
     if (!this.user) return false;
 
     // Admins can grade any assignment
-    if (this.hasRole('admin')) return true;
+    if (this.hasRole('ADMIN')) return true;
 
     // Course instructors can grade assignments in their courses
     if (courseContext && courseContext.instructorId === this.user.id) {
@@ -252,7 +252,7 @@ export class RoleGuard {
     if (!this.user) return false;
 
     // Admins can view all analytics
-    if (this.hasRole('admin')) return true;
+    if (this.hasRole('ADMIN')) return true;
 
     // Course instructors can view analytics for their courses
     if (courseContext && courseContext.instructorId === this.user.id) {
@@ -362,21 +362,21 @@ export const RouteGuards = {
    * Check if user can access student routes
    */
   canAccessStudentRoutes(user: User | null): boolean {
-    return createRoleGuard(user).hasAnyRole(['student', 'educator', 'admin']);
+    return createRoleGuard(user).hasAnyRole(['STUDENT', 'EDUCATOR', 'ADMIN']);
   },
 
   /**
    * Check if user can access educator routes
    */
   canAccessEducatorRoutes(user: User | null): boolean {
-    return createRoleGuard(user).hasAnyRole(['educator', 'admin']);
+    return createRoleGuard(user).hasAnyRole(['EDUCATOR', 'ADMIN']);
   },
 
   /**
    * Check if user can access admin routes
    */
   canAccessAdminRoutes(user: User | null): boolean {
-    return createRoleGuard(user).hasRole('admin');
+    return createRoleGuard(user).hasRole('ADMIN');
   },
 
   /**

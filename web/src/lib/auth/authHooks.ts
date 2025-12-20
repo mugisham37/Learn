@@ -50,7 +50,6 @@ export function useUser() {
       id: user.id,
       email: user.email,
       role: user.role,
-      fullName: user.fullName,
       emailVerified: user.emailVerified,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
@@ -61,9 +60,9 @@ export function useUser() {
     user: userInfo,
     isAuthenticated,
     isLoading,
-    isStudent: user?.role === 'student',
-    isEducator: user?.role === 'educator',
-    isAdmin: user?.role === 'admin',
+    isStudent: user?.role === 'STUDENT',
+    isEducator: user?.role === 'EDUCATOR',
+    isAdmin: user?.role === 'ADMIN',
   };
 }
 
@@ -213,10 +212,10 @@ export function useAuthGuard() {
     canAccessRoute,
     
     // Convenience guards for common routes
-    requireStudent: useCallback((redirectTo?: string) => requireRole('student', redirectTo), [requireRole]),
-    requireEducator: useCallback((redirectTo?: string) => requireRole('educator', redirectTo), [requireRole]),
-    requireAdmin: useCallback((redirectTo?: string) => requireRole('admin', redirectTo), [requireRole]),
-    requireEducatorOrAdmin: useCallback((redirectTo?: string) => requireAnyRole(['educator', 'admin'], redirectTo), [requireAnyRole]),
+    requireStudent: useCallback((redirectTo?: string) => requireRole('STUDENT', redirectTo), [requireRole]),
+    requireEducator: useCallback((redirectTo?: string) => requireRole('EDUCATOR', redirectTo), [requireRole]),
+    requireAdmin: useCallback((redirectTo?: string) => requireRole('ADMIN', redirectTo), [requireRole]),
+    requireEducatorOrAdmin: useCallback((redirectTo?: string) => requireAnyRole(['EDUCATOR', 'ADMIN'], redirectTo), [requireAnyRole]),
   };
 }
 
@@ -305,7 +304,7 @@ export function useResourceOwnership() {
   
   const canModifyResource = useCallback((resourceOwnerId: string, requiredPermission?: Permission) => {
     // Admins can modify any resource
-    if (user?.role === 'admin') return true;
+    if (user?.role === 'ADMIN') return true;
     
     // Owner can modify their own resource
     if (isOwner(resourceOwnerId)) return true;
