@@ -5,7 +5,7 @@
  * assignment submissions, and grading workflows.
  */
 
-import { useQuery, useMutation } from '@apollo/client';
+import { useQuery, useMutation } from '@apollo/client/react';
 import { gql } from '@apollo/client';
 import { useState, useCallback, useRef, useEffect } from 'react';
 import type {
@@ -510,14 +510,14 @@ export function useSubmitAssignment(): MutationResult<AssignmentSubmission, { in
   const [submitAssignmentMutation, { loading, error, reset }] = useMutation(SUBMIT_ASSIGNMENT, {
     errorPolicy: 'all',
     // Update cache after successful submission
-    update: (cache, { data }) => {
+    update: (cache: any, { data }: { data?: any }) => {
       if (data?.submitAssignment) {
         const assignmentId = data.submitAssignment.assignment.id;
         
         // Update assignment submissions list
         cache.updateQuery(
           { query: GET_ASSIGNMENT, variables: { id: assignmentId } },
-          (existingData: { assignment?: Assignment }) => {
+          (existingData: { assignment?: Assignment } | undefined) => {
             if (!existingData?.assignment) return existingData;
             
             return {
@@ -594,11 +594,11 @@ export function useSubmitAssignment(): MutationResult<AssignmentSubmission, { in
  * }
  * ```
  */
-export function useGradeAssignment(): MutationResult<AssignmentSubmission> {
+export function useGradeAssignment(): MutationResult<AssignmentSubmission, { input: GradeAssignmentInput }> {
   const [gradeAssignmentMutation, { loading, error, reset }] = useMutation(GRADE_ASSIGNMENT, {
     errorPolicy: 'all',
     // Update cache after successful grading
-    update: (cache, { data }) => {
+    update: (cache: any, { data }: { data?: any }) => {
       if (data?.gradeAssignment) {
         // Update submission in cache
         cache.modify({

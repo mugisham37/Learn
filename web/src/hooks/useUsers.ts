@@ -5,7 +5,7 @@
  * notification preferences, and user data fetching.
  */
 
-import { useQuery, useMutation } from '@apollo/client';
+import { useQuery, useMutation } from '@apollo/client/react';
 import { gql } from '@apollo/client';
 import type {
   User,
@@ -99,8 +99,8 @@ interface QueryResult<T> {
   refetch: () => Promise<unknown>;
 }
 
-interface MutationResult<T> {
-  mutate: (variables: Record<string, unknown>) => Promise<T>;
+interface MutationResult<T, V = Record<string, unknown>> {
+  mutate: (variables: V) => Promise<T>;
   loading: boolean;
   error: Error | undefined;
   reset: () => void;
@@ -193,7 +193,7 @@ export function useUserById(id: string): QueryResult<User> {
  * }
  * ```
  */
-export function useUpdateProfile(): MutationResult<User> {
+export function useUpdateProfile(): MutationResult<User, { input: UpdateProfileInput }> {
   const [updateProfileMutation, { loading, error, reset }] = useMutation(UPDATE_PROFILE, {
     errorPolicy: 'all',
     // Optimistic response for immediate UI updates
@@ -211,7 +211,7 @@ export function useUpdateProfile(): MutationResult<User> {
     // Update cache after successful mutation
     update: (cache, { data }) => {
       if (data?.updateProfile) {
-        cache.updateQuery({ query: GET_CURRENT_USER }, (existingData: { currentUser?: User }) => {
+        cache.updateQuery({ query: GET_CURRENT_USER }, (existingData: { currentUser?: User } | undefined) => {
           if (!existingData?.currentUser) return existingData;
           
           return {
@@ -262,7 +262,7 @@ export function useUpdateProfile(): MutationResult<User> {
  * }
  * ```
  */
-export function useNotificationPreferences(): MutationResult<User> {
+export function useNotificationPreferences(): MutationResult<User, { input: UpdateNotificationPreferencesInput }> {
   const [updatePreferencesMutation, { loading, error, reset }] = useMutation(
     UPDATE_NOTIFICATION_PREFERENCES,
     {
@@ -287,7 +287,7 @@ export function useNotificationPreferences(): MutationResult<User> {
       // Update cache after successful mutation
       update: (cache, { data }) => {
         if (data?.updateNotificationPreferences) {
-          cache.updateQuery({ query: GET_CURRENT_USER }, (existingData: { currentUser?: User }) => {
+          cache.updateQuery({ query: GET_CURRENT_USER }, (existingData: { currentUser?: User } | undefined) => {
             if (!existingData?.currentUser) return existingData;
             
             return {

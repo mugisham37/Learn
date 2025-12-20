@@ -5,7 +5,7 @@
  * progress tracking, and lesson completion.
  */
 
-import { useQuery, useMutation } from '@apollo/client';
+import { useQuery, useMutation } from '@apollo/client/react';
 import { gql } from '@apollo/client';
 import type {
   Enrollment,
@@ -177,8 +177,8 @@ interface QueryResult<T> {
   fetchMore?: (options: Record<string, unknown>) => Promise<unknown>;
 }
 
-interface MutationResult<T> {
-  mutate: (variables: Record<string, unknown>) => Promise<T>;
+interface MutationResult<T, V = Record<string, unknown>> {
+  mutate: (variables: V) => Promise<T>;
   loading: boolean;
   error: Error | undefined;
   reset: () => void;
@@ -319,16 +319,16 @@ export function useEnrollmentProgress(enrollmentId: string): QueryResult<Enrollm
  * }
  * ```
  */
-export function useEnrollInCourse(): MutationResult<Enrollment> {
+export function useEnrollInCourse(): MutationResult<Enrollment, { input: EnrollInCourseInput }> {
   const [enrollInCourseMutation, { loading, error, reset }] = useMutation(ENROLL_IN_COURSE, {
     errorPolicy: 'all',
     // Update cache after successful enrollment
-    update: (cache, { data }) => {
+    update: (cache: any, { data }: { data?: any }) => {
       if (data?.enrollInCourse) {
         // Add to my enrollments list
         cache.updateQuery(
           { query: GET_MY_ENROLLMENTS, variables: {} },
-          (existingData: { myEnrollments?: EnrollmentConnection }) => {
+          (existingData: { myEnrollments?: EnrollmentConnection } | undefined) => {
             if (!existingData?.myEnrollments) return existingData;
             
             return {
@@ -417,7 +417,7 @@ export function useEnrollInCourse(): MutationResult<Enrollment> {
  * }
  * ```
  */
-export function useUpdateLessonProgress(): MutationResult<LessonProgress> {
+export function useUpdateLessonProgress(): MutationResult<LessonProgress, { input: UpdateLessonProgressInput }> {
   const [updateProgressMutation, { loading, error, reset }] = useMutation(
     UPDATE_LESSON_PROGRESS,
     {
@@ -453,7 +453,7 @@ export function useUpdateLessonProgress(): MutationResult<LessonProgress> {
           // Update enrollment progress in cache
           cache.updateQuery(
             { query: GET_ENROLLMENT_PROGRESS, variables: { enrollmentId } },
-            (existingData: { enrollment?: Enrollment }) => {
+            (existingData: { enrollment?: Enrollment } | undefined) => {
               if (!existingData?.enrollment) return existingData;
               
               // Update lesson progress in the list

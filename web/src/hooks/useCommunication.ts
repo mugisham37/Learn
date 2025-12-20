@@ -5,7 +5,7 @@
  * discussions, announcements, and real-time chat functionality.
  */
 
-import { useQuery, useMutation, useSubscription } from '@apollo/client';
+import { useQuery, useMutation, useSubscription } from '@apollo/client/react';
 import { gql } from '@apollo/client';
 import { useState, useCallback, useRef, useEffect } from 'react';
 import type {
@@ -355,8 +355,8 @@ interface QueryResult<T> {
   fetchMore?: (options: Record<string, unknown>) => Promise<unknown>;
 }
 
-interface MutationResult<T> {
-  mutate: (variables: Record<string, unknown>) => Promise<T>;
+interface MutationResult<T, V = Record<string, unknown>> {
+  mutate: (variables: V) => Promise<T>;
   loading: boolean;
   error: Error | undefined;
   reset: () => void;
@@ -503,13 +503,13 @@ export function useChatSession(conversationId: string): ChatSession {
   useSubscription(MESSAGE_SUBSCRIPTION, {
     variables: { conversationId },
     skip: !conversationId,
-    onData: ({ subscriptionData, client }) => {
+    onData: ({ subscriptionData, client }: { subscriptionData: any; client: any }) => {
       if (subscriptionData.data?.messageAdded) {
         // Update cache with new message
         client.cache.updateQuery(
           { query: GET_CONVERSATION_MESSAGES, variables: { conversationId } },
-          (existingData: { conversation?: { messages?: { edges?: Array<{ node: Message; cursor: string }> } } }) => {
-            if (!existingData?.conversation?.messages) return existingData;
+          (existingData: { conversation?: { messages?: { edges?: Array<{ node: Message; cursor: string }> } } } | undefined) => {
+            if (!existingData?.conversation?.messages?.edges) return existingData;
             
             return {
               conversation: {
@@ -537,7 +537,7 @@ export function useChatSession(conversationId: string): ChatSession {
   useSubscription(TYPING_SUBSCRIPTION, {
     variables: { conversationId },
     skip: !conversationId,
-    onData: ({ subscriptionData }) => {
+    onData: ({ subscriptionData }: { subscriptionData: any }) => {
       if (subscriptionData.data?.userTyping) {
         const { userId, isTyping } = subscriptionData.data.userTyping;
         
@@ -749,18 +749,18 @@ export function useDiscussionThreads(
  * }
  * ```
  */
-export function useCreateThread(): MutationResult<DiscussionThread> {
+export function useCreateThread(): MutationResult<DiscussionThread, { input: CreateThreadInput }> {
   const [createThreadMutation, { loading, error, reset }] = useMutation(CREATE_THREAD, {
     errorPolicy: 'all',
     // Update cache after successful creation
-    update: (cache, { data }) => {
+    update: (cache: any, { data }: { data?: any }) => {
       if (data?.createDiscussionThread) {
         const courseId = data.createDiscussionThread.course.id;
         
         // Add to threads list
         cache.updateQuery(
           { query: GET_DISCUSSION_THREADS, variables: { courseId } },
-          (existingData: { discussionThreads?: ThreadConnection }) => {
+          (existingData: { discussionThreads?: ThreadConnection } | undefined) => {
             if (!existingData?.discussionThreads) return existingData;
             
             return {
@@ -834,19 +834,19 @@ export function useCreateThread(): MutationResult<DiscussionThread> {
  * }
  * ```
  */
-export function useReplyToThread(): MutationResult<DiscussionReply> {
+export function useReplyToThread(): MutationResult<DiscussionReply, { input: ReplyToThreadInput }> {
   const [replyToThreadMutation, { loading, error, reset }] = useMutation(REPLY_TO_THREAD, {
     errorPolicy: 'all',
     // Update cache after successful reply
-    update: (cache, { data }) => {
+    update: (cache: any, { data }: { data?: any }) => {
       if (data?.replyToThread) {
         const threadId = data.replyToThread.thread.id;
         
         // Add to thread replies
         cache.updateQuery(
           { query: GET_THREAD_REPLIES, variables: { threadId } },
-          (existingData: { discussionThread?: { replies?: { edges?: Array<{ node: DiscussionReply; cursor: string }> } } }) => {
-            if (!existingData?.discussionThread?.replies) return existingData;
+          (existingData: { discussionThread?: { replies?: { edges?: Array<{ node: DiscussionReply; cursor: string }> } } } | undefined) => {
+            if (!existingData?.discussionThread?.replies?.edges) return existingData;
             
             return {
               discussionThread: {

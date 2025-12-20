@@ -124,7 +124,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       if (accessToken && !tokenManager.isTokenExpired(accessToken)) {
         // Extract user from valid token
         const user = tokenManager.getUserFromToken(accessToken);
-        if (user) {
+        if (user && typeof user === 'object' && 'id' in user) {
           dispatch({ type: 'AUTH_SUCCESS', payload: { user: user as User } });
           return;
         }
@@ -136,7 +136,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         try {
           const newAccessToken = await tokenManager.refreshAccessToken();
           const user = tokenManager.getUserFromToken(newAccessToken);
-          if (user) {
+          if (user && typeof user === 'object' && 'id' in user) {
             dispatch({ type: 'AUTH_SUCCESS', payload: { user: user as User } });
             return;
           }
