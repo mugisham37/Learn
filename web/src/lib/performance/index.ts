@@ -9,7 +9,7 @@
  */
 
 import React from 'react';
-import { ApolloClient, ApolloLink, from } from '@apollo/client';
+import { ApolloClient, ApolloLink, concat } from '@apollo/client';
 import { GraphQLDeduplicationUtils } from '../graphql/deduplication';
 import { MemoizationUtils } from '../utils/memoization';
 import { LazyLoadingUtils } from '../utils/lazyLoading';
@@ -93,9 +93,9 @@ export class PerformanceManager {
   private static instance: PerformanceManager;
   private config: PerformanceConfig;
   private deduplicationLink?: ApolloLink;
-  private cacheOptimizer?: any;
-  private bundleMonitor: any;
-  private memoizationMonitor: any;
+  private cacheOptimizer?: CacheOptimizationUtils.CacheOptimizer;
+  private bundleMonitor: LazyLoadingUtils.BundleMonitor | null = null;
+  private memoizationMonitor: MemoizationUtils.MemoizationMonitor | null = null;
 
   private constructor(config: PerformanceConfig = {}) {
     this.config = {
@@ -132,7 +132,7 @@ export class PerformanceManager {
   /**
    * Configure Apollo Client with performance optimizations
    */
-  configureApolloClient(client: ApolloClient<any>): ApolloClient<any> {
+  configureApolloClient(client: ApolloClient<unknown>): ApolloClient<unknown> {
     const links: ApolloLink[] = [];
 
     // Add deduplication link
@@ -154,7 +154,7 @@ export class PerformanceManager {
     // Combine with existing links
     if (links.length > 0) {
       const existingLink = client.link;
-      client.setLink(from([...links, existingLink]));
+      client.setLink(concat(links[0], existingLink));
     }
 
     return client;
@@ -175,10 +175,12 @@ export class PerformanceManager {
       return Component;
     }
 
-    return MemoizationUtils.memoizeComponent(Component, {
-      debug: options.debug && this.config.enableMonitoring,
-      displayName: options.displayName,
-    });
+    const memoOptions = {
+      debug: Boolean(options.debug && this.config.enableMonitoring),
+      displayName: options.displayName || Component.displayName || Component.name,
+    };
+
+    return MemoizationUtils.memoizeComponent(Component, memoOptions);
   }
 
   /**

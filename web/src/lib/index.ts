@@ -150,8 +150,8 @@ export {
 
 // Performance Optimization - explicit exports to avoid conflicts
 export {
-  PerformanceProvider: PerformanceManager,
-  usePerformanceMonitor: usePerformanceMetrics,
+  PerformanceManager as PerformanceProvider,
+  usePerformanceMetrics,
   // Avoid re-exporting conflicting names: PerformanceMetrics
 } from './performance';
 

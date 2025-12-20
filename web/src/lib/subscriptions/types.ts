@@ -23,7 +23,7 @@ export interface ConnectionStatus {
  * Subscription manager interface for managing WebSocket subscriptions
  */
 export interface SubscriptionManager {
-  subscribe<T>(subscription: DocumentNode, variables?: any): Observable<T>;
+  subscribe<T>(subscription: DocumentNode, variables?: Record<string, unknown>): Observable<T>;
   unsubscribe(subscriptionId: string): void;
   getConnectionStatus(): ConnectionStatus;
   reconnect(): Promise<void>;
@@ -52,7 +52,7 @@ export interface SubscriptionHookResult<T> {
  */
 export interface SubscriptionOptions {
   skip?: boolean;
-  onSubscriptionData?: (data: any) => void;
+  onSubscriptionData?: (data: Record<string, unknown>) => void;
   onError?: (error: Error) => void;
   shouldResubscribe?: boolean;
 }

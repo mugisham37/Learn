@@ -8,7 +8,6 @@
  */
 
 import React, { useMemo, useCallback, useRef, useEffect } from 'react';
-import { ApolloCache } from '@apollo/client';
 
 // =============================================================================
 // Types and Interfaces
@@ -34,7 +33,9 @@ export interface ComponentMemoOptions {
 
 export interface CacheAwareMemoOptions {
   /** Apollo cache instance for invalidation tracking */
-  cache?: ApolloCache<unknown>;
+  cache?: {
+    evict: (options: unknown) => unknown;
+  };
   /** Cache keys to watch for invalidation */
   watchKeys?: string[];
   /** Custom invalidation predicate */
@@ -63,7 +64,6 @@ export function createMemoizedSelector<TState, TArgs extends unknown[], TResult>
   const {
     maxSize = 10,
     equalityFn = Object.is,
-    trackInvalidation = false,
   } = options;
 
   const cache = new Map<string, { result: TResult; inputs: [TState, ...TArgs]; timestamp: number }>();
@@ -130,13 +130,13 @@ export function createMemoizedSelector<TState, TArgs extends unknown[], TResult>
   };
 
   // Add utility methods
-  (memoizedSelector as any).clearCache = () => {
+  (memoizedSelector as unknown as { clearCache: () => void }).clearCache = () => {
     cache.clear();
     metrics.invalidations++;
     updateMetrics();
   };
 
-  (memoizedSelector as any).getMetrics = () => ({ ...metrics });
+  (memoizedSelector as unknown as { getMetrics: () => MemoizationMetrics }).getMetrics = () => ({ ...metrics });
 
   return memoizedSelector;
 }
@@ -189,7 +189,7 @@ export function memoizeComponent<TProps extends object>(
         isEqual = false;
       } else {
         isEqual = prevKeys.every(key => 
-          Object.is((prevProps as any)[key], (nextProps as any)[key])
+          Object.is((prevProps as Record<string, unknown>)[key], (nextProps as Record<string, unknown>)[key])
         );
       }
     }
@@ -203,7 +203,7 @@ export function memoizeComponent<TProps extends object>(
         
         // Log changed props
         const changedProps = Object.keys(nextProps).filter(key =>
-          !Object.is((prevProps as any)[key], (nextProps as any)[key])
+          !Object.is((prevProps as Record<string, unknown>)[key], (nextProps as Record<string, unknown>)[key])
         );
         if (changedProps.length > 0) {
           console.log(`[Memo] ${componentName}: Changed props:`, changedProps);
@@ -249,13 +249,14 @@ export function useStableMemo<T>(
     const result = factory();
     previousResult.current = result;
     return result;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
 }
 
 /**
  * Hook for memoizing callback functions with stable references
  */
-export function useStableCallback<TArgs extends any[], TReturn>(
+export function useStableCallback<TArgs extends unknown[], TReturn>(
   callback: (...args: TArgs) => TReturn,
   deps: React.DependencyList,
   options: { debug?: boolean; name?: string } = {}
@@ -267,6 +268,7 @@ export function useStableCallback<TArgs extends any[], TReturn>(
       console.log(`[${name}] Callback invoked with args:`, args);
     }
     return callback(...args);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
 }
 
@@ -277,7 +279,7 @@ export function useStableCallback<TArgs extends any[], TReturn>(
 /**
  * Creates a memoized function that invalidates based on Apollo cache changes
  */
-export function createCacheAwareMemo<TArgs extends any[], TResult>(
+export function createCacheAwareMemo<TArgs extends unknown[], TResult>(
   fn: (...args: TArgs) => TResult,
   options: CacheAwareMemoOptions = {}
 ): (...args: TArgs) => TResult {
@@ -296,7 +298,9 @@ export function createCacheAwareMemo<TArgs extends any[], TResult>(
       // Check if we should invalidate
       const shouldInvalidateResult = shouldInvalidate 
         ? shouldInvalidate(options)
-        : watchKeys.length === 0 || watchKeys.some(key => options.id?.includes(key));
+        : watchKeys.length === 0 || (options && typeof options === 'object' && 'id' in options && 
+          typeof (options as { id?: string }).id === 'string' && 
+          watchKeys.some(key => (options as { id: string }).id.includes(key)));
 
       if (shouldInvalidateResult) {
         cachedResult = undefined;
@@ -348,7 +352,9 @@ export function useCacheAwareMemo<T>(
       const result = originalEvict(options);
       
       const shouldInvalidate = watchKeys.length === 0 || 
-        watchKeys.some(key => options.id?.includes(key));
+        (options && typeof options === 'object' && 'id' in options && 
+         typeof (options as { id?: string }).id === 'string' && 
+         watchKeys.some(key => (options as { id: string }).id.includes(key)));
 
       if (shouldInvalidate) {
         setCacheVersion(prev => prev + 1);
@@ -364,7 +370,8 @@ export function useCacheAwareMemo<T>(
   }, [cache, watchKeys]);
 
   // Include cache version in dependencies
-  return useMemo(factory, [...deps, cacheVersion]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  return useMemo(() => factory(), [...deps, cacheVersion]);
 }
 
 // =============================================================================

@@ -235,6 +235,13 @@ export const calculateLessonCompletionPercentage = (
   if (videoDuration <= 0) return 0;
   
   const percentage = Math.min((watchTime / videoDuration) * 100, 100);
+  
+  // Apply completion threshold logic
+  const watchRatio = watchTime / videoDuration;
+  if (watchRatio >= completionThreshold) {
+    return 100; // Consider it fully completed if threshold is met
+  }
+  
   return Math.round(percentage * 100) / 100;
 };
 
@@ -430,12 +437,12 @@ const generateDailyProgressData = (
   const currentDate = new Date(start);
   
   while (currentDate <= end) {
-    const dateStr = currentDate.toISOString().split('T')[0];
+    const dateStr = currentDate.toISOString().split('T')[0] || '';
     
     // Find lessons completed on this date
     const lessonsCompletedToday = enrollment.lessonProgress.filter(progress => {
       if (!progress.completionDate) return false;
-      const completionDateStr = progress.completionDate.toISOString().split('T')[0];
+      const completionDateStr = progress.completionDate.toISOString().split('T')[0] || '';
       return completionDateStr === dateStr;
     });
 
@@ -461,11 +468,23 @@ const generateDailyProgressData = (
 /**
  * Generates weekly progress data from daily data
  */
-const generateWeeklyProgressData = (dailyData: any[]) => {
-  const weeklyData: any[] = [];
+const generateWeeklyProgressData = (dailyData: Array<{
+  date: string;
+  lessonsCompleted: number;
+  timeSpent: number;
+  progressGained: number;
+}>) => {
+  const weeklyData: Array<{
+    week: string;
+    lessonsCompleted: number;
+    timeSpent: number;
+    progressGained: number;
+  }> = [];
   
   for (let i = 0; i < dailyData.length; i += 7) {
     const weekData = dailyData.slice(i, i + 7);
+    if (weekData.length === 0) continue;
+    
     const weekStart = new Date(weekData[0].date);
     const weekStr = `${weekStart.getFullYear()}-W${Math.ceil((weekStart.getTime() - new Date(weekStart.getFullYear(), 0, 1).getTime()) / (7 * 24 * 60 * 60 * 1000))}`;
     
@@ -487,8 +506,18 @@ const generateWeeklyProgressData = (dailyData: any[]) => {
 /**
  * Generates monthly progress data from daily data
  */
-const generateMonthlyProgressData = (dailyData: any[]) => {
-  const monthlyMap = new Map<string, any>();
+const generateMonthlyProgressData = (dailyData: Array<{
+  date: string;
+  lessonsCompleted: number;
+  timeSpent: number;
+  progressGained: number;
+}>) => {
+  const monthlyMap = new Map<string, {
+    month: string;
+    lessonsCompleted: number;
+    timeSpent: number;
+    progressGained: number;
+  }>();
 
   dailyData.forEach(day => {
     const date = new Date(day.date);
@@ -515,7 +544,12 @@ const generateMonthlyProgressData = (dailyData: any[]) => {
 /**
  * Calculates streak data from daily progress
  */
-const calculateStreakData = (dailyData: any[]) => {
+const calculateStreakData = (dailyData: Array<{
+  date: string;
+  lessonsCompleted: number;
+  timeSpent: number;
+  progressGained: number;
+}>) => {
   let currentStreak = 0;
   let longestStreak = 0;
   let tempStreak = 0;
@@ -564,8 +598,8 @@ export const getNextLesson = (
   course: Course,
   enrollment: Enrollment
 ): Lesson | null => {
-  for (const module of course.modules.sort((a, b) => a.order - b.order)) {
-    for (const lesson of module.lessons.sort((a, b) => a.order - b.order)) {
+  for (const courseModule of course.modules.sort((a, b) => a.order - b.order)) {
+    for (const lesson of courseModule.lessons.sort((a, b) => a.order - b.order)) {
       const progress = enrollment.lessonProgress.find(p => p.lessonId === lesson.id);
       
       if (!progress || !progress.isCompleted) {

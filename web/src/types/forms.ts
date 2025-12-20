@@ -32,3 +32,32 @@ export enum UserRole {
   Educator = 'EDUCATOR',
   Student = 'STUDENT',
 }
+
+export enum Difficulty {
+  Beginner = 'BEGINNER',
+  Intermediate = 'INTERMEDIATE',
+  Advanced = 'ADVANCED',
+}
+
+// Form Input Types
+export interface CreateCourseInput {
+  title: string;
+  description: string;
+  category: string;
+  difficulty: Difficulty;
+  price?: number;
+  currency?: string;
+  enrollmentLimit?: number;
+  thumbnailUrl?: string;
+}
+
+export interface UpdateCourseInput {
+  title?: string;
+  description?: string;
+  category?: string;
+  difficulty?: Difficulty;
+  price?: number;
+  currency?: string;
+  enrollmentLimit?: number;
+  thumbnailUrl?: string;
+}

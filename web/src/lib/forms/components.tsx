@@ -13,11 +13,11 @@ import React, { createContext, useContext, useState, useCallback } from 'react';
 // =============================================================================
 
 export interface FormContextValue {
-  values: Record<string, any>;
+  values: Record<string, unknown>;
   errors: Record<string, string>;
   touched: Record<string, boolean>;
   isSubmitting: boolean;
-  setValue: (name: string, value: any) => void;
+  setValue: (name: string, value: unknown) => void;
   setError: (name: string, error: string) => void;
   setTouched: (name: string, touched: boolean) => void;
   validateField: (name: string) => boolean;
@@ -28,9 +28,9 @@ export interface FormContextValue {
 
 export interface FormProviderProps {
   children: React.ReactNode;
-  initialValues?: Record<string, any>;
-  onSubmit?: (values: Record<string, any>) => Promise<void> | void;
-  validate?: (values: Record<string, any>) => Record<string, string>;
+  initialValues?: Record<string, unknown>;
+  onSubmit?: (values: Record<string, unknown>) => Promise<void> | void;
+  validate?: (values: Record<string, unknown>) => Record<string, string>;
 }
 
 export interface FormFieldProps {
@@ -70,12 +70,12 @@ export function FormProvider({
   onSubmit,
   validate 
 }: FormProviderProps) {
-  const [values, setValues] = useState<Record<string, any>>(initialValues);
+  const [values, setValues] = useState<Record<string, unknown>>(initialValues);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouchedState] = useState<Record<string, boolean>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const setValue = useCallback((name: string, value: any) => {
+  const setValue = useCallback((name: string, value: unknown) => {
     setValues(prev => ({ ...prev, [name]: value }));
     // Clear error when value changes
     if (errors[name]) {
@@ -99,8 +99,9 @@ export function FormProvider({
     if (!validate) return true;
     
     const fieldErrors = validate(values);
-    if (fieldErrors[name]) {
-      setError(name, fieldErrors[name]);
+    const fieldError = fieldErrors[name];
+    if (fieldError) {
+      setError(name, fieldError);
       return false;
     }
     return true;
@@ -175,7 +176,7 @@ export function useFormField(name: string) {
   const isTouched = touched[name];
   const hasError = Boolean(error && isTouched);
 
-  const handleChange = useCallback((newValue: any) => {
+  const handleChange = useCallback((newValue: unknown) => {
     setValue(name, newValue);
   }, [name, setValue]);
 
@@ -221,7 +222,6 @@ export function FormField({
           </label>
         )}
         {React.cloneElement(children as React.ReactElement, {
-          id: name,
           name,
           value,
           onChange: (e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value),

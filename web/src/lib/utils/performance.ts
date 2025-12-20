@@ -14,7 +14,7 @@
 export interface MemoizeOptions {
   maxSize?: number;
   ttl?: number; // Time to live in milliseconds
-  keyGenerator?: (...args: any[]) => string;
+  keyGenerator?: (...args: unknown[]) => string;
 }
 
 export interface DebounceOptions {
@@ -42,7 +42,7 @@ export interface PerformanceMetrics {
 /**
  * Creates a memoized version of a function with configurable cache size and TTL
  */
-export function memoize<TArgs extends any[], TReturn>(
+export function memoize<TArgs extends unknown[], TReturn>(
   fn: (...args: TArgs) => TReturn,
   options: MemoizeOptions = {}
 ): (...args: TArgs) => TReturn {
@@ -88,7 +88,7 @@ export function memoize<TArgs extends any[], TReturn>(
 /**
  * Creates a memoized async function
  */
-export function memoizeAsync<TArgs extends any[], TReturn>(
+export function memoizeAsync<TArgs extends unknown[], TReturn>(
   fn: (...args: TArgs) => Promise<TReturn>,
   options: MemoizeOptions = {}
 ): (...args: TArgs) => Promise<TReturn> {
@@ -145,7 +145,7 @@ export function clearMemoizationCaches(): void {
 /**
  * Creates a debounced version of a function
  */
-export function debounce<TArgs extends any[]>(
+export function debounce<TArgs extends unknown[]>(
   fn: (...args: TArgs) => void,
   delay: number,
   options: DebounceOptions = {}
@@ -240,7 +240,7 @@ export function debounce<TArgs extends any[]>(
 /**
  * Creates a throttled version of a function
  */
-export function throttle<TArgs extends any[]>(
+export function throttle<TArgs extends unknown[]>(
   fn: (...args: TArgs) => void,
   delay: number,
   options: ThrottleOptions = {}
@@ -291,7 +291,7 @@ export function throttle<TArgs extends any[]>(
 /**
  * Creates a request deduplication utility
  */
-export function createRequestDeduplicator<TArgs extends any[], TReturn>(
+export function createRequestDeduplicator<TArgs extends unknown[], TReturn>(
   requestFn: (...args: TArgs) => Promise<TReturn>,
   keyGenerator: (...args: TArgs) => string = (...args) => JSON.stringify(args)
 ): (...args: TArgs) => Promise<TReturn> {
@@ -327,24 +327,24 @@ export function createRequestDeduplicator<TArgs extends any[], TReturn>(
 /**
  * Measures execution time of a function
  */
-export function measurePerformance<TArgs extends any[], TReturn>(
+export function measurePerformance<TArgs extends unknown[], TReturn>(
   fn: (...args: TArgs) => TReturn,
   operationName: string
 ): (...args: TArgs) => TReturn {
   return (...args: TArgs): TReturn => {
     const startTime = performance.now();
-    const startMemory = (performance as any).memory?.usedJSHeapSize;
+    const startMemory = (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory?.usedJSHeapSize;
 
     const result = fn(...args);
 
     const endTime = performance.now();
-    const endMemory = (performance as any).memory?.usedJSHeapSize;
+    const endMemory = (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory?.usedJSHeapSize;
 
     const metrics: PerformanceMetrics = {
       executionTime: endTime - startTime,
-      memoryUsage: endMemory && startMemory ? endMemory - startMemory : undefined,
       timestamp: Date.now(),
       operation: operationName,
+      ...(endMemory && startMemory ? { memoryUsage: endMemory - startMemory } : {}),
     };
 
     // Log performance metrics (in development)
@@ -359,24 +359,24 @@ export function measurePerformance<TArgs extends any[], TReturn>(
 /**
  * Measures execution time of an async function
  */
-export function measureAsyncPerformance<TArgs extends any[], TReturn>(
+export function measureAsyncPerformance<TArgs extends unknown[], TReturn>(
   fn: (...args: TArgs) => Promise<TReturn>,
   operationName: string
 ): (...args: TArgs) => Promise<TReturn> {
   return async (...args: TArgs): Promise<TReturn> => {
     const startTime = performance.now();
-    const startMemory = (performance as any).memory?.usedJSHeapSize;
+    const startMemory = (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory?.usedJSHeapSize;
 
     const result = await fn(...args);
 
     const endTime = performance.now();
-    const endMemory = (performance as any).memory?.usedJSHeapSize;
+    const endMemory = (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory?.usedJSHeapSize;
 
     const metrics: PerformanceMetrics = {
       executionTime: endTime - startTime,
-      memoryUsage: endMemory && startMemory ? endMemory - startMemory : undefined,
       timestamp: Date.now(),
       operation: operationName,
+      ...(endMemory && startMemory ? { memoryUsage: endMemory - startMemory } : {}),
     };
 
     // Log performance metrics (in development)
@@ -430,7 +430,10 @@ export function createBatchProcessor<TItem, TResult>(
       const results = await processFn(items);
 
       currentBatch.forEach(({ resolve }, index) => {
-        resolve(results[index]);
+        const result = results[index];
+        if (result !== undefined) {
+          resolve(result);
+        }
       });
     } catch (error) {
       currentBatch.forEach(({ reject }) => {
