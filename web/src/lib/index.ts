@@ -157,3 +157,20 @@ export {
 
 // Configuration
 export * from './config';
+
+// Schema Integration - explicit exports to avoid conflicts
+export {
+  SchemaIntegration,
+  schemaIntegration,
+  checkSchemaCompatibility,
+  getSchemaHealthStatus,
+  useSchemaIntegration,
+  useSchemaHealth,
+  useSchemaStats,
+} from './schema';
+
+export type {
+  SchemaMetadata,
+  SchemaValidationResult,
+  SchemaSyncOptions,
+} from './schema';

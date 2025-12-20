@@ -74,6 +74,9 @@ generates:
       # Performance
       dedupeOperationSuffix: true
       
+      # Schema Integration
+      declarationKind: 'interface'
+      
   # Generate separate types for forms and validation
   src/types/forms.ts:
     plugins:
@@ -102,6 +105,28 @@ generates:
       - "introspection"
     config:
       minify: true
+      
+  # Generate GraphQL schema types for backend integration
+  src/types/graphql-responses.ts:
+    plugins:
+      - "typescript"
+    config:
+      skipTypename: false
+      enumsAsTypes: true
+      scalars:
+        DateTime: string
+        Upload: File
+        JSON: any
+        ID: string
+      namingConvention:
+        typeNames: pascal-case#pascalCase
+        fieldNames: camelCase
+      avoidOptionals:
+        field: true
+        inputValue: false
+        object: false
+      maybeValue: T | null | undefined
+      inputMaybeValue: T | null | undefined
       
 hooks:
   afterAllFileWrite:

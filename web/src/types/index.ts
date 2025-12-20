@@ -92,9 +92,34 @@ export type { EntityUser as User, EntityCourse as Course };
 
 // Custom frontend types
 export interface FoundationConfig {
+  // Environment
+  nodeEnv: 'development' | 'staging' | 'production';
+  appEnv: 'development' | 'staging' | 'production';
+  
+  // GraphQL Configuration
   graphqlEndpoint: string;
   wsEndpoint: string;
+  
+  // Development Configuration
   enableDevTools: boolean;
+  enableGraphQLPlayground: boolean;
+  
+  // Feature Flags
+  features: {
+    analytics: boolean;
+    notifications: boolean;
+    realTime: boolean;
+    fileUploads: boolean;
+  };
+  
+  // Performance Monitoring
+  performanceMonitoring: {
+    enabled: boolean;
+    sampleRate: number;
+  };
+  
+  // Logging
+  logLevel: 'debug' | 'info' | 'warn' | 'error';
 }
 
 export interface ErrorContext {
