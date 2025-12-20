@@ -5,6 +5,9 @@
  * progress tracking, queue management, and error recovery.
  */
 
+// Provider and context
+export { UploadProvider, useUploadContext } from './provider';
+
 // Types
 export type {
   UploadProgress,

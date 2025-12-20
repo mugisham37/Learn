@@ -104,6 +104,9 @@ export {
   isLesson,
   
   // Utility types (non-conflicting ones)
+} from './types';
+
+export type {
   DeepPartial,
   DeepRequired,
   NonNullable,
@@ -147,8 +150,8 @@ export {
 
 // Performance Optimization - explicit exports to avoid conflicts
 export {
-  PerformanceProvider,
-  usePerformanceMonitor,
+  PerformanceProvider: PerformanceManager,
+  usePerformanceMonitor: usePerformanceMetrics,
   // Avoid re-exporting conflicting names: PerformanceMetrics
 } from './performance';
 

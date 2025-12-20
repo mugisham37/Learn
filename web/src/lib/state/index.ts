@@ -12,6 +12,9 @@
  * - Comprehensive error handling and recovery
  */
 
+// Global state provider and hooks
+export { StateProvider, useAppState, useStateManager } from './provider';
+
 // Course Editor State Management
 export {
   useCourseEditor,

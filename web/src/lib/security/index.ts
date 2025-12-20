@@ -7,6 +7,9 @@
  * Requirements: 13.1, 13.2, 13.3, 13.4, 13.5
  */
 
+// Security provider and hooks
+export { SecurityProvider, useSecurityContext } from './provider';
+
 // Token storage and encryption
 export * from './tokenSecurity';
 

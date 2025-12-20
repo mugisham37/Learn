@@ -7,6 +7,9 @@
  * Requirements: 2.5 - Form type integration with GraphQL
  */
 
+// Form components and hooks
+export { FormProvider, FormField, FormButton, useForm, useFormField } from './components';
+
 // Form types matching GraphQL mutations
 export * from './formTypes';
 

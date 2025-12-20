@@ -20,6 +20,8 @@ export {
   useNotificationSubscription,
   usePresenceSubscription,
   useMultipleSubscriptions,
+  useSubscription: useMessageSubscription, // Alias for compatibility
+  useSubscriptionState: useSubscriptionContext, // Alias for compatibility
 } from './subscriptionHooks';
 
 // Cache integration utilities

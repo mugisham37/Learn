@@ -10,5 +10,15 @@
 // Runtime validation with Zod schemas
 export * from './runtimeValidation';
 
+// Export specific functions for compatibility
+export { validateGraphQLResponse } from './runtimeValidation';
+
+// Create runtime validator function
+export function createRuntimeValidator<T>(schema: any) {
+  return (data: unknown): T => {
+    return schema.parse(data);
+  };
+}
+
 // GraphQL-specific validation utilities
 export * from './graphqlValidation';

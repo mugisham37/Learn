@@ -7,6 +7,9 @@
 // Main Apollo Client instance
 export { apolloClient, createApolloClient } from './client';
 
+// Provider and hooks
+export { GraphQLProvider, useGraphQLClient } from './provider';
+
 // Cache utilities
 export { createCacheConfig, cacheHelpers } from './cache';
 

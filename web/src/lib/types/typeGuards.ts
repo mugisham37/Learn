@@ -26,6 +26,65 @@ import type {
 } from '@/types/entities';
 
 // =============================================================================
+// Type Guards for Entity Types
+// =============================================================================
+
+/**
+ * Type guard to check if an object is a User
+ */
+export function isUser(obj: unknown): obj is User {
+  return (
+    obj != null &&
+    typeof obj === 'object' &&
+    'id' in obj &&
+    'email' in obj &&
+    'role' in obj
+  );
+}
+
+/**
+ * Type guard to check if an object is a Course
+ */
+export function isCourse(obj: unknown): obj is Course {
+  return (
+    obj != null &&
+    typeof obj === 'object' &&
+    'id' in obj &&
+    'title' in obj &&
+    'instructor' in obj &&
+    'status' in obj
+  );
+}
+
+/**
+ * Type guard to check if an object is an Enrollment
+ */
+export function isEnrollment(obj: unknown): obj is Enrollment {
+  return (
+    obj != null &&
+    typeof obj === 'object' &&
+    'id' in obj &&
+    'student' in obj &&
+    'course' in obj &&
+    'status' in obj
+  );
+}
+
+/**
+ * Type guard to check if an object is a Lesson
+ */
+export function isLesson(obj: unknown): obj is Lesson {
+  return (
+    obj != null &&
+    typeof obj === 'object' &&
+    'id' in obj &&
+    'title' in obj &&
+    'type' in obj &&
+    'module' in obj
+  );
+}
+
+// =============================================================================
 // Type Guards for User Types
 // =============================================================================
 

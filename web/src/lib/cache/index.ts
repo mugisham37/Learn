@@ -5,6 +5,9 @@
  * Provides cache update functions, invalidation strategies, and optimistic response generators.
  */
 
+// Provider and hooks
+export { CacheProvider, useCacheManager } from './provider';
+
 export * from './cacheHelpers';
 export * from './cacheUpdaters';
 export * from './cacheInvalidation';

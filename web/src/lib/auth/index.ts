@@ -12,6 +12,9 @@ export type { TokenStorage } from './tokenStorage';
 // Authentication provider and context
 export { AuthProvider, useAuthContext } from './authProvider';
 
+// Authentication components
+export { AuthGuard, ProtectedRoute, RoleGuard, PermissionGuard } from './components';
+
 // Role-based access control
 export { 
   createRoleGuard, 
@@ -29,4 +32,5 @@ export {
   useAuthGuard,
   useAuthActions,
   useResourceOwnership,
+  useAuthState: useAuth, // Alias for compatibility
 } from './authHooks';

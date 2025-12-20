@@ -18,14 +18,14 @@ export interface SelectorMemoOptions {
   /** Maximum cache size for selector results */
   maxSize?: number;
   /** Custom equality function for comparing inputs */
-  equalityFn?: (a: any, b: any) => boolean;
+  equalityFn?: (a: unknown, b: unknown) => boolean;
   /** Enable cache invalidation tracking */
   trackInvalidation?: boolean;
 }
 
 export interface ComponentMemoOptions {
   /** Custom comparison function for props */
-  areEqual?: (prevProps: any, nextProps: any) => boolean;
+  areEqual?: (prevProps: unknown, nextProps: unknown) => boolean;
   /** Enable debug logging for re-renders */
   debug?: boolean;
   /** Component display name for debugging */
@@ -34,11 +34,11 @@ export interface ComponentMemoOptions {
 
 export interface CacheAwareMemoOptions {
   /** Apollo cache instance for invalidation tracking */
-  cache?: ApolloCache<any>;
+  cache?: ApolloCache<unknown>;
   /** Cache keys to watch for invalidation */
   watchKeys?: string[];
   /** Custom invalidation predicate */
-  shouldInvalidate?: (cacheUpdate: any) => boolean;
+  shouldInvalidate?: (cacheUpdate: unknown) => boolean;
 }
 
 export interface MemoizationMetrics {
@@ -56,7 +56,7 @@ export interface MemoizationMetrics {
 /**
  * Creates a memoized selector with advanced caching capabilities
  */
-export function createMemoizedSelector<TState, TArgs extends any[], TResult>(
+export function createMemoizedSelector<TState, TArgs extends unknown[], TResult>(
   selector: (state: TState, ...args: TArgs) => TResult,
   options: SelectorMemoOptions = {}
 ): (state: TState, ...args: TArgs) => TResult {
@@ -113,7 +113,9 @@ export function createMemoizedSelector<TState, TArgs extends any[], TResult>(
       // Remove oldest entry
       const entries = Array.from(cache.entries());
       const oldest = entries.sort((a, b) => a[1].timestamp - b[1].timestamp)[0];
-      cache.delete(oldest[0]);
+      if (oldest) {
+        cache.delete(oldest[0]);
+      }
     }
 
     // Cache the result
@@ -142,7 +144,7 @@ export function createMemoizedSelector<TState, TArgs extends any[], TResult>(
 /**
  * Creates a reselect-style selector with multiple input selectors
  */
-export function createSelector<TState, TInputs extends any[], TResult>(
+export function createSelector<TState, TInputs extends unknown[], TResult>(
   inputSelectors: {
     [K in keyof TInputs]: (state: TState) => TInputs[K];
   },
@@ -228,8 +230,8 @@ export function useStableMemo<T>(
   options: { debug?: boolean; name?: string } = {}
 ): T {
   const { debug = false, name = 'useStableMemo' } = options;
-  const previousDeps = useRef<React.DependencyList>();
-  const previousResult = useRef<T>();
+  const previousDeps = useRef<React.DependencyList>(undefined);
+  const previousResult = useRef<T>(undefined);
 
   return useMemo(() => {
     if (debug) {
@@ -288,7 +290,7 @@ export function createCacheAwareMemo<TArgs extends any[], TResult>(
   // Set up cache invalidation if Apollo cache is provided
   if (cache) {
     const originalEvict = cache.evict.bind(cache);
-    cache.evict = (options: any) => {
+    cache.evict = (options: unknown) => {
       const result = originalEvict(options);
       
       // Check if we should invalidate
@@ -342,7 +344,7 @@ export function useCacheAwareMemo<T>(
     if (!cache) return;
 
     const originalEvict = cache.evict.bind(cache);
-    cache.evict = (options: any) => {
+    cache.evict = (options: unknown) => {
       const result = originalEvict(options);
       
       const shouldInvalidate = watchKeys.length === 0 || 
