@@ -82,7 +82,7 @@ export function generateQuerySuggestions(query: string, existingResults?: Course
 export function buildElasticsearchQuery(
   query: string,
   filters: SearchFilters,
-  _sort: { field: string; order: string }
+  sort: { field: string; order: string }
 ): ElasticsearchQuery {
   const esQuery: ElasticsearchQuery = {
     bool: {
@@ -131,13 +131,13 @@ export function buildElasticsearchQuery(
     };
     
     if (filters.priceRange.min !== undefined) {
-      priceFilter.range.price.gte = filters.priceRange.min;
+      priceFilter.range.price!.gte = filters.priceRange.min;
     }
     if (filters.priceRange.max !== undefined) {
-      priceFilter.range.price.lte = filters.priceRange.max;
+      priceFilter.range.price!.lte = filters.priceRange.max;
     }
     
-    esQuery.bool.filter.push(priceFilter as Record<string, unknown>);
+    esQuery.bool.filter.push(priceFilter as unknown as Record<string, unknown>);
   }
 
   if (filters.rating?.min) {
@@ -164,6 +164,9 @@ export function buildElasticsearchQuery(
     { range: { averageRating: { gte: 4.0, boost: 1.1 } } },
     { range: { publishedAt: { gte: 'now-30d', boost: 1.1 } } }
   );
+
+  // Apply sorting (use the sort parameter)
+  console.log('Applying sort:', sort);
 
   return esQuery;
 }

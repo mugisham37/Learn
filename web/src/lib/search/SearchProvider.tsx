@@ -117,8 +117,38 @@ export function SearchProvider({
   // UI state
   const [isSearchFocused, setSearchFocused] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
-  const [searchHistory, setSearchHistory] = useState<string[]>([]);
-  const [userPreferences, setUserPreferences] = useState<UserPreferences | undefined>(initialUserPreferences);
+  // Initialize search history and user preferences from localStorage
+  const [searchHistory, setSearchHistory] = useState<string[]>(() => {
+    if (typeof window === 'undefined') return [];
+    
+    const stored = localStorage.getItem('search_history');
+    if (stored) {
+      try {
+        return JSON.parse(stored);
+      } catch (error) {
+        console.warn('Failed to load search history:', error);
+        return [];
+      }
+    }
+    return [];
+  });
+  
+  const [userPreferences, setUserPreferences] = useState<UserPreferences | undefined>(() => {
+    if (typeof window === 'undefined') return initialUserPreferences;
+    
+    if (initialUserPreferences) return initialUserPreferences;
+    
+    const storedPrefs = localStorage.getItem('user_search_preferences');
+    if (storedPrefs) {
+      try {
+        return JSON.parse(storedPrefs);
+      } catch (error) {
+        console.warn('Failed to load user preferences:', error);
+        return undefined;
+      }
+    }
+    return undefined;
+  });
   
   // Search hooks
   const searchHook = useSearch({
@@ -150,36 +180,6 @@ export function SearchProvider({
   
   const analyticsHook = useSearchAnalytics();
   const optimizationHook = useSearchOptimization();
-  
-  // Load search history on mount
-  const [isInitialized, setIsInitialized] = useState(false);
-  
-  useEffect(() => {
-    if (typeof window !== 'undefined' && !isInitialized) {
-      const stored = localStorage.getItem('search_history');
-      if (stored) {
-        try {
-          const parsedHistory = JSON.parse(stored);
-          setSearchHistory(parsedHistory);
-        } catch (error) {
-          console.warn('Failed to load search history:', error);
-        }
-      }
-      
-      // Load user preferences
-      const storedPrefs = localStorage.getItem('user_search_preferences');
-      if (storedPrefs && !initialUserPreferences) {
-        try {
-          const parsedPrefs = JSON.parse(storedPrefs);
-          setUserPreferences(parsedPrefs);
-        } catch (error) {
-          console.warn('Failed to load user preferences:', error);
-        }
-      }
-      
-      setIsInitialized(true);
-    }
-  }, [isInitialized, initialUserPreferences]);
   
   // Save search history when it changes
   useEffect(() => {
@@ -429,7 +429,7 @@ export function useSearchKeyboardShortcuts() {
     
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [setSearchFocused, performSearch]);
+  }, [setSearchFocused, performSearch, clearSearch]);
 }
 
 /**
@@ -437,7 +437,6 @@ export function useSearchKeyboardShortcuts() {
  */
 export function useSearchUrlSync() {
   const { setQuery, setFilters } = useSearchContext();
-  const router = useRouter();
   
   useEffect(() => {
     // Parse URL parameters on mount

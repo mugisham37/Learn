@@ -9,7 +9,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import React from 'react';
-import { ApolloClient, DocumentNode, InMemoryCache } from '@apollo/client';
+import { ApolloClient, DocumentNode, InMemoryCache, from, createHttpLink } from '@apollo/client';
 import { CSRFProtector } from './csrfProtection';
 import { inputValidator, type ValidationResult } from './inputValidation';
 import { secureTokenStorage } from './tokenSecurity';
@@ -34,10 +34,16 @@ interface SecurityState {
  */
 export function useSecurityIntegration() {
   // Create a mock Apollo client for now - in real implementation, use useApolloClient()
-  const apolloClient = React.useMemo(() => new ApolloClient({
-    cache: new InMemoryCache(),
-    link: {} as any, // Mock link for now
-  }), []);
+  const apolloClient = React.useMemo(() => {
+    const httpLink = createHttpLink({
+      uri: '/api/graphql', // Mock URI
+    });
+    
+    return new ApolloClient({
+      cache: new InMemoryCache(),
+      link: from([httpLink]),
+    });
+  }, []);
   const [securityState, setSecurityState] = useState<SecurityState>({
     csrfToken: null,
     isSecureStorageAvailable: false,
@@ -93,12 +99,12 @@ export function useSecurityIntegration() {
         errors: [],
         warnings,
       };
-    } catch (_validationError) {
+    } catch (validationError) {
       return {
         success: false,
         errors: [{
           field: 'input',
-          message: 'Input validation failed',
+          message: validationError instanceof Error ? validationError.message : 'Input validation failed',
           code: 'validation_error',
           severity: 'high',
         }],

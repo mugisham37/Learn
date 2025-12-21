@@ -125,13 +125,9 @@ export function useMessageSubscription(
               return conversation;
             });
           },
-          messages(existingMessages = [], details) {
-            // Add new message to the specific conversation's message list
-            const args = (details as any)?.args;
-            if (args?.conversationId === (data as Record<string, unknown>)?.conversationId) {
-              return [data, ...existingMessages];
-            }
-            return existingMessages;
+          messages(existingMessages = []) {
+            // Add new message to the message list
+            return [data, ...existingMessages];
           },
         },
       });
@@ -182,28 +178,24 @@ export function useProgressSubscription(
                   progress: progressData.progress || enrollment.progress,
                   completedLessons: progressData.completedLessons || enrollment.completedLessons,
                   lastAccessDate: new Date().toISOString(),
-                  ...(progressData.completed && { completedAt: new Date().toISOString() }),
+                  ...(progressData.completed === true ? { completedAt: new Date().toISOString() } : {}),
                 };
               }
               return enrollment;
             });
           },
-          courseProgress(existingProgress = [], details) {
+          courseProgress(existingProgress = []) {
             // Update course-specific progress
-            const args = (details as any)?.args;
-            if (args?.courseId === (data as Record<string, unknown>)?.courseId) {
-              return existingProgress.map((progress: Record<string, unknown>) => {
-                if (progress.enrollmentId === (data as Record<string, unknown>)?.enrollmentId) {
-                  return {
-                    ...progress,
-                    ...data,
-                    updatedAt: new Date().toISOString(),
-                  };
-                }
-                return progress;
-              });
-            }
-            return existingProgress;
+            return existingProgress.map((progress: Record<string, unknown>) => {
+              if (progress.enrollmentId === (data as Record<string, unknown>)?.enrollmentId) {
+                return {
+                  ...progress,
+                  ...data,
+                  updatedAt: new Date().toISOString(),
+                };
+              }
+              return progress;
+            });
           },
         },
       });
@@ -252,13 +244,9 @@ export function useNotificationSubscription(
             // Increment unread count
             return existingCount + 1;
           },
-          userNotifications(existingUserNotifications = [], details) {
+          userNotifications(existingUserNotifications = []) {
             // Update user-specific notifications
-            const args = (details as any)?.args;
-            if (args?.userId === userId) {
-              return [data, ...existingUserNotifications];
-            }
-            return existingUserNotifications;
+            return [data, ...existingUserNotifications];
           },
         },
       });
@@ -270,7 +258,7 @@ export function useNotificationSubscription(
     if (options.onSubscriptionData) {
       options.onSubscriptionData(data);
     }
-  }, [apolloClient.cache, options, userId]);
+  }, [apolloClient.cache, options]);
 
   // For now, using a placeholder subscription document
   // In a real implementation, this would be a proper notification subscription

@@ -264,10 +264,10 @@ export class InputValidator {
             });
           }
         }
-      } catch (_parseError) {
+      } catch (parseError) {
         errors.push({
           field: 'url',
-          message: 'URL parsing failed',
+          message: parseError instanceof Error ? parseError.message : 'URL parsing failed',
           code: 'parse_error',
           severity: 'medium',
         });

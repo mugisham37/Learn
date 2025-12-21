@@ -452,7 +452,7 @@ export function useManagedSubscription<T = unknown>(
     );
 
     return cleanup;
-  }, [query, variables, options?.skip, options?.onData, options?.onError, options?.onComplete]);
+  }, [query, variables, options]);
 
   const unsubscribe = React.useCallback(() => {
     if (subscriptionIdRef.current && managerRef.current) {

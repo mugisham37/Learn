@@ -157,10 +157,10 @@ async function validateRequestInput(request: NextRequest): Promise<{
       valid: errors.length === 0,
       errors,
     };
-  } catch (_error) {
+  } catch (error) {
     return {
       valid: false,
-      errors: ['Request validation failed'],
+      errors: [error instanceof Error ? error.message : 'Request validation failed'],
     };
   }
 }
