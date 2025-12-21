@@ -41,6 +41,15 @@ export {
   useEnrollmentProgress,
   useEnrollInCourse,
   useUpdateLessonProgress,
+  useMyCertificates,
+  useVerifyCertificate,
+  useCheckEnrollmentEligibility,
+  useCheckLessonAccess,
+  useWithdrawEnrollment,
+  useCompleteLesson,
+  useResetLessonProgress,
+  useRegenerateCertificate,
+  useEnrollmentAnalytics,
 } from './useEnrollments';
 
 // Content Management Hooks

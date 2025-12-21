@@ -22,6 +22,8 @@ import type {
   DiscussionThread,
   DiscussionReply,
   StreamingUrl,
+  Certificate,
+  LessonProgress,
 } from './entities';
 
 // Assessment responses
@@ -92,7 +94,54 @@ export interface EnrollInCourseResponse {
 }
 
 export interface UpdateLessonProgressResponse {
-  updateLessonProgress: import('./entities').LessonProgress;
+  updateLessonProgress: LessonProgress;
+}
+
+export interface GetMyCertificatesResponse {
+  myCertificates: Certificate[];
+}
+
+export interface VerifyCertificateResponse {
+  verifyCertificate: Certificate;
+}
+
+export interface CheckEnrollmentEligibilityResponse {
+  checkEnrollmentEligibility: {
+    eligible: boolean;
+    reasons: string[];
+    requiresPayment: boolean;
+    paymentAmount?: number;
+    enrollmentLimit?: number;
+    currentEnrollments: number;
+  };
+}
+
+export interface CheckLessonAccessResponse {
+  checkLessonAccess: {
+    canAccess: boolean;
+    reasons: string[];
+    prerequisiteModules?: Array<{
+      moduleId: string;
+      moduleTitle: string;
+      isCompleted: boolean;
+    }>;
+  };
+}
+
+export interface WithdrawEnrollmentResponse {
+  withdrawEnrollment: boolean;
+}
+
+export interface CompleteLessonResponse {
+  completeLesson: LessonProgress;
+}
+
+export interface ResetLessonProgressResponse {
+  resetLessonProgress: LessonProgress;
+}
+
+export interface RegenerateCertificateResponse {
+  regenerateCertificate: Certificate;
 }
 
 // User responses

@@ -74,6 +74,7 @@ export type {
   MessageAttachmentInput,
   CreateThreadInput,
   ReplyToThreadInput,
+  WithdrawEnrollmentInput,
   CourseFilter,
   EnrollmentFilter,
   ConversationFilter,

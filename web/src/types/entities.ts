@@ -477,6 +477,11 @@ export interface ReplyToThreadInput {
   parentReplyId?: ID;
 }
 
+export interface WithdrawEnrollmentInput {
+  enrollmentId: ID;
+  reason?: string;
+}
+
 // Filter types
 export interface CourseFilter {
   category?: string;
