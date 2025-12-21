@@ -10,7 +10,6 @@
 import { Suspense } from 'react';
 import { AdminLayout } from '@/components/layouts/ProtectedLayout';
 import { pageData } from '@/lib/ssr/dataFetching';
-import { nextCache } from '@/lib/cache/nextCacheIntegration';
 import type { AdminDashboardData } from '@/types/admin';
 
 /**
@@ -224,4 +223,4 @@ export const metadata = {
 /**
  * Revalidation configuration
  */
-export const revalidate = nextCache.config.ANALYTICS.revalidate; // 24 hours
+export const revalidate = 86400; // 24 hours

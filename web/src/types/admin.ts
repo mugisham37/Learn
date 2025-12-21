@@ -4,7 +4,7 @@
  * Type definitions for admin dashboard components and data structures.
  */
 
-import type { User } from './entities';
+import type { User, Course, Enrollment } from './entities';
 
 export interface AdminStats {
   totalUsers: number;

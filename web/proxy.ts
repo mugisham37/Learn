@@ -1,5 +1,5 @@
 /**
- * Next.js Middleware for Authentication and Route Protection
+ * Next.js Proxy for Authentication and Route Protection
  *
  * Handles JWT token validation, automatic refresh, route protection,
  * and comprehensive security middleware integration.
@@ -101,7 +101,7 @@ function hasRequiredRole(userRole: string, requiredRoles: string[]): boolean {
   return requiredRoles.includes(userRole);
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Apply security middleware first

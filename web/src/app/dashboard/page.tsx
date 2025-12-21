@@ -11,7 +11,6 @@ import { Suspense } from 'react';
 import Image from 'next/image';
 import { ProtectedLayout } from '@/components/layouts/ProtectedLayout';
 import { pageData } from '@/lib/ssr/dataFetching';
-import { nextCache } from '@/lib/cache/nextCacheIntegration';
 import type { DashboardData } from '@/types/admin';
 
 /**
@@ -235,4 +234,4 @@ export const metadata = {
 /**
  * Revalidation configuration
  */
-export const revalidate = nextCache.config.USER_DATA.revalidate; // 1 minute
+export const revalidate = 60; // 1 minute

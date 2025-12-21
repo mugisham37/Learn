@@ -12,8 +12,13 @@ const nextConfig: NextConfig = {
     optimizePackageImports: ['@apollo/client', 'graphql'],
   },
 
-  // Webpack configuration for better bundle optimization
-  webpack: (config, { buildId, dev, isServer, defaultLoaders, webpack }) => {
+  // Turbopack configuration (Next.js 16+)
+  turbopack: {
+    // Add any Turbopack-specific configuration here
+  },
+
+  // Webpack configuration for better bundle optimization (only when explicitly using webpack)
+  webpack: (config, { dev, isServer }) => {
     // Optimize bundle size and performance
     if (!dev && !isServer) {
       // Enhanced code splitting configuration
@@ -73,12 +78,11 @@ const nextConfig: NextConfig = {
       config.optimization.minimize = true;
     }
 
-    // Performance monitoring in development
-    if (dev) {
-      // Add bundle analyzer plugin for development
-      const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
-
-      if (process.env.ANALYZE === 'true') {
+    // Development bundle analysis (only when webpack is used)
+    if (dev && process.env.ANALYZE === 'true') {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
         config.plugins.push(
           new BundleAnalyzerPlugin({
             analyzerMode: 'server',
@@ -86,6 +90,8 @@ const nextConfig: NextConfig = {
             openAnalyzer: true,
           })
         );
+      } catch (error) {
+        console.warn('Bundle analyzer not available:', error);
       }
     }
 
@@ -246,11 +252,19 @@ const nextConfig: NextConfig = {
 
   // Image optimization configuration
   images: {
-    domains: [
-      'localhost',
+    remotePatterns: [
+      {
+        protocol: 'https' as const,
+        hostname: 'localhost',
+      },
       // Add your CDN domains here
       ...(process.env.NEXT_PUBLIC_CLOUDFRONT_DOMAIN
-        ? [process.env.NEXT_PUBLIC_CLOUDFRONT_DOMAIN]
+        ? [
+            {
+              protocol: 'https' as const,
+              hostname: process.env.NEXT_PUBLIC_CLOUDFRONT_DOMAIN,
+            },
+          ]
         : []),
     ],
     formats: ['image/webp', 'image/avif'],
@@ -264,9 +278,6 @@ const nextConfig: NextConfig = {
 
   // Strict mode
   reactStrictMode: true,
-
-  // SWC minification
-  swcMinify: true,
 
   // Output configuration
   output: 'standalone',

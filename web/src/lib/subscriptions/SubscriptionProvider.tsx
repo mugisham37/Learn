@@ -6,23 +6,36 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { ApolloClient } from '@apollo/client';
+import { ConnectionStatus } from './types';
 
 interface SubscriptionContextValue {
   isConnected: boolean;
-  connectionStatus: 'connecting' | 'connected' | 'disconnected' | 'error';
+  connectionStatus: ConnectionStatus;
   client: ApolloClient | null;
 }
 
 const SubscriptionContext = createContext<SubscriptionContextValue>({
   isConnected: false,
-  connectionStatus: 'disconnected',
+  connectionStatus: {
+    connected: false,
+    connecting: false,
+    error: null,
+    lastConnected: null,
+    reconnectAttempts: 0,
+  },
   client: null,
 });
 
 export function SubscriptionProvider({ children }: { children: React.ReactNode }) {
   const [contextValue, setContextValue] = useState<SubscriptionContextValue>({
     isConnected: true, // Initialize with connected state
-    connectionStatus: 'connected',
+    connectionStatus: {
+      connected: true,
+      connecting: false,
+      error: null,
+      lastConnected: new Date(),
+      reconnectAttempts: 0,
+    },
     client: null, // Would be set to actual Apollo client in real implementation
   });
 
@@ -32,7 +45,13 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       setContextValue(prev => ({
         ...prev,
         isConnected: true,
-        connectionStatus: 'connected',
+        connectionStatus: {
+          connected: true,
+          connecting: false,
+          error: null,
+          lastConnected: new Date(),
+          reconnectAttempts: 0,
+        },
       }));
     }, 0);
 

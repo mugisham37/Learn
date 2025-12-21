@@ -196,7 +196,7 @@ export function OfflineContentManager({
       }
 
       // Combine chunks into blob
-      const blob = new Blob(chunks, { type: 'video/mp4' });
+      const blob = new Blob(chunks as BlobPart[], { type: 'video/mp4' });
 
       // Store in IndexedDB
       const db = await openOfflineDB();

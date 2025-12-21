@@ -235,7 +235,7 @@ export function SearchProvider({
   const optimizedResults = React.useMemo(() => {
     if (!searchHook.data?.documents) return [];
 
-    return optimizationHook.optimizeResults(searchHook.data.documents, userPreferences);
+    return optimizationHook.optimizeResults(searchHook.data.documents, userPreferences as Record<string, unknown> | undefined);
   }, [searchHook.data, optimizationHook, userPreferences]);
 
   // Search actions
@@ -313,7 +313,7 @@ export function SearchProvider({
     sort,
     results: optimizedResults,
     loading: searchHook.loading || facetedSearchHook.loading,
-    error: searchHook.error || facetedSearchHook.error,
+    error: searchHook.error || facetedSearchHook.error || undefined,
 
     // Search actions
     setQuery,

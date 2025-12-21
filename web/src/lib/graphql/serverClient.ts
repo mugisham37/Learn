@@ -126,7 +126,7 @@ export function createServerClient(accessToken?: string) {
 /**
  * Execute GraphQL query on server-side
  */
-export async function executeServerQuery<T = unknown, V = Record<string, unknown>>(
+export async function executeServerQuery<T = unknown, V extends Record<string, unknown> = Record<string, unknown>>(
   queryString: string,
   variables?: V,
   accessToken?: string
@@ -141,7 +141,7 @@ export async function executeServerQuery<T = unknown, V = Record<string, unknown
 
     const result = await client.query({
       query,
-      variables,
+      ...(variables && { variables }),
       fetchPolicy: 'network-only', // Always fetch fresh data on server
     });
 
@@ -171,7 +171,7 @@ export async function executeServerQuery<T = unknown, V = Record<string, unknown
 /**
  * Execute GraphQL mutation on server-side
  */
-export async function executeServerMutation<T = unknown, V = Record<string, unknown>>(
+export async function executeServerMutation<T = unknown, V extends Record<string, unknown> = Record<string, unknown>>(
   mutationString: string,
   variables?: V,
   accessToken?: string
@@ -185,7 +185,7 @@ export async function executeServerMutation<T = unknown, V = Record<string, unkn
 
     const result = await client.mutate({
       mutation,
-      variables,
+      ...(variables && { variables }),
     });
 
     const errorExtensions = (result.error as ApolloErrorWithExtensions).extensions;

@@ -29,6 +29,111 @@ export interface SubscriptionCacheConfig {
   optimisticResponse?: (variables: Record<string, unknown>) => unknown;
 }
 
+export interface CacheInvalidationConfig {
+  typename: string;
+  id?: string;
+  fieldNames?: string[];
+}
+
+// =============================================================================
+// Cache Manager Class
+// =============================================================================
+
+export class SubscriptionCacheManager {
+  private cache: InMemoryCache;
+  private configs: Map<string, SubscriptionCacheConfig> = new Map();
+
+  constructor(cache: InMemoryCache) {
+    this.cache = cache;
+  }
+
+  registerConfig(subscriptionType: string, config: SubscriptionCacheConfig): void {
+    this.configs.set(subscriptionType, config);
+  }
+
+  handleSubscriptionData(subscriptionType: string, data: unknown): void {
+    const config = this.configs.get(subscriptionType);
+    if (config) {
+      updateCacheWithSubscriptionData(this.cache, data, config);
+    }
+  }
+
+  invalidateCache(config: CacheInvalidationConfig): void {
+    invalidateCacheForEntity(this.cache, config.typename, config.fieldNames);
+  }
+}
+
+// =============================================================================
+// Factory Functions
+// =============================================================================
+
+export function createSubscriptionCacheManager(cache: InMemoryCache): SubscriptionCacheManager {
+  return new SubscriptionCacheManager(cache);
+}
+
+export function createCacheUpdateHandler(
+  cache: InMemoryCache,
+  config: SubscriptionCacheConfig
+) {
+  return (data: unknown) => {
+    updateCacheWithSubscriptionData(cache, data, config);
+  };
+}
+
+export function createCacheInvalidationHandler(
+  cache: InMemoryCache
+) {
+  return (config: CacheInvalidationConfig) => {
+    invalidateCacheForEntity(cache, config.typename, config.fieldNames);
+  };
+}
+
+// =============================================================================
+// Configuration Constants
+// =============================================================================
+
+export const SUBSCRIPTION_CACHE_CONFIGS: Record<string, SubscriptionCacheConfig> = {
+  MESSAGE_RECEIVED: {
+    updateStrategy: { type: 'append', field: 'messages' },
+    invalidationRules: [
+      { typename: 'Conversation', fields: ['lastMessage', 'unreadCount'] }
+    ]
+  },
+  NOTIFICATION_RECEIVED: {
+    updateStrategy: { type: 'prepend', field: 'notifications' },
+    invalidationRules: [
+      { typename: 'User', fields: ['unreadNotificationCount'] }
+    ]
+  },
+  PROGRESS_UPDATED: {
+    updateStrategy: { type: 'replace' },
+    invalidationRules: [
+      { typename: 'Enrollment', fields: ['progress', 'completedLessons'] }
+    ]
+  },
+  USER_PRESENCE: {
+    updateStrategy: { type: 'merge' },
+    invalidationRules: [
+      { typename: 'Course', fields: ['activeUsers'] }
+    ]
+  }
+};
+
+export const CACHE_INVALIDATION_CONFIGS: Record<string, CacheInvalidationConfig> = {
+  USER_UPDATED: {
+    typename: 'User',
+    fieldNames: ['profile', 'preferences']
+  },
+  COURSE_UPDATED: {
+    typename: 'Course',
+    fieldNames: ['title', 'description', 'modules']
+  },
+  ENROLLMENT_UPDATED: {
+    typename: 'Enrollment',
+    fieldNames: ['progress', 'status']
+  }
+};
+
 // =============================================================================
 // Cache Update Functions
 // =============================================================================
@@ -169,10 +274,16 @@ function handleMergeUpdate(
       fields: {
         ...Object.keys(dataObj).reduce((acc, key) => {
           if (key !== '__typename' && key !== 'id') {
-            acc[key] = () => dataObj[key];
+            acc[key] = (existing) => {
+              // Use strategy condition if provided
+              if (strategy.condition) {
+                return strategy.condition(existing, dataObj[key]) ? dataObj[key] : existing;
+              }
+              return dataObj[key];
+            };
           }
           return acc;
-        }, {} as Record<string, () => unknown>),
+        }, {} as Record<string, (existing: unknown) => unknown>),
       },
     });
   }
@@ -188,7 +299,13 @@ function handleReplaceUpdate(
     cache.modify({
       id: 'ROOT_QUERY',
       fields: {
-        [strategy.field]: () => data,
+        [strategy.field]: (existing) => {
+          // Use strategy condition if provided
+          if (strategy.condition) {
+            return strategy.condition(existing, data) ? data : existing;
+          }
+          return data;
+        },
       },
     });
   }
@@ -206,6 +323,10 @@ function handleAppendUpdate(
       fields: {
         [strategy.field]: (existing = []) => {
           const existingArray = Array.isArray(existing) ? existing : [];
+          // Use strategy condition if provided
+          if (strategy.condition && !strategy.condition(existingArray, data)) {
+            return existingArray;
+          }
           return [...existingArray, data];
         },
       },
@@ -225,6 +346,10 @@ function handlePrependUpdate(
       fields: {
         [strategy.field]: (existing = []) => {
           const existingArray = Array.isArray(existing) ? existing : [];
+          // Use strategy condition if provided
+          if (strategy.condition && !strategy.condition(existingArray, data)) {
+            return existingArray;
+          }
           return [data, ...existingArray];
         },
       },
@@ -240,6 +365,11 @@ function handleRemoveUpdate(
   // Implement remove logic
   const dataObj = data as Record<string, unknown>;
   if (dataObj.__typename && dataObj.id) {
+    // Use strategy condition if provided
+    if (strategy.condition && !strategy.condition(null, dataObj)) {
+      return; // Don't remove if condition fails
+    }
+    
     const entityId = `${dataObj.__typename}:${dataObj.id}`;
     cache.evict({ id: entityId });
     cache.gc();

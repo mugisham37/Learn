@@ -7,20 +7,20 @@
  * Requirements: 6.1, 6.2, 6.3, 6.4, 6.5
  */
 
-import { InMemoryCache } from '@apollo/client';
+import { InMemoryCache, ApolloClient } from '@apollo/client';
 import { DocumentNode } from 'graphql';
 
-// Define Apollo Client type for compatibility
-type ApolloClientInstance = {
-  cache: InMemoryCache;
-  query: (options: Record<string, unknown>) => Promise<unknown>;
-  mutate: (options: Record<string, unknown>) => Promise<unknown>;
-  watchQuery: (options: Record<string, unknown>) => unknown;
-  readQuery: (options: Record<string, unknown>) => unknown;
-  writeQuery: (options: Record<string, unknown>) => void;
-  readFragment: (options: Record<string, unknown>) => unknown;
-  writeFragment: (options: Record<string, unknown>) => void;
-};
+// Apollo Client interface for cache operations - matches the CacheOptimizer expectation
+interface ApolloClientLike {
+  query: (options: {
+    query: DocumentNode;
+    variables?: Record<string, unknown>;
+    fetchPolicy?: string;
+  }) => Promise<unknown>;
+}
+
+// Define Apollo Client type for compatibility - use the actual ApolloClient type
+type ApolloClientInstance = ApolloClient;
 import { cacheHelpers, cachePersistence, backendCacheInvalidation } from '../graphql/cache';
 import { updateCacheAfterMutation } from './cacheUpdaters';
 import { invalidateCache } from './cacheInvalidation';
@@ -438,7 +438,12 @@ export class BackendCacheManager {
     // Create warming config for the queries
     createCacheWarmingConfig(queries.map(query => ({ query, priority: 1 })));
 
-    await this.optimizer.warmCache(this.client);
+    // Create a compatible client interface for the optimizer
+    const clientLike: ApolloClientLike = {
+      query: (options) => this.client.query(options as Parameters<typeof this.client.query>[0])
+    };
+
+    await this.optimizer.warmCache(clientLike);
   }
 
   /**

@@ -181,7 +181,7 @@ export function useSecurityIntegration() {
         // Execute GraphQL operation with security headers
         const result = await apolloClient.query({
           query: operation as unknown as DocumentNode,
-          variables,
+          ...(variables && { variables }),
           context: {
             headers,
           },
@@ -246,7 +246,7 @@ export function useSecurityIntegration() {
         // Execute GraphQL mutation with security headers
         const result = await apolloClient.mutate({
           mutation: mutation as unknown as DocumentNode,
-          variables,
+          ...(variables && { variables }),
           context: {
             headers,
           },

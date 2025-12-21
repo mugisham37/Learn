@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "dev": "next dev --turbo",
+    "build": "next build --turbo",
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
@@ -64,6 +64,7 @@
     "prettier": "^3.7.4",
     "tailwindcss": "^4",
     "typescript": "^5",
-    "vitest": "^4.0.16"
+    "vitest": "^4.0.16",
+    "webpack-bundle-analyzer": "^4.10.2"
   }
 }
