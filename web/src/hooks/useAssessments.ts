@@ -251,6 +251,95 @@ const GRADE_ASSIGNMENT = gql`
   }
 `;
 
+// Additional queries for analytics and reporting
+const GET_QUIZ_ANALYTICS = gql`
+  query GetQuizAnalytics($quizId: ID!, $dateRange: DateRangeInput) {
+    quizAnalytics(quizId: $quizId, dateRange: $dateRange) {
+      totalAttempts
+      averageScore
+      passRate
+      averageTimeSpent
+      questionAnalytics {
+        questionId
+        correctAnswerRate
+        averageTimeSpent
+        commonWrongAnswers
+      }
+      scoreDistribution {
+        range
+        count
+      }
+      attemptsByDate {
+        date
+        count
+      }
+    }
+  }
+`;
+
+const GET_ASSIGNMENT_ANALYTICS = gql`
+  query GetAssignmentAnalytics($assignmentId: ID!, $dateRange: DateRangeInput) {
+    assignmentAnalytics(assignmentId: $assignmentId, dateRange: $dateRange) {
+      totalSubmissions
+      averageGrade
+      submissionRate
+      averageTimeToSubmit
+      gradeDistribution {
+        range
+        count
+      }
+      submissionsByDate {
+        date
+        count
+      }
+      lateSubmissions {
+        count
+        percentage
+      }
+    }
+  }
+`;
+
+const GET_STUDENT_ASSESSMENT_PROGRESS = gql`
+  query GetStudentAssessmentProgress($studentId: ID!, $courseId: ID) {
+    studentAssessmentProgress(studentId: $studentId, courseId: $courseId) {
+      totalQuizzes
+      completedQuizzes
+      averageQuizScore
+      totalAssignments
+      submittedAssignments
+      averageAssignmentGrade
+      overallProgress
+      recentActivity {
+        type
+        title
+        completedAt
+        score
+      }
+    }
+  }
+`;
+
+const GET_ASSESSMENT_ATTEMPTS = gql`
+  query GetAssessmentAttempts($assessmentId: ID!, $studentId: ID) {
+    assessmentAttempts(assessmentId: $assessmentId, studentId: $studentId) {
+      id
+      attemptNumber
+      startedAt
+      submittedAt
+      score
+      status
+      timeSpent
+      answers {
+        questionId
+        answer
+        isCorrect
+        timeSpent
+      }
+    }
+  }
+`;
+
 // Hook return types
 interface QueryResult<T> {
   data: T | undefined;
@@ -698,6 +787,231 @@ export function useAssignment(assignmentId: string): QueryResult<Assignment> {
 
   return {
     data: data?.assignment,
+    loading,
+    error,
+    refetch,
+  };
+}
+
+/**
+ * Hook for fetching quiz analytics and reporting data
+ * 
+ * @param quizId - The quiz ID to get analytics for
+ * @param dateRange - Optional date range filter
+ * @returns Query result with quiz analytics
+ * 
+ * @example
+ * ```tsx
+ * function QuizAnalyticsDashboard({ quizId }: { quizId: string }) {
+ *   const { data: analytics, loading, error } = useQuizAnalytics(quizId, {
+ *     startDate: '2024-01-01',
+ *     endDate: '2024-12-31'
+ *   });
+ *   
+ *   if (loading) return <div>Loading analytics...</div>;
+ *   if (error) return <div>Error: {error.message}</div>;
+ *   if (!analytics) return <div>No analytics data available</div>;
+ *   
+ *   return (
+ *     <div>
+ *       <h2>Quiz Analytics</h2>
+ *       <div>Total Attempts: {analytics.totalAttempts}</div>
+ *       <div>Average Score: {analytics.averageScore}%</div>
+ *       <div>Pass Rate: {analytics.passRate}%</div>
+ *       <div>Average Time: {analytics.averageTimeSpent} minutes</div>
+ *       
+ *       <h3>Question Performance</h3>
+ *       {analytics.questionAnalytics.map(qa => (
+ *         <div key={qa.questionId}>
+ *           Question {qa.questionId}: {qa.correctAnswerRate}% correct
+ *         </div>
+ *       ))}
+ *     </div>
+ *   );
+ * }
+ * ```
+ */
+export function useQuizAnalytics(
+  quizId: string, 
+  dateRange?: { startDate: string; endDate: string }
+): QueryResult<any> {
+  const { data, loading, error, refetch } = useQuery(GET_QUIZ_ANALYTICS, {
+    variables: { 
+      quizId,
+      dateRange: dateRange ? {
+        startDate: dateRange.startDate,
+        endDate: dateRange.endDate
+      } : undefined
+    },
+    skip: !quizId,
+    errorPolicy: 'all',
+  });
+
+  return {
+    data: data?.quizAnalytics,
+    loading,
+    error,
+    refetch,
+  };
+}
+
+/**
+ * Hook for fetching assignment analytics and reporting data
+ * 
+ * @param assignmentId - The assignment ID to get analytics for
+ * @param dateRange - Optional date range filter
+ * @returns Query result with assignment analytics
+ * 
+ * @example
+ * ```tsx
+ * function AssignmentAnalyticsDashboard({ assignmentId }: { assignmentId: string }) {
+ *   const { data: analytics, loading, error } = useAssignmentAnalytics(assignmentId);
+ *   
+ *   if (loading) return <div>Loading analytics...</div>;
+ *   if (error) return <div>Error: {error.message}</div>;
+ *   if (!analytics) return <div>No analytics data available</div>;
+ *   
+ *   return (
+ *     <div>
+ *       <h2>Assignment Analytics</h2>
+ *       <div>Total Submissions: {analytics.totalSubmissions}</div>
+ *       <div>Average Grade: {analytics.averageGrade}%</div>
+ *       <div>Submission Rate: {analytics.submissionRate}%</div>
+ *       <div>Late Submissions: {analytics.lateSubmissions.count} ({analytics.lateSubmissions.percentage}%)</div>
+ *       
+ *       <h3>Grade Distribution</h3>
+ *       {analytics.gradeDistribution.map(grade => (
+ *         <div key={grade.range}>
+ *           {grade.range}: {grade.count} students
+ *         </div>
+ *       ))}
+ *     </div>
+ *   );
+ * }
+ * ```
+ */
+export function useAssignmentAnalytics(
+  assignmentId: string,
+  dateRange?: { startDate: string; endDate: string }
+): QueryResult<any> {
+  const { data, loading, error, refetch } = useQuery(GET_ASSIGNMENT_ANALYTICS, {
+    variables: { 
+      assignmentId,
+      dateRange: dateRange ? {
+        startDate: dateRange.startDate,
+        endDate: dateRange.endDate
+      } : undefined
+    },
+    skip: !assignmentId,
+    errorPolicy: 'all',
+  });
+
+  return {
+    data: data?.assignmentAnalytics,
+    loading,
+    error,
+    refetch,
+  };
+}
+
+/**
+ * Hook for tracking student assessment progress across courses
+ * 
+ * @param studentId - The student ID to track progress for
+ * @param courseId - Optional course ID to filter by specific course
+ * @returns Query result with student progress data
+ * 
+ * @example
+ * ```tsx
+ * function StudentProgressDashboard({ studentId, courseId }: { studentId: string; courseId?: string }) {
+ *   const { data: progress, loading, error } = useStudentAssessmentProgress(studentId, courseId);
+ *   
+ *   if (loading) return <div>Loading progress...</div>;
+ *   if (error) return <div>Error: {error.message}</div>;
+ *   if (!progress) return <div>No progress data available</div>;
+ *   
+ *   return (
+ *     <div>
+ *       <h2>Assessment Progress</h2>
+ *       <div>Quiz Progress: {progress.completedQuizzes}/{progress.totalQuizzes} ({progress.averageQuizScore}% avg)</div>
+ *       <div>Assignment Progress: {progress.submittedAssignments}/{progress.totalAssignments} ({progress.averageAssignmentGrade}% avg)</div>
+ *       <div>Overall Progress: {progress.overallProgress}%</div>
+ *       
+ *       <h3>Recent Activity</h3>
+ *       {progress.recentActivity.map((activity, index) => (
+ *         <div key={index}>
+ *           {activity.type}: {activity.title} - Score: {activity.score}% ({activity.completedAt})
+ *         </div>
+ *       ))}
+ *     </div>
+ *   );
+ * }
+ * ```
+ */
+export function useStudentAssessmentProgress(
+  studentId: string,
+  courseId?: string
+): QueryResult<any> {
+  const { data, loading, error, refetch } = useQuery(GET_STUDENT_ASSESSMENT_PROGRESS, {
+    variables: { studentId, courseId },
+    skip: !studentId,
+    errorPolicy: 'all',
+  });
+
+  return {
+    data: data?.studentAssessmentProgress,
+    loading,
+    error,
+    refetch,
+  };
+}
+
+/**
+ * Hook for tracking assessment attempts and time management
+ * 
+ * @param assessmentId - The assessment (quiz/assignment) ID
+ * @param studentId - The student ID to track attempts for
+ * @returns Query result with attempt tracking data
+ * 
+ * @example
+ * ```tsx
+ * function AttemptTracker({ assessmentId, studentId }: { assessmentId: string; studentId: string }) {
+ *   const { data: attempts, loading, error } = useAssessmentAttempts(assessmentId, studentId);
+ *   
+ *   if (loading) return <div>Loading attempts...</div>;
+ *   if (error) return <div>Error: {error.message}</div>;
+ *   if (!attempts || attempts.length === 0) return <div>No attempts found</div>;
+ *   
+ *   return (
+ *     <div>
+ *       <h2>Assessment Attempts</h2>
+ *       {attempts.map(attempt => (
+ *         <div key={attempt.id}>
+ *           <h3>Attempt #{attempt.attemptNumber}</h3>
+ *           <div>Started: {new Date(attempt.startedAt).toLocaleString()}</div>
+ *           <div>Submitted: {attempt.submittedAt ? new Date(attempt.submittedAt).toLocaleString() : 'In Progress'}</div>
+ *           <div>Score: {attempt.score}%</div>
+ *           <div>Time Spent: {Math.floor(attempt.timeSpent / 60)} minutes</div>
+ *           <div>Status: {attempt.status}</div>
+ *         </div>
+ *       ))}
+ *     </div>
+ *   );
+ * }
+ * ```
+ */
+export function useAssessmentAttempts(
+  assessmentId: string,
+  studentId: string
+): QueryResult<any[]> {
+  const { data, loading, error, refetch } = useQuery(GET_ASSESSMENT_ATTEMPTS, {
+    variables: { assessmentId, studentId },
+    skip: !assessmentId || !studentId,
+    errorPolicy: 'all',
+  });
+
+  return {
+    data: data?.assessmentAttempts || [],
     loading,
     error,
     refetch,

@@ -58,6 +58,10 @@ export {
   useVideoUpload,
   useStreamingUrl,
   useUploadProgress,
+  useVideoAsset,
+  useFileAsset,
+  useAssetManagement,
+  useVideoProcessingStatus,
 } from './useContent';
 
 // Assessment Hooks

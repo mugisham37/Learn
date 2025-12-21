@@ -322,9 +322,10 @@ export interface VideoFormat {
 }
 
 export interface StreamingUrl {
-  url: string;
+  streamingUrl: string;
   expiresAt: DateTime;
-  quality: string;
+  resolution: string;
+  format: string;
 }
 
 // Pagination types

@@ -1,29 +1,434 @@
-# Basic GraphQL Operations for Code Generation Testing
-# These will be replaced with real operations as we implement features
+# GraphQL Operations for Backend Integration
+# Real operations that connect to the production backend
 
-# Query operations
+# Authentication operations
 query GetCurrentUser {
-  _empty
+  currentUser {
+    id
+    email
+    role
+    emailVerified
+    profile {
+      fullName
+      avatarUrl
+      bio
+      timezone
+      language
+    }
+    notificationPreferences {
+      email
+      push
+      sms
+      inApp
+    }
+    createdAt
+    updatedAt
+  }
 }
 
-query GetCourses {
-  _empty
-}
-
-# Mutation operations
 mutation Login($email: String!, $password: String!) {
-  _empty
+  login(email: $email, password: $password) {
+    user {
+      id
+      email
+      role
+      emailVerified
+    }
+    tokens {
+      accessToken
+      refreshToken
+      expiresAt
+    }
+    permissions
+  }
 }
 
-mutation CreateCourse($input: String!) {
-  _empty
+# Content Management Operations
+mutation GenerateUploadUrl($input: GenerateUploadUrlInput!) {
+  generateUploadUrl(input: $input) {
+    uploadUrl
+    fileKey
+    expiresIn
+    maxFileSize
+  }
+}
+
+mutation CompleteFileUpload($fileKey: String!, $metadata: FileMetadataInput) {
+  completeFileUpload(fileKey: $fileKey, metadata: $metadata) {
+    id
+    fileKey
+    originalName
+    mimeType
+    fileSize
+    url
+    createdAt
+  }
+}
+
+query GetStreamingUrl($lessonId: ID!, $resolution: String, $format: String) {
+  generateStreamingUrl(lessonId: $lessonId, resolution: $resolution, format: $format) {
+    streamingUrl
+    expiresAt
+    resolution
+    format
+  }
+}
+
+query GetVideoAsset($id: ID!) {
+  videoAsset(id: $id) {
+    id
+    lesson {
+      id
+    }
+    uploadedBy {
+      id
+    }
+    originalFileName
+    originalFileSize
+    mimeType
+    s3Bucket
+    s3Key
+    s3Region
+    processingStatus
+    processingJobId
+    processingStartedAt
+    processingCompletedAt
+    processingErrorMessage
+    durationSeconds
+    originalResolution
+    originalBitrate
+    originalFrameRate
+    hlsManifestUrl
+    thumbnailUrl
+    previewUrl
+    availableResolutions {
+      resolution
+      url
+      bitrate
+      width
+      height
+    }
+    cloudfrontDistribution
+    streamingUrls {
+      hls
+      dash
+      mp4
+    }
+    metadata
+    createdAt
+    updatedAt
+    formattedDuration
+    formattedFileSize
+    isProcessing
+    isProcessed
+    isProcessingFailed
+    isReadyForStreaming
+    processingProgress
+    bestResolution {
+      resolution
+      url
+      bitrate
+      width
+      height
+    }
+    hasThumbnail
+    hasPreview
+    supportsAdaptiveStreaming
+  }
+}
+
+query GetFileAsset($id: ID!) {
+  fileAsset(id: $id) {
+    id
+    course {
+      id
+    }
+    lesson {
+      id
+    }
+    uploadedBy {
+      id
+    }
+    fileName
+    originalFileName
+    fileSize
+    mimeType
+    assetType
+    s3Bucket
+    s3Key
+    s3Region
+    isPublic
+    accessLevel
+    cloudfrontUrl
+    processingStatus
+    processingErrorMessage
+    variants {
+      thumbnail
+      compressed
+      preview
+    }
+    description
+    tags
+    metadata
+    expiresAt
+    createdAt
+    updatedAt
+    formattedFileSize
+    fileExtension
+    displayName
+    isImage
+    isDocument
+    isAudio
+    isArchive
+    isProcessing
+    isProcessed
+    isProcessingFailed
+    isExpired
+    isPubliclyAccessible
+    cdnUrl
+    thumbnailUrl
+    previewUrl
+    compressedUrl
+    hasThumbnail
+    hasPreview
+    imageDimensions {
+      width
+      height
+    }
+    pageCount
+    isSafeForPreview
+    timeUntilExpiration
+    isExpiringSoon
+    iconClass
+  }
+}
+
+query GetVideoAssets($filter: VideoAssetFilter, $pagination: PaginationInput) {
+  videoAssets(filter: $filter, pagination: $pagination) {
+    edges {
+      node {
+        id
+        originalFileName
+        originalFileSize
+        processingStatus
+        durationSeconds
+        thumbnailUrl
+        isReadyForStreaming
+        formattedDuration
+        formattedFileSize
+        createdAt
+      }
+      cursor
+    }
+    pageInfo {
+      hasNextPage
+      hasPreviousPage
+      startCursor
+      endCursor
+    }
+    totalCount
+  }
+}
+
+query GetFileAssets($filter: FileAssetFilter, $pagination: PaginationInput) {
+  fileAssets(filter: $filter, pagination: $pagination) {
+    edges {
+      node {
+        id
+        fileName
+        fileSize
+        assetType
+        processingStatus
+        isPublic
+        accessLevel
+        thumbnailUrl
+        formattedFileSize
+        fileExtension
+        iconClass
+        createdAt
+      }
+      cursor
+    }
+    pageInfo {
+      hasNextPage
+      hasPreviousPage
+      startCursor
+      endCursor
+    }
+    totalCount
+  }
+}
+
+query GetVideoProcessingStatus($videoAssetId: ID!) {
+  videoProcessingStatus(videoAssetId: $videoAssetId) {
+    id
+    videoAsset {
+      id
+    }
+    jobType
+    externalJobId
+    externalServiceName
+    status
+    progress
+    startedAt
+    completedAt
+    result
+    errorMessage
+    errorCode
+    attemptCount
+    maxAttempts
+    nextRetryAt
+    priority
+    scheduledFor
+    metadata
+    createdAt
+    updatedAt
+    isPending
+    isInProgress
+    isCompleted
+    isFailed
+    isCancelled
+    isFinal
+    canRetry
+    isReadyForRetry
+    isScheduled
+    isReadyToExecute
+    duration
+    formattedDuration
+    timeUntilRetry
+    timeUntilScheduled
+    estimatedCompletionTime
+    hasExceededTimeout
+    priorityDescription
+    isHighPriority
+    jobTypeDescription
+  }
+}
+
+mutation DeleteContent($fileKey: String!) {
+  deleteContent(fileKey: $fileKey)
+}
+
+mutation DeleteVideoAsset($id: ID!) {
+  deleteVideoAsset(id: $id)
+}
+
+mutation DeleteFileAsset($id: ID!) {
+  deleteFileAsset(id: $id)
+}
+
+mutation RetryProcessingJob($id: ID!) {
+  retryProcessingJob(id: $id) {
+    id
+    status
+    progress
+    nextRetryAt
+    attemptCount
+  }
+}
+
+mutation CancelProcessingJob($id: ID!) {
+  cancelProcessingJob(id: $id) {
+    id
+    status
+  }
+}
+
+# Course operations
+query GetCourses($filter: CourseFilter, $pagination: PaginationInput) {
+  courses(filter: $filter, pagination: $pagination) {
+    edges {
+      node {
+        id
+        title
+        description
+        slug
+        category
+        difficulty
+        price
+        currency
+        status
+        thumbnailUrl
+        instructor {
+          id
+          profile {
+            fullName
+          }
+        }
+        enrollmentCount
+        averageRating
+        createdAt
+        updatedAt
+      }
+      cursor
+    }
+    pageInfo {
+      hasNextPage
+      hasPreviousPage
+      startCursor
+      endCursor
+    }
+    totalCount
+  }
+}
+
+mutation CreateCourse($input: CreateCourseInput!) {
+  createCourse(input: $input) {
+    id
+    title
+    description
+    slug
+    category
+    difficulty
+    price
+    currency
+    status
+    createdAt
+  }
 }
 
 # Subscription operations
-subscription MessageUpdates {
-  _empty
+subscription MessageUpdates($conversationId: ID!) {
+  messageUpdates(conversationId: $conversationId) {
+    id
+    conversationId
+    senderId
+    content
+    type
+    timestamp
+  }
 }
 
-subscription ProgressUpdates {
-  _empty
+subscription ProgressUpdates($userId: ID!) {
+  progressUpdates(userId: $userId) {
+    userId
+    courseId
+    lessonId
+    progressPercentage
+    completedAt
+    timestamp
+  }
+}
+
+subscription NotificationUpdates($userId: ID!) {
+  notificationUpdates(userId: $userId) {
+    id
+    userId
+    type
+    title
+    message
+    data
+    timestamp
+  }
+}
+
+subscription VideoProcessingUpdates($videoAssetId: ID!) {
+  videoProcessingUpdates(videoAssetId: $videoAssetId) {
+    id
+    videoAssetId
+    status
+    progress
+    errorMessage
+    completedAt
+  }
 }

@@ -29,12 +29,12 @@ import { UploadQueue } from './uploadQueue';
 
 // GraphQL mutations
 const GET_PRESIGNED_UPLOAD_URL = gql`
-  mutation GetPresignedUploadUrl($input: FileUploadInput!) {
-    getPresignedUploadUrl(input: $input) {
+  mutation GenerateUploadUrl($input: GenerateUploadUrlInput!) {
+    generateUploadUrl(input: $input) {
       uploadUrl
       fileKey
-      fields
-      expiresAt
+      expiresIn
+      maxFileSize
     }
   }
 `;
@@ -55,11 +55,11 @@ const COMPLETE_FILE_UPLOAD = gql`
 
 // GraphQL response types
 interface GetPresignedUploadUrlResponse {
-  getPresignedUploadUrl: {
+  generateUploadUrl: {
     uploadUrl: string;
     fileKey: string;
-    fields: Record<string, string>;
-    expiresAt: string;
+    expiresIn: number;
+    maxFileSize: number;
   };
 }
 
@@ -220,15 +220,16 @@ export function useFileUpload(
         variables: {
           input: {
             fileName: file.name,
+            fileType: file.type.startsWith('video/') ? 'video' : 
+                     file.type.startsWith('image/') ? 'image' : 'document',
             fileSize: file.size,
-            mimeType: file.type,
             courseId: options.courseId,
             lessonId: options.lessonId,
           },
         },
       });
 
-      if (!presignedData?.getPresignedUploadUrl) {
+      if (!presignedData?.generateUploadUrl) {
         throw UploadErrorHandler.createError(
           uploadId,
           'SERVER_ERROR',
@@ -237,10 +238,11 @@ export function useFileUpload(
         );
       }
 
-      const { uploadUrl, fileKey } = presignedData.getPresignedUploadUrl;
+      const { uploadUrl, fileKey } = presignedData.generateUploadUrl;
 
       // Step 2: Upload file to S3 with progress tracking
-      const formData = UploadUtils.createUploadFormData(file, presignedData.getPresignedUploadUrl);
+      const formData = new FormData();
+      formData.append('file', file);
 
       // Create abort controller for cancellation
       abortControllerRef.current = new AbortController();

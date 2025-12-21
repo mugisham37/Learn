@@ -240,7 +240,252 @@ export interface MarkMessagesReadResponse {
 
 // Content responses
 export interface GetStreamingUrlResponse {
-  getStreamingUrl: StreamingUrl;
+  generateStreamingUrl: {
+    streamingUrl: string;
+    expiresAt: string;
+    resolution: string;
+    format: string;
+  };
+}
+
+export interface GenerateUploadUrlResponse {
+  generateUploadUrl: {
+    uploadUrl: string;
+    fileKey: string;
+    expiresIn: number;
+    maxFileSize: number;
+  };
+}
+
+export interface CompleteFileUploadResponse {
+  completeFileUpload: {
+    id: string;
+    fileKey: string;
+    originalName: string;
+    mimeType: string;
+    fileSize: number;
+    url: string;
+    createdAt: string;
+  };
+}
+
+export interface GetVideoAssetResponse {
+  videoAsset: {
+    id: string;
+    lesson: { id: string } | null;
+    uploadedBy: { id: string };
+    originalFileName: string;
+    originalFileSize: number;
+    mimeType: string;
+    s3Bucket: string;
+    s3Key: string;
+    s3Region: string;
+    processingStatus: string;
+    processingJobId: string | null;
+    processingStartedAt: string | null;
+    processingCompletedAt: string | null;
+    processingErrorMessage: string | null;
+    durationSeconds: number | null;
+    originalResolution: string | null;
+    originalBitrate: number | null;
+    originalFrameRate: number | null;
+    hlsManifestUrl: string | null;
+    thumbnailUrl: string | null;
+    previewUrl: string | null;
+    availableResolutions: Array<{
+      resolution: string;
+      url: string;
+      bitrate: number;
+      width: number;
+      height: number;
+    }>;
+    cloudfrontDistribution: string | null;
+    streamingUrls: {
+      hls?: string;
+      dash?: string;
+      mp4?: Record<string, string>;
+    };
+    metadata: Record<string, any>;
+    createdAt: string;
+    updatedAt: string;
+    formattedDuration: string | null;
+    formattedFileSize: string;
+    isProcessing: boolean;
+    isProcessed: boolean;
+    isProcessingFailed: boolean;
+    isReadyForStreaming: boolean;
+    processingProgress: number;
+    bestResolution: {
+      resolution: string;
+      url: string;
+      bitrate: number;
+      width: number;
+      height: number;
+    } | null;
+    hasThumbnail: boolean;
+    hasPreview: boolean;
+    supportsAdaptiveStreaming: boolean;
+  };
+}
+
+export interface GetFileAssetResponse {
+  fileAsset: {
+    id: string;
+    course: { id: string } | null;
+    lesson: { id: string } | null;
+    uploadedBy: { id: string };
+    fileName: string;
+    originalFileName: string;
+    fileSize: number;
+    mimeType: string;
+    assetType: string;
+    s3Bucket: string;
+    s3Key: string;
+    s3Region: string;
+    isPublic: boolean;
+    accessLevel: string;
+    cloudfrontUrl: string | null;
+    processingStatus: string;
+    processingErrorMessage: string | null;
+    variants: {
+      thumbnail?: string;
+      compressed?: string;
+      preview?: string;
+    };
+    description: string | null;
+    tags: string[];
+    metadata: Record<string, any>;
+    expiresAt: string | null;
+    createdAt: string;
+    updatedAt: string;
+    formattedFileSize: string;
+    fileExtension: string;
+    displayName: string;
+    isImage: boolean;
+    isDocument: boolean;
+    isAudio: boolean;
+    isArchive: boolean;
+    isProcessing: boolean;
+    isProcessed: boolean;
+    isProcessingFailed: boolean;
+    isExpired: boolean;
+    isPubliclyAccessible: boolean;
+    cdnUrl: string | null;
+    thumbnailUrl: string | undefined;
+    previewUrl: string | undefined;
+    compressedUrl: string | undefined;
+    hasThumbnail: boolean;
+    hasPreview: boolean;
+    imageDimensions: {
+      width: number;
+      height: number;
+    } | null;
+    pageCount: number | null;
+    isSafeForPreview: boolean;
+    timeUntilExpiration: number | null;
+    isExpiringSoon: boolean;
+    iconClass: string;
+  };
+}
+
+export interface GetVideoAssetsResponse {
+  videoAssets: {
+    edges: Array<{
+      node: {
+        id: string;
+        originalFileName: string;
+        originalFileSize: number;
+        processingStatus: string;
+        durationSeconds: number | null;
+        thumbnailUrl: string | null;
+        isReadyForStreaming: boolean;
+        formattedDuration: string | null;
+        formattedFileSize: string;
+        createdAt: string;
+      };
+      cursor: string;
+    }>;
+    pageInfo: {
+      hasNextPage: boolean;
+      hasPreviousPage: boolean;
+      startCursor: string | null;
+      endCursor: string | null;
+    };
+    totalCount: number;
+  };
+}
+
+export interface GetFileAssetsResponse {
+  fileAssets: {
+    edges: Array<{
+      node: {
+        id: string;
+        fileName: string;
+        fileSize: number;
+        assetType: string;
+        processingStatus: string;
+        isPublic: boolean;
+        accessLevel: string;
+        thumbnailUrl: string | null;
+        formattedFileSize: string;
+        fileExtension: string;
+        iconClass: string;
+        createdAt: string;
+      };
+      cursor: string;
+    }>;
+    pageInfo: {
+      hasNextPage: boolean;
+      hasPreviousPage: boolean;
+      startCursor: string | null;
+      endCursor: string | null;
+    };
+    totalCount: number;
+  };
+}
+
+export interface GetVideoProcessingStatusResponse {
+  videoProcessingStatus: {
+    id: string;
+    videoAsset: { id: string };
+    jobType: string;
+    externalJobId: string | null;
+    externalServiceName: string | null;
+    status: string;
+    progress: number;
+    startedAt: string | null;
+    completedAt: string | null;
+    result: Record<string, any> | null;
+    errorMessage: string | null;
+    errorCode: string | null;
+    attemptCount: number;
+    maxAttempts: number;
+    nextRetryAt: string | null;
+    priority: number;
+    scheduledFor: string | null;
+    metadata: Record<string, any>;
+    createdAt: string;
+    updatedAt: string;
+    isPending: boolean;
+    isInProgress: boolean;
+    isCompleted: boolean;
+    isFailed: boolean;
+    isCancelled: boolean;
+    isFinal: boolean;
+    canRetry: boolean;
+    isReadyForRetry: boolean;
+    isScheduled: boolean;
+    isReadyToExecute: boolean;
+    duration: number | null;
+    formattedDuration: string | null;
+    timeUntilRetry: number | null;
+    timeUntilScheduled: number | null;
+    estimatedCompletionTime: string | null;
+    hasExceededTimeout: boolean;
+    priorityDescription: string;
+    isHighPriority: boolean;
+    jobTypeDescription: string;
+  };
 }
 
 // Subscription responses
