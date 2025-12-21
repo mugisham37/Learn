@@ -11,6 +11,7 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { serverGraphQL } from '@/lib/graphql/serverClient';
 import { nextCache } from '@/lib/cache/nextCacheIntegration';
+import type { Enrollment, Course } from '@/types/graphql-responses';
 
 /**
  * Authentication utilities for server-side
@@ -98,7 +99,7 @@ export const serverData = {
     });
 
     return {
-      courses: result.data?.courses?.edges?.map((edge: { node: unknown }) => edge.node) || [],
+      courses: result.data?.courses?.edges?.map((edge: { node: Course }) => edge.node) || [],
       pageInfo: result.data?.courses?.pageInfo || {},
       totalCount: result.data?.courses?.totalCount || 0,
       errors: result.errors,
@@ -146,7 +147,7 @@ export const serverData = {
 
     return {
       enrollments:
-        result.data?.myEnrollments?.edges?.map((edge: { node: unknown }) => edge.node) || [],
+        result.data?.myEnrollments?.edges?.map((edge: { node: Enrollment }) => edge.node) || [],
       pageInfo: result.data?.myEnrollments?.pageInfo || {},
       totalCount: result.data?.myEnrollments?.totalCount || 0,
       errors: result.errors,
@@ -172,7 +173,7 @@ export const serverData = {
       stats: {
         totalEnrollments: enrollmentsResult.totalCount,
         completedCourses: enrollmentsResult.enrollments.filter(
-          (e: { status: string }) => e.status === 'COMPLETED'
+          (e: Enrollment) => e.status === 'COMPLETED'
         ).length,
       },
     };

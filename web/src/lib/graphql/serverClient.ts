@@ -12,6 +12,20 @@ import { setContext } from '@apollo/client/link/context';
 import { onError } from '@apollo/client/link/error';
 import { config } from '@/lib/config';
 import { cookies } from 'next/headers';
+import type {
+  MeQueryResponse,
+  CoursesQueryResponse,
+  CourseBySlugQueryResponse,
+  MyEnrollmentsQueryResponse,
+  CourseFilter,
+  CourseSort,
+  EnrollmentFilter,
+} from '@/types/graphql-responses';
+
+// Type for Apollo Client errors with extensions
+interface ApolloErrorWithExtensions extends Error {
+  extensions?: { code?: string };
+}
 
 /**
  * Create server-side Apollo Client instance
@@ -131,12 +145,13 @@ export async function executeServerQuery<T = unknown, V = Record<string, unknown
       fetchPolicy: 'network-only', // Always fetch fresh data on server
     });
 
+    const errorExtensions = (result.error as ApolloErrorWithExtensions).extensions;
     return {
       data: result.data as T,
-      errors: result.errors?.map(err => ({ 
-        message: err.message, 
-        extensions: err.extensions 
-      })) || (result.error ? [{ message: result.error.message }] : []),
+      errors: result.error ? [{ 
+        message: result.error.message,
+        ...(errorExtensions && { extensions: errorExtensions })
+      }] : [],
       loading: false,
     };
   } catch (error) {
@@ -162,7 +177,7 @@ export async function executeServerMutation<T = unknown, V = Record<string, unkn
   accessToken?: string
 ): Promise<{
   data: T | null;
-  errors?: Array<{ message: string }>;
+  errors?: Array<{ message: string; extensions?: { code?: string } }>;
 }> {
   try {
     const client = createServerClient(accessToken);
@@ -173,16 +188,23 @@ export async function executeServerMutation<T = unknown, V = Record<string, unkn
       variables,
     });
 
+    const errorExtensions = (result.error as ApolloErrorWithExtensions).extensions;
     return {
       data: result.data as T,
-      errors: result.error ? [{ message: result.error.message }] : [],
+      errors: result.error ? [{ 
+        message: result.error.message,
+        ...(errorExtensions && { extensions: errorExtensions })
+      }] : [],
     };
   } catch (error) {
     console.error('Server-side GraphQL mutation error:', error);
 
     return {
       data: null,
-      errors: [{ message: error instanceof Error ? error.message : 'Unknown error' }],
+      errors: [{ 
+        message: error instanceof Error ? error.message : 'Unknown error',
+        extensions: { code: 'NETWORK_ERROR' }
+      }],
     };
   }
 }
@@ -221,7 +243,7 @@ export const serverGraphQL = {
       }
     `;
 
-    return executeServerQuery(ME_QUERY, {}, accessToken);
+    return executeServerQuery<MeQueryResponse>(ME_QUERY, {}, accessToken);
   },
 
   /**
@@ -231,8 +253,8 @@ export const serverGraphQL = {
     variables: {
       first?: number;
       after?: string;
-      filter?: Record<string, unknown>;
-      sort?: Record<string, unknown>;
+      filter?: CourseFilter;
+      sort?: CourseSort;
     } = {}
   ) {
     const COURSES_QUERY = `
@@ -275,7 +297,7 @@ export const serverGraphQL = {
       }
     `;
 
-    return executeServerQuery(COURSES_QUERY, variables);
+    return executeServerQuery<CoursesQueryResponse>(COURSES_QUERY, variables);
   },
 
   /**
@@ -341,7 +363,7 @@ export const serverGraphQL = {
       }
     `;
 
-    return executeServerQuery(COURSE_BY_SLUG_QUERY, { slug }, accessToken);
+    return executeServerQuery<CourseBySlugQueryResponse>(COURSE_BY_SLUG_QUERY, { slug }, accessToken);
   },
 
   /**
@@ -352,7 +374,7 @@ export const serverGraphQL = {
     variables: {
       first?: number;
       after?: string;
-      filter?: Record<string, unknown>;
+      filter?: EnrollmentFilter;
     } = {}
   ) {
     const USER_ENROLLMENTS_QUERY = `
@@ -390,6 +412,6 @@ export const serverGraphQL = {
       }
     `;
 
-    return executeServerQuery(USER_ENROLLMENTS_QUERY, variables, accessToken);
+    return executeServerQuery<MyEnrollmentsQueryResponse>(USER_ENROLLMENTS_QUERY, variables, accessToken);
   },
 };
