@@ -7,8 +7,20 @@
  * Requirements: 6.1, 6.2, 6.3, 6.4, 6.5
  */
 
-import { InMemoryCache, ApolloClient, NormalizedCacheObject } from '@apollo/client';
+import { InMemoryCache } from '@apollo/client';
 import { DocumentNode } from 'graphql';
+
+// Define Apollo Client type for compatibility
+type ApolloClientInstance = {
+  cache: InMemoryCache;
+  query: (options: Record<string, unknown>) => Promise<unknown>;
+  mutate: (options: Record<string, unknown>) => Promise<unknown>;
+  watchQuery: (options: Record<string, unknown>) => unknown;
+  readQuery: (options: Record<string, unknown>) => unknown;
+  writeQuery: (options: Record<string, unknown>) => void;
+  readFragment: (options: Record<string, unknown>) => unknown;
+  writeFragment: (options: Record<string, unknown>) => void;
+};
 import { cacheHelpers, cachePersistence, backendCacheInvalidation } from '../graphql/cache';
 import { updateCacheAfterMutation } from './cacheUpdaters';
 import { invalidateCache } from './cacheInvalidation';
@@ -60,15 +72,15 @@ export interface BackendCacheOperation<T extends CacheEntity = CacheEntity> {
  */
 export class BackendCacheManager {
   private cache: InMemoryCache;
-  private client: ApolloClient<NormalizedCacheObject>;
-  private optimizer: CacheOptimizer;
+  private client: ApolloClientInstance;
+  private optimizer?: CacheOptimizer;
   private subscriptionHandlers = new Map<string, (data: unknown) => void>();
   private persistenceEnabled: boolean;
   private persistenceKey: string;
 
   constructor(
     cache: InMemoryCache,
-    client: ApolloClient<NormalizedCacheObject>,
+    client: ApolloClientInstance,
     options: {
       enablePersistence?: boolean;
       persistenceKey?: string;
@@ -262,25 +274,25 @@ export class BackendCacheManager {
     switch (module) {
       case BackendModule.COURSES:
         if (typename === 'Course') {
-          return commonOptimisticResponses.course.create(data as Partial<CacheEntity>) as T;
+          return commonOptimisticResponses.course.create(data as Partial<CacheEntity>) as unknown as T;
         }
         break;
 
       case BackendModule.ENROLLMENTS:
         if (typename === 'Enrollment') {
-          return commonOptimisticResponses.enrollment.create(data as Partial<CacheEntity>) as T;
+          return commonOptimisticResponses.enrollment.create(data as Partial<CacheEntity>) as unknown as T;
         }
         break;
 
       case BackendModule.COMMUNICATION:
         if (typename === 'Message') {
-          return commonOptimisticResponses.message.send(data as Partial<CacheEntity>) as T;
+          return commonOptimisticResponses.message.send(data as Partial<CacheEntity>) as unknown as T;
         }
         break;
 
       case BackendModule.ASSESSMENTS:
         if (typename === 'AssignmentSubmission') {
-          return commonOptimisticResponses.assignment.submit(data as Partial<CacheEntity>) as T;
+          return commonOptimisticResponses.assignment.submit(data as Partial<CacheEntity>) as unknown as T;
         }
         break;
 
@@ -289,13 +301,13 @@ export class BackendCacheManager {
           return commonOptimisticResponses.user.updateProfile(
             data.id!,
             data as unknown as Record<string, unknown>
-          ) as T;
+          ) as unknown as T;
         }
         break;
 
       case BackendModule.NOTIFICATIONS:
         if (typename === 'Notification') {
-          return commonOptimisticResponses.notification.markAsRead(data.id!) as T;
+          return commonOptimisticResponses.notification.markAsRead(data.id!) as unknown as T;
         }
         break;
     }
@@ -362,16 +374,21 @@ export class BackendCacheManager {
           backendCacheInvalidation.contentProcessingCompleted(this.cache, id, jobId);
         }
         break;
+
+      case BackendModule.ANALYTICS:
+      case BackendModule.SEARCH:
+        // No specific invalidation rules for these modules yet
+        break;
     }
   }
 
   /**
    * Apply module-specific subscription handling
    */
-  private applySubscriptionHandling(module: BackendModule, subscriptionData: unknown): void {
+  private applySubscriptionHandling(_module: BackendModule, subscriptionData: unknown): void {
     const data = subscriptionData as CacheEntity;
 
-    switch (module) {
+    switch (_module) {
       case BackendModule.COMMUNICATION:
         if (data.__typename === 'Message') {
           const conversationId = (data as { conversationId?: string }).conversationId || '';
@@ -415,7 +432,7 @@ export class BackendCacheManager {
   /**
    * Warm cache with critical queries for a specific module
    */
-  async warmModuleCache(module: BackendModule, queries: DocumentNode[]): Promise<void> {
+  async warmModuleCache(_module: BackendModule, queries: DocumentNode[]): Promise<void> {
     if (!this.optimizer) return;
 
     // Create warming config for the queries
@@ -427,7 +444,8 @@ export class BackendCacheManager {
   /**
    * Get cache statistics for a specific module
    */
-  getModuleStats(module: BackendModule): {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  getModuleStats(_module: BackendModule): {
     entities: number;
     queries: number;
     memoryUsage: string;
@@ -539,7 +557,7 @@ export class BackendCacheManager {
  */
 export function createBackendCacheManager(
   cache: InMemoryCache,
-  client: ApolloClient<NormalizedCacheObject>,
+  client: ApolloClientInstance,
   options?: {
     enablePersistence?: boolean;
     persistenceKey?: string;
@@ -555,7 +573,7 @@ export function createBackendCacheManager(
 export const moduleOperations = {
   users: {
     updateProfile: (cache: InMemoryCache, userId: string, profileData: Record<string, unknown>) => {
-      const manager = new BackendCacheManager(cache, {} as ApolloClient<NormalizedCacheObject>);
+      const manager = new BackendCacheManager(cache, {} as ApolloClientInstance);
       return manager.executeOperation({
         module: BackendModule.USERS,
         operation: 'update',
@@ -568,7 +586,7 @@ export const moduleOperations = {
 
   courses: {
     publish: (cache: InMemoryCache, courseId: string) => {
-      const manager = new BackendCacheManager(cache, {} as ApolloClient<NormalizedCacheObject>);
+      const manager = new BackendCacheManager(cache, {} as ApolloClientInstance);
       return manager.executeOperation({
         module: BackendModule.COURSES,
         operation: 'update',
@@ -590,7 +608,7 @@ export const moduleOperations = {
       enrollmentId: string,
       progress: { percentage: number; lessons: unknown[] }
     ) => {
-      const manager = new BackendCacheManager(cache, {} as ApolloClient<NormalizedCacheObject>);
+      const manager = new BackendCacheManager(cache, {} as ApolloClientInstance);
       return manager.executeOperation({
         module: BackendModule.ENROLLMENTS,
         operation: 'update',
@@ -608,7 +626,7 @@ export const moduleOperations = {
 
   communication: {
     sendMessage: (cache: InMemoryCache, messageData: CacheEntity, conversationId: string) => {
-      const manager = new BackendCacheManager(cache, {} as ApolloClient<NormalizedCacheObject>);
+      const manager = new BackendCacheManager(cache, {} as ApolloClientInstance);
       return manager.executeOperation({
         module: BackendModule.COMMUNICATION,
         operation: 'create',
@@ -617,7 +635,7 @@ export const moduleOperations = {
       });
     },
     createAnnouncement: (cache: InMemoryCache, announcementData: CacheEntity, courseId: string) => {
-      const manager = new BackendCacheManager(cache, {} as ApolloClient<NormalizedCacheObject>);
+      const manager = new BackendCacheManager(cache, {} as ApolloClientInstance);
       return manager.executeOperation({
         module: BackendModule.COMMUNICATION,
         operation: 'create',
@@ -626,7 +644,7 @@ export const moduleOperations = {
       });
     },
     updatePresence: (cache: InMemoryCache, presenceData: CacheEntity, courseId: string) => {
-      const manager = new BackendCacheManager(cache, {} as ApolloClient<NormalizedCacheObject>);
+      const manager = new BackendCacheManager(cache, {} as ApolloClientInstance);
       return manager.executeOperation({
         module: BackendModule.COMMUNICATION,
         operation: 'update',
@@ -637,8 +655,8 @@ export const moduleOperations = {
   },
 
   notifications: {
-    markAsRead: (cache: InMemoryCache, notificationId: string, _userId: string) => {
-      const manager = new BackendCacheManager(cache, {} as ApolloClient<NormalizedCacheObject>);
+    markAsRead: (cache: InMemoryCache, notificationId: string) => {
+      const manager = new BackendCacheManager(cache, {} as ApolloClientInstance);
       return manager.executeOperation({
         module: BackendModule.NOTIFICATIONS,
         operation: 'update',

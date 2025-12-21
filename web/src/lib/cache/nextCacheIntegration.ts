@@ -291,7 +291,7 @@ export const cacheInvalidation = {
     await cacheRevalidation.revalidateCourse(courseId);
 
     // If category changed, invalidate category cache
-    if (updates.category) {
+    if (updates.category && typeof updates.category === 'string') {
       await cacheRevalidation.revalidateCourseCategory(updates.category);
     }
   },

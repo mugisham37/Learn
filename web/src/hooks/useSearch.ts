@@ -8,9 +8,34 @@
  * Requirements: 2.2 - Complete Module Hook Implementation (Search)
  */
 
-import { useQuery, useLazyQuery, useMutation } from '@apollo/client/react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useQuery, useLazyQuery } from '@apollo/client/react';
+import { useCallback, useEffect, useState, useMemo } from 'react';
 import { gql } from '@apollo/client';
+import type { ErrorPolicy } from '@apollo/client';
+
+// ============================================================================
+// GraphQL Response Types
+// ============================================================================
+
+interface SearchCoursesResponse {
+  searchCourses: SearchResult;
+}
+
+interface SearchLessonsResponse {
+  searchLessons: LessonSearchResults;
+}
+
+interface AutocompleteResponse {
+  autocomplete: string[];
+}
+
+interface TrendingSearchesResponse {
+  trendingSearches: string[];
+}
+
+interface SearchHealthResponse {
+  searchHealth: SearchHealthResult;
+}
 
 // ============================================================================
 // GraphQL Operations
@@ -171,8 +196,8 @@ export interface SearchFilters {
 }
 
 export interface SearchPagination {
-  from?: number;
-  size?: number;
+  from: number;
+  size: number;
 }
 
 export interface SearchSort {
@@ -209,7 +234,7 @@ export interface CourseSearchResult {
   searchBoost?: number;
   popularityScore?: number;
   recentEnrollmentVelocity?: number;
-  highlight?: Record<string, any>;
+  highlight?: Record<string, unknown>;
 }
 
 export interface LessonSearchResult {
@@ -228,7 +253,7 @@ export interface LessonSearchResult {
   courseTitle: string;
   courseCategory: string;
   courseDifficulty: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
-  highlight?: Record<string, any>;
+  highlight?: Record<string, unknown>;
 }
 
 export interface SearchFacets {
@@ -283,17 +308,17 @@ export interface UseSearchOptions {
 }
 
 export interface UseSearchReturn {
-  data?: SearchResult;
+  data: SearchResult | undefined;
   loading: boolean;
-  error?: Error;
+  error?: Error | null;
   refetch: (variables?: Partial<UseSearchOptions>) => Promise<void>;
   fetchMore: (pagination: SearchPagination) => Promise<void>;
   // Search analytics
-  searchTime?: number;
+  searchTime?: number | undefined;
   resultCount: number;
   hasNextPage: boolean;
   // Faceted search helpers
-  applyFilter: (key: keyof SearchFilters, value: any) => void;
+  applyFilter: (key: keyof SearchFilters, value: unknown) => void;
   clearFilter: (key: keyof SearchFilters) => void;
   clearAllFilters: () => void;
   activeFilters: Partial<SearchFilters>;
@@ -308,13 +333,13 @@ export interface UseFacetedSearchOptions {
 
 export interface UseFacetedSearchReturn {
   // Search state
-  searchResult?: SearchResult;
+  searchResult: SearchResult | undefined;
   loading: boolean;
-  error?: Error;
+  error?: Error | null;
 
   // Filter management
   filters: SearchFilters;
-  setFilter: (key: keyof SearchFilters, value: any) => void;
+  setFilter: (key: keyof SearchFilters, value: unknown) => void;
   clearFilter: (key: keyof SearchFilters) => void;
   clearAllFilters: () => void;
 
@@ -327,10 +352,10 @@ export interface UseFacetedSearchReturn {
   hasNextPage: boolean;
 
   // Facets
-  facets?: SearchFacets;
+  facets?: SearchFacets | undefined;
 
   // Analytics
-  searchTime?: number;
+  searchTime?: number | undefined;
   resultCount: number;
 }
 
@@ -344,7 +369,7 @@ export interface UseAutocompleteOptions {
 export interface UseAutocompleteReturn {
   suggestions: string[];
   loading: boolean;
-  error?: Error;
+  error?: Error | null;
   refetch: () => Promise<void>;
 }
 
@@ -356,7 +381,7 @@ export interface UseTrendingSearchesOptions {
 export interface UseTrendingSearchesReturn {
   trendingSearches: string[];
   loading: boolean;
-  error?: Error;
+  error?: Error | null;
   refetch: () => Promise<void>;
 }
 
@@ -368,9 +393,9 @@ export interface UseSearchLessonsOptions {
 }
 
 export interface UseSearchLessonsReturn {
-  data?: LessonSearchResults;
+  data: LessonSearchResults | undefined;
   loading: boolean;
-  error?: Error;
+  error?: Error | null;
   refetch: (variables?: Partial<UseSearchLessonsOptions>) => Promise<void>;
   fetchMore: (pagination: SearchPagination) => Promise<void>;
   hasNextPage: boolean;
@@ -397,7 +422,7 @@ export function useSearch(options: UseSearchOptions): UseSearchReturn {
     error,
     refetch: apolloRefetch,
     fetchMore: apolloFetchMore,
-  } = useQuery(SEARCH_COURSES, {
+  } = useQuery<SearchCoursesResponse>(SEARCH_COURSES, {
     variables: {
       query: options.query,
       filters: activeFilters,
@@ -406,8 +431,8 @@ export function useSearch(options: UseSearchOptions): UseSearchReturn {
       includeFacets: options.includeFacets !== false,
     },
     skip: options.skip || !options.query.trim(),
-    pollInterval: options.pollInterval,
-    errorPolicy: 'partial',
+    ...(options.pollInterval && { pollInterval: options.pollInterval }),
+    errorPolicy: 'all' as ErrorPolicy,
     notifyOnNetworkStatusChange: true,
   });
 
@@ -447,7 +472,7 @@ export function useSearch(options: UseSearchOptions): UseSearchReturn {
           sort: options.sort || { field: 'RELEVANCE', order: 'DESC' },
           includeFacets: options.includeFacets !== false,
         },
-        updateQuery: (prev, { fetchMoreResult }) => {
+        updateQuery: (prev: SearchCoursesResponse, { fetchMoreResult }) => {
           if (!fetchMoreResult?.searchCourses) return prev;
 
           return {
@@ -466,7 +491,7 @@ export function useSearch(options: UseSearchOptions): UseSearchReturn {
   );
 
   const applyFilter = useCallback(
-    (key: keyof SearchFilters, value: any) => {
+    (key: keyof SearchFilters, value: unknown) => {
       setActiveFilters(prev => ({ ...prev, [key]: value }));
       setCurrentPagination({ from: 0, size: currentPagination.size }); // Reset pagination
     },
@@ -476,6 +501,7 @@ export function useSearch(options: UseSearchOptions): UseSearchReturn {
   const clearFilter = useCallback(
     (key: keyof SearchFilters) => {
       setActiveFilters(prev => {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { [key]: _, ...rest } = prev;
         return rest;
       });
@@ -492,7 +518,7 @@ export function useSearch(options: UseSearchOptions): UseSearchReturn {
   return {
     data: searchResult,
     loading,
-    error,
+    error: error || null,
     refetch,
     fetchMore,
     searchTime: searchResult?.took,
@@ -534,8 +560,8 @@ export function useFacetedSearch(options: UseFacetedSearchOptions): UseFacetedSe
   const [
     executeSearch,
     { data, loading, error, refetch: apolloRefetch, fetchMore: apolloFetchMore },
-  ] = useLazyQuery(SEARCH_COURSES, {
-    errorPolicy: 'partial',
+  ] = useLazyQuery<SearchCoursesResponse>(SEARCH_COURSES, {
+    errorPolicy: 'all' as ErrorPolicy,
     notifyOnNetworkStatusChange: true,
   });
 
@@ -559,7 +585,7 @@ export function useFacetedSearch(options: UseFacetedSearchOptions): UseFacetedSe
   const hasNextPage = pagination.from + pagination.size < resultCount;
 
   const setFilter = useCallback(
-    (key: keyof SearchFilters, value: any) => {
+    (key: keyof SearchFilters, value: unknown) => {
       setFilters(prev => ({ ...prev, [key]: value }));
       setPagination({ from: 0, size: pagination.size }); // Reset pagination
     },
@@ -569,6 +595,7 @@ export function useFacetedSearch(options: UseFacetedSearchOptions): UseFacetedSe
   const clearFilter = useCallback(
     (key: keyof SearchFilters) => {
       setFilters(prev => {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { [key]: _, ...rest } = prev;
         return rest;
       });
@@ -625,7 +652,7 @@ export function useFacetedSearch(options: UseFacetedSearchOptions): UseFacetedSe
           sort: { field: 'RELEVANCE', order: 'DESC' },
           includeFacets: true,
         },
-        updateQuery: (prev, { fetchMoreResult }) => {
+        updateQuery: (prev: SearchCoursesResponse, { fetchMoreResult }) => {
           if (!fetchMoreResult?.searchCourses) return prev;
 
           return {
@@ -650,7 +677,7 @@ export function useFacetedSearch(options: UseFacetedSearchOptions): UseFacetedSe
   return {
     searchResult,
     loading,
-    error,
+    error: error || null,
     filters,
     setFilter,
     clearFilter,
@@ -685,13 +712,13 @@ export function useAutocomplete(options: UseAutocompleteOptions): UseAutocomplet
     return () => clearTimeout(timer);
   }, [options.query, options.debounceMs]);
 
-  const { data, loading, error, refetch } = useQuery(AUTOCOMPLETE, {
+  const { data, loading, error, refetch } = useQuery<AutocompleteResponse>(AUTOCOMPLETE, {
     variables: {
       query: debouncedQuery,
       limit: options.limit || 10,
     },
     skip: options.skip || !debouncedQuery.trim() || debouncedQuery.length < 2,
-    errorPolicy: 'ignore', // Don't show errors for autocomplete
+    errorPolicy: 'ignore' as ErrorPolicy, // Don't show errors for autocomplete
   });
 
   const suggestions = data?.autocomplete || [];
@@ -705,7 +732,7 @@ export function useAutocomplete(options: UseAutocompleteOptions): UseAutocomplet
   return {
     suggestions,
     loading,
-    error,
+    error: error || null,
     refetch: refetchSuggestions,
   };
 }
@@ -721,12 +748,12 @@ export function useAutocomplete(options: UseAutocompleteOptions): UseAutocomplet
 export function useTrendingSearches(
   options: UseTrendingSearchesOptions = {}
 ): UseTrendingSearchesReturn {
-  const { data, loading, error, refetch } = useQuery(TRENDING_SEARCHES, {
+  const { data, loading, error, refetch } = useQuery<TrendingSearchesResponse>(TRENDING_SEARCHES, {
     variables: {
       limit: options.limit || 10,
     },
-    pollInterval: options.pollInterval,
-    errorPolicy: 'ignore', // Don't show errors for trending searches
+    ...(options.pollInterval && { pollInterval: options.pollInterval }),
+    errorPolicy: 'ignore' as ErrorPolicy, // Don't show errors for trending searches
   });
 
   const trendingSearches = data?.trendingSearches || [];
@@ -740,7 +767,7 @@ export function useTrendingSearches(
   return {
     trendingSearches,
     loading,
-    error,
+    error: error || null,
     refetch: refetchTrending,
   };
 }
@@ -764,14 +791,14 @@ export function useSearchLessons(options: UseSearchLessonsOptions): UseSearchLes
     error,
     refetch: apolloRefetch,
     fetchMore: apolloFetchMore,
-  } = useQuery(SEARCH_LESSONS, {
+  } = useQuery<SearchLessonsResponse>(SEARCH_LESSONS, {
     variables: {
       query: options.query,
       courseId: options.courseId,
       pagination: currentPagination,
     },
     skip: options.skip || !options.query.trim(),
-    errorPolicy: 'partial',
+    errorPolicy: 'all' as ErrorPolicy,
     notifyOnNetworkStatusChange: true,
   });
 
@@ -804,7 +831,7 @@ export function useSearchLessons(options: UseSearchLessonsOptions): UseSearchLes
           courseId: options.courseId,
           pagination,
         },
-        updateQuery: (prev, { fetchMoreResult }) => {
+        updateQuery: (prev: SearchLessonsResponse, { fetchMoreResult }) => {
           if (!fetchMoreResult?.searchLessons) return prev;
 
           return {
@@ -825,7 +852,7 @@ export function useSearchLessons(options: UseSearchLessonsOptions): UseSearchLes
   return {
     data: searchResult,
     loading,
-    error,
+    error: error || null,
     refetch,
     fetchMore,
     hasNextPage,
@@ -855,29 +882,40 @@ export function useSearchAnalytics() {
     loading: healthLoading,
     error: healthError,
     refetch: refetchHealth,
-  } = useQuery(SEARCH_HEALTH, {
+  } = useQuery<SearchHealthResponse>(SEARCH_HEALTH, {
     pollInterval: 30000, // Poll every 30 seconds
-    errorPolicy: 'ignore',
+    errorPolicy: 'ignore' as ErrorPolicy,
   });
 
-  const { data: trendingData } = useQuery(TRENDING_SEARCHES, {
+  const { data: trendingData } = useQuery<TrendingSearchesResponse>(TRENDING_SEARCHES, {
     variables: { limit: 20 },
     pollInterval: 60000, // Poll every minute
-    errorPolicy: 'ignore',
+    errorPolicy: 'ignore' as ErrorPolicy,
   });
 
   const searchHealth = healthData?.searchHealth;
-  const trendingSearches = trendingData?.trendingSearches || [];
+  const trendingSearches = useMemo(() => trendingData?.trendingSearches || [], [trendingData?.trendingSearches]);
 
-  // Update metrics when trending data changes
+  // Update metrics when trending data changes - using callback to avoid direct setState in effect
+  const updatePopularQueries = useCallback((queries: string[]) => {
+    setSearchMetrics(prev => ({
+      ...prev,
+      popularQueries: queries,
+    }));
+  }, []);
+
   useEffect(() => {
     if (trendingSearches.length > 0) {
-      setSearchMetrics(prev => ({
-        ...prev,
-        popularQueries: trendingSearches,
-      }));
+      // Use a timeout to avoid synchronous setState in effect
+      const timeoutId = setTimeout(() => {
+        updatePopularQueries(trendingSearches);
+      }, 0);
+      
+      return () => clearTimeout(timeoutId);
     }
-  }, [trendingSearches]);
+    // Return undefined when condition is not met
+    return undefined;
+  }, [trendingSearches, updatePopularQueries]);
 
   const trackSearch = useCallback((query: string, resultCount: number, searchTime: number) => {
     setSearchMetrics(prev => {
@@ -905,13 +943,17 @@ export function useSearchAnalytics() {
   }, []);
 
   const getSearchInsights = useCallback(() => {
+    const coursesIndexed = searchHealth?.statistics?.coursesIndexed ?? 0;
+    const lessonsIndexed = searchHealth?.statistics?.lessonsIndexed ?? 0;
+    const indicesHealthy = Boolean(searchHealth?.indices?.courses && searchHealth?.indices?.lessons);
+
     return {
       ...searchMetrics,
       searchHealth,
       indexHealth: {
-        coursesIndexed: searchHealth?.statistics?.coursesIndexed || 0,
-        lessonsIndexed: searchHealth?.statistics?.lessonsIndexed || 0,
-        indicesHealthy: searchHealth?.indices?.courses && searchHealth?.indices?.lessons,
+        coursesIndexed,
+        lessonsIndexed,
+        indicesHealthy,
       },
     };
   }, [searchMetrics, searchHealth]);
@@ -921,7 +963,7 @@ export function useSearchAnalytics() {
     searchHealth,
     trendingSearches,
     loading: healthLoading,
-    error: healthError,
+    error: healthError || null,
     trackSearch,
     getSearchInsights,
     refetchHealth,
@@ -946,7 +988,7 @@ export function useSearchOptimization() {
   });
 
   const optimizeResults = useCallback(
-    (results: CourseSearchResult[], userPreferences?: any) => {
+    (results: CourseSearchResult[], userPreferences?: Record<string, unknown>) => {
       let optimizedResults = [...results];
 
       // Apply popularity boost
@@ -989,18 +1031,20 @@ export function useSearchOptimization() {
           let bPersonalizationScore = 0;
 
           // Boost based on user's preferred categories
-          if (userPreferences.preferredCategories?.includes(a.category)) {
+          const preferredCategories = userPreferences.preferredCategories as string[] | undefined;
+          if (preferredCategories?.includes(a.category)) {
             aPersonalizationScore += 0.3;
           }
-          if (userPreferences.preferredCategories?.includes(b.category)) {
+          if (preferredCategories?.includes(b.category)) {
             bPersonalizationScore += 0.3;
           }
 
           // Boost based on user's skill level
-          if (userPreferences.skillLevel === a.difficulty.toLowerCase()) {
+          const skillLevel = userPreferences.skillLevel as string | undefined;
+          if (skillLevel === a.difficulty.toLowerCase()) {
             aPersonalizationScore += 0.2;
           }
-          if (userPreferences.skillLevel === b.difficulty.toLowerCase()) {
+          if (skillLevel === b.difficulty.toLowerCase()) {
             bPersonalizationScore += 0.2;
           }
 
@@ -1059,11 +1103,11 @@ export function useSearchOptimization() {
         const categories = [...new Set(results.map(r => r.category))];
         const difficulties = [...new Set(results.map(r => r.difficulty))];
 
-        if (categories.length > 1) {
+        if (categories.length > 1 && categories[0]) {
           recommendations.push(`${query} ${categories[0].toLowerCase()}`);
         }
 
-        if (difficulties.length > 1) {
+        if (difficulties.length > 1 && difficulties[0]) {
           recommendations.push(`${difficulties[0].toLowerCase()} ${query}`);
         }
       }
@@ -1072,7 +1116,10 @@ export function useSearchOptimization() {
       if (results.length === 0) {
         const words = query.split(' ');
         if (words.length > 1) {
-          recommendations.push(words[0]); // Suggest first word only
+          const firstWord = words[0];
+          if (firstWord) {
+            recommendations.push(firstWord); // Suggest first word only
+          }
           recommendations.push(words.slice(0, -1).join(' ')); // Remove last word
         }
       }
