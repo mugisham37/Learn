@@ -1,12 +1,15 @@
 /**
  * Next.js Middleware for Authentication and Route Protection
  * 
- * Handles JWT token validation, automatic refresh, and route protection
- * based on user roles and authentication status.
+ * Handles JWT token validation, automatic refresh, route protection,
+ * and comprehensive security middleware integration.
+ * 
+ * Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 12.1, 12.2, 12.3, 12.4, 12.5
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { config } from '@/lib/config';
+import { securityMiddleware } from '@/lib/security/securityMiddleware';
 
 // Routes that require authentication
 const PROTECTED_ROUTES = [
@@ -119,6 +122,12 @@ function hasRequiredRole(userRole: string, requiredRoles: string[]): boolean {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   
+  // Apply security middleware first
+  const securityResponse = await securityMiddleware(request);
+  if (securityResponse && securityResponse.status !== 200) {
+    return securityResponse;
+  }
+  
   // Skip middleware for API routes, static files, and Next.js internals
   if (
     pathname.startsWith('/api/') ||
@@ -126,7 +135,7 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/favicon.ico') ||
     pathname.includes('.')
   ) {
-    return NextResponse.next();
+    return securityResponse || NextResponse.next();
   }
 
   // Get tokens from cookies
@@ -211,10 +220,27 @@ export async function middleware(request: NextRequest) {
 
   // If user is authenticated and trying to access auth pages, redirect to dashboard
   if (accessToken && ['/login', '/register'].includes(pathname)) {
-    return NextResponse.redirect(new URL('/dashboard', request.url));
+    const response = NextResponse.redirect(new URL('/dashboard', request.url));
+    
+    // Apply security headers from security middleware
+    if (securityResponse) {
+      securityResponse.headers.forEach((value, key) => {
+        response.headers.set(key, value);
+      });
+    }
+    
+    return response;
   }
 
-  return NextResponse.next();
+  // Apply security headers to the response
+  const response = NextResponse.next();
+  if (securityResponse) {
+    securityResponse.headers.forEach((value, key) => {
+      response.headers.set(key, value);
+    });
+  }
+  
+  return response;
 }
 
 export const config = {

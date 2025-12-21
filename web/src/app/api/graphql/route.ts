@@ -2,13 +2,16 @@
  * GraphQL Proxy API Route
  * 
  * Next.js API route that proxies GraphQL requests to the backend server.
- * Handles authentication, CORS, rate limiting, and request validation.
+ * Handles authentication, CORS, rate limiting, input validation, and comprehensive security.
  * 
- * Requirements: 8.2, 8.3
+ * Requirements: 8.2, 8.3, 12.1, 12.2, 12.3, 12.4, 12.5
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { config } from '@/lib/config';
+import { inputValidator } from '@/lib/security/inputValidation';
+import { CSRFProtector } from '@/lib/security/csrfProtection';
+import { securityConfig } from '@/lib/security/securityConfig';
 
 // Rate limiting configuration
 const RATE_LIMIT = {
@@ -27,13 +30,14 @@ function getClientIP(request: NextRequest): string {
   const realIP = request.headers.get('x-real-ip');
   
   if (forwarded) {
-    return forwarded.split(',')[0].trim();
+    return forwarded.split(',')[0]?.trim() || 'unknown';
   }
   
   if (realIP) {
     return realIP;
   }
   
+  // Fallback to a default value since NextRequest doesn't have ip property
   return 'unknown';
 }
 
@@ -65,21 +69,23 @@ function checkRateLimit(clientIP: string): { allowed: boolean; remaining: number
 /**
  * Validate GraphQL request
  */
-function validateGraphQLRequest(body: any): { valid: boolean; error?: string } {
+function validateGraphQLRequest(body: unknown): { valid: boolean; error?: string } {
   if (!body) {
     return { valid: false, error: 'Request body is required' };
   }
 
-  if (typeof body !== 'object') {
+  if (typeof body !== 'object' || body === null) {
     return { valid: false, error: 'Request body must be an object' };
   }
 
-  if (!body.query || typeof body.query !== 'string') {
+  const graphqlBody = body as { query?: unknown; variables?: unknown };
+
+  if (!graphqlBody.query || typeof graphqlBody.query !== 'string') {
     return { valid: false, error: 'GraphQL query is required' };
   }
 
   // Basic query validation
-  const query = body.query.trim();
+  const query = graphqlBody.query.trim();
   if (query.length === 0) {
     return { valid: false, error: 'GraphQL query cannot be empty' };
   }
@@ -186,6 +192,67 @@ export async function POST(request: NextRequest) {
           headers: corsHeaders,
         }
       );
+    }
+
+    // CSRF protection for mutations
+    if (securityConfig.csrfProtection.enabled && body.query) {
+      const isMutation = body.query.trim().toLowerCase().startsWith('mutation');
+      if (isMutation) {
+        const csrfToken = request.headers.get(securityConfig.csrfProtection.tokenHeader);
+        if (!csrfToken) {
+          return NextResponse.json(
+            { 
+              errors: [{ 
+                message: 'CSRF token required for mutations',
+                extensions: { code: 'CSRF_TOKEN_REQUIRED' }
+              }] 
+            },
+            { 
+              status: 403,
+              headers: corsHeaders,
+            }
+          );
+        }
+
+        const isValidCSRF = await CSRFProtector.validateCSRFToken(csrfToken);
+        if (!isValidCSRF) {
+          return NextResponse.json(
+            { 
+              errors: [{ 
+                message: 'Invalid CSRF token',
+                extensions: { code: 'INVALID_CSRF_TOKEN' }
+              }] 
+            },
+            { 
+              status: 403,
+              headers: corsHeaders,
+            }
+          );
+        }
+      }
+    }
+
+    // Validate and sanitize GraphQL input
+    if (body.variables) {
+      const validationResult = inputValidator.validateGraphQLInput(body.variables);
+      if (!validationResult.success) {
+        return NextResponse.json(
+          { 
+            errors: [{ 
+              message: 'Input validation failed',
+              extensions: { 
+                code: 'INPUT_VALIDATION_ERROR',
+                validationErrors: validationResult.errors
+              }
+            }] 
+          },
+          { 
+            status: 400,
+            headers: corsHeaders,
+          }
+        );
+      }
+      body.variables = validationResult.data;
     }
 
     // Validate GraphQL request
