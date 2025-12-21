@@ -47,10 +47,8 @@ export interface SanitizationOptions {
  * Base input validator class
  */
 export class InputValidator {
-  private xssProtector: XSSProtector;
-  
   constructor() {
-    this.xssProtector = new XSSProtector();
+    // Remove unused xssProtector instance
   }
   
   /**
@@ -90,7 +88,7 @@ export class InputValidator {
     
     // XSS protection
     if (!options.allowHtml) {
-      const xssResult = this.xssProtector.sanitize(sanitized);
+      const xssResult = XSSProtector.validateUserContent(sanitized);
       sanitized = xssResult.sanitized;
       if (xssResult.removed.length > 0) {
         warnings.push('Potentially dangerous content removed');
@@ -266,7 +264,7 @@ export class InputValidator {
             });
           }
         }
-      } catch (error) {
+      } catch (parseError) {
         errors.push({
           field: 'url',
           message: 'URL parsing failed',
@@ -494,12 +492,12 @@ export function createValidationMiddleware<T>(schema: z.ZodSchema<T>) {
       }
       
       return result;
-    } catch (error) {
+    } catch (validationError) {
       logValidationEvent({
         type: 'security_error',
         details: {
           reason: 'validation_error',
-          error: error instanceof Error ? error.message : 'Unknown error',
+          error: validationError instanceof Error ? validationError.message : 'Unknown error',
         },
         severity: 'high',
       });

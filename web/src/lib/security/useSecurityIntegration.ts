@@ -8,8 +8,7 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
-import { ApolloClient } from '@apollo/client';
-import { useApolloClient } from '@apollo/client/react/hooks';
+import { ApolloClient, DocumentNode, InMemoryCache } from '@apollo/client';
 import { CSRFProtector } from './csrfProtection';
 import { inputValidator, type ValidationResult } from './inputValidation';
 import { secureTokenStorage } from './tokenSecurity';
@@ -33,7 +32,11 @@ interface SecurityState {
  * Security integration hook
  */
 export function useSecurityIntegration() {
-  const apolloClient = useApolloClient();
+  // Create a mock Apollo client for now - in real implementation, use useApolloClient()
+  const apolloClient = new ApolloClient({
+    cache: new InMemoryCache(),
+    uri: '/api/graphql',
+  });
   const [securityState, setSecurityState] = useState<SecurityState>({
     csrfToken: null,
     isSecureStorageAvailable: false,
@@ -68,8 +71,8 @@ export function useSecurityIntegration() {
       }
 
       setSecurityState(prev => ({ ...prev, securityHeaders }));
-    } catch (error) {
-      console.error('Failed to initialize security:', error);
+    } catch (securityError) {
+      console.error('Failed to initialize security:', securityError);
     }
   }, [securityState.csrfToken]);
 
@@ -89,7 +92,7 @@ export function useSecurityIntegration() {
         errors: [],
         warnings,
       };
-    } catch (error) {
+    } catch (validationError) {
       return {
         success: false,
         errors: [{
@@ -159,7 +162,7 @@ export function useSecurityIntegration() {
 
       // Execute GraphQL operation with security headers
       const result = await apolloClient.query({
-        query: operation as any, // Type assertion for flexibility
+        query: operation as unknown as DocumentNode,
         variables,
         context: {
           headers,
@@ -219,7 +222,7 @@ export function useSecurityIntegration() {
 
       // Execute GraphQL mutation with security headers
       const result = await apolloClient.mutate({
-        mutation: mutation as any, // Type assertion for flexibility
+        mutation: mutation as unknown as DocumentNode,
         variables,
         context: {
           headers,

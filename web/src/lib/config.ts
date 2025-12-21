@@ -19,8 +19,8 @@ const envSchema = z.object({
   NEXT_PUBLIC_WS_ENDPOINT: z.string().url(),
   
   // Development Configuration
-  NEXT_PUBLIC_ENABLE_DEV_TOOLS: z.string().transform(val => val === 'true').default('false'),
-  NEXT_PUBLIC_ENABLE_GRAPHQL_PLAYGROUND: z.string().transform(val => val === 'true').default('false'),
+  NEXT_PUBLIC_ENABLE_DEV_TOOLS: z.string().default('false').transform(val => val === 'true'),
+  NEXT_PUBLIC_ENABLE_GRAPHQL_PLAYGROUND: z.string().default('false').transform(val => val === 'true'),
   
   // Authentication Configuration
   NEXT_PUBLIC_JWT_SECRET: z.string().min(32, 'JWT secret must be at least 32 characters'),
@@ -33,7 +33,7 @@ const envSchema = z.object({
   NEXT_PUBLIC_MAX_FILE_SIZE: z.string().default('100MB'),
   NEXT_PUBLIC_MAX_VIDEO_SIZE: z.string().default('500MB'),
   NEXT_PUBLIC_ALLOWED_FILE_TYPES: z.string().default('image/*,video/*,application/pdf'),
-  NEXT_PUBLIC_CONCURRENT_UPLOADS: z.string().transform(val => parseInt(val, 10)).default('3'),
+  NEXT_PUBLIC_CONCURRENT_UPLOADS: z.string().default('3').transform(val => parseInt(val, 10)),
   
   // AWS Configuration
   NEXT_PUBLIC_AWS_REGION: z.string().default('us-east-1'),
@@ -46,8 +46,8 @@ const envSchema = z.object({
   NEXT_PUBLIC_SENTRY_DSN_STAGING: z.string().optional(),
   NEXT_PUBLIC_SENTRY_ENVIRONMENT: z.string().default('development'),
   NEXT_PUBLIC_SENTRY_RELEASE: z.string().default('1.0.0'),
-  NEXT_PUBLIC_SENTRY_SAMPLE_RATE: z.string().transform(val => parseFloat(val)).default('1.0'),
-  NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE: z.string().transform(val => parseFloat(val)).default('0.1'),
+  NEXT_PUBLIC_SENTRY_SAMPLE_RATE: z.string().default('1.0').transform(val => parseFloat(val)),
+  NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE: z.string().default('0.1').transform(val => parseFloat(val)),
   
   // Backend Integration for Error Correlation
   NEXT_PUBLIC_BACKEND_VERSION: z.string().optional(),
@@ -56,41 +56,41 @@ const envSchema = z.object({
   NEXT_PUBLIC_COMMIT_SHA: z.string().optional(),
   
   // Performance Monitoring
-  NEXT_PUBLIC_ENABLE_PERFORMANCE_MONITORING: z.string().transform(val => val === 'true').default('true'),
-  NEXT_PUBLIC_PERFORMANCE_SAMPLE_RATE: z.string().transform(val => parseFloat(val)).default('0.1'),
+  NEXT_PUBLIC_ENABLE_PERFORMANCE_MONITORING: z.string().default('true').transform(val => val === 'true'),
+  NEXT_PUBLIC_PERFORMANCE_SAMPLE_RATE: z.string().default('0.1').transform(val => parseFloat(val)),
   
   // Cache Configuration
-  NEXT_PUBLIC_CACHE_TTL: z.string().transform(val => parseInt(val, 10)).default(() => '300000'),
-  NEXT_PUBLIC_CACHE_MAX_SIZE: z.string().transform(val => parseInt(val, 10)).default(() => '52428800'),
-  NEXT_PUBLIC_ENABLE_CACHE_PERSISTENCE: z.string().transform(val => val === 'true').default(() => 'true'),
+  NEXT_PUBLIC_CACHE_TTL: z.string().default('300000').transform(val => parseInt(val, 10)),
+  NEXT_PUBLIC_CACHE_MAX_SIZE: z.string().default('52428800').transform(val => parseInt(val, 10)),
+  NEXT_PUBLIC_ENABLE_CACHE_PERSISTENCE: z.string().default('true').transform(val => val === 'true'),
   
   // Real-time Configuration
-  NEXT_PUBLIC_WS_RECONNECT_ATTEMPTS: z.string().transform(val => parseInt(val, 10)).default(() => '5'),
-  NEXT_PUBLIC_WS_RECONNECT_INTERVAL: z.string().transform(val => parseInt(val, 10)).default(() => '1000'),
-  NEXT_PUBLIC_WS_HEARTBEAT_INTERVAL: z.string().transform(val => parseInt(val, 10)).default(() => '30000'),
+  NEXT_PUBLIC_WS_RECONNECT_ATTEMPTS: z.string().default('5').transform(val => parseInt(val, 10)),
+  NEXT_PUBLIC_WS_RECONNECT_INTERVAL: z.string().default('1000').transform(val => parseInt(val, 10)),
+  NEXT_PUBLIC_WS_HEARTBEAT_INTERVAL: z.string().default('30000').transform(val => parseInt(val, 10)),
   
   // Security Configuration
-  NEXT_PUBLIC_ENABLE_CSRF_PROTECTION: z.string().transform(val => val === 'true').default(() => 'true'),
-  NEXT_PUBLIC_ENABLE_XSS_PROTECTION: z.string().transform(val => val === 'true').default(() => 'true'),
-  NEXT_PUBLIC_SECURE_COOKIES: z.string().transform(val => val === 'true').default(() => 'false'),
+  NEXT_PUBLIC_ENABLE_CSRF_PROTECTION: z.string().default('true').transform(val => val === 'true'),
+  NEXT_PUBLIC_ENABLE_XSS_PROTECTION: z.string().default('true').transform(val => val === 'true'),
+  NEXT_PUBLIC_SECURE_COOKIES: z.string().default('false').transform(val => val === 'true'),
   
   // Rate Limiting
-  NEXT_PUBLIC_RATE_LIMIT_MAX: z.string().transform(val => parseInt(val, 10)).default(() => '100'),
-  NEXT_PUBLIC_RATE_LIMIT_WINDOW: z.string().transform(val => parseInt(val, 10)).default(() => '900000'),
+  NEXT_PUBLIC_RATE_LIMIT_MAX: z.string().default('100').transform(val => parseInt(val, 10)),
+  NEXT_PUBLIC_RATE_LIMIT_WINDOW: z.string().default('900000').transform(val => parseInt(val, 10)),
   
   // Feature Flags
-  NEXT_PUBLIC_ENABLE_ANALYTICS: z.string().transform(val => val === 'true').default(() => 'true'),
-  NEXT_PUBLIC_ENABLE_NOTIFICATIONS: z.string().transform(val => val === 'true').default(() => 'true'),
-  NEXT_PUBLIC_ENABLE_REAL_TIME: z.string().transform(val => val === 'true').default(() => 'true'),
-  NEXT_PUBLIC_ENABLE_FILE_UPLOADS: z.string().transform(val => val === 'true').default(() => 'true'),
+  NEXT_PUBLIC_ENABLE_ANALYTICS: z.string().default('true').transform(val => val === 'true'),
+  NEXT_PUBLIC_ENABLE_NOTIFICATIONS: z.string().default('true').transform(val => val === 'true'),
+  NEXT_PUBLIC_ENABLE_REAL_TIME: z.string().default('true').transform(val => val === 'true'),
+  NEXT_PUBLIC_ENABLE_FILE_UPLOADS: z.string().default('true').transform(val => val === 'true'),
   
   // API Timeouts
-  NEXT_PUBLIC_API_TIMEOUT: z.string().transform(val => parseInt(val, 10)).default(() => '30000'),
-  NEXT_PUBLIC_UPLOAD_TIMEOUT: z.string().transform(val => parseInt(val, 10)).default(() => '300000'),
+  NEXT_PUBLIC_API_TIMEOUT: z.string().default('30000').transform(val => parseInt(val, 10)),
+  NEXT_PUBLIC_UPLOAD_TIMEOUT: z.string().default('300000').transform(val => parseInt(val, 10)),
   
   // Development Tools
-  NEXT_PUBLIC_ENABLE_REDUX_DEVTOOLS: z.string().transform(val => val === 'true').default(() => 'false'),
-  NEXT_PUBLIC_ENABLE_APOLLO_DEVTOOLS: z.string().transform(val => val === 'true').default(() => 'false'),
+  NEXT_PUBLIC_ENABLE_REDUX_DEVTOOLS: z.string().default('false').transform(val => val === 'true'),
+  NEXT_PUBLIC_ENABLE_APOLLO_DEVTOOLS: z.string().default('false').transform(val => val === 'true'),
   NEXT_PUBLIC_LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
 });
 

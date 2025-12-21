@@ -62,7 +62,7 @@ function parseJWT(token: string): Record<string, unknown> | null {
  */
 function isTokenExpired(token: string): boolean {
   const payload = parseJWT(token);
-  if (!payload || !payload.exp) return true;
+  if (!payload || !payload.exp || typeof payload.exp !== 'number') return true;
   
   const currentTime = Math.floor(Date.now() / 1000);
   const expirationTime = payload.exp;
@@ -209,7 +209,7 @@ export async function middleware(request: NextRequest) {
   // If route requires specific roles, check user role
   if (requiredRoles && accessToken) {
     const payload = parseJWT(accessToken);
-    if (!payload || !payload.role) {
+    if (!payload || !payload.role || typeof payload.role !== 'string') {
       return NextResponse.redirect(new URL('/unauthorized', request.url));
     }
 

@@ -112,22 +112,22 @@ export function useMessageSubscription(
         fields: {
           conversations(existingConversations = []) {
             // Update conversation cache with new message
-            const messageData = data as any;
-            return existingConversations.map((conversation: any) => {
+            const messageData = data as Record<string, unknown>;
+            return existingConversations.map((conversation: Record<string, unknown>) => {
               if (conversation.id === messageData?.conversationId) {
                 return {
                   ...conversation,
                   lastMessage: messageData,
                   updatedAt: new Date().toISOString(),
-                  unreadCount: conversation.unreadCount + 1,
+                  unreadCount: (conversation.unreadCount as number) + 1,
                 };
               }
               return conversation;
             });
           },
-          messages(existingMessages = [], { args }) {
+          messages(existingMessages = [], { args }: { args?: Record<string, unknown> }) {
             // Add new message to the specific conversation's message list
-            if (args?.conversationId === (data as any)?.conversationId) {
+            if (args?.conversationId === (data as Record<string, unknown>)?.conversationId) {
               return [data, ...existingMessages];
             }
             return existingMessages;
@@ -173,8 +173,8 @@ export function useProgressSubscription(
         fields: {
           enrollments(existingEnrollments = []) {
             // Update enrollment progress in cache
-            const progressData = data as any;
-            return existingEnrollments.map((enrollment: any) => {
+            const progressData = data as Record<string, unknown>;
+            return existingEnrollments.map((enrollment: Record<string, unknown>) => {
               if (enrollment.id === progressData?.enrollmentId) {
                 return {
                   ...enrollment,
@@ -187,14 +187,14 @@ export function useProgressSubscription(
               return enrollment;
             });
           },
-          courseProgress(existingProgress = [], { args }) {
+          courseProgress(existingProgress = [], { args }: { args?: Record<string, unknown> }) {
             // Update course-specific progress
-            if (args?.courseId === (data as any)?.courseId) {
-              return existingProgress.map((progress: any) => {
-                if (progress.enrollmentId === (data as any)?.enrollmentId) {
+            if (args?.courseId === (data as Record<string, unknown>)?.courseId) {
+              return existingProgress.map((progress: Record<string, unknown>) => {
+                if (progress.enrollmentId === (data as Record<string, unknown>)?.enrollmentId) {
                   return {
                     ...progress,
-                    ...(data as any),
+                    ...(data as Record<string, unknown>),
                     updatedAt: new Date().toISOString(),
                   };
                 }
@@ -250,7 +250,7 @@ export function useNotificationSubscription(
             // Increment unread count
             return existingCount + 1;
           },
-          userNotifications(existingUserNotifications = [], { args }) {
+          userNotifications(existingUserNotifications = [], { args }: { args?: Record<string, unknown> }) {
             // Update user-specific notifications
             if (args?.userId === userId) {
               return [data, ...existingUserNotifications];
@@ -300,9 +300,9 @@ export function usePresenceSubscription(
         fields: {
           coursePresence(existingPresence = []) {
             // Update user presence in course
-            const presenceData = data as any;
+            const presenceData = data as Record<string, unknown>;
             const existingIndex = existingPresence.findIndex(
-              (presence: any) => presence.userId === presenceData?.userId
+              (presence: Record<string, unknown>) => presence.userId === presenceData?.userId
             );
             
             if (existingIndex >= 0) {
@@ -327,15 +327,15 @@ export function usePresenceSubscription(
           },
           onlineUsers(existingOnlineUsers = []) {
             // Update online users list
-            const presenceData = data as any;
+            const presenceData = data as Record<string, unknown>;
             if (presenceData.status === 'online') {
               // Add to online users if not already present
-              if (!existingOnlineUsers.some((user: any) => user.id === presenceData.userId)) {
+              if (!existingOnlineUsers.some((user: Record<string, unknown>) => user.id === presenceData.userId)) {
                 return [...existingOnlineUsers, { id: presenceData.userId }];
               }
             } else {
               // Remove from online users
-              return existingOnlineUsers.filter((user: any) => user.id !== presenceData.userId);
+              return existingOnlineUsers.filter((user: Record<string, unknown>) => user.id !== presenceData.userId);
             }
             return existingOnlineUsers;
           },

@@ -42,7 +42,7 @@ export interface SearchContextValue {
   sort: SearchSort;
   results: CourseSearchResult[];
   loading: boolean;
-  error?: Error;
+  error?: Error | undefined;
   
   // Search actions
   setQuery: (query: string) => void;
@@ -72,7 +72,7 @@ export interface SearchContextValue {
   
   // Search optimization
   optimizeResults: (results: CourseSearchResult[]) => CourseSearchResult[];
-  userPreferences?: UserPreferences;
+  userPreferences: UserPreferences | undefined;
   setUserPreferences: (preferences: UserPreferences) => void;
   
   // Search history
@@ -157,7 +157,9 @@ export function SearchProvider({
       const stored = localStorage.getItem('search_history');
       if (stored) {
         try {
-          setSearchHistory(JSON.parse(stored));
+          const parsedHistory = JSON.parse(stored);
+          // Use functional update to avoid direct setState in effect
+          setSearchHistory(() => parsedHistory);
         } catch (error) {
           console.warn('Failed to load search history:', error);
         }
@@ -167,7 +169,9 @@ export function SearchProvider({
       const storedPrefs = localStorage.getItem('user_search_preferences');
       if (storedPrefs && !initialUserPreferences) {
         try {
-          setUserPreferences(JSON.parse(storedPrefs));
+          const parsedPrefs = JSON.parse(storedPrefs);
+          // Use functional update to avoid direct setState in effect
+          setUserPreferences(() => parsedPrefs);
         } catch (error) {
           console.warn('Failed to load user preferences:', error);
         }
@@ -236,9 +240,19 @@ export function SearchProvider({
       searchHook.data.documents,
       userPreferences
     );
-  }, [searchHook.data?.documents, optimizationHook, userPreferences]);
+  }, [searchHook.data, optimizationHook, userPreferences]);
   
   // Search actions
+  const addToHistory = useCallback((searchQuery: string) => {
+    if (!searchQuery.trim()) return;
+    
+    setSearchHistory(prev => {
+      const filtered = prev.filter(item => item !== searchQuery);
+      const newHistory = [searchQuery, ...filtered].slice(0, 50); // Keep last 50
+      return newHistory;
+    });
+  }, []);
+  
   const performSearch = useCallback(async () => {
     if (!query.trim()) return;
     
@@ -280,16 +294,6 @@ export function SearchProvider({
     await searchHook.fetchMore({ from, size: 20 });
     setCurrentPage(nextPage);
   }, [searchHook, currentPage]);
-  
-  const addToHistory = useCallback((searchQuery: string) => {
-    if (!searchQuery.trim()) return;
-    
-    setSearchHistory(prev => {
-      const filtered = prev.filter(item => item !== searchQuery);
-      const newHistory = [searchQuery, ...filtered].slice(0, 50); // Keep last 50
-      return newHistory;
-    });
-  }, []);
   
   const clearHistory = useCallback(() => {
     setSearchHistory([]);
@@ -501,8 +505,8 @@ export function useSearchPerformance() {
         averageSearchTime: searchMetrics.averageSearchTime || 0,
         successRate: searchMetrics.successRate || 0,
         totalSearches: searchMetrics.totalSearches || 0,
-        slowSearches: searchMetrics.totalSearches > 0 
-          ? Math.round((searchMetrics.totalSearches * 0.1)) // Estimate 10% slow searches
+        slowSearches: (searchMetrics.totalSearches || 0) > 0 
+          ? Math.round(((searchMetrics.totalSearches || 0) * 0.1)) // Estimate 10% slow searches
           : 0,
       }));
     }

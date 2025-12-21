@@ -95,7 +95,7 @@ export const serverData = {
     });
 
     return {
-      courses: result.data?.courses?.edges?.map(edge => edge.node) || [],
+      courses: result.data?.courses?.edges?.map((edge: { node: unknown }) => edge.node) || [],
       pageInfo: result.data?.courses?.pageInfo || {},
       totalCount: result.data?.courses?.totalCount || 0,
       errors: result.errors,
@@ -139,7 +139,7 @@ export const serverData = {
     });
 
     return {
-      enrollments: result.data?.myEnrollments?.edges?.map(edge => edge.node) || [],
+      enrollments: result.data?.myEnrollments?.edges?.map((edge: { node: unknown }) => edge.node) || [],
       pageInfo: result.data?.myEnrollments?.pageInfo || {},
       totalCount: result.data?.myEnrollments?.totalCount || 0,
       errors: result.errors,
@@ -164,7 +164,7 @@ export const serverData = {
       featuredCourses: coursesResult.courses,
       stats: {
         totalEnrollments: enrollmentsResult.totalCount,
-        completedCourses: enrollmentsResult.enrollments.filter(e => e.status === 'COMPLETED').length,
+        completedCourses: enrollmentsResult.enrollments.filter((e: { status: string }) => e.status === 'COMPLETED').length,
       },
     };
   },

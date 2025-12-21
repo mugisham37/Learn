@@ -14,6 +14,17 @@ import type {
   SearchFacets 
 } from '../../hooks/useSearch';
 
+// Extend Window interface for gtag
+declare global {
+  interface Window {
+    gtag?: (
+      command: 'event' | 'config' | 'set',
+      targetId: string,
+      config?: Record<string, unknown>
+    ) => void;
+  }
+}
+
 // ============================================================================
 // Query Processing Utilities
 // ============================================================================
@@ -71,9 +82,9 @@ export function generateQuerySuggestions(query: string, existingResults?: Course
 export function buildElasticsearchQuery(
   query: string,
   filters: SearchFilters,
-  sort: { field: string; order: string }
-) {
-  const esQuery: any = {
+  _sort: { field: string; order: string }
+): Record<string, unknown> {
+  const esQuery: Record<string, unknown> = {
     bool: {
       must: [],
       filter: [],
@@ -113,14 +124,14 @@ export function buildElasticsearchQuery(
   }
 
   if (filters.priceRange) {
-    const priceFilter: any = { range: { price: {} } };
+    const priceFilter: Record<string, unknown> = { range: { price: {} } };
     if (filters.priceRange.min !== undefined) {
-      priceFilter.range.price.gte = filters.priceRange.min;
+      (priceFilter.range as Record<string, Record<string, unknown>>).price.gte = filters.priceRange.min;
     }
     if (filters.priceRange.max !== undefined) {
-      priceFilter.range.price.lte = filters.priceRange.max;
+      (priceFilter.range as Record<string, Record<string, unknown>>).price.lte = filters.priceRange.max;
     }
-    esQuery.bool.filter.push(priceFilter);
+    (esQuery.bool as Record<string, unknown[]>).filter.push(priceFilter);
   }
 
   if (filters.rating?.min) {
@@ -609,7 +620,7 @@ function formatLanguageLabel(language: string): string {
   return languageNames[language] || language.toUpperCase();
 }
 
-function extractHighlights(highlight?: Record<string, any>): string[] {
+function extractHighlights(highlight?: Record<string, unknown>): string[] {
   if (!highlight) return [];
   
   const highlights: string[] = [];
@@ -642,7 +653,7 @@ function getSessionId(): string {
   return sessionId;
 }
 
-function storeLocalAnalytics(event: any): void {
+function storeLocalAnalytics(event: Record<string, unknown>): void {
   try {
     const stored = localStorage.getItem('search_analytics') || '[]';
     const analytics = JSON.parse(stored);

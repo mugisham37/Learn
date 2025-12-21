@@ -755,8 +755,11 @@ export function useChat(): [ChatState, ChatActions] {
     startTyping: useCallback((conversationId: string) => {
       // Send typing indicator via Socket.io
       if (typeof window !== 'undefined') {
-        const { sendTypingIndicator } = require('../realtime/socketClient').default;
-        sendTypingIndicator(conversationId, true);
+        import('../realtime/socketClient').then(({ default: socketClient }) => {
+          socketClient.sendTypingIndicator(conversationId, true);
+        }).catch(() => {
+          console.warn('Failed to load socket client');
+        });
       }
       
       console.log(`Started typing in conversation ${conversationId}`);
@@ -770,8 +773,11 @@ export function useChat(): [ChatState, ChatActions] {
       typingTimeoutRef.current[conversationId] = setTimeout(() => {
         // Send stop typing indicator via Socket.io
         if (typeof window !== 'undefined') {
-          const { sendTypingIndicator } = require('../realtime/socketClient').default;
-          sendTypingIndicator(conversationId, false);
+          import('../realtime/socketClient').then(({ default: socketClient }) => {
+            socketClient.sendTypingIndicator(conversationId, false);
+          }).catch(() => {
+            console.warn('Failed to load socket client');
+          });
         }
         
         console.log(`Stopped typing in conversation ${conversationId}`);
@@ -786,8 +792,11 @@ export function useChat(): [ChatState, ChatActions] {
     stopTyping: useCallback((conversationId: string) => {
       // Send stop typing indicator via Socket.io
       if (typeof window !== 'undefined') {
-        const { sendTypingIndicator } = require('../realtime/socketClient').default;
-        sendTypingIndicator(conversationId, false);
+        import('../realtime/socketClient').then(({ default: socketClient }) => {
+          socketClient.sendTypingIndicator(conversationId, false);
+        }).catch(() => {
+          console.warn('Failed to load socket client');
+        });
       }
       
       console.log(`Stopped typing in conversation ${conversationId}`);
