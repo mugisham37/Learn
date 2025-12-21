@@ -24,7 +24,7 @@ interface ContentAccessControlProps {
   courseId: string;
   lessonId?: string;
   title: string;
-  thumbnail?: string;
+  thumbnail: string;
   className?: string;
 }
 
@@ -71,7 +71,7 @@ export function ContentAccessControl({
     }
 
     // Check basic content viewing permission
-    if (!hasPermission('course:view' as any)) {
+    if (!hasPermission('course:view' as const)) {
       return {
         type: 'permission',
         message: 'You do not have permission to view content',
@@ -143,13 +143,7 @@ export function ContentAccessControl({
       <div className='access-restriction-card'>
         {/* Thumbnail or placeholder */}
         <div className='content-preview'>
-          {thumbnail ? (
-            <img src={thumbnail} alt={title} className='thumbnail' />
-          ) : (
-            <div className='thumbnail-placeholder'>
-              <div className='play-icon'>▶️</div>
-            </div>
-          )}
+          <img src={thumbnail} alt={title} className='thumbnail' />
           <div className='overlay'>
             <div className='lock-icon'>🔒</div>
           </div>

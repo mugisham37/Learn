@@ -77,10 +77,11 @@ export function ContentManagementExample({ courseId, lessonId }: ContentManageme
         onProgress: progress => {
           console.log(`Upload progress: ${progress.percentage}%`);
         },
-        onComplete: (result: any) => {
-          console.log('Upload completed:', result);
-          if (result?.id) {
-            setUploadedAssetId(result.id);
+        onComplete: (result: unknown) => {
+          const typedResult = result as { id?: string };
+          console.log('Upload completed:', typedResult);
+          if (typedResult?.id) {
+            setUploadedAssetId(typedResult.id);
           }
         },
         onError: error => {
@@ -104,10 +105,11 @@ export function ContentManagementExample({ courseId, lessonId }: ContentManageme
         onProgress: progress => {
           console.log(`Video upload progress: ${progress.percentage}%`);
         },
-        onComplete: (result: any) => {
-          console.log('Video upload completed:', result);
-          if (result?.id) {
-            setUploadedAssetId(result.id);
+        onComplete: (result: unknown) => {
+          const typedResult = result as { id?: string };
+          console.log('Video upload completed:', typedResult);
+          if (typedResult?.id) {
+            setUploadedAssetId(typedResult.id);
           }
         },
         onError: error => {
@@ -130,7 +132,7 @@ export function ContentManagementExample({ courseId, lessonId }: ContentManageme
       console.log('Asset deleted successfully');
       setUploadedAssetId(null);
       setSelectedFile(null);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Failed to delete asset:', error);
     }
   }, [uploadedAssetId, assetType, assetManagement]);
@@ -191,14 +193,14 @@ export function ContentManagementExample({ courseId, lessonId }: ContentManageme
                 />
               </div>
               <p>
-                {(fileUpload.uploadProgress || videoUpload.uploadProgress)?.percentage || 0}% -
-                {(fileUpload.uploadProgress || videoUpload.uploadProgress)?.status}
+                {(fileUpload.uploadProgress || videoUpload.uploadProgress)?.percentage || 0}% -{' '}
+                {String((fileUpload.uploadProgress || videoUpload.uploadProgress)?.status || '')}
               </p>
               {(fileUpload.uploadProgress || videoUpload.uploadProgress)?.speed && (
                 <p>
                   Speed:{' '}
                   {(
-                    (fileUpload.uploadProgress || videoUpload.uploadProgress)?.speed! /
+                    ((fileUpload.uploadProgress || videoUpload.uploadProgress)?.speed || 0) /
                     1024 /
                     1024
                   ).toFixed(2)}{' '}
@@ -304,10 +306,10 @@ export function ContentManagementExample({ courseId, lessonId }: ContentManageme
           {subscriptionData && (
             <div className='realtime-updates'>
               <h4>Real-time Updates</h4>
-              <p>Status: {subscriptionData.status}</p>
-              <p>Progress: {subscriptionData.progress}%</p>
-              {subscriptionData.errorMessage && (
-                <p className='error'>Error: {subscriptionData.errorMessage}</p>
+              <p>Status: {subscriptionData.videoProcessingUpdates?.status}</p>
+              <p>Progress: {subscriptionData.videoProcessingUpdates?.progress}%</p>
+              {subscriptionData.videoProcessingUpdates?.errorMessage && (
+                <p className='error'>Error: {subscriptionData.videoProcessingUpdates.errorMessage}</p>
               )}
             </div>
           )}

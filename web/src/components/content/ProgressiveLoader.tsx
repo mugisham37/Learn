@@ -18,7 +18,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 
 interface ProgressiveLoaderProps {
   title: string;
-  thumbnail?: string;
+  thumbnail: string;
   className?: string;
   type?: 'video' | 'image' | 'document';
   size?: 'small' | 'medium' | 'large';
@@ -52,27 +52,51 @@ export function ProgressiveLoader({
   const [connectionInfo, setConnectionInfo] = useState<ConnectionInfo | null>(null);
   const [optimizedThumbnail, setOptimizedThumbnail] = useState<string>('');
 
+  // Preload image utility - moved to top to avoid hoisting issues
+  const preloadImage = useCallback((url: string): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve();
+      img.onerror = () => reject(new Error('Failed to load image'));
+      img.src = url;
+    });
+  }, []);
+
   // Detect connection quality
   useEffect(() => {
-    if ('connection' in navigator) {
-      const connection = (navigator as any).connection;
-      setConnectionInfo({
-        effectiveType: connection.effectiveType || '4g',
-        downlink: connection.downlink || 10,
-        rtt: connection.rtt || 100,
-      });
+    const initializeConnection = () => {
+      if ('connection' in navigator) {
+        const connection = (navigator as Navigator & { connection?: { effectiveType?: string; downlink?: number; rtt?: number; addEventListener?: (event: string, handler: () => void) => void; removeEventListener?: (event: string, handler: () => void) => void } }).connection;
+        if (connection) {
+          const updateConnectionInfo = () => {
+            setConnectionInfo({
+              effectiveType: (connection.effectiveType as '2g' | '3g' | '4g' | 'slow-2g') || '4g',
+              downlink: connection.downlink || 10,
+              rtt: connection.rtt || 100,
+            });
+          };
 
-      const handleConnectionChange = () => {
-        setConnectionInfo({
-          effectiveType: connection.effectiveType || '4g',
-          downlink: connection.downlink || 10,
-          rtt: connection.rtt || 100,
-        });
-      };
+          updateConnectionInfo();
 
-      connection.addEventListener('change', handleConnectionChange);
-      return () => connection.removeEventListener('change', handleConnectionChange);
-    }
+          const handleConnectionChange = () => {
+            updateConnectionInfo();
+          };
+
+          if (connection.addEventListener) {
+            connection.addEventListener('change', handleConnectionChange);
+            return () => {
+              if (connection.removeEventListener) {
+                connection.removeEventListener('change', handleConnectionChange);
+              }
+            };
+          }
+        }
+      }
+      return undefined;
+    };
+
+    const cleanup = initializeConnection();
+    return cleanup;
   }, []);
 
   // Progressive loading strategy
@@ -145,6 +169,7 @@ export function ProgressiveLoader({
 
         setLoadingState({ phase: 'complete', progress: 100 });
       } catch (error) {
+        console.error('Loading error:', error);
         setLoadingState({
           phase: 'error',
           progress: 0,
@@ -154,20 +179,10 @@ export function ProgressiveLoader({
     };
 
     loadProgressively();
-  }, [thumbnail, getOptimizedThumbnailUrl, getLoadingStrategy]);
-
-  // Preload image utility
-  const preloadImage = (url: string): Promise<void> => {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => resolve();
-      img.onerror = () => reject(new Error('Failed to load image'));
-      img.src = url;
-    });
-  };
+  }, [thumbnail, getOptimizedThumbnailUrl, getLoadingStrategy, preloadImage]);
 
   // Get skeleton dimensions based on type and size
-  const getSkeletonDimensions = () => {
+  const getSkeletonDimensions = useCallback(() => {
     const dimensions = {
       video: {
         small: { width: '320px', height: '180px' },
@@ -187,7 +202,7 @@ export function ProgressiveLoader({
     };
 
     return dimensions[type][size];
-  };
+  }, [type, size]);
 
   const dimensions = getSkeletonDimensions();
 
@@ -309,7 +324,6 @@ export const ProgressiveLoadingUtils = {
       // Preload thumbnails and metadata
       return fetch(`/api/content/${id}/preview`, {
         method: 'HEAD',
-        priority: 'low' as RequestPriority,
       });
     });
 
@@ -353,13 +367,14 @@ export const ProgressiveLoadingUtils = {
       full: 85,
     }[contentType];
 
-    const connectionMultiplier =
-      {
-        'slow-2g': 0.6,
-        '2g': 0.7,
-        '3g': 0.85,
-        '4g': 1.0,
-      }[connectionType as keyof typeof connectionMultiplier] || 1.0;
+    const connectionMultipliers: Record<string, number> = {
+      'slow-2g': 0.6,
+      '2g': 0.7,
+      '3g': 0.85,
+      '4g': 1.0,
+    };
+
+    const connectionMultiplier = connectionMultipliers[connectionType] || 1.0;
 
     const viewportMultiplier =
       viewportWidth > 1920 ? 1.1 : viewportWidth > 1280 ? 1.0 : viewportWidth > 768 ? 0.9 : 0.8;

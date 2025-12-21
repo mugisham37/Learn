@@ -10,7 +10,7 @@
 
 'use client';
 
-import React, { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import {
   useSearch,
   useFacetedSearch,
@@ -18,8 +18,6 @@ import {
   useTrendingSearches,
   useSearchLessons,
   useSearchAnalytics,
-  useSearchOptimization,
-  useSearchContext,
   SearchProvider,
   type SearchFilters,
   type CourseSearchResult,
@@ -70,7 +68,6 @@ function SearchInterface() {
 
   // Analytics and optimization
   const analyticsHook = useSearchAnalytics();
-  const optimizationHook = useSearchOptimization();
 
   // Handle search submission
   const handleSearch = useCallback(async () => {
@@ -95,7 +92,7 @@ function SearchInterface() {
 
   // Handle result click tracking
   const handleResultClick = useCallback(
-    (result: CourseSearchResult, position: number) => {
+    (result: CourseSearchResult) => {
       analyticsHook.trackSearch(query, 1, 0); // Track click
       // Navigate to course page
       window.location.href = `/course/${result.slug}`;
@@ -303,7 +300,7 @@ function AdvancedFiltersPanel({ facetedSearch, onFiltersChange }: AdvancedFilter
   const [localFilters, setLocalFilters] = useState<SearchFilters>({});
 
   const handleFilterChange = useCallback(
-    (key: keyof SearchFilters, value: any) => {
+    (key: keyof SearchFilters, value: string[] | { min?: number; max?: number }) => {
       const newFilters = { ...localFilters, [key]: value };
       setLocalFilters(newFilters);
       onFiltersChange(newFilters);
@@ -369,10 +366,12 @@ function AdvancedFiltersPanel({ facetedSearch, onFiltersChange }: AdvancedFilter
             value={localFilters.priceRange?.min || ''}
             onChange={e => {
               const min = e.target.value ? parseInt(e.target.value, 10) : undefined;
-              handleFilterChange('priceRange', {
-                ...localFilters.priceRange,
-                min,
-              });
+              if (min !== undefined) {
+                handleFilterChange('priceRange', {
+                  ...localFilters.priceRange,
+                  min,
+                });
+              }
             }}
             className='border border-gray-300 rounded-md px-3 py-2'
           />
@@ -382,10 +381,12 @@ function AdvancedFiltersPanel({ facetedSearch, onFiltersChange }: AdvancedFilter
             value={localFilters.priceRange?.max || ''}
             onChange={e => {
               const max = e.target.value ? parseInt(e.target.value, 10) : undefined;
-              handleFilterChange('priceRange', {
-                ...localFilters.priceRange,
-                max,
-              });
+              if (max !== undefined) {
+                handleFilterChange('priceRange', {
+                  ...localFilters.priceRange,
+                  max,
+                });
+              }
             }}
             className='border border-gray-300 rounded-md px-3 py-2'
           />
@@ -411,8 +412,12 @@ function AdvancedFiltersPanel({ facetedSearch, onFiltersChange }: AdvancedFilter
 // ============================================================================
 
 interface FacetsPanelProps {
-  facets: any;
-  onFilterChange: (key: keyof SearchFilters, value: any) => void;
+  facets: {
+    categories?: Array<{ key: string; count: number }>;
+    difficulties?: Array<{ key: string; count: number }>;
+    priceRanges?: Array<{ key: string; count: number; from?: number; to?: number }>;
+  };
+  onFilterChange: (key: keyof SearchFilters, value: string[] | { min?: number; max?: number }) => void;
 }
 
 function FacetsPanel({ facets, onFilterChange }: FacetsPanelProps) {
@@ -421,11 +426,11 @@ function FacetsPanel({ facets, onFilterChange }: FacetsPanelProps) {
       <h3 className='text-lg font-semibold text-gray-900'>Refine Results</h3>
 
       {/* Categories */}
-      {facets.categories?.length > 0 && (
+      {facets.categories && facets.categories.length > 0 && (
         <div>
           <h4 className='font-medium text-gray-900 mb-2'>Categories</h4>
           <div className='space-y-1'>
-            {facets.categories.slice(0, 8).map((category: any) => (
+            {facets.categories.slice(0, 8).map((category) => (
               <button
                 key={category.key}
                 onClick={() => onFilterChange('category', [category.key])}
@@ -440,11 +445,11 @@ function FacetsPanel({ facets, onFilterChange }: FacetsPanelProps) {
       )}
 
       {/* Difficulties */}
-      {facets.difficulties?.length > 0 && (
+      {facets.difficulties && facets.difficulties.length > 0 && (
         <div>
           <h4 className='font-medium text-gray-900 mb-2'>Difficulty</h4>
           <div className='space-y-1'>
-            {facets.difficulties.map((difficulty: any) => (
+            {facets.difficulties.map((difficulty) => (
               <button
                 key={difficulty.key}
                 onClick={() => onFilterChange('difficulty', [difficulty.key])}
@@ -459,14 +464,21 @@ function FacetsPanel({ facets, onFilterChange }: FacetsPanelProps) {
       )}
 
       {/* Price Ranges */}
-      {facets.priceRanges?.length > 0 && (
+      {facets.priceRanges && facets.priceRanges.length > 0 && (
         <div>
           <h4 className='font-medium text-gray-900 mb-2'>Price</h4>
           <div className='space-y-1'>
-            {facets.priceRanges.map((range: any) => (
+            {facets.priceRanges.map((range) => (
               <button
                 key={range.key}
-                onClick={() => onFilterChange('priceRange', { min: range.from, max: range.to })}
+                onClick={() => {
+                  const min = range.from;
+                  const max = range.to;
+                  const priceRange: { min?: number; max?: number } = {};
+                  if (min !== undefined) priceRange.min = min;
+                  if (max !== undefined) priceRange.max = max;
+                  onFilterChange('priceRange', priceRange);
+                }}
                 className='flex justify-between w-full text-left text-sm text-gray-600 hover:text-gray-900'
               >
                 <span>{range.key}</span>
@@ -487,7 +499,7 @@ function FacetsPanel({ facets, onFilterChange }: FacetsPanelProps) {
 interface CourseResultsListProps {
   results: CourseSearchResult[];
   loading: boolean;
-  onResultClick: (result: CourseSearchResult, position: number) => void;
+  onResultClick: (result: CourseSearchResult) => void;
   onLoadMore: () => void;
   hasMore: boolean;
 }
@@ -533,10 +545,10 @@ function CourseResultsList({
 
   return (
     <div className='space-y-4'>
-      {results.map((result, index) => (
+      {results.map((result) => (
         <div
           key={result.id}
-          onClick={() => onResultClick(result, index)}
+          onClick={() => onResultClick(result)}
           className='bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow cursor-pointer'
         >
           <div className='flex justify-between items-start'>
@@ -608,7 +620,14 @@ function CourseResultsList({
 // ============================================================================
 
 interface LessonResultsListProps {
-  results: any[];
+  results: Array<{
+    id: string;
+    title: string;
+    courseTitle: string;
+    lessonType: string;
+    durationMinutes?: number;
+    courseDifficulty: string;
+  }>;
   loading: boolean;
   onLoadMore: () => void;
   hasMore: boolean;
@@ -636,7 +655,7 @@ function LessonResultsList({ results, loading, onLoadMore, hasMore }: LessonResu
 
   return (
     <div className='space-y-4'>
-      {results.map((result, index) => (
+      {results.map((result) => (
         <div
           key={result.id}
           className='bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow'

@@ -11,20 +11,6 @@ import { Suspense } from 'react';
 import { AdminLayout } from '@/components/layouts/ProtectedLayout';
 import { pageData } from '@/lib/ssr/dataFetching';
 import { nextCache } from '@/lib/cache/nextCacheIntegration';
-
-/**
- * Admin Dashboard Page
- *
- * Role-protected admin dashboard with server-side data fetching.
- * Demonstrates role-based access control and admin-specific layouts.
- *
- * Requirements: 8.1, 8.4
- */
-
-import { Suspense } from 'react';
-import { AdminLayout } from '@/components/layouts/ProtectedLayout';
-import { pageData } from '@/lib/ssr/dataFetching';
-import { nextCache } from '@/lib/cache/nextCacheIntegration';
 import type { AdminDashboardData } from '@/types/admin';
 
 /**

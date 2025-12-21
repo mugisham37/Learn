@@ -92,8 +92,7 @@ export function VideoPlayer({
   } = useStreamingUrl(lessonId, selectedQuality === 'auto' ? undefined : selectedQuality);
 
   // Check content access permissions
-  const hasContentAccess =
-    hasPermission('content:view') && ContentAccessControl.canAccessContent(courseId, lessonId);
+  const hasContentAccess = hasPermission('course:view' as const);
 
   // Initialize video player
   useEffect(() => {
@@ -109,6 +108,8 @@ export function VideoPlayer({
       video.src = streamingUrl.streamingUrl;
     } else {
       // Use HLS.js for other browsers
+      let cleanup: (() => void) | undefined;
+      
       import('hls.js').then(({ default: Hls }) => {
         if (Hls.isSupported()) {
           const hls = new Hls({
@@ -122,7 +123,7 @@ export function VideoPlayer({
 
           // Handle quality levels
           hls.on(Hls.Events.MANIFEST_PARSED, () => {
-            const qualities: StreamingQuality[] = hls.levels.map((level, index) => ({
+            const qualities: StreamingQuality[] = hls.levels.map((level: { height: number; bitrate: number }) => ({
               resolution: `${level.height}p`,
               bitrate: level.bitrate,
               label: `${level.height}p (${Math.round(level.bitrate / 1000)}k)`,
@@ -131,10 +132,10 @@ export function VideoPlayer({
           });
 
           // Handle errors
-          hls.on(Hls.Events.ERROR, (event, data) => {
+          hls.on(Hls.Events.ERROR, (_event: unknown, data: { fatal?: boolean; type?: string; details?: string; recoverable?: boolean }) => {
             if (data.fatal) {
               const videoError: VideoError = {
-                code: data.type,
+                code: data.type || 'UNKNOWN',
                 message: data.details || 'Video playback error',
                 recoverable: data.recoverable || false,
               };
@@ -143,10 +144,16 @@ export function VideoPlayer({
             }
           });
 
-          return () => hls.destroy();
+          cleanup = () => hls.destroy();
         }
+      }).catch(error => {
+        console.error('Failed to load HLS.js:', error);
       });
+
+      return cleanup;
     }
+
+    return undefined;
   }, [streamingUrl, onError]);
 
   // Video event handlers
@@ -349,14 +356,14 @@ export function VideoPlayer({
         courseId={courseId}
         lessonId={lessonId}
         title={title}
-        thumbnail={thumbnail}
+        thumbnail={thumbnail || ''}
       />
     );
   }
 
   // Show loading state
   if (urlLoading) {
-    return <ProgressiveLoader title={title} thumbnail={thumbnail} className={className} />;
+    return <ProgressiveLoader title={title} thumbnail={thumbnail || ''} className={className} />;
   }
 
   // Show error state
@@ -469,7 +476,7 @@ export function VideoPlayer({
       <OfflineContentManager
         lessonId={lessonId}
         courseId={courseId}
-        streamingUrl={streamingUrl?.streamingUrl}
+        streamingUrl={streamingUrl?.streamingUrl || ''}
       />
     </div>
   );

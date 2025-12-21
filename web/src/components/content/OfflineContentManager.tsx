@@ -14,13 +14,13 @@
  * Requirements: 13.5
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useCurrentUser } from '@/hooks/useUsers';
 
 interface OfflineContentManagerProps {
   lessonId: string;
   courseId: string;
-  streamingUrl?: string;
+  streamingUrl: string;
   className?: string;
 }
 
@@ -79,16 +79,28 @@ export function OfflineContentManager({
     checkOfflineSupport();
   }, []);
 
-  // Load offline content and storage info
-  useEffect(() => {
-    if (!isOfflineSupported) return;
+  // Open IndexedDB for offline content
+  const openOfflineDB = useCallback((): Promise<IDBDatabase> => {
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open('OfflineContent', 1);
 
-    loadOfflineContent();
-    updateStorageInfo();
-  }, [isOfflineSupported, lessonId]);
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => resolve(request.result);
+
+      request.onupgradeneeded = event => {
+        const db = (event.target as IDBOpenDBRequest).result;
+
+        if (!db.objectStoreNames.contains('content')) {
+          const store = db.createObjectStore('content', { keyPath: 'id' });
+          store.createIndex('lessonId', 'lessonId', { unique: false });
+          store.createIndex('courseId', 'courseId', { unique: false });
+        }
+      };
+    });
+  }, []);
 
   // Load offline content from IndexedDB
-  const loadOfflineContent = async () => {
+  const loadOfflineContent = useCallback(async () => {
     try {
       const db = await openOfflineDB();
       const transaction = db.transaction(['content'], 'readonly');
@@ -106,10 +118,10 @@ export function OfflineContentManager({
     } catch (error) {
       console.error('Failed to load offline content:', error);
     }
-  };
+  }, [lessonId, openOfflineDB]);
 
   // Update storage information
-  const updateStorageInfo = async () => {
+  const updateStorageInfo = useCallback(async () => {
     try {
       if ('storage' in navigator && 'estimate' in navigator.storage) {
         const estimate = await navigator.storage.estimate();
@@ -128,27 +140,15 @@ export function OfflineContentManager({
     } catch (error) {
       console.error('Failed to get storage info:', error);
     }
-  };
+  }, []);
 
-  // Open IndexedDB for offline content
-  const openOfflineDB = (): Promise<IDBDatabase> => {
-    return new Promise((resolve, reject) => {
-      const request = indexedDB.open('OfflineContent', 1);
+  // Load offline content and storage info
+  useEffect(() => {
+    if (!isOfflineSupported) return;
 
-      request.onerror = () => reject(request.error);
-      request.onsuccess = () => resolve(request.result);
-
-      request.onupgradeneeded = event => {
-        const db = (event.target as IDBOpenDBRequest).result;
-
-        if (!db.objectStoreNames.contains('content')) {
-          const store = db.createObjectStore('content', { keyPath: 'id' });
-          store.createIndex('lessonId', 'lessonId', { unique: false });
-          store.createIndex('courseId', 'courseId', { unique: false });
-        }
-      };
-    });
-  };
+    loadOfflineContent();
+    updateStorageInfo();
+  }, [isOfflineSupported, loadOfflineContent, updateStorageInfo]);
 
   // Download content for offline access
   const downloadContent = useCallback(async () => {
@@ -240,7 +240,7 @@ export function OfflineContentManager({
         error: error instanceof Error ? error.message : 'Download failed',
       });
     }
-  }, [streamingUrl, lessonId, courseId, isOfflineSupported]);
+  }, [streamingUrl, lessonId, courseId, isOfflineSupported, loadOfflineContent, updateStorageInfo, openOfflineDB]);
 
   // Remove offline content
   const removeContent = useCallback(
@@ -266,7 +266,7 @@ export function OfflineContentManager({
         console.error('Failed to remove content:', error);
       }
     },
-    [courseId, lessonId]
+    [courseId, lessonId, loadOfflineContent, updateStorageInfo, openOfflineDB]
   );
 
   // Clean up expired content
@@ -290,7 +290,7 @@ export function OfflineContentManager({
     } catch (error) {
       console.error('Failed to cleanup expired content:', error);
     }
-  }, [removeContent]);
+  }, [removeContent, openOfflineDB]);
 
   // Format file size
   const formatFileSize = (bytes: number): string => {
@@ -458,15 +458,20 @@ export const OfflineContentUtils = {
    */
   isContentAvailableOffline: async (lessonId: string): Promise<boolean> => {
     try {
-      const db = await indexedDB.open('OfflineContent', 1);
+      const request = indexedDB.open('OfflineContent', 1);
+      const db = await new Promise<IDBDatabase>((resolve, reject) => {
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+      
       const transaction = db.transaction(['content'], 'readonly');
       const store = transaction.objectStore('content');
       const index = store.index('lessonId');
-      const request = index.get(lessonId);
+      const getRequest = index.get(lessonId);
 
       return new Promise(resolve => {
-        request.onsuccess = () => resolve(!!request.result);
-        request.onerror = () => resolve(false);
+        getRequest.onsuccess = () => resolve(!!getRequest.result);
+        getRequest.onerror = () => resolve(false);
       });
     } catch {
       return false;
@@ -478,18 +483,23 @@ export const OfflineContentUtils = {
    */
   getOfflineContentUrl: async (lessonId: string): Promise<string | null> => {
     try {
-      const db = await indexedDB.open('OfflineContent', 1);
+      const request = indexedDB.open('OfflineContent', 1);
+      const db = await new Promise<IDBDatabase>((resolve, reject) => {
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+      
       const transaction = db.transaction(['content'], 'readonly');
       const store = transaction.objectStore('content');
       const index = store.index('lessonId');
-      const request = index.get(lessonId);
+      const getRequest = index.get(lessonId);
 
       return new Promise(resolve => {
-        request.onsuccess = () => {
-          const content = request.result as OfflineContent;
+        getRequest.onsuccess = () => {
+          const content = getRequest.result as OfflineContent;
           resolve(content?.url || null);
         };
-        request.onerror = () => resolve(null);
+        getRequest.onerror = () => resolve(null);
       });
     } catch {
       return null;

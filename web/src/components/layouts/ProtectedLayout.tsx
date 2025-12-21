@@ -9,10 +9,12 @@
 
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { ErrorBoundary } from '@/lib/errors';
+import type { User } from '@/types/entities';
+import type { ClassifiedError } from '@/lib/errors/errorTypes';
 
 interface ProtectedLayoutProps {
   children: React.ReactNode;
@@ -244,7 +246,7 @@ function Header({
 }: {
   actions: HeaderAction[];
   userRole: string;
-  user: any;
+  user: User | null;
 }) {
   const { logout } = useAuth();
   const filteredActions = filterByRole(actions, userRole);
@@ -351,7 +353,11 @@ export function ProtectedLayout({
 }: ProtectedLayoutProps) {
   const { user, isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
-  const [layoutConfig, setLayoutConfig] = useState<LayoutConfig | null>(null);
+
+  // Memoize layout configuration based on user role
+  const layoutConfig = useMemo(() => {
+    return user?.role ? getLayoutConfig(user.role) : null;
+  }, [user]);
 
   // Check authentication and authorization
   useEffect(() => {
@@ -370,13 +376,6 @@ export function ProtectedLayout({
     }
   }, [isAuthenticated, isLoading, user, requiredRoles, router, fallbackPath]);
 
-  // Set layout configuration based on user role
-  useEffect(() => {
-    if (user?.role) {
-      setLayoutConfig(getLayoutConfig(user.role));
-    }
-  }, [user?.role]);
-
   // Show loading state
   if (isLoading || !layoutConfig) {
     return <LoadingLayout />;
@@ -394,8 +393,8 @@ export function ProtectedLayout({
 
   return (
     <ErrorBoundary
-      fallback={({ error, resetError }: { error: Error; resetError: () => void }) => (
-        <ErrorLayout error={error} retry={resetError} />
+      fallback={(error: ClassifiedError, retry: () => void) => (
+        <ErrorLayout error={new Error(error.message)} retry={retry} />
       )}
     >
       <div className={`min-h-screen bg-gray-50 ${className}`}>

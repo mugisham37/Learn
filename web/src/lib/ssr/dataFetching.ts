@@ -212,19 +212,19 @@ export const serverData = {
       recentActivity: [
         {
           id: '1',
-          type: 'user_registration',
+          type: 'user_registration' as const,
           message: 'New user registration: john.doe@example.com',
           timestamp: new Date().toISOString(),
         },
         {
           id: '2',
-          type: 'course_published',
+          type: 'course_published' as const,
           message: 'Course published: Advanced React Patterns',
           timestamp: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
         },
         {
           id: '3',
-          type: 'payment_processed',
+          type: 'payment_processed' as const,
           message: 'Payment processed: $99.00',
           timestamp: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
         },
