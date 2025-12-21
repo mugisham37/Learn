@@ -19,20 +19,27 @@ import type {
   NetworkErrorDetails,
   GraphQLErrorExtensions
 } from './errorTypes';
+import { 
+  getBackendErrorConfig, 
+  getBackendFieldError, 
+  getBackendContextualMessage,
+  isBackendError,
+  BACKEND_ERROR_MAPPING 
+} from './backendErrorMapping';
 
 /**
  * Error code to type mapping for GraphQL errors
+ * Now uses backend-specific error mapping with fallbacks
  */
 const GRAPHQL_ERROR_MAPPING: Record<string, ErrorType> = {
-  'UNAUTHENTICATED': 'AUTHENTICATION_ERROR',
-  'FORBIDDEN': 'AUTHORIZATION_ERROR',
-  'BAD_USER_INPUT': 'VALIDATION_ERROR',
+  // Legacy fallbacks for non-backend errors
   'GRAPHQL_VALIDATION_FAILED': 'VALIDATION_ERROR',
-  'INTERNAL_SERVER_ERROR': 'UNKNOWN_ERROR',
   'NETWORK_ERROR': 'NETWORK_ERROR',
-  'UPLOAD_ERROR': 'UPLOAD_ERROR',
-  'SUBSCRIPTION_ERROR': 'SUBSCRIPTION_ERROR',
   'CACHE_ERROR': 'CACHE_ERROR',
+  // Backend errors are handled by BACKEND_ERROR_MAPPING
+  ...Object.fromEntries(
+    Object.entries(BACKEND_ERROR_MAPPING).map(([code, config]) => [code, config.type])
+  ),
 };
 
 /**
@@ -108,6 +115,55 @@ export class ErrorClassifier {
     context?: Partial<ErrorContext>
   ): ClassifiedError {
     const code = error.extensions?.code || 'UNKNOWN_ERROR';
+    
+    // Use backend error mapping if available
+    if (isBackendError(code)) {
+      const backendConfig = getBackendErrorConfig(code);
+      
+      // Get contextual message if context is provided
+      let userMessage = backendConfig.userMessage || error.message;
+      if (context?.operation) {
+        const contextualMessage = getBackendContextualMessage(context.operation, code);
+        if (contextualMessage) {
+          userMessage = contextualMessage;
+        }
+      }
+      
+      // Get field-specific message if field is provided
+      if (error.extensions?.field) {
+        const fieldMessage = getBackendFieldError(error.extensions.field, code);
+        if (fieldMessage) {
+          userMessage = fieldMessage;
+        }
+      }
+      
+      return {
+        id: generateId(),
+        type: backendConfig.type,
+        category: backendConfig.category,
+        severity: backendConfig.severity,
+        code,
+        message: error.message,
+        userMessage,
+        field: error.extensions?.field || undefined,
+        retryable: backendConfig.retryable,
+        retryDelay: this.getRetryDelay(backendConfig.type),
+        maxRetries: this.getMaxRetries(backendConfig.type),
+        context: context ? {
+          ...context,
+          metadata: {
+            path: error.path,
+            locations: error.locations,
+            extensions: error.extensions,
+            backendError: true,
+          },
+        } : undefined,
+        timestamp: new Date(),
+        stack: undefined,
+      };
+    }
+    
+    // Fallback to legacy mapping for non-backend errors
     const type = GRAPHQL_ERROR_MAPPING[code] || 'UNKNOWN_ERROR';
     const category = TYPE_TO_CATEGORY[type];
     const severity = TYPE_TO_SEVERITY[type];
@@ -130,6 +186,7 @@ export class ErrorClassifier {
           path: error.path,
           locations: error.locations,
           extensions: error.extensions,
+          backendError: false,
         },
       } : undefined,
       timestamp: new Date(),

@@ -136,7 +136,7 @@ export function RoleDashboard() {
           
           <div className="upcoming-deadlines">
             <h4>Upcoming Deadlines</h4>
-            {dashboard.studentMetrics.upcomingDeadlines.map((deadline, index) => (
+            {dashboard.studentMetrics.upcomingDeadlines.map((deadline: { assignmentName: string; courseName: string; dueDate: string }, index: number) => (
               <div key={index} className="deadline">
                 <p>{deadline.assignmentName} - {deadline.courseName}</p>
                 <p>Due: {new Date(deadline.dueDate).toLocaleDateString()}</p>

@@ -1,16 +1,15 @@
 /**
  * Error Tracking Integration
  * 
- * Integrates with Sentry and other error tracking services for comprehensive error monitoring.
+ * Integrates with backend-aware error tracking system for comprehensive error monitoring.
+ * Uses the new backend-integrated error handling system.
  */
 
 import { errorTrackingConfig, config } from '../config';
-
-// Sentry integration (lazy loaded to avoid bundle bloat)
-let Sentry: any = null;
+import { initializeErrorHandling } from '../errors';
 
 /**
- * Initialize error tracking
+ * Initialize error tracking with backend integration
  */
 export async function initializeErrorTracking(): Promise<void> {
   if (!errorTrackingConfig.sentryDsn) {
@@ -19,74 +18,27 @@ export async function initializeErrorTracking(): Promise<void> {
   }
 
   try {
-    console.log('🔧 Initializing error tracking...');
+    console.log('🔧 Initializing backend-integrated error tracking...');
 
-    // Dynamically import Sentry to avoid bundle bloat when not needed
-    const { init, configureScope, setTag, setContext } = await import('@sentry/nextjs');
-    Sentry = await import('@sentry/nextjs');
-
-    // Initialize Sentry
-    init({
-      dsn: errorTrackingConfig.sentryDsn,
+    // Initialize the new backend-integrated error handling system
+    await initializeErrorHandling({
+      sentryDsn: errorTrackingConfig.sentryDsn,
       environment: errorTrackingConfig.environment,
-      release: errorTrackingConfig.release,
+      version: errorTrackingConfig.release,
+      enableTracking: true,
+      enableRecovery: true,
       sampleRate: errorTrackingConfig.sampleRate,
       tracesSampleRate: errorTrackingConfig.tracesSampleRate,
-      
-      // Performance monitoring
-      integrations: [
-        // Add performance monitoring integrations
-      ],
-      
-      // Error filtering
-      beforeSend(event, hint) {
-        // Filter out development errors in production
-        if (config.appEnv === 'production' && event.environment === 'development') {
-          return null;
-        }
-
-        // Filter out known non-critical errors
-        const error = hint.originalException;
-        if (error instanceof Error) {
-          // Skip network errors that are likely temporary
-          if (error.message.includes('NetworkError') || error.message.includes('fetch')) {
-            return null;
-          }
-
-          // Skip authentication errors (handled by auth system)
-          if (error.message.includes('Unauthorized') || error.message.includes('JWT')) {
-            return null;
-          }
-        }
-
-        return event;
-      },
-
-      // Breadcrumb filtering
-      beforeBreadcrumb(breadcrumb) {
-        // Filter out noisy breadcrumbs
-        if (breadcrumb.category === 'console' && breadcrumb.level === 'debug') {
-          return null;
-        }
-
-        return breadcrumb;
+      backendIntegration: {
+        backendVersion: process.env.NEXT_PUBLIC_BACKEND_VERSION,
+        backendEnvironment: process.env.NEXT_PUBLIC_BACKEND_ENV,
+        enableCorrelation: true,
       },
     });
 
-    // Set global context
-    configureScope((scope) => {
-      scope.setTag('app.environment', config.appEnv);
-      scope.setTag('app.version', errorTrackingConfig.release);
-      scope.setContext('configuration', {
-        graphqlEndpoint: config.graphqlEndpoint,
-        wsEndpoint: config.wsEndpoint,
-        features: config.features,
-      });
-    });
-
-    console.log('✅ Error tracking initialized successfully');
+    console.log('✅ Backend-integrated error tracking initialized successfully');
   } catch (error) {
-    console.error('❌ Failed to initialize error tracking:', error);
+    console.error('❌ Failed to initialize backend-integrated error tracking:', error);
   }
 }
 

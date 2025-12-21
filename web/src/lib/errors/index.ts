@@ -4,6 +4,8 @@
  * Comprehensive error handling system with classification, recovery,
  * tracking, and user-friendly messaging. Provides a complete solution
  * for handling all types of errors in the frontend application.
+ * 
+ * Includes backend-specific error integration for the LMS system.
  */
 
 // Core error types and interfaces
@@ -23,6 +25,40 @@ export type {
   NetworkErrorDetails,
   GraphQLErrorExtensions,
 } from './errorTypes';
+
+// Backend error integration
+export {
+  BACKEND_ERROR_MAPPING,
+  BACKEND_RETRY_CONFIG,
+  BACKEND_FIELD_ERRORS,
+  BACKEND_CONTEXTUAL_MESSAGES,
+  getBackendErrorConfig,
+  getBackendFieldError,
+  getBackendContextualMessage,
+  isBackendError,
+  getBackendRetryConfig,
+} from './backendErrorMapping';
+
+// Backend Sentry configuration
+export {
+  BACKEND_SENTRY_CONFIG,
+  BACKEND_SENTRY_LEVELS,
+  getBackendErrorFingerprint,
+  getBackendErrorTags,
+  getBackendErrorContext,
+  shouldReportBackendError,
+  getBackendSentryDSN,
+  createBackendSentryConfig,
+} from './backendSentryConfig';
+
+// Backend error link for Apollo Client
+export {
+  createBackendErrorLink,
+  createBackendRetryLink,
+  enrichBackendErrorContext,
+  collectBackendErrorMetrics,
+  handleBackendErrorNotification,
+} from './backendErrorLink';
 
 // Error classification system
 export { 
@@ -70,7 +106,7 @@ export {
 } from './ErrorBoundary';
 
 /**
- * Initialize the error handling system
+ * Initialize the error handling system with backend integration
  */
 export async function initializeErrorHandling(config?: {
   /** Sentry DSN for error tracking */
@@ -96,6 +132,16 @@ export async function initializeErrorHandling(config?: {
   
   /** Sample rate for performance monitoring (0.0 to 1.0) */
   tracesSampleRate?: number;
+  
+  /** Backend integration settings */
+  backendIntegration?: {
+    /** Backend version for correlation */
+    backendVersion?: string;
+    /** Backend environment for correlation */
+    backendEnvironment?: string;
+    /** Enable backend error correlation */
+    enableCorrelation?: boolean;
+  };
 }) {
   const environment = config?.environment || process.env.NODE_ENV || 'development';
   const {
@@ -106,6 +152,7 @@ export async function initializeErrorHandling(config?: {
     enableRecovery = true,
     sampleRate = environment === 'production' ? 0.1 : 1.0,
     tracesSampleRate = environment === 'production' ? 0.1 : 1.0,
+    backendIntegration,
   } = config || {};
 
   try {
@@ -114,8 +161,10 @@ export async function initializeErrorHandling(config?: {
     const { errorHandler } = await import('./errorHandler');
     const { NetworkErrorRecovery } = await import('./errorRecovery');
 
-    // Initialize error tracking
+    // Initialize error tracking with backend integration
     if (enableTracking) {
+      const backendSentryConfig = createBackendSentryConfig();
+      
       await errorTrackingManager.initialize({
         ...(sentryDsn && { dsn: sentryDsn }),
         environment,
@@ -123,10 +172,21 @@ export async function initializeErrorHandling(config?: {
         sampleRate,
         tracesSampleRate,
         enabled: enableTracking && (environment === 'production' ? !!sentryDsn : true),
+        additionalConfig: {
+          ...backendSentryConfig,
+          // Add backend correlation if enabled
+          ...(backendIntegration?.enableCorrelation && {
+            tags: {
+              ...backendSentryConfig.initialScope?.tags,
+              'backend.version': backendIntegration.backendVersion,
+              'backend.environment': backendIntegration.backendEnvironment,
+            },
+          }),
+        },
       });
     }
 
-    // Configure error handler
+    // Configure error handler with backend integration
     errorHandler.updateConfig({
       enableTracking,
       enableRecovery,
@@ -137,11 +197,22 @@ export async function initializeErrorHandling(config?: {
     // Set up network monitoring
     if (typeof window !== 'undefined') {
       NetworkErrorRecovery.startNetworkMonitoring();
+      
+      // Set up backend error event listeners
+      window.addEventListener('backend:error-notification', (event) => {
+        const detail = (event as CustomEvent).detail;
+        console.info('Backend error notification:', detail);
+      });
+      
+      window.addEventListener('backend:error-metrics', (event) => {
+        const detail = (event as CustomEvent).detail;
+        console.info('Backend error metrics:', detail);
+      });
     }
 
-    console.info('Error handling system initialized successfully');
+    console.info('Backend-integrated error handling system initialized successfully');
   } catch (error) {
-    console.error('Failed to initialize error handling system:', error);
+    console.error('Failed to initialize backend-integrated error handling system:', error);
   }
 }
 

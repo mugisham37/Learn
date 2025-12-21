@@ -11,6 +11,14 @@ import type {
   ErrorContext,
   PerformanceMetrics
 } from './errorTypes';
+import { 
+  createBackendSentryConfig,
+  getBackendErrorFingerprint,
+  getBackendErrorTags,
+  getBackendErrorContext,
+  shouldReportBackendError,
+  BACKEND_SENTRY_LEVELS
+} from './backendSentryConfig';
 
 /**
  * Error tracking service interface
@@ -160,28 +168,33 @@ class SentryTrackingService implements ErrorTrackingService {
       
       this.sentry = sentryModule;
 
+      // Use backend-specific configuration
+      const backendConfig = createBackendSentryConfig();
+      
       sentryModule.init({
+        ...backendConfig,
+        // Override with provided config
         dsn: config.dsn,
         environment: config.environment,
         release: config.version,
         sampleRate: config.sampleRate,
         tracesSampleRate: config.tracesSampleRate,
-        beforeSend: this.beforeSend.bind(this),
-        beforeSendTransaction: this.beforeSendTransaction.bind(this),
         ...config.additionalConfig,
       });
 
-      // Set initial context
+      // Set initial context with backend integration
       sentryModule.configureScope((scope: SentryScope) => {
         scope.setTag('component', 'frontend-foundation');
+        scope.setTag('backend.integrated', 'true');
         scope.setContext('app', {
           name: 'Learning Platform Frontend',
           version: config.version,
+          backend_integration: true,
         });
       });
 
       this.isInitialized = true;
-      console.info('Error tracking initialized successfully');
+      console.info('Backend-integrated error tracking initialized successfully');
     } catch (error) {
       console.error('Failed to initialize error tracking:', error);
       this.enabled = false;
@@ -193,35 +206,52 @@ class SentryTrackingService implements ErrorTrackingService {
       return;
     }
 
+    // Check if error should be reported based on backend configuration
+    if (!shouldReportBackendError({
+      type: error.type,
+      code: error.code,
+      severity: error.severity,
+    })) {
+      return;
+    }
+
     try {
       this.sentry?.withScope((scope: SentryScope) => {
-        // Set error classification tags
-        scope.setTag('error.type', error.type);
-        scope.setTag('error.category', error.category);
-        scope.setTag('error.severity', error.severity);
-        scope.setTag('error.retryable', error.retryable.toString());
+        // Set backend-specific error tags
+        const backendTags = getBackendErrorTags({
+          type: error.type,
+          code: error.code,
+          category: error.category,
+          severity: error.severity,
+          retryable: error.retryable,
+          operation: context?.operation,
+          userId: context?.userId,
+        });
+        
+        Object.entries(backendTags).forEach(([key, value]) => {
+          scope.setTag(key, value);
+        });
 
-        // Set context information if available
-        if (context) {
-          if (context.operation) {
-            scope.setTag('operation', context.operation);
-          }
-          if (context.userId) {
-            scope.setTag('userId', context.userId);
-          }
-          if (context.requestId) {
-            scope.setTag('requestId', context.requestId);
-          }
-          if (context.variables) {
-            scope.setContext('variables', context.variables);
-          }
-          if (context.metadata) {
-            scope.setContext('metadata', context.metadata);
-          }
-        }
+        // Set backend-specific error context
+        const backendContext = getBackendErrorContext({
+          message: error.message,
+          context,
+        });
+        
+        Object.entries(backendContext).forEach(([key, value]) => {
+          scope.setContext(key, value as Record<string, unknown>);
+        });
 
-        // Set error level based on severity
-        const level = this.mapSeverityToLevel(error.severity);
+        // Set backend-specific error fingerprint
+        const fingerprint = getBackendErrorFingerprint({
+          type: error.type,
+          code: error.code,
+          operation: context?.operation,
+          field: error.field,
+        });
+        
+        // Set error level based on backend severity mapping
+        const level = BACKEND_SENTRY_LEVELS[error.severity as keyof typeof BACKEND_SENTRY_LEVELS] || 'error';
         scope.setLevel(level);
 
         // Create error object
@@ -231,11 +261,13 @@ class SentryTrackingService implements ErrorTrackingService {
           errorObj.stack = error.stack;
         }
 
-        // Capture exception
-        this.sentry?.captureException(errorObj);
+        // Capture exception with backend fingerprint
+        this.sentry?.captureException(errorObj, {
+          fingerprint,
+        });
       });
     } catch (trackingError) {
-      console.error('Failed to report error to tracking service:', trackingError);
+      console.error('Failed to report backend error to tracking service:', trackingError);
     }
   }
 

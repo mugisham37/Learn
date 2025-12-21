@@ -42,10 +42,18 @@ const envSchema = z.object({
   
   // Error Tracking and Monitoring
   NEXT_PUBLIC_SENTRY_DSN: z.string().optional(),
+  NEXT_PUBLIC_SENTRY_DSN_DEV: z.string().optional(),
+  NEXT_PUBLIC_SENTRY_DSN_STAGING: z.string().optional(),
   NEXT_PUBLIC_SENTRY_ENVIRONMENT: z.string().default('development'),
   NEXT_PUBLIC_SENTRY_RELEASE: z.string().default('1.0.0'),
   NEXT_PUBLIC_SENTRY_SAMPLE_RATE: z.string().transform(val => parseFloat(val)).default('1.0'),
   NEXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE: z.string().transform(val => parseFloat(val)).default('0.1'),
+  
+  // Backend Integration for Error Correlation
+  NEXT_PUBLIC_BACKEND_VERSION: z.string().optional(),
+  NEXT_PUBLIC_BACKEND_ENV: z.string().optional(),
+  NEXT_PUBLIC_BUILD_TIME: z.string().optional(),
+  NEXT_PUBLIC_COMMIT_SHA: z.string().optional(),
   
   // Performance Monitoring
   NEXT_PUBLIC_ENABLE_PERFORMANCE_MONITORING: z.string().transform(val => val === 'true').default('true'),

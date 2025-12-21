@@ -15,6 +15,7 @@ import { tokenManager } from '../auth/tokenStorage';
 import { createAuthLink, createAuthErrorLink } from './links/authLink';
 import { createErrorLink } from './links/errorLink';
 import { createRetryLink } from './links/retryLink';
+import { createBackendErrorLink } from '../errors/backendErrorLink';
 import { createCacheConfig } from './cache';
 
 /**
@@ -23,12 +24,12 @@ import { createCacheConfig } from './cache';
  * Features:
  * - Normalized cache with type policies
  * - Authentication with automatic token injection
- * - Comprehensive error handling with user-friendly messages
+ * - Backend-integrated error handling with classification and recovery
  * - Retry logic with exponential backoff
  * - WebSocket subscriptions with automatic reconnection
  * - Development tools integration
  */
-function createApolloClient() {
+async function createApolloClient() {
   // HTTP link for queries and mutations
   const httpLink = createHttpLink({
     uri: config.graphqlEndpoint,
@@ -97,17 +98,21 @@ function createApolloClient() {
   // Create authentication error handling link
   const authErrorLink = createAuthErrorLink();
 
-  // Create general error handling link
+  // Create backend-specific error handling link
+  const backendErrorLink = createBackendErrorLink();
+
+  // Create general error handling link (fallback)
   const errorLink = createErrorLink();
 
   // Create retry link
   const retryLink = createRetryLink();
 
   // Combine all links in the correct order
-  // Order matters: auth -> auth-error -> error -> retry -> transport
+  // Order matters: auth -> auth-error -> backend-error -> error -> retry -> transport
   const link = ApolloLink.from([
     authLink,
     authErrorLink,
+    backendErrorLink,
     errorLink,
     retryLink,
     splitLink,
@@ -117,10 +122,10 @@ function createApolloClient() {
   const cache = createCacheConfig();
 
   // Load persisted cache if enabled
-  if (config.features.realTime && cacheConfig.enablePersistence) {
+  if (config.features.realTime) {
     try {
       const { cachePersistence } = await import('./cache');
-      cachePersistence.loadFromStorage(cache, 'lms-apollo-cache');
+      await cachePersistence.loadFromStorage(cache, 'lms-apollo-cache');
     } catch (error) {
       console.warn('Failed to load persisted cache:', error);
     }
@@ -148,8 +153,27 @@ function createApolloClient() {
   return client;
 }
 
-// Export the configured Apollo Client instance
-export const apolloClient = createApolloClient();
+// Create and export the configured Apollo Client instance
+let apolloClientInstance: ApolloClient<unknown> | null = null;
+
+export const apolloClient = (() => {
+  if (!apolloClientInstance) {
+    createApolloClient().then(client => {
+      apolloClientInstance = client;
+    }).catch(error => {
+      console.error('Failed to create Apollo Client:', error);
+    });
+  }
+  return apolloClientInstance;
+})();
+
+// Export async client creation for proper initialization
+export async function getApolloClient() {
+  if (!apolloClientInstance) {
+    apolloClientInstance = await createApolloClient();
+  }
+  return apolloClientInstance;
+}
 
 // Export the client creation function for testing
 export { createApolloClient };

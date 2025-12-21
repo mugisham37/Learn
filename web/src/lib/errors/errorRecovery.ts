@@ -11,6 +11,7 @@ import type {
   ErrorHandlerResult,
   ErrorRecoveryStrategy
 } from './errorTypes';
+import { getBackendRetryConfig } from './backendErrorMapping';
 
 /**
  * Retry configuration for different error types
@@ -179,7 +180,12 @@ export class ErrorRecoveryManager {
     error: ClassifiedError,
     originalOperation?: () => Promise<unknown>
   ): Promise<ErrorHandlerResult> {
-    const retryConfig = DEFAULT_RETRY_CONFIGS[error.type];
+    // Use backend-specific retry config if available
+    const backendRetryConfig = getBackendRetryConfig(error.type);
+    const retryConfig = {
+      ...DEFAULT_RETRY_CONFIGS[error.type],
+      ...backendRetryConfig,
+    };
     
     if (!retryConfig) {
       return {
