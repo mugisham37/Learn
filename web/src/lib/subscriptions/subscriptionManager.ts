@@ -9,7 +9,7 @@
 
 import React from 'react';
 import { DocumentNode, print } from 'graphql';
-import { Observable, Subscription } from '@apollo/client';
+import { Observable } from '@apollo/client';
 
 // =============================================================================
 // Types and Interfaces
@@ -19,7 +19,7 @@ export interface SubscriptionConfig {
   /** Subscription query */
   query: DocumentNode;
   /** Query variables */
-  variables?: Record<string, unknown>;
+  variables?: Record<string, unknown> | undefined;
   /** Subscription options */
   options?: {
     errorPolicy?: 'none' | 'ignore' | 'all';
@@ -76,7 +76,7 @@ export interface SubscriptionState<T = unknown> {
 
 export class SubscriptionManager {
   private subscriptions = new Map<string, {
-    subscription: Subscription;
+    subscription: { unsubscribe: () => void };
     config: SubscriptionConfig;
     metrics: SubscriptionMetrics;
     cleanup: () => void;
@@ -171,7 +171,7 @@ export class SubscriptionManager {
       });
     };
 
-    const executeSubscription = (): Subscription => {
+    const executeSubscription = (): { unsubscribe: () => void } => {
       const observable = createObservable();
       
       return observable.subscribe({
@@ -416,7 +416,7 @@ export function useManagedSubscription<T = unknown>(
       subscriptionId,
       {
         query,
-        variables,
+        variables: variables || undefined,
         maxRetries: 3,
         retryDelay: 1000,
       },
@@ -533,7 +533,7 @@ export function batchSubscriptionOperations<T>(
   manager: SubscriptionManager
 ): () => void {
   const cleanupFunctions = operations.map(op => 
-    manager.createSubscription(op.id, { query: op.query, variables: op.variables }, op.observer)
+    manager.createSubscription(op.id, { query: op.query, variables: op.variables || undefined }, op.observer)
   );
 
   return () => {
@@ -552,6 +552,3 @@ export const SubscriptionManagementUtils = {
   useManagedSubscription,
   useSubscriptionManagerMetrics,
 };
-
-// Re-export for convenience
-export { SubscriptionManager, useManagedSubscription };

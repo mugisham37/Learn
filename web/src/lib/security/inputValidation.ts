@@ -17,7 +17,7 @@ import type { SecurityEvent } from './securityTypes';
  */
 export interface ValidationResult<T = unknown> {
   success: boolean;
-  data?: T;
+  data?: T | undefined;
   errors: ValidationError[];
   warnings: string[];
 }
@@ -90,7 +90,7 @@ export class InputValidator {
     
     // XSS protection
     if (!options.allowHtml) {
-      const xssResult = this.xssProtector.sanitizeContent(sanitized);
+      const xssResult = this.xssProtector.sanitize(sanitized);
       sanitized = xssResult.sanitized;
       if (xssResult.removed.length > 0) {
         warnings.push('Potentially dangerous content removed');

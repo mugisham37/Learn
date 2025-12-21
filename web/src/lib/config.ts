@@ -60,37 +60,37 @@ const envSchema = z.object({
   NEXT_PUBLIC_PERFORMANCE_SAMPLE_RATE: z.string().transform(val => parseFloat(val)).default('0.1'),
   
   // Cache Configuration
-  NEXT_PUBLIC_CACHE_TTL: z.string().transform(val => parseInt(val, 10)).default('300000'),
-  NEXT_PUBLIC_CACHE_MAX_SIZE: z.string().transform(val => parseInt(val, 10)).default('52428800'),
-  NEXT_PUBLIC_ENABLE_CACHE_PERSISTENCE: z.string().transform(val => val === 'true').default('true'),
+  NEXT_PUBLIC_CACHE_TTL: z.string().transform(val => parseInt(val, 10)).default(() => '300000'),
+  NEXT_PUBLIC_CACHE_MAX_SIZE: z.string().transform(val => parseInt(val, 10)).default(() => '52428800'),
+  NEXT_PUBLIC_ENABLE_CACHE_PERSISTENCE: z.string().transform(val => val === 'true').default(() => 'true'),
   
   // Real-time Configuration
-  NEXT_PUBLIC_WS_RECONNECT_ATTEMPTS: z.string().transform(val => parseInt(val, 10)).default('5'),
-  NEXT_PUBLIC_WS_RECONNECT_INTERVAL: z.string().transform(val => parseInt(val, 10)).default('1000'),
-  NEXT_PUBLIC_WS_HEARTBEAT_INTERVAL: z.string().transform(val => parseInt(val, 10)).default('30000'),
+  NEXT_PUBLIC_WS_RECONNECT_ATTEMPTS: z.string().transform(val => parseInt(val, 10)).default(() => '5'),
+  NEXT_PUBLIC_WS_RECONNECT_INTERVAL: z.string().transform(val => parseInt(val, 10)).default(() => '1000'),
+  NEXT_PUBLIC_WS_HEARTBEAT_INTERVAL: z.string().transform(val => parseInt(val, 10)).default(() => '30000'),
   
   // Security Configuration
-  NEXT_PUBLIC_ENABLE_CSRF_PROTECTION: z.string().transform(val => val === 'true').default('true'),
-  NEXT_PUBLIC_ENABLE_XSS_PROTECTION: z.string().transform(val => val === 'true').default('true'),
-  NEXT_PUBLIC_SECURE_COOKIES: z.string().transform(val => val === 'true').default('false'),
+  NEXT_PUBLIC_ENABLE_CSRF_PROTECTION: z.string().transform(val => val === 'true').default(() => 'true'),
+  NEXT_PUBLIC_ENABLE_XSS_PROTECTION: z.string().transform(val => val === 'true').default(() => 'true'),
+  NEXT_PUBLIC_SECURE_COOKIES: z.string().transform(val => val === 'true').default(() => 'false'),
   
   // Rate Limiting
-  NEXT_PUBLIC_RATE_LIMIT_MAX: z.string().transform(val => parseInt(val, 10)).default('100'),
-  NEXT_PUBLIC_RATE_LIMIT_WINDOW: z.string().transform(val => parseInt(val, 10)).default('900000'),
+  NEXT_PUBLIC_RATE_LIMIT_MAX: z.string().transform(val => parseInt(val, 10)).default(() => '100'),
+  NEXT_PUBLIC_RATE_LIMIT_WINDOW: z.string().transform(val => parseInt(val, 10)).default(() => '900000'),
   
   // Feature Flags
-  NEXT_PUBLIC_ENABLE_ANALYTICS: z.string().transform(val => val === 'true').default('true'),
-  NEXT_PUBLIC_ENABLE_NOTIFICATIONS: z.string().transform(val => val === 'true').default('true'),
-  NEXT_PUBLIC_ENABLE_REAL_TIME: z.string().transform(val => val === 'true').default('true'),
-  NEXT_PUBLIC_ENABLE_FILE_UPLOADS: z.string().transform(val => val === 'true').default('true'),
+  NEXT_PUBLIC_ENABLE_ANALYTICS: z.string().transform(val => val === 'true').default(() => 'true'),
+  NEXT_PUBLIC_ENABLE_NOTIFICATIONS: z.string().transform(val => val === 'true').default(() => 'true'),
+  NEXT_PUBLIC_ENABLE_REAL_TIME: z.string().transform(val => val === 'true').default(() => 'true'),
+  NEXT_PUBLIC_ENABLE_FILE_UPLOADS: z.string().transform(val => val === 'true').default(() => 'true'),
   
   // API Timeouts
-  NEXT_PUBLIC_API_TIMEOUT: z.string().transform(val => parseInt(val, 10)).default('30000'),
-  NEXT_PUBLIC_UPLOAD_TIMEOUT: z.string().transform(val => parseInt(val, 10)).default('300000'),
+  NEXT_PUBLIC_API_TIMEOUT: z.string().transform(val => parseInt(val, 10)).default(() => '30000'),
+  NEXT_PUBLIC_UPLOAD_TIMEOUT: z.string().transform(val => parseInt(val, 10)).default(() => '300000'),
   
   // Development Tools
-  NEXT_PUBLIC_ENABLE_REDUX_DEVTOOLS: z.string().transform(val => val === 'true').default('false'),
-  NEXT_PUBLIC_ENABLE_APOLLO_DEVTOOLS: z.string().transform(val => val === 'true').default('false'),
+  NEXT_PUBLIC_ENABLE_REDUX_DEVTOOLS: z.string().transform(val => val === 'true').default(() => 'false'),
+  NEXT_PUBLIC_ENABLE_APOLLO_DEVTOOLS: z.string().transform(val => val === 'true').default(() => 'false'),
   NEXT_PUBLIC_LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
 });
 

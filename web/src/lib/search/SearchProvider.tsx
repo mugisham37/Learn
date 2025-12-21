@@ -64,7 +64,11 @@ export interface SearchContextValue {
   
   // Analytics and tracking
   trackResultClick: (resultId: string, position: number) => void;
-  searchMetrics: any;
+  searchMetrics: {
+    averageSearchTime?: number;
+    successRate?: number;
+    totalSearches?: number;
+  };
   
   // Search optimization
   optimizeResults: (results: CourseSearchResult[]) => CourseSearchResult[];
@@ -258,7 +262,7 @@ export function SearchProvider({
     } catch (error) {
       console.error('Search failed:', error);
     }
-  }, [query, filters, searchHook, analyticsHook]);
+  }, [query, filters, searchHook, analyticsHook, addToHistory]);
   
   const clearSearch = useCallback(() => {
     setQuery('');
@@ -453,10 +457,10 @@ export function useSearchUrlSync() {
         
         const priceMin = params.get('priceMin');
         const priceMax = params.get('priceMax');
-        if (priceMin || priceMax) {
+        if (priceMin !== null || priceMax !== null) {
           urlFilters.priceRange = {
-            min: priceMin ? parseInt(priceMin, 10) : undefined,
-            max: priceMax ? parseInt(priceMax, 10) : undefined,
+            ...(priceMin !== null && { min: parseInt(priceMin, 10) }),
+            ...(priceMax !== null && { max: parseInt(priceMax, 10) }),
           };
         }
         
@@ -489,15 +493,19 @@ export function useSearchPerformance() {
     slowSearches: 0,
   });
   
+  // Update performance data when metrics change
   useEffect(() => {
-    setPerformanceData({
-      averageSearchTime: searchMetrics.averageSearchTime || 0,
-      successRate: searchMetrics.successRate || 0,
-      totalSearches: searchMetrics.totalSearches || 0,
-      slowSearches: searchMetrics.totalSearches > 0 
-        ? Math.round((searchMetrics.totalSearches * 0.1)) // Estimate 10% slow searches
-        : 0,
-    });
+    if (searchMetrics) {
+      setPerformanceData(prev => ({
+        ...prev,
+        averageSearchTime: searchMetrics.averageSearchTime || 0,
+        successRate: searchMetrics.successRate || 0,
+        totalSearches: searchMetrics.totalSearches || 0,
+        slowSearches: searchMetrics.totalSearches > 0 
+          ? Math.round((searchMetrics.totalSearches * 0.1)) // Estimate 10% slow searches
+          : 0,
+      }));
+    }
   }, [searchMetrics]);
   
   const isPerformanceGood = performanceData.averageSearchTime < 1000 && performanceData.successRate > 0.8;

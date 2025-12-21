@@ -8,7 +8,8 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
-import { useApolloClient } from '@apollo/client';
+import { ApolloClient } from '@apollo/client';
+import { useApolloClient } from '@apollo/client/react/hooks';
 import { CSRFProtector } from './csrfProtection';
 import { inputValidator, type ValidationResult } from './inputValidation';
 import { secureTokenStorage } from './tokenSecurity';
@@ -275,7 +276,7 @@ export function useSecurityIntegration() {
           ...securityState.securityHeaders,
           // Don't set Content-Type for FormData - browser will set it with boundary
         },
-        signal: options?.signal,
+        ...(options?.signal && { signal: options.signal }),
       });
 
       if (!response.ok) {

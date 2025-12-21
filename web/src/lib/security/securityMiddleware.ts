@@ -48,7 +48,7 @@ const RATE_LIMITS = {
 function getClientId(request: NextRequest): string {
   // In production, use a combination of IP, user agent, and user ID
   const forwarded = request.headers.get('x-forwarded-for');
-  const ip = forwarded ? forwarded.split(',')[0] : request.ip || 'unknown';
+  const ip = forwarded ? forwarded.split(',')[0] : request.headers.get('x-real-ip') || 'unknown';
   const userAgent = request.headers.get('user-agent') || 'unknown';
   
   // Create a hash of IP + User Agent for privacy
@@ -176,7 +176,7 @@ function logSecurityEvent(event: SecurityEvent, request: NextRequest): void {
       url: request.url,
       method: request.method,
       userAgent: request.headers.get('user-agent'),
-      ip: request.headers.get('x-forwarded-for') || request.ip,
+      ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip'),
     });
   }
   

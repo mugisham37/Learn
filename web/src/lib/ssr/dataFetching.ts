@@ -19,9 +19,9 @@ export const serverAuth = {
   /**
    * Get access token from cookies
    */
-  getAccessToken(): string | null {
+  async getAccessToken(): Promise<string | null> {
     try {
-      const cookieStore = cookies();
+      const cookieStore = await cookies();
       return cookieStore.get('access-token')?.value || null;
     } catch (error) {
       console.warn('Unable to access cookies:', error);
@@ -32,8 +32,8 @@ export const serverAuth = {
   /**
    * Require authentication - redirect if not authenticated
    */
-  requireAuth(): string {
-    const token = this.getAccessToken();
+  async requireAuth(): Promise<string> {
+    const token = await this.getAccessToken();
     if (!token) {
       redirect('/login');
     }
@@ -44,7 +44,7 @@ export const serverAuth = {
    * Get current user or redirect to login
    */
   async getCurrentUser() {
-    const token = this.requireAuth();
+    const token = await this.requireAuth();
     const result = await serverGraphQL.fetchCurrentUser(token);
     
     if (result.errors || !result.data?.me) {
@@ -86,7 +86,7 @@ export const serverData = {
     
     const result = await serverGraphQL.fetchCourses({
       first: params.limit || 12,
-      after: params.page ? btoa(`cursor:${(params.page - 1) * (params.limit || 12)}`) : undefined,
+      ...(params.page && { after: btoa(`cursor:${(params.page - 1) * (params.limit || 12)}`) }),
       filter: {
         ...(params.category && { category: params.category }),
         ...(params.difficulty && { difficulty: params.difficulty }),
@@ -106,7 +106,7 @@ export const serverData = {
    * Fetch course by slug with caching
    */
   async fetchCourse(slug: string, requireAuth: boolean = false) {
-    const token = requireAuth ? serverAuth.requireAuth() : serverAuth.getAccessToken();
+    const token = requireAuth ? await serverAuth.requireAuth() : await serverAuth.getAccessToken();
     
     const result = await serverGraphQL.fetchCourseBySlug(slug, token || undefined);
     
@@ -125,14 +125,14 @@ export const serverData = {
     page?: number;
     limit?: number;
   } = {}) {
-    const token = serverAuth.requireAuth();
+    const token = await serverAuth.requireAuth();
     const user = await serverAuth.getCurrentUser();
     
     const cacheKey = nextCache.keys.userEnrollments(user.id, params);
     
     const result = await serverGraphQL.fetchUserEnrollments(token, {
       first: params.limit || 10,
-      after: params.page ? btoa(`cursor:${(params.page - 1) * (params.limit || 10)}`) : undefined,
+      ...(params.page && { after: btoa(`cursor:${(params.page - 1) * (params.limit || 10)}`) }),
       filter: {
         ...(params.status && { status: params.status }),
       },
@@ -231,8 +231,8 @@ export const pageData = {
     const limit = 12;
 
     const result = await serverData.fetchCourses({
-      category: searchParams.category,
-      difficulty: searchParams.difficulty,
+      ...(searchParams.category && { category: searchParams.category }),
+      ...(searchParams.difficulty && { difficulty: searchParams.difficulty }),
       page,
       limit,
     });
@@ -261,8 +261,8 @@ export const pageData = {
     }
 
     // Check if user is enrolled (if authenticated)
-    const token = serverAuth.getAccessToken();
-    let enrollment = null;
+    const token = await serverAuth.getAccessToken();
+    const enrollment = null;
     
     if (token) {
       // Would fetch enrollment status
@@ -293,7 +293,7 @@ export const pageData = {
     const page = parseInt(searchParams.page || '1');
     
     const result = await serverData.fetchUserEnrollments({
-      status: searchParams.status,
+      ...(searchParams.status && { status: searchParams.status }),
       page,
       limit: 10,
     });
@@ -328,7 +328,7 @@ export const serverError = {
   /**
    * Handle authentication errors
    */
-  handleAuthError(error: any) {
+  handleAuthError(error: { extensions?: { code?: string } }) {
     if (error?.extensions?.code === 'UNAUTHENTICATED') {
       redirect('/login');
     }
@@ -338,7 +338,7 @@ export const serverError = {
   /**
    * Handle authorization errors
    */
-  handleAuthzError(error: any) {
+  handleAuthzError(error: { extensions?: { code?: string } }) {
     if (error?.extensions?.code === 'FORBIDDEN') {
       redirect('/unauthorized');
     }
@@ -348,7 +348,7 @@ export const serverError = {
   /**
    * Handle not found errors
    */
-  handleNotFoundError(error: any) {
+  handleNotFoundError(error: { extensions?: { code?: string } }) {
     if (error?.extensions?.code === 'NOT_FOUND') {
       redirect('/404');
     }

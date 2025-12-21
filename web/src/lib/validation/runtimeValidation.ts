@@ -338,9 +338,10 @@ export const PresignedUploadUrlSchema = z.object({
  * Streaming URL schema
  */
 export const StreamingUrlSchema = z.object({
-  url: z.string(),
+  streamingUrl: z.string(),
   expiresAt: z.string(),
-  quality: z.string()
+  resolution: z.string(),
+  format: z.string(),
 });
 
 // =============================================================================

@@ -8,7 +8,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { config } from '@/lib/config';
+import { config as appConfig } from '@/lib/config';
 import { securityMiddleware } from '@/lib/security/securityMiddleware';
 
 // Routes that require authentication
@@ -43,7 +43,7 @@ const PUBLIC_ROUTES = [
 /**
  * Parse JWT token payload
  */
-function parseJWT(token: string): Record<string, any> | null {
+function parseJWT(token: string): Record<string, unknown> | null {
   try {
     const parts = token.split('.');
     if (parts.length !== 3) return null;
@@ -76,7 +76,7 @@ function isTokenExpired(token: string): boolean {
  */
 async function refreshAccessToken(refreshToken: string): Promise<string | null> {
   try {
-    const response = await fetch(`${config.appUrl}/api/auth/refresh`, {
+    const response = await fetch(`${appConfig.graphqlEndpoint}/auth/refresh`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
