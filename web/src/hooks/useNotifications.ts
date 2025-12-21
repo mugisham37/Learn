@@ -18,10 +18,7 @@ import {
   useSubscription,
   ApolloCache,
   gql,
-  type QueryResult,
-  type MutationResult as ApolloMutationResult,
-  type SubscriptionResult,
-} from '@apollo/client';
+} from '@apollo/client/react';
 import type { ID, DateTime, JSON } from '../types';
 
 // ============================================================================
@@ -498,7 +495,7 @@ export function useNotifications(options?: {
           after: data.getUserNotifications.pageInfo.endCursor,
         },
       },
-      updateQuery: (prev, { fetchMoreResult }) => {
+      updateQuery: (prev: any, { fetchMoreResult }: { fetchMoreResult: any }) => {
         if (!fetchMoreResult) return prev;
 
         return {
@@ -670,7 +667,7 @@ export function useMarkNotificationRead(): MutationResult<
     MARK_NOTIFICATION_READ,
     {
       errorPolicy: 'all',
-      update: (cache: ApolloCache<unknown>, { data }) => {
+      update: (cache: ApolloCache, { data }: { data: any }) => {
         if (data?.markNotificationRead) {
           // Update the notification in cache
           cache.modify({
@@ -684,7 +681,7 @@ export function useMarkNotificationRead(): MutationResult<
           // Decrement unread count
           cache.modify({
             fields: {
-              getUserNotifications(existing) {
+              getUserNotifications(existing: any) {
                 if (!existing) return existing;
                 return {
                   ...existing,
@@ -787,7 +784,7 @@ export function useUpdateNotificationPreferences(): MutationResult<
   const [updatePreferencesMutation, { loading, error, reset }] =
     useMutation<UpdateNotificationPreferencesResponse>(UPDATE_NOTIFICATION_PREFERENCES, {
       errorPolicy: 'all',
-      update: (cache: ApolloCache<unknown>, { data }) => {
+      update: (cache: ApolloCache, { data }: { data: any }) => {
         if (data?.updateNotificationPreferences) {
           // Update preferences in cache
           cache.writeQuery({
@@ -845,7 +842,7 @@ export function useNotificationReceived(
     {
       variables: { userId },
       skip: !userId,
-      onData: ({ data: subscriptionData }) => {
+      onData: ({ data: subscriptionData }: { data: any }) => {
         if (subscriptionData.data?.notificationReceived && onNotification) {
           onNotification(subscriptionData.data.notificationReceived);
         }
@@ -888,7 +885,7 @@ export function useNotificationRead(
     {
       variables: { userId },
       skip: !userId,
-      onData: ({ data: subscriptionData }) => {
+      onData: ({ data: subscriptionData }: { data: any }) => {
         if (subscriptionData.data?.notificationRead && onNotificationRead) {
           onNotificationRead(subscriptionData.data.notificationRead);
         }
@@ -933,7 +930,7 @@ export function useUnreadCountChanged(
     {
       variables: { userId },
       skip: !userId,
-      onData: ({ data: subscriptionData }) => {
+      onData: ({ data: subscriptionData }: { data: any }) => {
         if (typeof subscriptionData.data?.unreadCountChanged === 'number' && onCountChanged) {
           onCountChanged(subscriptionData.data.unreadCountChanged);
         }
@@ -1021,7 +1018,7 @@ export function useNotificationManagement(
       await markAsRead({ input: { notificationId } });
     },
     markAllAsRead: async (input?: MarkAllNotificationsReadInput) => {
-      await markAllAsRead({ input });
+      await markAllAsRead({ input: input || {} });
     },
     markingAsRead,
     markingAllAsRead,

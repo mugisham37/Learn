@@ -179,9 +179,18 @@ export class ErrorRecoveryManager {
     // Use backend-specific retry config if available
     const backendRetryConfig = getBackendRetryConfig(error.type);
     const defaultConfig = DEFAULT_RETRY_CONFIGS[error.type] || DEFAULT_RETRY_CONFIGS.UNKNOWN_ERROR;
+    
+    // Ensure defaultConfig is never undefined
+    if (!defaultConfig) {
+      throw new Error(`No retry configuration found for error type: ${error.type}`);
+    }
+    
     const retryConfig: RetryConfig = {
-      ...defaultConfig,
-      ...backendRetryConfig,
+      maxAttempts: backendRetryConfig.maxAttempts ?? defaultConfig.maxAttempts,
+      baseDelay: backendRetryConfig.baseDelay ?? defaultConfig.baseDelay,
+      maxDelay: backendRetryConfig.maxDelay ?? defaultConfig.maxDelay,
+      backoffMultiplier: backendRetryConfig.backoffMultiplier ?? defaultConfig.backoffMultiplier,
+      jitterFactor: backendRetryConfig.jitterFactor ?? defaultConfig.jitterFactor,
     };
 
     if (!retryConfig) {

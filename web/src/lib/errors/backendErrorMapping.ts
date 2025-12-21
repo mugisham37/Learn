@@ -7,6 +7,15 @@
 
 import type { ErrorType, ErrorSeverity, ErrorCategory } from './errorTypes';
 
+// Import RetryConfig from errorRecovery
+interface RetryConfig {
+  maxAttempts: number;
+  baseDelay: number;
+  maxDelay: number;
+  backoffMultiplier: number;
+  jitterFactor: number;
+}
+
 /**
  * Backend GraphQL error codes mapping
  * These codes come from the production LMS backend
@@ -323,12 +332,14 @@ export const BACKEND_ERROR_MAPPING: Record<
 /**
  * Backend-specific retry configurations
  */
-export const BACKEND_RETRY_CONFIG = {
+export const BACKEND_RETRY_CONFIG: Record<ErrorType, Partial<RetryConfig>> = {
   // Authentication errors - retry with token refresh
   AUTHENTICATION_ERROR: {
     maxAttempts: 1, // Only retry once with token refresh
     baseDelay: 0, // Immediate retry after token refresh
     backoffMultiplier: 1,
+    maxDelay: 1000,
+    jitterFactor: 0,
   },
 
   // Authorization errors - no retry
@@ -336,6 +347,8 @@ export const BACKEND_RETRY_CONFIG = {
     maxAttempts: 0, // No retry for authorization errors
     baseDelay: 0,
     backoffMultiplier: 1,
+    maxDelay: 0,
+    jitterFactor: 0,
   },
 
   // Validation errors - no retry (user input issue)
@@ -343,6 +356,8 @@ export const BACKEND_RETRY_CONFIG = {
     maxAttempts: 0, // No retry for validation errors
     baseDelay: 0,
     backoffMultiplier: 1,
+    maxDelay: 0,
+    jitterFactor: 0,
   },
 
   // Network errors - aggressive retry for backend services
@@ -350,6 +365,8 @@ export const BACKEND_RETRY_CONFIG = {
     maxAttempts: 5, // More retries for network issues
     baseDelay: 1000,
     backoffMultiplier: 1.5, // Gentler backoff for backend
+    maxDelay: 30000,
+    jitterFactor: 0.1,
   },
 
   // Upload errors - retry with longer delays
@@ -357,6 +374,8 @@ export const BACKEND_RETRY_CONFIG = {
     maxAttempts: 3,
     baseDelay: 3000, // Longer initial delay
     backoffMultiplier: 2,
+    maxDelay: 15000,
+    jitterFactor: 0.15,
   },
 
   // Subscription errors - frequent retries for real-time
@@ -364,6 +383,8 @@ export const BACKEND_RETRY_CONFIG = {
     maxAttempts: 10, // Many retries for real-time connections
     baseDelay: 1000,
     backoffMultiplier: 1.2, // Gentle backoff
+    maxDelay: 30000,
+    jitterFactor: 0.1,
   },
 
   // Cache errors - moderate retry
@@ -371,6 +392,8 @@ export const BACKEND_RETRY_CONFIG = {
     maxAttempts: 2,
     baseDelay: 1000,
     backoffMultiplier: 1.5,
+    maxDelay: 5000,
+    jitterFactor: 0.1,
   },
 
   // Server errors - moderate retry
@@ -378,6 +401,8 @@ export const BACKEND_RETRY_CONFIG = {
     maxAttempts: 3,
     baseDelay: 2000,
     backoffMultiplier: 2,
+    maxDelay: 8000,
+    jitterFactor: 0.2,
   },
 };
 
@@ -520,12 +545,14 @@ export function isBackendError(errorCode: string): boolean {
 /**
  * Gets retry configuration for backend error type
  */
-export function getBackendRetryConfig(errorType: ErrorType) {
+export function getBackendRetryConfig(errorType: ErrorType): Partial<RetryConfig> {
   return (
     BACKEND_RETRY_CONFIG[errorType] || {
       maxAttempts: 2,
       baseDelay: 2000,
       backoffMultiplier: 2,
+      maxDelay: 8000,
+      jitterFactor: 0.2,
     }
   );
 }

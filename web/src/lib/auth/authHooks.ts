@@ -98,9 +98,9 @@ export function usePermissions() {
       case 'course:create':
       case 'course:edit':
       case 'course:delete':
-        return user.role === 'EDUCATOR' || user.role === 'ADMIN';
+        return ['EDUCATOR', 'ADMIN'].includes(user.role);
       case 'user:manage':
-        return user.role === 'ADMIN';
+        return ['ADMIN'].includes(user.role);
       default:
         return false;
     }

@@ -87,6 +87,28 @@ export type {
   ConversationFilter,
   ThreadFilter,
   PaginationInput,
+  // Analytics types
+  CourseAnalytics,
+  StudentAnalytics,
+  DashboardMetrics,
+  CourseReport,
+  StudentReport,
+  PlatformHealth,
+  CourseReportInput,
+  StudentReportInput,
+  PlatformMetricsInput,
+  DateRangeInput,
+  EngagementMetrics,
+  StudentDashboardMetrics,
+  EducatorDashboardMetrics,
+  AdminDashboardMetrics,
+  GrowthMetrics,
+  SystemMetrics,
+  CoursePerformanceMetrics,
+  CourseEngagementMetrics,
+  RevenueMetrics,
+  StudentPerformanceMetrics,
+  StudentEngagementMetrics,
 } from './entities';
 
 // Import User and Course from entities with different names to avoid conflicts
