@@ -18,6 +18,7 @@ import { useCurrentUser } from '@/hooks/useUsers';
 import { usePermissions } from '@/lib/auth/authHooks';
 import { useCourse } from '@/hooks/useCourses';
 import { useMyEnrollments } from '@/hooks/useEnrollments';
+import Image from 'next/image';
 import type { Course, Enrollment } from '@/types/entities';
 
 interface ContentAccessControlProps {
@@ -143,7 +144,13 @@ export function ContentAccessControl({
       <div className='access-restriction-card'>
         {/* Thumbnail or placeholder */}
         <div className='content-preview'>
-          <img src={thumbnail} alt={title} className='thumbnail' />
+          <Image 
+            src={thumbnail} 
+            alt={title} 
+            width={300}
+            height={200}
+            className='thumbnail'
+          />
           <div className='overlay'>
             <div className='lock-icon'>🔒</div>
           </div>
@@ -238,25 +245,28 @@ export const ContentAccessUtils = {
   /**
    * Check if user can access specific content
    */
-  canAccessContent: (_courseId: string, _lessonId?: string): boolean => {
+  canAccessContent: (courseId: string, lessonId?: string): boolean => {
     // This would integrate with the actual permission system
     // For now, return true as a placeholder
+    console.log('Checking access for course:', courseId, 'lesson:', lessonId);
     return true;
   },
 
   /**
    * Get required permission level for content
    */
-  getRequiredPermission: (_courseId: string, _lessonId?: string): string => {
+  getRequiredPermission: (courseId: string, lessonId?: string): string => {
     // Determine required permission based on content type
+    console.log('Getting permission for course:', courseId, 'lesson:', lessonId);
     return 'course:view';
   },
 
   /**
    * Check if content requires payment
    */
-  requiresPayment: (_courseId: string): boolean => {
+  requiresPayment: (courseId: string): boolean => {
     // Check if course is paid
+    console.log('Checking payment requirement for course:', courseId);
     return false; // Placeholder
   },
 

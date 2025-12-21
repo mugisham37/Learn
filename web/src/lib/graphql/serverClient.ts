@@ -118,7 +118,7 @@ export async function executeServerQuery<T = unknown, V = Record<string, unknown
   accessToken?: string
 ): Promise<{
   data: T | null;
-  errors?: Array<{ message: string }>;
+  errors?: Array<{ message: string; extensions?: { code?: string } }>;
   loading: boolean;
 }> {
   try {
@@ -133,7 +133,10 @@ export async function executeServerQuery<T = unknown, V = Record<string, unknown
 
     return {
       data: result.data as T,
-      errors: result.error ? [{ message: result.error.message }] : [],
+      errors: result.errors?.map(err => ({ 
+        message: err.message, 
+        extensions: err.extensions 
+      })) || (result.error ? [{ message: result.error.message }] : []),
       loading: false,
     };
   } catch (error) {
@@ -141,7 +144,10 @@ export async function executeServerQuery<T = unknown, V = Record<string, unknown
 
     return {
       data: null,
-      errors: [{ message: error instanceof Error ? error.message : 'Unknown error' }],
+      errors: [{ 
+        message: error instanceof Error ? error.message : 'Unknown error',
+        extensions: { code: 'NETWORK_ERROR' }
+      }],
       loading: false,
     };
   }

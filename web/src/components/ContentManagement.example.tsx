@@ -7,6 +7,7 @@
  */
 
 import React, { useState, useCallback } from 'react';
+import Image from 'next/image';
 import {
   useFileUpload,
   useVideoUpload,
@@ -182,7 +183,7 @@ export function ContentManagementExample({ courseId, lessonId }: ContentManageme
           )}
 
           {/* Upload Progress */}
-          {(fileUpload.uploadProgress || videoUpload.uploadProgress) && (
+          {(fileUpload.uploadProgress || videoUpload.uploadProgress) ? (
             <div className='upload-progress'>
               <div className='progress-bar'>
                 <div
@@ -196,7 +197,7 @@ export function ContentManagementExample({ courseId, lessonId }: ContentManageme
                 {(fileUpload.uploadProgress || videoUpload.uploadProgress)?.percentage || 0}% -{' '}
                 {String((fileUpload.uploadProgress || videoUpload.uploadProgress)?.status || '')}
               </p>
-              {(fileUpload.uploadProgress || videoUpload.uploadProgress)?.speed && (
+              {(fileUpload.uploadProgress || videoUpload.uploadProgress)?.speed ? (
                 <p>
                   Speed:{' '}
                   {(
@@ -206,9 +207,9 @@ export function ContentManagementExample({ courseId, lessonId }: ContentManageme
                   ).toFixed(2)}{' '}
                   MB/s
                 </p>
-              )}
+              ) : null}
             </div>
-          )}
+          ) : null}
 
           {/* Upload Errors */}
           {(fileUpload.error || videoUpload.error) && (
@@ -236,7 +237,13 @@ export function ContentManagementExample({ courseId, lessonId }: ContentManageme
 
               {videoAsset.thumbnailUrl && (
                 <div className='thumbnail'>
-                  <img src={videoAsset.thumbnailUrl} alt='Video thumbnail' />
+                  <Image 
+                    src={videoAsset.thumbnailUrl} 
+                    alt='Video thumbnail' 
+                    width={200}
+                    height={150}
+                    className="rounded"
+                  />
                 </div>
               )}
 
@@ -262,7 +269,13 @@ export function ContentManagementExample({ courseId, lessonId }: ContentManageme
 
               {fileAsset.thumbnailUrl && (
                 <div className='thumbnail'>
-                  <img src={fileAsset.thumbnailUrl} alt='File thumbnail' />
+                  <Image 
+                    src={fileAsset.thumbnailUrl} 
+                    alt='File thumbnail' 
+                    width={200}
+                    height={150}
+                    className="rounded"
+                  />
                 </div>
               )}
 

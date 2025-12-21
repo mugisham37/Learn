@@ -14,7 +14,8 @@
  * Requirements: 13.4
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import Image from 'next/image';
 
 interface ProgressiveLoaderProps {
   title: string;
@@ -55,7 +56,7 @@ export function ProgressiveLoader({
   // Preload image utility - moved to top to avoid hoisting issues
   const preloadImage = useCallback((url: string): Promise<void> => {
     return new Promise((resolve, reject) => {
-      const img = new Image();
+      const img = new window.Image();
       img.onload = () => resolve();
       img.onerror = () => reject(new Error('Failed to load image'));
       img.src = url;
@@ -265,9 +266,11 @@ export function ProgressiveLoader({
         {/* Optimized thumbnail */}
         {optimizedThumbnail && (
           <div className='thumbnail-container'>
-            <img
+            <Image
               src={optimizedThumbnail}
               alt={title}
+              width={640}
+              height={360}
               className='optimized-thumbnail'
               loading='lazy'
             />

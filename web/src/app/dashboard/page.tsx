@@ -8,6 +8,7 @@
  */
 
 import { Suspense } from 'react';
+import Image from 'next/image';
 import { ProtectedLayout } from '@/components/layouts/ProtectedLayout';
 import { pageData } from '@/lib/ssr/dataFetching';
 import { nextCache } from '@/lib/cache/nextCacheIntegration';
@@ -88,10 +89,12 @@ function DashboardContent({ dashboardData }: { dashboardData: DashboardData }) {
                 <div key={enrollment.id} className='flex items-center space-x-4'>
                   <div className='shrink-0'>
                     {enrollment.course.thumbnailUrl ? (
-                      <img
+                      <Image
                         src={enrollment.course.thumbnailUrl}
                         alt={enrollment.course.title}
-                        className='w-12 h-12 rounded-md object-cover'
+                        width={48}
+                        height={48}
+                        className='rounded-md object-cover'
                       />
                     ) : (
                       <div className='w-12 h-12 bg-gray-200 rounded-md flex items-center justify-center'>
@@ -143,9 +146,11 @@ function DashboardContent({ dashboardData }: { dashboardData: DashboardData }) {
             {featuredCourses.map(course => (
               <div key={course.id} className='border border-gray-200 rounded-lg overflow-hidden'>
                 {course.thumbnailUrl ? (
-                  <img
+                  <Image
                     src={course.thumbnailUrl}
                     alt={course.title}
+                    width={400}
+                    height={128}
                     className='w-full h-32 object-cover'
                   />
                 ) : (

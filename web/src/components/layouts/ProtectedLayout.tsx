@@ -11,6 +11,7 @@
 
 import { useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { useAuth } from '@/lib/auth';
 import { ErrorBoundary } from '@/lib/errors';
 import type { User } from '@/types/entities';
@@ -285,7 +286,13 @@ function Header({
               </div>
 
               {user?.profile?.avatarUrl ? (
-                <img src={user.profile.avatarUrl} alt='Profile' className='w-8 h-8 rounded-full' />
+                <Image 
+                  src={user.profile.avatarUrl} 
+                  alt='Profile' 
+                  width={32}
+                  height={32}
+                  className='rounded-full' 
+                />
               ) : (
                 <div className='w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center'>
                   <span className='text-xs font-medium text-gray-700'>
