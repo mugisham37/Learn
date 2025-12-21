@@ -298,9 +298,9 @@ interface UploadOptions {
 interface QueryResult<T> {
   data: T | undefined;
   loading: boolean;
-  error: any;
+  error: Error | undefined;
   refetch: () => Promise<void>;
-  fetchMore?: (options: { variables: any }) => Promise<void>;
+  fetchMore?: (options: { variables: Record<string, unknown> }) => Promise<void>;
 }
 
 interface FileUploadResult {
@@ -326,7 +326,7 @@ interface AssetManagementResult {
   retryProcessing: (jobId: string) => Promise<void>;
   cancelProcessing: (jobId: string) => Promise<void>;
   loading: boolean;
-  error: any;
+  error: Error | undefined;
 }
 
 /**
@@ -764,10 +764,10 @@ export function useAssetManagement(): AssetManagementResult {
   const [deleteContentMutation, { loading: deleteContentLoading, error: deleteContentError }] =
     useMutation<{ deleteContent: boolean }>(DELETE_CONTENT);
   const [retryProcessingMutation, { loading: retryLoading, error: retryError }] = useMutation<{
-    retryProcessingJob: any;
+    retryProcessingJob: GetVideoProcessingStatusResponse['videoProcessingStatus'];
   }>(RETRY_PROCESSING_JOB);
   const [cancelProcessingMutation, { loading: cancelLoading, error: cancelError }] = useMutation<{
-    cancelProcessingJob: any;
+    cancelProcessingJob: GetVideoProcessingStatusResponse['videoProcessingStatus'];
   }>(CANCEL_PROCESSING_JOB);
 
   const deleteAsset = useCallback(
@@ -860,7 +860,7 @@ export function useAssetManagement(): AssetManagementResult {
 export function useVideoProcessingStatus(videoAssetId: string): QueryResult<
   GetVideoProcessingStatusResponse['videoProcessingStatus']
 > & {
-  subscriptionData?: any;
+  subscriptionData?: { videoProcessingUpdates: GetVideoProcessingStatusResponse['videoProcessingStatus'] } | undefined;
 } {
   const { data, loading, error, refetch } = useQuery<GetVideoProcessingStatusResponse>(
     GET_VIDEO_PROCESSING_STATUS,
@@ -873,7 +873,7 @@ export function useVideoProcessingStatus(videoAssetId: string): QueryResult<
   );
 
   // Subscribe to real-time processing updates
-  const { data: subscriptionData } = useSubscription<{ videoProcessingUpdates: any }>(
+  const { data: subscriptionData } = useSubscription<{ videoProcessingUpdates: GetVideoProcessingStatusResponse['videoProcessingStatus'] }>(
     VIDEO_PROCESSING_UPDATES,
     {
       variables: { videoAssetId },
@@ -890,6 +890,6 @@ export function useVideoProcessingStatus(videoAssetId: string): QueryResult<
     loading,
     error,
     refetch: refetchStatus,
-    subscriptionData: subscriptionData?.videoProcessingUpdates,
+    subscriptionData: subscriptionData?.videoProcessingUpdates ? { videoProcessingUpdates: subscriptionData.videoProcessingUpdates } : undefined,
   };
 }

@@ -20,13 +20,18 @@ import { gql } from '@apollo/client';
 import { useState, useCallback } from 'react';
 import { useAuth } from '@/lib/auth';
 
-// ============================================================================
-// GraphQL Response Types (temporary until schema integration is complete)
-// ============================================================================
-
-interface GraphQLResponse<T = unknown> {
-  [key: string]: T;
-}
+import type {
+  CreateCheckoutSessionResponse,
+  GetPaymentHistoryResponse,
+  GetPaymentResponse,
+  GetUserSubscriptionsResponse,
+  GetSubscriptionResponse,
+  CreateSubscriptionResponse,
+  CancelSubscriptionResponse,
+  RequestRefundResponse,
+  GetRefundEligibilityResponse,
+  GetRefundResponse,
+} from '../types/graphql-responses';
 
 // ============================================================================
 // GraphQL Operations
@@ -417,7 +422,7 @@ export interface PaymentHistoryInput {
  */
 export function useStripeCheckout() {
   const { user } = useAuth();
-  const [createCheckoutSessionMutation, { data, loading, error, reset }] = useMutation(
+  const [createCheckoutSessionMutation, { data, loading, error, reset }] = useMutation<CreateCheckoutSessionResponse>(
     CREATE_CHECKOUT_SESSION,
     {
       errorPolicy: 'all',
@@ -453,7 +458,7 @@ export function useStripeCheckout() {
 
   return {
     createCheckoutSession,
-    data: (data as GraphQLResponse)?.createCheckoutSession,
+    data: data?.createCheckoutSession,
     loading,
     error,
     reset,
@@ -472,7 +477,7 @@ export function useStripeCheckout() {
  */
 export function usePaymentHistory(input: PaymentHistoryInput = { page: 1, limit: 20 }) {
   const { user } = useAuth();
-  const { data, loading, error, refetch, fetchMore } = useQuery(GET_PAYMENT_HISTORY, {
+  const { data, loading, error, refetch, fetchMore } = useQuery<GetPaymentHistoryResponse>(GET_PAYMENT_HISTORY, {
     variables: { input },
     skip: !user,
     errorPolicy: 'all',
@@ -488,7 +493,8 @@ export function usePaymentHistory(input: PaymentHistoryInput = { page: 1, limit:
           variables: {
             input: { ...input, page },
           },
-          updateQuery: (prev, { fetchMoreResult }) => {
+          updateQuery: (prev, options) => {
+            const { fetchMoreResult } = options;
             if (!fetchMoreResult?.getPaymentHistory) return prev;
 
             const newPayments = fetchMoreResult.getPaymentHistory.payments;
@@ -511,7 +517,7 @@ export function usePaymentHistory(input: PaymentHistoryInput = { page: 1, limit:
   );
 
   return {
-    data: (data as GraphQLResponse)?.getPaymentHistory,
+    data: data?.getPaymentHistory,
     loading,
     error,
     refetch,
@@ -527,14 +533,14 @@ export function usePaymentHistory(input: PaymentHistoryInput = { page: 1, limit:
  */
 export function usePayment(paymentId: string) {
   const { user } = useAuth();
-  const { data, loading, error, refetch } = useQuery(GET_PAYMENT, {
+  const { data, loading, error, refetch } = useQuery<GetPaymentResponse>(GET_PAYMENT, {
     variables: { id: paymentId },
     skip: !user || !paymentId,
     errorPolicy: 'all',
   });
 
   return {
-    data: (data as GraphQLResponse)?.getPayment,
+    data: data?.getPayment,
     loading,
     error,
     refetch,
@@ -552,24 +558,23 @@ export function usePayment(paymentId: string) {
  */
 export function useSubscriptionManagement() {
   const { user } = useAuth();
-  const { data, loading, error, refetch } = useQuery(GET_USER_SUBSCRIPTIONS, {
+  const { data, loading, error, refetch } = useQuery<GetUserSubscriptionsResponse>(GET_USER_SUBSCRIPTIONS, {
     skip: !user,
     errorPolicy: 'all',
   });
 
-  const [createSubscriptionMutation] = useMutation(CREATE_SUBSCRIPTION, {
+  const [createSubscriptionMutation] = useMutation<CreateSubscriptionResponse>(CREATE_SUBSCRIPTION, {
     errorPolicy: 'all',
     update: (cache, { data }) => {
       if (data?.createSubscription) {
         // Update the cache with the new subscription
-        const existingData = cache.readQuery({ query: GET_USER_SUBSCRIPTIONS });
+        const existingData = cache.readQuery<GetUserSubscriptionsResponse>({ query: GET_USER_SUBSCRIPTIONS });
         if (existingData) {
           cache.writeQuery({
             query: GET_USER_SUBSCRIPTIONS,
             data: {
               getUserSubscriptions: [
-                ...(existingData as unknown as { getUserSubscriptions: Subscription[] })
-                  .getUserSubscriptions,
+                ...existingData.getUserSubscriptions,
                 data.createSubscription,
               ],
             },
@@ -579,7 +584,7 @@ export function useSubscriptionManagement() {
     },
   });
 
-  const [cancelSubscriptionMutation] = useMutation(CANCEL_SUBSCRIPTION, {
+  const [cancelSubscriptionMutation] = useMutation<CancelSubscriptionResponse>(CANCEL_SUBSCRIPTION, {
     errorPolicy: 'all',
     update: (cache, { data }) => {
       if (data?.cancelSubscription) {
@@ -648,7 +653,7 @@ export function useSubscriptionManagement() {
   );
 
   return {
-    data: (data as GraphQLResponse)?.getUserSubscriptions,
+    data: data?.getUserSubscriptions,
     loading,
     error,
     refetch,
@@ -665,14 +670,14 @@ export function useSubscriptionManagement() {
  */
 export function useSubscription(subscriptionId: string) {
   const { user } = useAuth();
-  const { data, loading, error, refetch } = useQuery(GET_SUBSCRIPTION, {
+  const { data, loading, error, refetch } = useQuery<GetSubscriptionResponse>(GET_SUBSCRIPTION, {
     variables: { id: subscriptionId },
     skip: !user || !subscriptionId,
     errorPolicy: 'all',
   });
 
   return {
-    data: (data as GraphQLResponse)?.getSubscription,
+    data: data?.getSubscription,
     loading,
     error,
     refetch,
@@ -690,14 +695,14 @@ export function useSubscription(subscriptionId: string) {
  */
 export function useRefundProcessing() {
   const { user } = useAuth();
-  const [requestRefundMutation, { data, loading, error, reset }] = useMutation(REQUEST_REFUND, {
+  const [requestRefundMutation, { data, loading, error, reset }] = useMutation<RequestRefundResponse>(REQUEST_REFUND, {
     errorPolicy: 'all',
     onError: error => {
       console.error('Refund request failed:', error);
     },
   });
 
-  const [getRefundEligibility] = useLazyQuery(GET_REFUND_ELIGIBILITY, {
+  const [getRefundEligibility] = useLazyQuery<GetRefundEligibilityResponse>(GET_REFUND_ELIGIBILITY, {
     errorPolicy: 'all',
   });
 
@@ -752,7 +757,7 @@ export function useRefundProcessing() {
   return {
     requestRefund,
     checkRefundEligibility,
-    data: (data as GraphQLResponse)?.requestRefund,
+    data: data?.requestRefund,
     loading,
     error,
     reset,
@@ -767,14 +772,14 @@ export function useRefundProcessing() {
  */
 export function useRefund(refundId: string) {
   const { user } = useAuth();
-  const { data, loading, error, refetch } = useQuery(GET_REFUND, {
+  const { data, loading, error, refetch } = useQuery<GetRefundResponse>(GET_REFUND, {
     variables: { id: refundId },
     skip: !user || !refundId,
     errorPolicy: 'all',
   });
 
   return {
-    data: (data as GraphQLResponse)?.getRefund,
+    data: data?.getRefund,
     loading,
     error,
     refetch,
@@ -794,7 +799,13 @@ export function useRefund(refundId: string) {
  */
 export function usePaymentMethods() {
   const { user } = useAuth();
-  const [paymentMethods, setPaymentMethods] = useState<unknown[]>([]);
+  const [paymentMethods, setPaymentMethods] = useState<Array<{
+    id: string;
+    type: string;
+    last4: string;
+    brand: string;
+    isDefault: boolean;
+  }>>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
@@ -855,7 +866,7 @@ export function usePaymentMethods() {
 
         // Update local state
         setPaymentMethods(prev =>
-          prev.filter((method: { id: string }) => method.id !== paymentMethodId)
+          prev.filter(method => method.id !== paymentMethodId)
         );
       } catch (error) {
         setError(error as Error);
@@ -885,7 +896,7 @@ export function usePaymentMethods() {
 
         // Update local state
         setPaymentMethods(prev =>
-          prev.map((method: { id: string; isDefault: boolean }) => ({
+          prev.map(method => ({
             ...method,
             isDefault: method.id === paymentMethodId,
           }))

@@ -581,3 +581,313 @@ export interface GetTrendingCoursesResponse {
 export interface GetTopPerformingStudentsResponse {
   topPerformingStudents: import('./entities').StudentAnalytics[];
 }
+
+// Assessment Analytics responses
+export interface GetQuizAnalyticsResponse {
+  quizAnalytics: {
+    totalAttempts: number;
+    averageScore: number;
+    passRate: number;
+    averageTimeSpent: number;
+    questionAnalytics: Array<{
+      questionId: string;
+      correctAnswerRate: number;
+      averageTimeSpent: number;
+      commonWrongAnswers: string[];
+    }>;
+    scoreDistribution: Array<{
+      range: string;
+      count: number;
+    }>;
+    attemptsByDate: Array<{
+      date: string;
+      count: number;
+    }>;
+  };
+}
+
+export interface GetAssignmentAnalyticsResponse {
+  assignmentAnalytics: {
+    totalSubmissions: number;
+    averageGrade: number;
+    submissionRate: number;
+    averageTimeToSubmit: number;
+    gradeDistribution: Array<{
+      range: string;
+      count: number;
+    }>;
+    submissionsByDate: Array<{
+      date: string;
+      count: number;
+    }>;
+    lateSubmissions: {
+      count: number;
+      percentage: number;
+    };
+  };
+}
+
+export interface GetStudentAssessmentProgressResponse {
+  studentAssessmentProgress: {
+    totalQuizzes: number;
+    completedQuizzes: number;
+    averageQuizScore: number;
+    totalAssignments: number;
+    submittedAssignments: number;
+    averageAssignmentGrade: number;
+    overallProgress: number;
+    recentActivity: Array<{
+      type: string;
+      title: string;
+      completedAt: string;
+      score: number;
+    }>;
+  };
+}
+
+export interface GetAssessmentAttemptsResponse {
+  assessmentAttempts: Array<{
+    id: string;
+    attemptNumber: number;
+    startedAt: string;
+    submittedAt: string | null;
+    score: number;
+    status: string;
+    timeSpent: number;
+    answers: Array<{
+      questionId: string;
+      answer: string;
+      isCorrect: boolean;
+      timeSpent: number;
+    }>;
+  }>;
+}
+
+// Payment responses
+export interface CreateCheckoutSessionResponse {
+  createCheckoutSession: {
+    sessionId: string;
+    sessionUrl: string;
+    paymentId: string;
+  };
+}
+
+export interface GetPaymentHistoryResponse {
+  getPaymentHistory: {
+    payments: Array<{
+      id: string;
+      userId: string;
+      courseId?: string;
+      stripePaymentIntentId?: string;
+      stripeCheckoutSessionId?: string;
+      amount: number;
+      currency: string;
+      status: 'PENDING' | 'SUCCEEDED' | 'FAILED' | 'REFUNDED';
+      paymentMethod?: string;
+      metadata?: Record<string, unknown>;
+      createdAt: string;
+      updatedAt: string;
+      course?: {
+        id: string;
+        title: string;
+        thumbnailUrl?: string;
+        instructor?: {
+          id: string;
+          profile: {
+            fullName: string;
+          };
+        };
+      };
+      refunds: Array<{
+        id: string;
+        amount: number;
+        reason?: string;
+        status: string;
+        createdAt: string;
+      }>;
+    }>;
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+}
+
+export interface GetPaymentResponse {
+  getPayment: {
+    id: string;
+    userId: string;
+    courseId?: string;
+    stripePaymentIntentId?: string;
+    stripeCheckoutSessionId?: string;
+    amount: number;
+    currency: string;
+    status: 'PENDING' | 'SUCCEEDED' | 'FAILED' | 'REFUNDED';
+    paymentMethod?: string;
+    metadata?: Record<string, unknown>;
+    createdAt: string;
+    updatedAt: string;
+    course?: {
+      id: string;
+      title: string;
+      description?: string;
+      thumbnailUrl?: string;
+      instructor?: {
+        id: string;
+        profile: {
+          fullName: string;
+        };
+      };
+    };
+    refunds: Array<{
+      id: string;
+      amount: number;
+      reason?: string;
+      status: string;
+      createdAt: string;
+    }>;
+  };
+}
+
+export interface GetUserSubscriptionsResponse {
+  getUserSubscriptions: Array<{
+    id: string;
+    userId: string;
+    stripeSubscriptionId: string;
+    stripeCustomerId: string;
+    planId: string;
+    status: 'ACTIVE' | 'CANCELED' | 'PAST_DUE' | 'UNPAID';
+    currentPeriodStart: string;
+    currentPeriodEnd: string;
+    cancelAtPeriodEnd: boolean;
+    daysRemaining: number;
+    isActive: boolean;
+    isExpired: boolean;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+}
+
+export interface GetSubscriptionResponse {
+  getSubscription: {
+    id: string;
+    userId: string;
+    stripeSubscriptionId: string;
+    stripeCustomerId: string;
+    planId: string;
+    status: 'ACTIVE' | 'CANCELED' | 'PAST_DUE' | 'UNPAID';
+    currentPeriodStart: string;
+    currentPeriodEnd: string;
+    cancelAtPeriodEnd: boolean;
+    daysRemaining: number;
+    isActive: boolean;
+    isExpired: boolean;
+    createdAt: string;
+    updatedAt: string;
+  };
+}
+
+export interface CreateSubscriptionResponse {
+  createSubscription: {
+    id: string;
+    userId: string;
+    stripeSubscriptionId: string;
+    stripeCustomerId: string;
+    planId: string;
+    status: 'ACTIVE' | 'CANCELED' | 'PAST_DUE' | 'UNPAID';
+    currentPeriodStart: string;
+    currentPeriodEnd: string;
+    cancelAtPeriodEnd: boolean;
+    daysRemaining: number;
+    isActive: boolean;
+    isExpired: boolean;
+    createdAt: string;
+    updatedAt: string;
+  };
+}
+
+export interface CancelSubscriptionResponse {
+  cancelSubscription: {
+    id: string;
+    userId: string;
+    stripeSubscriptionId: string;
+    stripeCustomerId: string;
+    planId: string;
+    status: 'ACTIVE' | 'CANCELED' | 'PAST_DUE' | 'UNPAID';
+    currentPeriodStart: string;
+    currentPeriodEnd: string;
+    cancelAtPeriodEnd: boolean;
+    daysRemaining: number;
+    isActive: boolean;
+    isExpired: boolean;
+    createdAt: string;
+    updatedAt: string;
+  };
+}
+
+export interface RequestRefundResponse {
+  requestRefund: {
+    id: string;
+    paymentId: string;
+    enrollmentId?: string;
+    stripeRefundId?: string;
+    amount: number;
+    reason?: string;
+    status: 'PENDING' | 'SUCCEEDED' | 'FAILED';
+    createdAt: string;
+    updatedAt: string;
+    payment?: {
+      id: string;
+      amount: number;
+      currency: string;
+      course?: {
+        id: string;
+        title: string;
+      };
+    };
+  };
+}
+
+export interface GetRefundEligibilityResponse {
+  getRefundEligibility: {
+    eligible: boolean;
+    reason?: string;
+    maxRefundAmount?: number;
+    refundPolicy: {
+      fullRefundDays: number;
+      contentConsumptionThreshold: number;
+      minimumRefundPercentage: number;
+      administrativeFeePercentage: number;
+    };
+  };
+}
+
+export interface GetRefundResponse {
+  getRefund: {
+    id: string;
+    paymentId: string;
+    enrollmentId?: string;
+    stripeRefundId?: string;
+    amount: number;
+    reason?: string;
+    status: 'PENDING' | 'SUCCEEDED' | 'FAILED';
+    createdAt: string;
+    updatedAt: string;
+    payment?: {
+      id: string;
+      amount: number;
+      currency: string;
+      course?: {
+        id: string;
+        title: string;
+      };
+    };
+    enrollment?: {
+      id: string;
+      course: {
+        id: string;
+        title: string;
+      };
+    };
+  };
+}

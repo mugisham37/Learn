@@ -16,9 +16,8 @@ import {
   useQuery,
   useMutation,
   useSubscription,
-  ApolloCache,
-  gql,
 } from '@apollo/client/react';
+import { gql } from '@apollo/client';
 import type { ID, DateTime, JSON } from '../types';
 
 // ============================================================================
@@ -495,7 +494,7 @@ export function useNotifications(options?: {
           after: data.getUserNotifications.pageInfo.endCursor,
         },
       },
-      updateQuery: (prev: any, { fetchMoreResult }: { fetchMoreResult: any }) => {
+      updateQuery: (prev: GetUserNotificationsResponse, { fetchMoreResult }: { fetchMoreResult: GetUserNotificationsResponse }) => {
         if (!fetchMoreResult) return prev;
 
         return {
@@ -667,25 +666,30 @@ export function useMarkNotificationRead(): MutationResult<
     MARK_NOTIFICATION_READ,
     {
       errorPolicy: 'all',
-      update: (cache: ApolloCache, { data }: { data: any }) => {
+      update: (cache, result) => {
+        const { data } = result;
         if (data?.markNotificationRead) {
           // Update the notification in cache
-          cache.modify({
-            id: cache.identify(data.markNotificationRead),
-            fields: {
-              isRead: () => true,
-              readAt: () => data.markNotificationRead.readAt,
-            },
-          });
+          const notificationId = cache.identify(data.markNotificationRead as unknown as { __typename: string; id: string });
+          if (notificationId) {
+            cache.modify({
+              id: notificationId,
+              fields: {
+                isRead: () => true,
+                readAt: () => data.markNotificationRead.readAt,
+              },
+            });
+          }
 
-          // Decrement unread count
+          // Decrement unread count - using evict and refetch pattern
           cache.modify({
             fields: {
-              getUserNotifications(existing: any) {
+              getUserNotifications(existing, { readField }) {
                 if (!existing) return existing;
+                const currentCount = readField<number>('unreadCount', existing);
                 return {
                   ...existing,
-                  unreadCount: Math.max(0, (existing.unreadCount || 0) - 1),
+                  unreadCount: Math.max(0, (currentCount || 0) - 1),
                 };
               },
             },
@@ -784,7 +788,8 @@ export function useUpdateNotificationPreferences(): MutationResult<
   const [updatePreferencesMutation, { loading, error, reset }] =
     useMutation<UpdateNotificationPreferencesResponse>(UPDATE_NOTIFICATION_PREFERENCES, {
       errorPolicy: 'all',
-      update: (cache: ApolloCache, { data }: { data: any }) => {
+      update: (cache, result) => {
+        const { data } = result;
         if (data?.updateNotificationPreferences) {
           // Update preferences in cache
           cache.writeQuery({
@@ -842,7 +847,7 @@ export function useNotificationReceived(
     {
       variables: { userId },
       skip: !userId,
-      onData: ({ data: subscriptionData }: { data: any }) => {
+      onData: ({ data: subscriptionData }: { data: { data?: NotificationReceivedSubscriptionData } }) => {
         if (subscriptionData.data?.notificationReceived && onNotification) {
           onNotification(subscriptionData.data.notificationReceived);
         }
@@ -885,7 +890,7 @@ export function useNotificationRead(
     {
       variables: { userId },
       skip: !userId,
-      onData: ({ data: subscriptionData }: { data: any }) => {
+      onData: ({ data: subscriptionData }: { data: { data?: NotificationReadSubscriptionData } }) => {
         if (subscriptionData.data?.notificationRead && onNotificationRead) {
           onNotificationRead(subscriptionData.data.notificationRead);
         }
@@ -930,7 +935,7 @@ export function useUnreadCountChanged(
     {
       variables: { userId },
       skip: !userId,
-      onData: ({ data: subscriptionData }: { data: any }) => {
+      onData: ({ data: subscriptionData }: { data: { data?: UnreadCountChangedSubscriptionData } }) => {
         if (typeof subscriptionData.data?.unreadCountChanged === 'number' && onCountChanged) {
           onCountChanged(subscriptionData.data.unreadCountChanged);
         }
@@ -1164,7 +1169,7 @@ export function useNotificationAnalytics(options?: {
     } finally {
       setLoading(false);
     }
-  }, [options]);
+  }, []);
 
   const generateReport = useCallback(
     async (format: 'pdf' | 'csv' | 'excel') => {
@@ -1397,7 +1402,7 @@ export function useNotificationScheduling() {
  * ```
  */
 export function useMultiChannelNotifications() {
-  const [channelStatus, setChannelStatus] = useState<
+  const [channelStatus] = useState<
     Record<
       NotificationChannel,
       {

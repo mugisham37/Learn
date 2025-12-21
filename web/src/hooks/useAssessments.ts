@@ -25,6 +25,10 @@ import type {
   SubmitQuizResponse,
   SubmitAssignmentResponse,
   GradeAssignmentResponse,
+  GetQuizAnalyticsResponse,
+  GetAssignmentAnalyticsResponse,
+  GetStudentAssessmentProgressResponse,
+  GetAssessmentAttemptsResponse,
 } from '../types/graphql-responses';
 
 // GraphQL Queries and Mutations
@@ -864,8 +868,8 @@ export function useAssignment(assignmentId: string): QueryResult<Assignment> {
 export function useQuizAnalytics(
   quizId: string,
   dateRange?: { startDate: string; endDate: string }
-): QueryResult<any> {
-  const { data, loading, error, refetch } = useQuery(GET_QUIZ_ANALYTICS, {
+): QueryResult<GetQuizAnalyticsResponse['quizAnalytics']> {
+  const { data, loading, error, refetch } = useQuery<GetQuizAnalyticsResponse>(GET_QUIZ_ANALYTICS, {
     variables: {
       quizId,
       dateRange: dateRange
@@ -925,8 +929,8 @@ export function useQuizAnalytics(
 export function useAssignmentAnalytics(
   assignmentId: string,
   dateRange?: { startDate: string; endDate: string }
-): QueryResult<any> {
-  const { data, loading, error, refetch } = useQuery(GET_ASSIGNMENT_ANALYTICS, {
+): QueryResult<GetAssignmentAnalyticsResponse['assignmentAnalytics']> {
+  const { data, loading, error, refetch } = useQuery<GetAssignmentAnalyticsResponse>(GET_ASSIGNMENT_ANALYTICS, {
     variables: {
       assignmentId,
       dateRange: dateRange
@@ -985,8 +989,8 @@ export function useAssignmentAnalytics(
 export function useStudentAssessmentProgress(
   studentId: string,
   courseId?: string
-): QueryResult<any> {
-  const { data, loading, error, refetch } = useQuery(GET_STUDENT_ASSESSMENT_PROGRESS, {
+): QueryResult<GetStudentAssessmentProgressResponse['studentAssessmentProgress']> {
+  const { data, loading, error, refetch } = useQuery<GetStudentAssessmentProgressResponse>(GET_STUDENT_ASSESSMENT_PROGRESS, {
     variables: { studentId, courseId },
     skip: !studentId,
     errorPolicy: 'all',
@@ -1034,8 +1038,8 @@ export function useStudentAssessmentProgress(
  * }
  * ```
  */
-export function useAssessmentAttempts(assessmentId: string, studentId: string): QueryResult<any[]> {
-  const { data, loading, error, refetch } = useQuery(GET_ASSESSMENT_ATTEMPTS, {
+export function useAssessmentAttempts(assessmentId: string, studentId: string): QueryResult<GetAssessmentAttemptsResponse['assessmentAttempts']> {
+  const { data, loading, error, refetch } = useQuery<GetAssessmentAttemptsResponse>(GET_ASSESSMENT_ATTEMPTS, {
     variables: { assessmentId, studentId },
     skip: !assessmentId || !studentId,
     errorPolicy: 'all',
