@@ -9,6 +9,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { useAuthActions } from '../authHooks';
+import type { User } from '@/types';
 
 interface EmailVerificationFormProps {
   email?: string;
@@ -103,7 +104,7 @@ export function EmailVerificationForm({
 interface EmailVerificationHandlerProps {
   token: string;
   email: string;
-  onSuccess?: (user: any) => void;
+  onSuccess?: (user: User) => void;
   onError?: (error: string) => void;
   redirectTo?: string;
 }
@@ -140,7 +141,9 @@ export function EmailVerificationHandler({
       if (result.success) {
         setMessage('Email verified successfully! Redirecting...');
         setIsVerified(true);
-        onSuccess?.(result.user);
+        if (result.user) {
+          onSuccess?.(result.user);
+        }
       } else {
         const error = 'Email verification failed';
         setMessage(error);

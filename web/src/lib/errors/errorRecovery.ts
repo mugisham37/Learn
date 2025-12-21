@@ -178,8 +178,9 @@ export class ErrorRecoveryManager {
   ): Promise<ErrorHandlerResult> {
     // Use backend-specific retry config if available
     const backendRetryConfig = getBackendRetryConfig(error.type);
-    const retryConfig = {
-      ...DEFAULT_RETRY_CONFIGS[error.type],
+    const defaultConfig = DEFAULT_RETRY_CONFIGS[error.type] || DEFAULT_RETRY_CONFIGS.UNKNOWN_ERROR;
+    const retryConfig: RetryConfig = {
+      ...defaultConfig,
       ...backendRetryConfig,
     };
 

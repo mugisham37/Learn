@@ -48,22 +48,19 @@ export function createServerClient(accessToken?: string) {
   });
 
   // Error handling link
-  const errorLink = onError(({ graphQLErrors, networkError }) => {
-    if (graphQLErrors) {
-      graphQLErrors.forEach(({ message, locations, path, extensions }: {
-        message: string;
-        locations?: readonly unknown[];
-        path?: readonly (string | number)[];
-        extensions?: Record<string, unknown>;
-      }) => {
+  const errorLink = onError((errorResponse) => {
+    if ('graphQLErrors' in errorResponse && Array.isArray(errorResponse.graphQLErrors)) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      errorResponse.graphQLErrors.forEach((gqlError: any) => {
+        const { message, locations, path, extensions } = gqlError;
         console.error(`GraphQL error: Message: ${message}, Location: ${locations}, Path: ${path}`, {
           extensions,
         });
       });
     }
 
-    if (networkError) {
-      console.error(`Network error: ${networkError.message}`, networkError);
+    if ('networkError' in errorResponse && errorResponse.networkError && typeof errorResponse.networkError === 'object' && 'message' in errorResponse.networkError) {
+      console.error(`Network error: ${(errorResponse.networkError as Error).message}`, errorResponse.networkError);
     }
   });
 

@@ -9,6 +9,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { useAuthActions } from '../authHooks';
+import type { User } from '@/types';
 
 interface PasswordResetRequestFormProps {
   onSuccess?: () => void;
@@ -59,7 +60,7 @@ export function PasswordResetRequestForm({ onSuccess, onError }: PasswordResetRe
       <div className='text-center mb-6'>
         <h2 className='text-2xl font-bold text-gray-900'>Reset Your Password</h2>
         <p className='mt-2 text-sm text-gray-600'>
-          Enter your email address and we'll send you a link to reset your password.
+          Enter your email address and we&apos;ll send you a link to reset your password.
         </p>
       </div>
 
@@ -107,7 +108,7 @@ export function PasswordResetRequestForm({ onSuccess, onError }: PasswordResetRe
 interface PasswordResetConfirmFormProps {
   token: string;
   email: string;
-  onSuccess?: (user: any) => void;
+  onSuccess?: (user: User) => void;
   onError?: (error: string) => void;
   redirectTo?: string;
 }
@@ -161,7 +162,9 @@ export function PasswordResetConfirmForm({
 
         if (result.success) {
           setMessage('Password reset successfully! Redirecting to login...');
-          onSuccess?.(result.user);
+          if (result.user) {
+            onSuccess?.(result.user);
+          }
         } else {
           const error = 'Password reset failed';
           setMessage(error);

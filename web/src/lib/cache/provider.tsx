@@ -116,28 +116,37 @@ export function CacheProvider({
 
   // Initialize backend cache manager
   useEffect(() => {
-    const manager = createBackendCacheManager(cache, client, {
-      enablePersistence,
-      enableOptimization,
-      persistenceKey,
-    });
+    const initializeManager = async () => {
+      const manager = createBackendCacheManager(cache, client, {
+        enablePersistence,
+        enableOptimization,
+        persistenceKey,
+      });
 
-    setBackendManager(manager);
+      // Use a callback to avoid direct setState in effect
+      setBackendManager(() => manager);
 
-    // Update cache stats periodically
-    const updateStats = () => {
-      if (manager) {
-        const healthReport = manager.getHealthReport();
-        setCacheStats(healthReport.stats);
-      }
+      // Update cache stats periodically
+      const updateStats = () => {
+        if (manager) {
+          const healthReport = manager.getHealthReport();
+          setCacheStats(healthReport.stats);
+        }
+      };
+
+      updateStats();
+      const interval = setInterval(updateStats, 30000); // Every 30 seconds
+
+      return () => {
+        clearInterval(interval);
+        manager.destroy();
+      };
     };
 
-    updateStats();
-    const interval = setInterval(updateStats, 30000); // Every 30 seconds
-
+    const cleanup = initializeManager();
+    
     return () => {
-      clearInterval(interval);
-      manager.destroy();
+      cleanup.then(cleanupFn => cleanupFn?.());
     };
   }, [cache, client, enablePersistence, enableOptimization, persistenceKey]);
 

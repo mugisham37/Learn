@@ -10,6 +10,11 @@
 import { revalidatePath, revalidateTag } from 'next/cache';
 
 /**
+ * Revalidation profile for cache operations
+ */
+const REVALIDATION_PROFILE = 'page' as const;
+
+/**
  * Cache configuration for different data types
  */
 export const CACHE_CONFIG = {
@@ -76,71 +81,71 @@ export const cacheRevalidation = {
    * Revalidate course data
    */
   async revalidateCourse(courseId: string) {
-    revalidateTag(CACHE_TAGS.COURSE(courseId));
-    revalidateTag(CACHE_TAGS.COURSES_LIST);
-    revalidatePath('/courses');
-    revalidatePath(`/courses/${courseId}`);
+    revalidateTag(CACHE_TAGS.COURSE(courseId), REVALIDATION_PROFILE);
+    revalidateTag(CACHE_TAGS.COURSES_LIST, REVALIDATION_PROFILE);
+    revalidatePath('/courses', REVALIDATION_PROFILE);
+    revalidatePath(`/courses/${courseId}`, REVALIDATION_PROFILE);
   },
 
   /**
    * Revalidate user data
    */
   async revalidateUser(userId: string) {
-    revalidateTag(CACHE_TAGS.USER(userId));
-    revalidateTag(CACHE_TAGS.USERS_LIST);
-    revalidateTag(CACHE_TAGS.USER_COURSES(userId));
-    revalidateTag(CACHE_TAGS.USER_ENROLLMENTS(userId));
-    revalidatePath('/profile');
-    revalidatePath('/dashboard');
+    revalidateTag(CACHE_TAGS.USER(userId), REVALIDATION_PROFILE);
+    revalidateTag(CACHE_TAGS.USERS_LIST, REVALIDATION_PROFILE);
+    revalidateTag(CACHE_TAGS.USER_COURSES(userId), REVALIDATION_PROFILE);
+    revalidateTag(CACHE_TAGS.USER_ENROLLMENTS(userId), REVALIDATION_PROFILE);
+    revalidatePath('/profile', REVALIDATION_PROFILE);
+    revalidatePath('/dashboard', REVALIDATION_PROFILE);
   },
 
   /**
    * Revalidate enrollment data
    */
   async revalidateEnrollment(enrollmentId: string, userId: string, courseId: string) {
-    revalidateTag(CACHE_TAGS.ENROLLMENT(enrollmentId));
-    revalidateTag(CACHE_TAGS.ENROLLMENTS_LIST);
-    revalidateTag(CACHE_TAGS.USER_ENROLLMENTS(userId));
-    revalidateTag(CACHE_TAGS.COURSE(courseId));
-    revalidatePath('/learning');
-    revalidatePath(`/courses/${courseId}`);
+    revalidateTag(CACHE_TAGS.ENROLLMENT(enrollmentId), REVALIDATION_PROFILE);
+    revalidateTag(CACHE_TAGS.ENROLLMENTS_LIST, REVALIDATION_PROFILE);
+    revalidateTag(CACHE_TAGS.USER_ENROLLMENTS(userId), REVALIDATION_PROFILE);
+    revalidateTag(CACHE_TAGS.COURSE(courseId), REVALIDATION_PROFILE);
+    revalidatePath('/learning', REVALIDATION_PROFILE);
+    revalidatePath(`/courses/${courseId}`, REVALIDATION_PROFILE);
   },
 
   /**
    * Revalidate course category
    */
   async revalidateCourseCategory(category: string) {
-    revalidateTag(CACHE_TAGS.COURSE_CATEGORY(category));
-    revalidateTag(CACHE_TAGS.COURSES_LIST);
-    revalidatePath('/courses');
+    revalidateTag(CACHE_TAGS.COURSE_CATEGORY(category), REVALIDATION_PROFILE);
+    revalidateTag(CACHE_TAGS.COURSES_LIST, REVALIDATION_PROFILE);
+    revalidatePath('/courses', REVALIDATION_PROFILE);
   },
 
   /**
    * Revalidate user progress
    */
   async revalidateUserProgress(userId: string) {
-    revalidateTag(CACHE_TAGS.USER_PROGRESS(userId));
-    revalidateTag(CACHE_TAGS.USER_ENROLLMENTS(userId));
-    revalidatePath('/learning');
-    revalidatePath('/dashboard');
+    revalidateTag(CACHE_TAGS.USER_PROGRESS(userId), REVALIDATION_PROFILE);
+    revalidateTag(CACHE_TAGS.USER_ENROLLMENTS(userId), REVALIDATION_PROFILE);
+    revalidatePath('/learning', REVALIDATION_PROFILE);
+    revalidatePath('/dashboard', REVALIDATION_PROFILE);
   },
 
   /**
    * Revalidate all course-related data
    */
   async revalidateAllCourses() {
-    revalidateTag(CACHE_TAGS.COURSES_LIST);
-    revalidateTag('courses');
-    revalidatePath('/courses');
+    revalidateTag(CACHE_TAGS.COURSES_LIST, REVALIDATION_PROFILE);
+    revalidateTag('courses', REVALIDATION_PROFILE);
+    revalidatePath('/courses', REVALIDATION_PROFILE);
   },
 
   /**
    * Revalidate specific path
    */
   async revalidateCustomPath(path: string, tags?: string[]) {
-    revalidatePath(path);
+    revalidatePath(path, REVALIDATION_PROFILE);
     if (tags) {
-      tags.forEach(tag => revalidateTag(tag));
+      tags.forEach(tag => revalidateTag(tag, REVALIDATION_PROFILE));
     }
   },
 };
@@ -282,7 +287,7 @@ export const cacheInvalidation = {
   /**
    * Invalidate on course update
    */
-  onCourseUpdate: async (courseId: string, updates: any) => {
+  onCourseUpdate: async (courseId: string, updates: Record<string, unknown>) => {
     await cacheRevalidation.revalidateCourse(courseId);
 
     // If category changed, invalidate category cache
