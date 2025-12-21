@@ -264,7 +264,7 @@ export class InputValidator {
             });
           }
         }
-      } catch (parseError) {
+      } catch (_parseError) {
         errors.push({
           field: 'url',
           message: 'URL parsing failed',

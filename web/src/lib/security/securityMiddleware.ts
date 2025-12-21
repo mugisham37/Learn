@@ -10,7 +10,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { securityConfig, SECURITY_CONSTANTS } from './securityConfig';
 import { CSRFProtector } from './csrfProtection';
-import { XSSProtector } from './xssProtection';
 import type { SecurityEvent } from './securityTypes';
 
 // Rate limiting store (in production, use Redis)
@@ -158,7 +157,7 @@ async function validateRequestInput(request: NextRequest): Promise<{
       valid: errors.length === 0,
       errors,
     };
-  } catch (error) {
+  } catch (_error) {
     return {
       valid: false,
       errors: ['Request validation failed'],
@@ -320,13 +319,13 @@ export async function securityMiddleware(request: NextRequest): Promise<NextResp
     
     return response;
     
-  } catch (error) {
+  } catch (middlewareError) {
     logSecurityEvent({
       type: 'security_error',
       timestamp: new Date(),
       details: { 
         reason: 'middleware_error',
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: middlewareError instanceof Error ? middlewareError.message : 'Unknown error',
       },
       severity: 'critical',
     }, request);

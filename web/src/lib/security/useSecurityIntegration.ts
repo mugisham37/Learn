@@ -8,6 +8,7 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
+import React from 'react';
 import { ApolloClient, DocumentNode, InMemoryCache } from '@apollo/client';
 import { CSRFProtector } from './csrfProtection';
 import { inputValidator, type ValidationResult } from './inputValidation';
@@ -33,10 +34,10 @@ interface SecurityState {
  */
 export function useSecurityIntegration() {
   // Create a mock Apollo client for now - in real implementation, use useApolloClient()
-  const apolloClient = new ApolloClient({
+  const apolloClient = React.useMemo(() => new ApolloClient({
     cache: new InMemoryCache(),
-    uri: '/api/graphql',
-  });
+    link: {} as any, // Mock link for now
+  }), []);
   const [securityState, setSecurityState] = useState<SecurityState>({
     csrfToken: null,
     isSecureStorageAvailable: false,
@@ -92,7 +93,7 @@ export function useSecurityIntegration() {
         errors: [],
         warnings,
       };
-    } catch (validationError) {
+    } catch (_validationError) {
       return {
         success: false,
         errors: [{

@@ -125,8 +125,9 @@ export function useMessageSubscription(
               return conversation;
             });
           },
-          messages(existingMessages = [], { args }: { args?: Record<string, unknown> }) {
+          messages(existingMessages = [], details) {
             // Add new message to the specific conversation's message list
+            const args = (details as any)?.args;
             if (args?.conversationId === (data as Record<string, unknown>)?.conversationId) {
               return [data, ...existingMessages];
             }
@@ -187,14 +188,15 @@ export function useProgressSubscription(
               return enrollment;
             });
           },
-          courseProgress(existingProgress = [], { args }: { args?: Record<string, unknown> }) {
+          courseProgress(existingProgress = [], details) {
             // Update course-specific progress
+            const args = (details as any)?.args;
             if (args?.courseId === (data as Record<string, unknown>)?.courseId) {
               return existingProgress.map((progress: Record<string, unknown>) => {
                 if (progress.enrollmentId === (data as Record<string, unknown>)?.enrollmentId) {
                   return {
                     ...progress,
-                    ...(data as Record<string, unknown>),
+                    ...data,
                     updatedAt: new Date().toISOString(),
                   };
                 }
@@ -250,8 +252,9 @@ export function useNotificationSubscription(
             // Increment unread count
             return existingCount + 1;
           },
-          userNotifications(existingUserNotifications = [], { args }: { args?: Record<string, unknown> }) {
+          userNotifications(existingUserNotifications = [], details) {
             // Update user-specific notifications
+            const args = (details as any)?.args;
             if (args?.userId === userId) {
               return [data, ...existingUserNotifications];
             }

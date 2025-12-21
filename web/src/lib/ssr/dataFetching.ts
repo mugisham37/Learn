@@ -82,7 +82,8 @@ export const serverData = {
     limit?: number;
     featured?: boolean;
   } = {}) {
-    const cacheKey = nextCache.keys.courseList(params);
+    // Generate cache key for potential future use
+    nextCache.keys.courseList(params);
     
     const result = await serverGraphQL.fetchCourses({
       first: params.limit || 12,
@@ -128,7 +129,8 @@ export const serverData = {
     const token = await serverAuth.requireAuth();
     const user = await serverAuth.getCurrentUser();
     
-    const cacheKey = nextCache.keys.userEnrollments(user.id, params);
+    // Generate cache key for potential future use
+    nextCache.keys.userEnrollments(user.id, params);
     
     const result = await serverGraphQL.fetchUserEnrollments(token, {
       first: params.limit || 10,

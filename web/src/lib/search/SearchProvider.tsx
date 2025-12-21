@@ -152,14 +152,15 @@ export function SearchProvider({
   const optimizationHook = useSearchOptimization();
   
   // Load search history on mount
+  const [isInitialized, setIsInitialized] = useState(false);
+  
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && !isInitialized) {
       const stored = localStorage.getItem('search_history');
       if (stored) {
         try {
           const parsedHistory = JSON.parse(stored);
-          // Use functional update to avoid direct setState in effect
-          setSearchHistory(() => parsedHistory);
+          setSearchHistory(parsedHistory);
         } catch (error) {
           console.warn('Failed to load search history:', error);
         }
@@ -170,14 +171,15 @@ export function SearchProvider({
       if (storedPrefs && !initialUserPreferences) {
         try {
           const parsedPrefs = JSON.parse(storedPrefs);
-          // Use functional update to avoid direct setState in effect
-          setUserPreferences(() => parsedPrefs);
+          setUserPreferences(parsedPrefs);
         } catch (error) {
           console.warn('Failed to load user preferences:', error);
         }
       }
+      
+      setIsInitialized(true);
     }
-  }, [initialUserPreferences]);
+  }, [isInitialized, initialUserPreferences]);
   
   // Save search history when it changes
   useEffect(() => {
@@ -490,26 +492,26 @@ export function useSearchUrlSync() {
  */
 export function useSearchPerformance() {
   const { searchMetrics } = useSearchContext();
-  const [performanceData, setPerformanceData] = useState({
-    averageSearchTime: 0,
-    successRate: 0,
-    totalSearches: 0,
-    slowSearches: 0,
-  });
   
-  // Update performance data when metrics change
-  useEffect(() => {
-    if (searchMetrics) {
-      setPerformanceData(prev => ({
-        ...prev,
-        averageSearchTime: searchMetrics.averageSearchTime || 0,
-        successRate: searchMetrics.successRate || 0,
-        totalSearches: searchMetrics.totalSearches || 0,
-        slowSearches: (searchMetrics.totalSearches || 0) > 0 
-          ? Math.round(((searchMetrics.totalSearches || 0) * 0.1)) // Estimate 10% slow searches
-          : 0,
-      }));
+  // Derive performance data from searchMetrics without using state
+  const performanceData = React.useMemo(() => {
+    if (!searchMetrics) {
+      return {
+        averageSearchTime: 0,
+        successRate: 0,
+        totalSearches: 0,
+        slowSearches: 0,
+      };
     }
+    
+    return {
+      averageSearchTime: searchMetrics.averageSearchTime || 0,
+      successRate: searchMetrics.successRate || 0,
+      totalSearches: searchMetrics.totalSearches || 0,
+      slowSearches: (searchMetrics.totalSearches || 0) > 0 
+        ? Math.round(((searchMetrics.totalSearches || 0) * 0.1)) // Estimate 10% slow searches
+        : 0,
+    };
   }, [searchMetrics]);
   
   const isPerformanceGood = performanceData.averageSearchTime < 1000 && performanceData.successRate > 0.8;

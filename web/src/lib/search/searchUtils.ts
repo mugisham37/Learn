@@ -83,8 +83,8 @@ export function buildElasticsearchQuery(
   query: string,
   filters: SearchFilters,
   _sort: { field: string; order: string }
-): Record<string, unknown> {
-  const esQuery: Record<string, unknown> = {
+): ElasticsearchQuery {
+  const esQuery: ElasticsearchQuery = {
     bool: {
       must: [],
       filter: [],
@@ -124,14 +124,20 @@ export function buildElasticsearchQuery(
   }
 
   if (filters.priceRange) {
-    const priceFilter: Record<string, unknown> = { range: { price: {} } };
+    const priceFilter: ElasticsearchRangeQuery = { 
+      range: { 
+        price: {} 
+      } 
+    };
+    
     if (filters.priceRange.min !== undefined) {
-      (priceFilter.range as Record<string, Record<string, unknown>>).price.gte = filters.priceRange.min;
+      priceFilter.range.price.gte = filters.priceRange.min;
     }
     if (filters.priceRange.max !== undefined) {
-      (priceFilter.range as Record<string, Record<string, unknown>>).price.lte = filters.priceRange.max;
+      priceFilter.range.price.lte = filters.priceRange.max;
     }
-    (esQuery.bool as Record<string, unknown[]>).filter.push(priceFilter);
+    
+    esQuery.bool.filter.push(priceFilter as Record<string, unknown>);
   }
 
   if (filters.rating?.min) {
@@ -544,6 +550,25 @@ export interface UserPreferences {
   skillLevel?: string;
   maxPrice?: number;
   preferredLanguage?: string;
+}
+
+// Elasticsearch query types
+interface ElasticsearchRangeQuery {
+  range: {
+    [field: string]: {
+      gte?: number;
+      lte?: number;
+      boost?: number;
+    };
+  };
+}
+
+interface ElasticsearchQuery {
+  bool: {
+    must: Array<Record<string, unknown>>;
+    filter: Array<Record<string, unknown>>;
+    should: Array<Record<string, unknown>>;
+  };
 }
 
 // ============================================================================

@@ -28,18 +28,6 @@ const ROLE_PROTECTED_ROUTES = {
   '/analytics': ['EDUCATOR', 'ADMIN'],
 };
 
-// Public routes that don't require authentication
-const PUBLIC_ROUTES = [
-  '/',
-  '/login',
-  '/register',
-  '/forgot-password',
-  '/reset-password',
-  '/verify-email',
-  '/about',
-  '/contact',
-];
-
 /**
  * Parse JWT token payload
  */

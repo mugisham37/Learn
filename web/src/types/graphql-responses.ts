@@ -21,7 +21,6 @@ import type {
   ThreadConnection,
   DiscussionThread,
   DiscussionReply,
-  StreamingUrl,
   Certificate,
   LessonProgress,
   Announcement,
@@ -346,7 +345,7 @@ export interface GetVideoAssetResponse {
       dash?: string;
       mp4?: Record<string, string>;
     };
-    metadata: Record<string, any>;
+    metadata: Record<string, unknown>;
     createdAt: string;
     updatedAt: string;
     formattedDuration: string | null;
@@ -395,7 +394,7 @@ export interface GetFileAssetResponse {
     };
     description: string | null;
     tags: string[];
-    metadata: Record<string, any>;
+    metadata: Record<string, unknown>;
     expiresAt: string | null;
     createdAt: string;
     updatedAt: string;
@@ -496,7 +495,7 @@ export interface GetVideoProcessingStatusResponse {
     progress: number;
     startedAt: string | null;
     completedAt: string | null;
-    result: Record<string, any> | null;
+    result: Record<string, unknown> | null;
     errorMessage: string | null;
     errorCode: string | null;
     attemptCount: number;
@@ -504,7 +503,7 @@ export interface GetVideoProcessingStatusResponse {
     nextRetryAt: string | null;
     priority: number;
     scheduledFor: string | null;
-    metadata: Record<string, any>;
+    metadata: Record<string, unknown>;
     createdAt: string;
     updatedAt: string;
     isPending: boolean;
