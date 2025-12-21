@@ -1,6 +1,6 @@
 /**
  * Error Boundary Components
- * 
+ *
  * React error boundary components for graceful error handling
  * and recovery in the frontend application.
  */
@@ -48,7 +48,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
   constructor(props: ErrorBoundaryProps) {
     super(props);
-    
+
     this.state = {
       hasError: false,
       error: null,
@@ -115,7 +115,10 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     try {
       // Report to Sentry or other error tracking service
       if (typeof window !== 'undefined' && (window as unknown as Record<string, unknown>).Sentry) {
-        const sentry = (window as unknown as Record<string, unknown>).Sentry as Record<string, unknown>;
+        const sentry = (window as unknown as Record<string, unknown>).Sentry as Record<
+          string,
+          unknown
+        >;
         if (typeof sentry.captureException === 'function') {
           sentry.captureException(error, {
             tags: {
@@ -176,35 +179,38 @@ interface DefaultErrorFallbackProps {
   canRetry?: boolean;
 }
 
-function DefaultErrorFallback({ 
-  error, 
-  errorInfo, 
-  onRetry, 
-  canRetry = true 
+function DefaultErrorFallback({
+  error,
+  errorInfo,
+  onRetry,
+  canRetry = true,
 }: DefaultErrorFallbackProps) {
   const userMessage = errorMessageMapper.getMessage(error);
 
   return (
-    <div className="error-boundary-fallback" style={{
-      padding: '2rem',
-      margin: '1rem',
-      border: '1px solid #e2e8f0',
-      borderRadius: '0.5rem',
-      backgroundColor: '#fef2f2',
-      color: '#991b1b',
-    }}>
+    <div
+      className='error-boundary-fallback'
+      style={{
+        padding: '2rem',
+        margin: '1rem',
+        border: '1px solid #e2e8f0',
+        borderRadius: '0.5rem',
+        backgroundColor: '#fef2f2',
+        color: '#991b1b',
+      }}
+    >
       <div style={{ marginBottom: '1rem' }}>
-        <h2 style={{ 
-          fontSize: '1.25rem', 
-          fontWeight: 'bold', 
-          marginBottom: '0.5rem',
-          color: '#dc2626'
-        }}>
+        <h2
+          style={{
+            fontSize: '1.25rem',
+            fontWeight: 'bold',
+            marginBottom: '0.5rem',
+            color: '#dc2626',
+          }}
+        >
           Something went wrong
         </h2>
-        <p style={{ marginBottom: '1rem' }}>
-          {userMessage}
-        </p>
+        <p style={{ marginBottom: '1rem' }}>{userMessage}</p>
       </div>
 
       {onRetry && canRetry && (
@@ -243,24 +249,30 @@ function DefaultErrorFallback({
           <summary style={{ cursor: 'pointer', fontWeight: 'bold' }}>
             Error Details (Development)
           </summary>
-          <pre style={{
-            marginTop: '0.5rem',
-            padding: '1rem',
-            backgroundColor: '#f3f4f6',
-            borderRadius: '0.25rem',
-            fontSize: '0.875rem',
-            overflow: 'auto',
-            color: '#374151',
-          }}>
-            {JSON.stringify({
-              error: {
-                type: error.type,
-                code: error.code,
-                message: error.message,
-                stack: error.stack,
+          <pre
+            style={{
+              marginTop: '0.5rem',
+              padding: '1rem',
+              backgroundColor: '#f3f4f6',
+              borderRadius: '0.25rem',
+              fontSize: '0.875rem',
+              overflow: 'auto',
+              color: '#374151',
+            }}
+          >
+            {JSON.stringify(
+              {
+                error: {
+                  type: error.type,
+                  code: error.code,
+                  message: error.message,
+                  stack: error.stack,
+                },
+                errorInfo,
               },
-              errorInfo,
-            }, null, 2)}
+              null,
+              2
+            )}
           </pre>
         </details>
       )}
@@ -279,7 +291,7 @@ interface AsyncErrorBoundaryProps extends ErrorBoundaryProps {
 export class AsyncErrorBoundary extends ErrorBoundary {
   componentDidUpdate(prevProps: AsyncErrorBoundaryProps) {
     const { resetKey } = this.props as AsyncErrorBoundaryProps;
-    
+
     // Reset error state when resetKey changes
     if (prevProps.resetKey !== resetKey && this.state.hasError) {
       this.setState({
@@ -306,7 +318,7 @@ export function withErrorBoundary<P extends object>(
   );
 
   WrappedComponent.displayName = `withErrorBoundary(${Component.displayName || Component.name})`;
-  
+
   return WrappedComponent;
 }
 
@@ -342,20 +354,20 @@ export function useErrorHandler() {
 export function RouteErrorBoundary({ children }: { children: ReactNode }) {
   return (
     <ErrorBoundary
-      name="RouteErrorBoundary"
+      name='RouteErrorBoundary'
       showRetry={true}
       fallback={(error, retry) => (
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          minHeight: '50vh',
-          padding: '2rem',
-        }}>
-          <h1 style={{ fontSize: '2rem', marginBottom: '1rem' }}>
-            Page Error
-          </h1>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minHeight: '50vh',
+            padding: '2rem',
+          }}
+        >
+          <h1 style={{ fontSize: '2rem', marginBottom: '1rem' }}>Page Error</h1>
           <p style={{ marginBottom: '2rem', textAlign: 'center' }}>
             {errorMessageMapper.getMessage(error)}
           </p>
@@ -375,7 +387,7 @@ export function RouteErrorBoundary({ children }: { children: ReactNode }) {
               Try Again
             </button>
             <button
-              onClick={() => window.location.href = '/'}
+              onClick={() => (window.location.href = '/')}
               style={{
                 padding: '0.75rem 1.5rem',
                 backgroundColor: '#6b7280',
@@ -402,16 +414,18 @@ export function RouteErrorBoundary({ children }: { children: ReactNode }) {
 export function FormErrorBoundary({ children }: { children: ReactNode }) {
   return (
     <ErrorBoundary
-      name="FormErrorBoundary"
+      name='FormErrorBoundary'
       showRetry={true}
       fallback={(error, retry) => (
-        <div style={{
-          padding: '1rem',
-          border: '1px solid #fca5a5',
-          borderRadius: '0.5rem',
-          backgroundColor: '#fef2f2',
-          marginBottom: '1rem',
-        }}>
+        <div
+          style={{
+            padding: '1rem',
+            border: '1px solid #fca5a5',
+            borderRadius: '0.5rem',
+            backgroundColor: '#fef2f2',
+            marginBottom: '1rem',
+          }}
+        >
           <p style={{ color: '#dc2626', marginBottom: '1rem' }}>
             {errorMessageMapper.getMessage(error)}
           </p>

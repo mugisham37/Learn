@@ -1,9 +1,9 @@
 /**
  * State Management Module Exports
- * 
+ *
  * This module provides comprehensive state management patterns for complex UI interactions
  * including course editing, search filtering, chat messaging, and user preferences.
- * 
+ *
  * All state management follows consistent patterns with:
  * - Reducer-based state management with useReducer
  * - Automatic persistence where appropriate

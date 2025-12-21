@@ -1,9 +1,9 @@
 /**
  * Type-Safe Form Submission Utilities
- * 
+ *
  * Provides type-safe form submission utilities with error handling,
  * GraphQL mutation integration, and optimistic updates.
- * 
+ *
  * Requirements: 2.5 - Type-safe form submission utilities
  */
 
@@ -20,7 +20,7 @@ import type {
   RegistrationFormInput,
   MessageFormInput,
   ThreadFormInput,
-  ThreadReplyFormInput
+  ThreadReplyFormInput,
 } from './formTypes';
 
 import { validateForm } from './formValidation';
@@ -79,14 +79,16 @@ export type MutationFunction<TData, TVariables> = (options?: {
 /**
  * Create a type-safe form submission handler
  */
-export function createFormSubmissionHandler<TFormData extends Record<string, unknown>, TMutationData, TMutationVariables>(
+export function createFormSubmissionHandler<
+  TFormData extends Record<string, unknown>,
+  TMutationData,
+  TMutationVariables,
+>(
   mutationFn: MutationFunction<TMutationData, TMutationVariables>,
   transformFormData: (formData: TFormData) => TMutationVariables,
   options: FormSubmissionOptions<TFormData> = {}
 ) {
-  return async (
-    formData: TFormData
-  ): Promise<FormSubmissionResult<TMutationData>> => {
+  return async (formData: TFormData): Promise<FormSubmissionResult<TMutationData>> => {
     try {
       // Validate form data if schema provided
       if (options.validationSchema) {
@@ -95,17 +97,17 @@ export function createFormSubmissionHandler<TFormData extends Record<string, unk
           const error: FormSubmissionError = {
             type: 'validation',
             message: 'Please fix the validation errors',
-            fieldErrors: validationErrors as Record<string, string>
+            fieldErrors: validationErrors as Record<string, string>,
           };
-          
+
           if (options.onError) {
             options.onError(error);
           }
-          
+
           return {
             success: false,
             errors: validationErrors,
-            error
+            error,
           };
         }
       }
@@ -119,9 +121,11 @@ export function createFormSubmissionHandler<TFormData extends Record<string, unk
         optimisticResponse?: TMutationData;
       } = {
         variables,
-        ...(options.optimisticUpdate && { optimisticResponse: createOptimisticResponse(formData) as TMutationData })
+        ...(options.optimisticUpdate && {
+          optimisticResponse: createOptimisticResponse(formData) as TMutationData,
+        }),
       };
-      
+
       const result = await mutationFn(mutationOptions);
 
       // Handle success
@@ -129,40 +133,39 @@ export function createFormSubmissionHandler<TFormData extends Record<string, unk
         if (options.onSuccess) {
           options.onSuccess(result.data);
         }
-        
+
         return {
           success: true,
-          data: result.data
+          data: result.data,
         };
       }
 
       // Handle unexpected empty result
       const error: FormSubmissionError = {
         type: 'unknown',
-        message: 'Unexpected empty response from server'
-      };
-      
-      if (options.onError) {
-        options.onError(error);
-      }
-      
-      return {
-        success: false,
-        error
+        message: 'Unexpected empty response from server',
       };
 
-    } catch (err) {
-      // Handle different types of errors
-      const error = handleSubmissionError(err);
-      
       if (options.onError) {
         options.onError(error);
       }
-      
+
       return {
         success: false,
         error,
-        errors: error.fieldErrors as FormErrors<Record<string, unknown>>
+      };
+    } catch (err) {
+      // Handle different types of errors
+      const error = handleSubmissionError(err);
+
+      if (options.onError) {
+        options.onError(error);
+      }
+
+      return {
+        success: false,
+        error,
+        errors: error.fieldErrors as FormErrors<Record<string, unknown>>,
       };
     }
   };
@@ -178,8 +181,20 @@ function handleSubmissionError(err: unknown): FormSubmissionError {
   };
 
   // Type guard for error with graphQLErrors
-  const hasGraphQLErrors = (error: unknown): error is { graphQLErrors: Array<{ message: string; extensions?: { code?: string; fieldErrors?: Record<string, string> } }> } => {
-    return typeof error === 'object' && error !== null && 'graphQLErrors' in error && Array.isArray((error as { graphQLErrors: unknown }).graphQLErrors);
+  const hasGraphQLErrors = (
+    error: unknown
+  ): error is {
+    graphQLErrors: Array<{
+      message: string;
+      extensions?: { code?: string; fieldErrors?: Record<string, string> };
+    }>;
+  } => {
+    return (
+      typeof error === 'object' &&
+      error !== null &&
+      'graphQLErrors' in error &&
+      Array.isArray((error as { graphQLErrors: unknown }).graphQLErrors)
+    );
   };
 
   // GraphQL/Apollo errors
@@ -187,7 +202,7 @@ function handleSubmissionError(err: unknown): FormSubmissionError {
     return {
       type: 'network',
       message: 'Network error. Please check your connection and try again.',
-      originalError: err instanceof Error ? err : new Error(String(err))
+      originalError: err instanceof Error ? err : new Error(String(err)),
     };
   }
 
@@ -197,10 +212,10 @@ function handleSubmissionError(err: unknown): FormSubmissionError {
       return {
         type: 'server',
         message: 'Server error occurred',
-        originalError: err instanceof Error ? err : new Error(String(err))
+        originalError: err instanceof Error ? err : new Error(String(err)),
       };
     }
-    
+
     // Check for validation errors
     if (graphQLError.extensions?.code === 'VALIDATION_ERROR') {
       const fieldErrors = graphQLError.extensions?.fieldErrors || {};
@@ -208,15 +223,15 @@ function handleSubmissionError(err: unknown): FormSubmissionError {
         type: 'validation',
         message: 'Please fix the validation errors',
         fieldErrors,
-        originalError: err instanceof Error ? err : new Error(String(err))
+        originalError: err instanceof Error ? err : new Error(String(err)),
       };
     }
-    
+
     // Other GraphQL errors
     return {
       type: 'server',
       message: graphQLError.message || 'Server error occurred',
-      originalError: err instanceof Error ? err : new Error(String(err))
+      originalError: err instanceof Error ? err : new Error(String(err)),
     };
   }
 
@@ -225,7 +240,7 @@ function handleSubmissionError(err: unknown): FormSubmissionError {
     return {
       type: 'unknown',
       message: err.message || 'An unexpected error occurred',
-      originalError: err
+      originalError: err,
     };
   }
 
@@ -233,7 +248,7 @@ function handleSubmissionError(err: unknown): FormSubmissionError {
   return {
     type: 'unknown',
     message: 'An unexpected error occurred',
-    originalError: err instanceof Error ? err : new Error(String(err))
+    originalError: err instanceof Error ? err : new Error(String(err)),
   };
 }
 
@@ -247,7 +262,7 @@ function createOptimisticResponse<T>(formData: T): Record<string, unknown> {
     ...formData,
     id: `temp-${Date.now()}`,
     createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
+    updatedAt: new Date().toISOString(),
   };
 }
 
@@ -270,8 +285,8 @@ export function createProfileSubmissionHandler(
         bio: formData.bio,
         timezone: formData.timezone,
         language: formData.language,
-        avatarUrl: formData.avatarUrl
-      }
+        avatarUrl: formData.avatarUrl,
+      },
     }),
     options
   );
@@ -295,8 +310,8 @@ export function createCourseCreationSubmissionHandler(
         price: formData.price,
         currency: formData.currency,
         enrollmentLimit: formData.enrollmentLimit,
-        thumbnailUrl: formData.thumbnailUrl
-      }
+        thumbnailUrl: formData.thumbnailUrl,
+      },
     }),
     options
   );
@@ -321,8 +336,8 @@ export function createCourseUpdateSubmissionHandler(
         price: formData.price,
         currency: formData.currency,
         enrollmentLimit: formData.enrollmentLimit,
-        thumbnailUrl: formData.thumbnailUrl
-      }
+        thumbnailUrl: formData.thumbnailUrl,
+      },
     }),
     options
   );
@@ -346,8 +361,8 @@ export function createLessonSubmissionHandler(
         content: formData.content,
         videoUrl: formData.videoUrl,
         duration: formData.duration,
-        orderIndex: formData.orderIndex
-      }
+        orderIndex: formData.orderIndex,
+      },
     }),
     options
   );
@@ -377,9 +392,9 @@ export function createQuizSubmissionHandler(
           options: q.options,
           correctAnswer: q.correctAnswer,
           points: q.points,
-          orderIndex: q.orderIndex
-        }))
-      }
+          orderIndex: q.orderIndex,
+        })),
+      },
     }),
     options
   );
@@ -389,7 +404,10 @@ export function createQuizSubmissionHandler(
  * Assignment form submission handler
  */
 export function createAssignmentSubmissionHandler(
-  createOrUpdateAssignmentMutation: MutationFunction<Record<string, unknown>, Record<string, unknown>>,
+  createOrUpdateAssignmentMutation: MutationFunction<
+    Record<string, unknown>,
+    Record<string, unknown>
+  >,
   options: FormSubmissionOptions<AssignmentFormInput> = {}
 ) {
   return createFormSubmissionHandler(
@@ -403,8 +421,8 @@ export function createAssignmentSubmissionHandler(
         dueDate: formData.dueDate ? new Date(formData.dueDate).toISOString() : undefined,
         maxPoints: formData.maxPoints,
         allowedFileTypes: formData.allowedFileTypes,
-        maxFileSize: formData.maxFileSize
-      }
+        maxFileSize: formData.maxFileSize,
+      },
     }),
     options
   );
@@ -421,7 +439,7 @@ export function createLoginSubmissionHandler(
     loginMutation,
     (formData: LoginFormInput) => ({
       email: formData.email,
-      password: formData.password
+      password: formData.password,
     }),
     options
   );
@@ -441,8 +459,8 @@ export function createRegistrationSubmissionHandler(
         email: formData.email,
         password: formData.password,
         fullName: formData.fullName,
-        role: formData.role
-      }
+        role: formData.role,
+      },
     }),
     options
   );
@@ -461,8 +479,8 @@ export function createMessageSubmissionHandler(
       input: {
         conversationId: formData.conversationId,
         content: formData.content,
-        attachments: formData.attachments
-      }
+        attachments: formData.attachments,
+      },
     }),
     options
   );
@@ -482,8 +500,8 @@ export function createThreadSubmissionHandler(
         courseId: formData.courseId,
         lessonId: formData.lessonId,
         title: formData.title,
-        content: formData.content
-      }
+        content: formData.content,
+      },
     }),
     options
   );
@@ -502,8 +520,8 @@ export function createThreadReplySubmissionHandler(
       input: {
         threadId: formData.threadId,
         content: formData.content,
-        parentReplyId: formData.parentReplyId
-      }
+        parentReplyId: formData.parentReplyId,
+      },
     }),
     options
   );
@@ -521,35 +539,31 @@ export function createInitialSubmissionState(): FormSubmissionState {
     isSubmitting: false,
     isSubmitted: false,
     submitCount: 0,
-    errors: {}
+    errors: {},
   };
 }
 
 /**
  * Update form submission state for submission start
  */
-export function updateSubmissionStateForStart(
-  state: FormSubmissionState
-): FormSubmissionState {
+export function updateSubmissionStateForStart(state: FormSubmissionState): FormSubmissionState {
   return {
     ...state,
     isSubmitting: true,
-    errors: {}
+    errors: {},
   };
 }
 
 /**
  * Update form submission state for submission success
  */
-export function updateSubmissionStateForSuccess(
-  state: FormSubmissionState
-): FormSubmissionState {
+export function updateSubmissionStateForSuccess(state: FormSubmissionState): FormSubmissionState {
   return {
     ...state,
     isSubmitting: false,
     isSubmitted: true,
     submitCount: state.submitCount + 1,
-    errors: {}
+    errors: {},
   };
 }
 
@@ -565,7 +579,7 @@ export function updateSubmissionStateForError(
     isSubmitting: false,
     isSubmitted: false,
     submitCount: state.submitCount + 1,
-    errors: error.fieldErrors || {}
+    errors: error.fieldErrors || {},
   };
 }
 
@@ -589,9 +603,7 @@ export function canSubmitForm<T>(
   submissionState: FormSubmissionState
 ): boolean {
   return (
-    !submissionState.isSubmitting &&
-    Object.keys(errors).length === 0 &&
-    hasRequiredFields(values)
+    !submissionState.isSubmitting && Object.keys(errors).length === 0 && hasRequiredFields(values)
   );
 }
 
@@ -603,11 +615,11 @@ function hasRequiredFields<T>(values: T): boolean {
   if (!values || typeof values !== 'object') {
     return false;
   }
-  
+
   // Check for common required fields
   const commonRequiredFields = ['title', 'name', 'email'];
   const valueKeys = Object.keys(values);
-  
+
   return commonRequiredFields.some(field => {
     if (valueKeys.includes(field)) {
       const value = (values as Record<string, unknown>)[field];

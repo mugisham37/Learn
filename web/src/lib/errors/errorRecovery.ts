@@ -1,16 +1,12 @@
 /**
  * Error Recovery Strategies
- * 
+ *
  * Comprehensive error recovery system with retry mechanisms,
  * authentication error handling, network error recovery,
  * and graceful degradation strategies.
  */
 
-import type { 
-  ClassifiedError, 
-  ErrorHandlerResult,
-  ErrorRecoveryStrategy
-} from './errorTypes';
+import type { ClassifiedError, ErrorHandlerResult, ErrorRecoveryStrategy } from './errorTypes';
 import { getBackendRetryConfig } from './backendErrorMapping';
 
 /**
@@ -142,7 +138,7 @@ export class ErrorRecoveryManager {
     originalOperation?: () => Promise<unknown>
   ): Promise<ErrorHandlerResult> {
     const strategy = RECOVERY_STRATEGIES[error.type];
-    
+
     if (!strategy || !strategy.canRecover) {
       return {
         handled: false,
@@ -155,19 +151,19 @@ export class ErrorRecoveryManager {
     switch (strategy.recoveryAction) {
       case 'retry':
         return this.handleRetryRecovery(error, originalOperation);
-      
+
       case 'refresh_token':
         return this.handleAuthRecovery(error, originalOperation);
-      
+
       case 'redirect_login':
         return this.handleLoginRedirect(error);
-      
+
       case 'show_error':
         return this.handleShowError(error);
-      
+
       case 'custom':
         return this.handleCustomRecovery(error, strategy, originalOperation);
-      
+
       default:
         return this.handleShowError(error);
     }
@@ -186,7 +182,7 @@ export class ErrorRecoveryManager {
       ...DEFAULT_RETRY_CONFIGS[error.type],
       ...backendRetryConfig,
     };
-    
+
     if (!retryConfig) {
       return {
         handled: false,
@@ -197,7 +193,7 @@ export class ErrorRecoveryManager {
     }
 
     const attempt = this.getOrCreateRetryAttempt(error.id);
-    
+
     // Check if we've exceeded max attempts
     if (attempt.attempts >= retryConfig.maxAttempts) {
       this.retryAttempts.delete(error.id);
@@ -212,7 +208,7 @@ export class ErrorRecoveryManager {
     // Calculate retry delay with exponential backoff and jitter
     const delay = this.calculateRetryDelay(attempt.attempts, retryConfig);
     const nextRetryAt = new Date(Date.now() + delay);
-    
+
     // Update retry attempt
     attempt.attempts++;
     attempt.lastAttempt = new Date();
@@ -269,10 +265,10 @@ export class ErrorRecoveryManager {
 
     // Start token refresh
     this.authTokenRefreshPromise = this.refreshAuthToken();
-    
+
     try {
       const refreshSuccess = await this.authTokenRefreshPromise;
-      
+
       if (refreshSuccess) {
         // Token refresh successful
         if (originalOperation) {
@@ -284,7 +280,7 @@ export class ErrorRecoveryManager {
             actions: ['token_refreshed', 'operation_retried'],
           };
         }
-        
+
         return {
           handled: true,
           shouldRetry: false,
@@ -381,7 +377,7 @@ export class ErrorRecoveryManager {
    */
   private getOrCreateRetryAttempt(errorId: string): RetryAttempt {
     let attempt = this.retryAttempts.get(errorId);
-    
+
     if (!attempt) {
       attempt = {
         errorId,
@@ -391,7 +387,7 @@ export class ErrorRecoveryManager {
       };
       this.retryAttempts.set(errorId, attempt);
     }
-    
+
     return attempt;
   }
 
@@ -401,13 +397,13 @@ export class ErrorRecoveryManager {
   private calculateRetryDelay(attemptNumber: number, config: RetryConfig): number {
     // Exponential backoff: baseDelay * (backoffMultiplier ^ attemptNumber)
     const exponentialDelay = config.baseDelay * Math.pow(config.backoffMultiplier, attemptNumber);
-    
+
     // Apply maximum delay limit
     const cappedDelay = Math.min(exponentialDelay, config.maxDelay);
-    
+
     // Add jitter to prevent thundering herd
     const jitter = cappedDelay * config.jitterFactor * Math.random();
-    
+
     return Math.floor(cappedDelay + jitter);
   }
 
@@ -421,16 +417,16 @@ export class ErrorRecoveryManager {
       if (typeof window !== 'undefined') {
         const refreshEvent = new CustomEvent('auth:refresh-token');
         window.dispatchEvent(refreshEvent);
-        
+
         // Wait for auth system to handle refresh
-        return new Promise((resolve) => {
+        return new Promise(resolve => {
           const handleRefreshResult = (event: CustomEvent) => {
             window.removeEventListener('auth:refresh-result', handleRefreshResult as EventListener);
             resolve(event.detail.success);
           };
-          
+
           window.addEventListener('auth:refresh-result', handleRefreshResult as EventListener);
-          
+
           // Timeout after 10 seconds
           setTimeout(() => {
             window.removeEventListener('auth:refresh-result', handleRefreshResult as EventListener);
@@ -438,7 +434,7 @@ export class ErrorRecoveryManager {
           }, 10000);
         });
       }
-      
+
       return false;
     } catch (error) {
       console.error('Token refresh failed:', error);
@@ -494,7 +490,7 @@ export class NetworkErrorRecovery {
         method: 'HEAD',
         cache: 'no-cache',
       });
-      
+
       return response.ok;
     } catch {
       return false;

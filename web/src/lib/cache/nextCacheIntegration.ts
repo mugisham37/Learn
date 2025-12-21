@@ -1,9 +1,9 @@
 /**
  * Next.js Cache Integration
- * 
+ *
  * Integrates Next.js caching strategies with backend data and Apollo Client cache.
  * Provides utilities for cache revalidation, ISR, and SSG with backend data.
- * 
+ *
  * Requirements: 8.5
  */
 
@@ -18,25 +18,25 @@ export const CACHE_CONFIG = {
     revalidate: 3600, // 1 hour
     tags: ['static'],
   },
-  
+
   // Course catalog - changes moderately
   COURSES: {
     revalidate: 300, // 5 minutes
     tags: ['courses', 'catalog'],
   },
-  
+
   // User-specific data - changes frequently
   USER_DATA: {
     revalidate: 60, // 1 minute
     tags: ['user', 'profile'],
   },
-  
+
   // Real-time data - always fresh
   REALTIME: {
     revalidate: 0, // No caching
     tags: ['realtime'],
   },
-  
+
   // Analytics data - changes daily
   ANALYTICS: {
     revalidate: 86400, // 24 hours
@@ -53,15 +53,15 @@ export const CACHE_TAGS = {
   USER: (id: string) => `user:${id}`,
   ENROLLMENT: (id: string) => `enrollment:${id}`,
   ASSESSMENT: (id: string) => `assessment:${id}`,
-  
+
   // Collection tags
   COURSES_LIST: 'courses:list',
   USERS_LIST: 'users:list',
   ENROLLMENTS_LIST: 'enrollments:list',
-  
+
   // Category tags
   COURSE_CATEGORY: (category: string) => `course:category:${category}`,
-  
+
   // User-specific tags
   USER_COURSES: (userId: string) => `user:${userId}:courses`,
   USER_ENROLLMENTS: (userId: string) => `user:${userId}:enrollments`,
@@ -210,11 +210,14 @@ export const cacheKeys = {
   /**
    * Generate cache key for user enrollments
    */
-  userEnrollments: (userId: string, params: {
-    status?: string;
-    page?: number;
-    limit?: number;
-  }) => {
+  userEnrollments: (
+    userId: string,
+    params: {
+      status?: string;
+      page?: number;
+      limit?: number;
+    }
+  ) => {
     const parts = ['enrollments', `user:${userId}`];
     if (params.status) parts.push(`status:${params.status}`);
     if (params.page) parts.push(`page:${params.page}`);
@@ -281,7 +284,7 @@ export const cacheInvalidation = {
    */
   onCourseUpdate: async (courseId: string, updates: any) => {
     await cacheRevalidation.revalidateCourse(courseId);
-    
+
     // If category changed, invalidate category cache
     if (updates.category) {
       await cacheRevalidation.revalidateCourseCategory(updates.category);

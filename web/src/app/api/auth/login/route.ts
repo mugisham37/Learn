@@ -1,6 +1,6 @@
 /**
  * Login API Route
- * 
+ *
  * Next.js API route that proxies login requests to the backend GraphQL API.
  * Handles JWT token management and secure cookie setting.
  */
@@ -68,10 +68,7 @@ export async function POST(request: NextRequest) {
 
     // Validate input
     if (!email || !password) {
-      return NextResponse.json(
-        { error: 'Email and password are required' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Email and password are required' }, { status: 400 });
     }
 
     // Call backend GraphQL API
@@ -92,25 +89,22 @@ export async function POST(request: NextRequest) {
       throw new Error(`Backend request failed: ${response.status}`);
     }
 
-    const data = await response.json() as LoginResponse;
+    const data = (await response.json()) as LoginResponse;
 
     // Check for GraphQL errors
     if (data.errors && data.errors.length > 0) {
       const error = data.errors[0];
       return NextResponse.json(
-        { 
+        {
           error: error.message,
-          code: error.extensions?.code || 'LOGIN_FAILED'
+          code: error.extensions?.code || 'LOGIN_FAILED',
         },
         { status: 401 }
       );
     }
 
     if (!data.data?.login) {
-      return NextResponse.json(
-        { error: 'Invalid login response' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Invalid login response' }, { status: 500 });
     }
 
     const { accessToken, refreshToken, user } = data.data.login;
@@ -147,11 +141,11 @@ export async function POST(request: NextRequest) {
     return nextResponse;
   } catch (error) {
     console.error('Login API error:', error);
-    
+
     return NextResponse.json(
-      { 
+      {
         error: error instanceof Error ? error.message : 'Login failed',
-        code: 'INTERNAL_ERROR'
+        code: 'INTERNAL_ERROR',
       },
       { status: 500 }
     );

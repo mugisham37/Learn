@@ -1,9 +1,9 @@
 /**
  * Foundation Layer Main Exports
- * 
+ *
  * Main entry point for the frontend foundation layer.
  * Exports all modules and utilities for easy consumption.
- * 
+ *
  * Note: Using explicit re-exports to avoid naming conflicts
  */
 
@@ -20,7 +20,7 @@ export {
   // Avoid re-exporting conflicting names: tokenManager, SubscriptionOptions, cacheHelpers, MutationResult, QueryResult, SubscriptionResult
 } from './graphql';
 
-// Authentication System - explicit exports to avoid conflicts  
+// Authentication System - explicit exports to avoid conflicts
 export {
   AuthProvider,
   useAuth,
@@ -87,17 +87,17 @@ export {
   formatNumber,
   formatPercentage,
   formatFileSize,
-  
+
   // Validators
   validateField,
   validateForm,
   createValidator,
-  
+
   // Performance
   debounce,
   throttle,
   memoize,
-  
+
   // Common utilities
   generateId,
   generateUUID,
@@ -105,7 +105,7 @@ export {
   deepEqual,
   capitalize,
   truncate,
-  
+
   // Avoid re-exporting conflicting names: Course, Enrollment, Lesson, ValidationRule, validateField, validateForm, PerformanceMetrics
 } from './utils';
 
@@ -116,7 +116,7 @@ export {
   isCourse,
   isEnrollment,
   isLesson,
-  
+
   // Utility types (non-conflicting ones)
 } from './types';
 
@@ -126,7 +126,7 @@ export type {
   NonNullable,
   PartialBy,
   RequiredBy,
-  
+
   // Avoid re-exporting conflicting names: UserRole, MutationResult, QueryResult, SubscriptionResult, Course, Enrollment, Lesson, Message
 } from './types';
 
@@ -183,18 +183,9 @@ export {
   useSchemaStats,
 } from './schema';
 
-export type {
-  SchemaMetadata,
-  SchemaValidationResult,
-  SchemaSyncOptions,
-} from './schema';
+export type { SchemaMetadata, SchemaValidationResult, SchemaSyncOptions } from './schema';
 // Server-side Rendering and Data Fetching
-export {
-  serverAuth,
-  serverData,
-  pageData,
-  serverError,
-} from './ssr/dataFetching';
+export { serverAuth, serverData, pageData, serverError } from './ssr/dataFetching';
 
 export {
   serverGraphQL,

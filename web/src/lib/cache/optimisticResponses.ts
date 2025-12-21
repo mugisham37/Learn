@@ -1,6 +1,6 @@
 /**
  * Optimistic Response Generators
- * 
+ *
  * Utilities for generating optimistic responses for mutations.
  * Provides rollback mechanisms for failed optimistic updates.
  */
@@ -32,13 +32,16 @@ export function generateOptimisticResponse<T extends CacheEntity>(
   switch (config.operation) {
     case 'create':
       return generateCreateResponse(config.typename, config.data) as T;
-    
+
     case 'update':
-      return { ...baseResponse, ...generateUpdateResponse(config.typename, config.id!, config.data) } as T;
-    
+      return {
+        ...baseResponse,
+        ...generateUpdateResponse(config.typename, config.id!, config.data),
+      } as T;
+
     case 'delete':
       return generateDeleteResponse(config.typename, config.id!) as T;
-    
+
     default:
       return baseResponse;
   }
@@ -173,18 +176,17 @@ export const commonOptimisticResponses = {
         modules: [],
         averageRating: null,
       }),
-    
+
     update: (courseId: string, updates: Partial<CourseData>) =>
       generateUpdateResponse('Course', courseId, updates),
-    
+
     publish: (courseId: string) =>
       generateUpdateResponse('Course', courseId, {
         status: 'PUBLISHED',
         publishedAt: new Date().toISOString(),
       }),
-    
-    delete: (courseId: string) =>
-      generateDeleteResponse('Course', courseId),
+
+    delete: (courseId: string) => generateDeleteResponse('Course', courseId),
   },
 
   /**
@@ -199,14 +201,14 @@ export const commonOptimisticResponses = {
         status: 'ACTIVE',
         lessonProgress: [],
       }),
-    
+
     updateProgress: (enrollmentId: string, progress: { percentage: number; lessons: unknown[] }) =>
       generateUpdateResponse('Enrollment', enrollmentId, {
         progressPercentage: progress.percentage,
         lessonProgress: progress.lessons,
         lastAccessedAt: new Date().toISOString(),
       }),
-    
+
     complete: (enrollmentId: string) =>
       generateUpdateResponse('Enrollment', enrollmentId, {
         status: 'COMPLETED',
@@ -226,7 +228,7 @@ export const commonOptimisticResponses = {
         status: 'SENDING',
         readBy: [],
       }),
-    
+
     markAsRead: (messageId: string, userId: string) =>
       generateUpdateResponse('Message', messageId, {
         readBy: [{ userId, readAt: new Date().toISOString() }],
@@ -245,7 +247,7 @@ export const commonOptimisticResponses = {
         grade: null,
         feedback: null,
       }),
-    
+
     grade: (submissionId: string, gradeData: Partial<AssignmentSubmissionData>) =>
       generateUpdateResponse('AssignmentSubmission', submissionId, {
         ...gradeData,
@@ -265,7 +267,7 @@ export const commonOptimisticResponses = {
           updatedAt: new Date().toISOString(),
         },
       } as Partial<UserProfileData>),
-    
+
     updatePreferences: (userId: string, preferences: Record<string, unknown>) =>
       generateUpdateResponse('User', userId, {
         notificationPreferences: preferences,
@@ -284,7 +286,7 @@ export const commonOptimisticResponses = {
         isPinned: false,
         isLocked: false,
       }),
-    
+
     reply: (replyData: Partial<DiscussionReplyData>) =>
       generateCreateResponse('DiscussionReply', {
         ...replyData,
@@ -302,7 +304,7 @@ export const commonOptimisticResponses = {
         isRead: true,
         readAt: new Date().toISOString(),
       } as Partial<NotificationUpdateData>),
-    
+
     markAllAsRead: (userId: string) => ({
       __typename: 'NotificationBatch',
       userId,

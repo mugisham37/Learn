@@ -1,9 +1,9 @@
 /**
  * Lazy Loading Infrastructure
- * 
+ *
  * Code splitting utilities, lazy loading for subscription components,
  * dynamic import helpers with loading states, and bundle size monitoring.
- * 
+ *
  * Requirements: 12.3, 12.5
  */
 
@@ -72,7 +72,9 @@ export interface LazyComponentState {
 /**
  * Creates a lazy-loaded component with enhanced error handling and retry logic
  */
-export function createLazyComponent<TProps extends Record<string, unknown> = Record<string, unknown>>(
+export function createLazyComponent<
+  TProps extends Record<string, unknown> = Record<string, unknown>,
+>(
   importFn: () => Promise<{ default: ComponentType<TProps> }>,
   options: LazyLoadOptions = {}
 ): LazyExoticComponent<ComponentType<TProps>> {
@@ -130,19 +132,19 @@ export function createLazyComponent<TProps extends Record<string, unknown> = Rec
 
   // Wrap with error boundary if provided
   if (ErrorBoundaryComponent) {
-    const WrappedComponent = React.forwardRef<unknown, TProps>((props) => {
+    const WrappedComponent = React.forwardRef<unknown, TProps>(props => {
       return React.createElement(
         ErrorBoundaryComponent,
         {
           error: new Error('Component failed to load'),
-          retry: () => window.location.reload()
+          retry: () => window.location.reload(),
         },
         React.createElement(
           Suspense,
           {
-            fallback: LoadingComponent 
-              ? React.createElement(LoadingComponent) 
-              : React.createElement('div', {}, 'Loading...')
+            fallback: LoadingComponent
+              ? React.createElement(LoadingComponent)
+              : React.createElement('div', {}, 'Loading...'),
           },
           React.createElement(LazyComponent, props)
         )
@@ -159,21 +161,28 @@ export function createLazyComponent<TProps extends Record<string, unknown> = Rec
 /**
  * Creates a lazy-loaded subscription component with connection management
  */
-export function createLazySubscriptionComponent<TProps extends Record<string, unknown> = Record<string, unknown>>(
+export function createLazySubscriptionComponent<
+  TProps extends Record<string, unknown> = Record<string, unknown>,
+>(
   importFn: () => Promise<{ default: ComponentType<TProps> }>,
   subscriptionSetup?: () => void,
   subscriptionCleanup?: () => void
 ): LazyExoticComponent<ComponentType<TProps>> {
   const LazyComponent = createLazyComponent(importFn, {
     preload: true,
-    loadingComponent: () => React.createElement('div', { className: 'flex items-center justify-center p-4' },
-      React.createElement('div', { className: 'animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600' }),
-      React.createElement('span', { className: 'ml-2 text-sm text-gray-600' }, 'Connecting...')
-    ),
+    loadingComponent: () =>
+      React.createElement(
+        'div',
+        { className: 'flex items-center justify-center p-4' },
+        React.createElement('div', {
+          className: 'animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600',
+        }),
+        React.createElement('span', { className: 'ml-2 text-sm text-gray-600' }, 'Connecting...')
+      ),
   });
 
   // Wrap with subscription lifecycle management
-  const SubscriptionWrapper = React.forwardRef<unknown, TProps>((props) => {
+  const SubscriptionWrapper = React.forwardRef<unknown, TProps>(props => {
     React.useEffect(() => {
       subscriptionSetup?.();
       return subscriptionCleanup;
@@ -202,11 +211,7 @@ export function useDynamicImport<T = unknown>(
   error: Error | null;
   retry: () => void;
 } {
-  const {
-    timeout = 30000,
-    retry = true,
-    resolver = (module) => module as T,
-  } = options;
+  const { timeout = 30000, retry = true, resolver = module => module as T } = options;
 
   const [state, setState] = React.useState<{
     data: T | null;
@@ -345,17 +350,14 @@ export class BundleMonitor {
   } {
     const totalBundles = this.metrics.length;
     const totalSize = this.metrics.reduce((sum, m) => sum + m.size, 0);
-    const averageLoadTime = this.metrics.reduce((sum, m) => sum + m.loadTime, 0) / totalBundles || 0;
+    const averageLoadTime =
+      this.metrics.reduce((sum, m) => sum + m.loadTime, 0) / totalBundles || 0;
     const cachedCount = this.metrics.filter(m => m.cached).length;
     const cacheHitRate = cachedCount / totalBundles || 0;
 
-    const slowestBundles = [...this.metrics]
-      .sort((a, b) => b.loadTime - a.loadTime)
-      .slice(0, 5);
+    const slowestBundles = [...this.metrics].sort((a, b) => b.loadTime - a.loadTime).slice(0, 5);
 
-    const largestBundles = [...this.metrics]
-      .sort((a, b) => b.size - a.size)
-      .slice(0, 5);
+    const largestBundles = [...this.metrics].sort((a, b) => b.size - a.size).slice(0, 5);
 
     return {
       totalBundles,
@@ -412,7 +414,7 @@ export function withLazyLoading<TProps extends Record<string, unknown>>(
 ): ComponentType<TProps> {
   const { loadingComponent: LoadingComponent, errorBoundary: ErrorBoundary } = options;
 
-  const WrappedComponent: React.FC<TProps> = (props) => {
+  const WrappedComponent: React.FC<TProps> = props => {
     const [loaded, setLoaded] = React.useState(false);
     const [error, setError] = React.useState<Error | null>(null);
 
@@ -449,35 +451,65 @@ export function withLazyLoading<TProps extends Record<string, unknown>>(
  * Default loading component with progress indicator
  */
 export const DefaultLoadingComponent: React.FC<{ progress?: number }> = ({ progress }) => {
-  return React.createElement('div', { className: 'flex flex-col items-center justify-center p-8' },
-    React.createElement('div', { className: 'animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4' }),
+  return React.createElement(
+    'div',
+    { className: 'flex flex-col items-center justify-center p-8' },
+    React.createElement('div', {
+      className: 'animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4',
+    }),
     React.createElement('div', { className: 'text-sm text-gray-600 mb-2' }, 'Loading...'),
-    progress !== undefined && React.createElement('div', { className: 'w-32 bg-gray-200 rounded-full h-2' },
-      React.createElement('div', {
-        className: 'bg-blue-600 h-2 rounded-full transition-all duration-300',
-        style: { width: `${progress}%` }
-      })
-    )
+    progress !== undefined &&
+      React.createElement(
+        'div',
+        { className: 'w-32 bg-gray-200 rounded-full h-2' },
+        React.createElement('div', {
+          className: 'bg-blue-600 h-2 rounded-full transition-all duration-300',
+          style: { width: `${progress}%` },
+        })
+      )
   );
 };
 
 /**
  * Default error boundary component
  */
-export const DefaultErrorBoundary: React.FC<{ error: Error; retry: () => void }> = ({ error, retry }) => {
-  return React.createElement('div', { className: 'flex flex-col items-center justify-center p-8 border border-red-200 rounded-lg bg-red-50' },
-    React.createElement('div', { className: 'text-red-600 mb-4' },
-      React.createElement('svg', { className: 'w-8 h-8', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
-        React.createElement('path', { strokeLinecap: 'round', strokeLinejoin: 'round', strokeWidth: 2, d: 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z' })
+export const DefaultErrorBoundary: React.FC<{ error: Error; retry: () => void }> = ({
+  error,
+  retry,
+}) => {
+  return React.createElement(
+    'div',
+    {
+      className:
+        'flex flex-col items-center justify-center p-8 border border-red-200 rounded-lg bg-red-50',
+    },
+    React.createElement(
+      'div',
+      { className: 'text-red-600 mb-4' },
+      React.createElement(
+        'svg',
+        { className: 'w-8 h-8', fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
+        React.createElement('path', {
+          strokeLinecap: 'round',
+          strokeLinejoin: 'round',
+          strokeWidth: 2,
+          d: 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z',
+        })
       )
     ),
-    React.createElement('div', { className: 'text-sm text-red-800 mb-4 text-center' },
+    React.createElement(
+      'div',
+      { className: 'text-sm text-red-800 mb-4 text-center' },
       `Failed to load component: ${error.message}`
     ),
-    React.createElement('button', {
-      onClick: retry,
-      className: 'px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors'
-    }, 'Retry')
+    React.createElement(
+      'button',
+      {
+        onClick: retry,
+        className: 'px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors',
+      },
+      'Retry'
+    )
   );
 };
 

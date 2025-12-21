@@ -1,16 +1,16 @@
 /**
  * Offline Content Manager Component
- * 
+ *
  * Manages offline content access capabilities including download,
  * storage, synchronization, and offline playback.
- * 
+ *
  * Features:
  * - Content download for offline access
  * - Intelligent storage management
  * - Sync status tracking
  * - Offline playback capabilities
  * - Storage quota management
- * 
+ *
  * Requirements: 13.5
  */
 
@@ -72,7 +72,7 @@ export function OfflineContentManager({
       const hasServiceWorker = 'serviceWorker' in navigator;
       const hasIndexedDB = 'indexedDB' in window;
       const hasStorage = 'storage' in navigator;
-      
+
       setIsOfflineSupported(hasServiceWorker && hasIndexedDB && hasStorage);
     };
 
@@ -98,7 +98,7 @@ export function OfflineContentManager({
       request.onsuccess = () => {
         const content = request.result as OfflineContent[];
         setOfflineContent(content);
-        
+
         // Check if current lesson is downloaded
         const currentContent = content.find(c => c.lessonId === lessonId);
         setIsDownloaded(!!currentContent);
@@ -138,9 +138,9 @@ export function OfflineContentManager({
       request.onerror = () => reject(request.error);
       request.onsuccess = () => resolve(request.result);
 
-      request.onupgradeneeded = (event) => {
+      request.onupgradeneeded = event => {
         const db = (event.target as IDBOpenDBRequest).result;
-        
+
         if (!db.objectStoreNames.contains('content')) {
           const store = db.createObjectStore('content', { keyPath: 'id' });
           store.createIndex('lessonId', 'lessonId', { unique: false });
@@ -172,7 +172,7 @@ export function OfflineContentManager({
 
       const contentLength = response.headers.get('content-length');
       const totalSize = contentLength ? parseInt(contentLength, 10) : 0;
-      
+
       const reader = response.body?.getReader();
       if (!reader) throw new Error('No response body');
 
@@ -181,12 +181,12 @@ export function OfflineContentManager({
 
       while (true) {
         const { done, value } = await reader.read();
-        
+
         if (done) break;
-        
+
         chunks.push(value);
         downloadedSize += value.length;
-        
+
         const progress = totalSize > 0 ? (downloadedSize / totalSize) * 100 : 0;
         setDownloadProgress({
           lessonId,
@@ -197,7 +197,7 @@ export function OfflineContentManager({
 
       // Combine chunks into blob
       const blob = new Blob(chunks, { type: 'video/mp4' });
-      
+
       // Store in IndexedDB
       const db = await openOfflineDB();
       const transaction = db.transaction(['content'], 'readwrite');
@@ -231,7 +231,6 @@ export function OfflineContentManager({
       setIsDownloaded(true);
       await loadOfflineContent();
       await updateStorageInfo();
-
     } catch (error) {
       console.error('Download failed:', error);
       setDownloadProgress({
@@ -244,28 +243,31 @@ export function OfflineContentManager({
   }, [streamingUrl, lessonId, courseId, isOfflineSupported]);
 
   // Remove offline content
-  const removeContent = useCallback(async (contentId: string) => {
-    try {
-      const db = await openOfflineDB();
-      const transaction = db.transaction(['content'], 'readwrite');
-      const store = transaction.objectStore('content');
+  const removeContent = useCallback(
+    async (contentId: string) => {
+      try {
+        const db = await openOfflineDB();
+        const transaction = db.transaction(['content'], 'readwrite');
+        const store = transaction.objectStore('content');
 
-      await new Promise((resolve, reject) => {
-        const request = store.delete(contentId);
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
-      });
+        await new Promise((resolve, reject) => {
+          const request = store.delete(contentId);
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = () => reject(request.error);
+        });
 
-      if (contentId === `${courseId}-${lessonId}`) {
-        setIsDownloaded(false);
+        if (contentId === `${courseId}-${lessonId}`) {
+          setIsDownloaded(false);
+        }
+
+        await loadOfflineContent();
+        await updateStorageInfo();
+      } catch (error) {
+        console.error('Failed to remove content:', error);
       }
-
-      await loadOfflineContent();
-      await updateStorageInfo();
-    } catch (error) {
-      console.error('Failed to remove content:', error);
-    }
-  }, [courseId, lessonId]);
+    },
+    [courseId, lessonId]
+  );
 
   // Clean up expired content
   const cleanupExpiredContent = useCallback(async () => {
@@ -278,7 +280,7 @@ export function OfflineContentManager({
       request.onsuccess = async () => {
         const content = request.result as OfflineContent[];
         const now = new Date();
-        
+
         for (const item of content) {
           if (item.expiresAt && item.expiresAt < now) {
             await removeContent(item.id);
@@ -293,11 +295,11 @@ export function OfflineContentManager({
   // Format file size
   const formatFileSize = (bytes: number): string => {
     if (bytes === 0) return '0 B';
-    
+
     const k = 1024;
     const sizes = ['B', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    
+
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
@@ -313,16 +315,16 @@ export function OfflineContentManager({
         <button
           onClick={downloadContent}
           disabled={downloadProgress?.status === 'downloading'}
-          className="download-button"
+          className='download-button'
         >
           {downloadProgress?.status === 'downloading' ? (
             <>
-              <span className="download-icon">⬇️</span>
+              <span className='download-icon'>⬇️</span>
               Downloading... {Math.round(downloadProgress.progress)}%
             </>
           ) : (
             <>
-              <span className="download-icon">⬇️</span>
+              <span className='download-icon'>⬇️</span>
               Download for Offline
             </>
           )}
@@ -331,13 +333,13 @@ export function OfflineContentManager({
 
       {/* Downloaded indicator */}
       {isDownloaded && (
-        <div className="downloaded-indicator">
-          <span className="offline-icon">📱</span>
+        <div className='downloaded-indicator'>
+          <span className='offline-icon'>📱</span>
           Available Offline
           <button
             onClick={() => removeContent(`${courseId}-${lessonId}`)}
-            className="remove-button"
-            title="Remove offline content"
+            className='remove-button'
+            title='Remove offline content'
           >
             ✕
           </button>
@@ -346,25 +348,20 @@ export function OfflineContentManager({
 
       {/* Download progress */}
       {downloadProgress && downloadProgress.status === 'downloading' && (
-        <div className="download-progress">
-          <div className="progress-bar">
-            <div 
-              className="progress-fill"
-              style={{ width: `${downloadProgress.progress}%` }}
-            />
+        <div className='download-progress'>
+          <div className='progress-bar'>
+            <div className='progress-fill' style={{ width: `${downloadProgress.progress}%` }} />
           </div>
-          <div className="progress-text">
-            {Math.round(downloadProgress.progress)}% downloaded
-          </div>
+          <div className='progress-text'>{Math.round(downloadProgress.progress)}% downloaded</div>
         </div>
       )}
 
       {/* Error state */}
       {downloadProgress?.status === 'failed' && (
-        <div className="download-error">
-          <span className="error-icon">⚠️</span>
+        <div className='download-error'>
+          <span className='error-icon'>⚠️</span>
           Download failed: {downloadProgress.error}
-          <button onClick={downloadContent} className="retry-button">
+          <button onClick={downloadContent} className='retry-button'>
             Retry
           </button>
         </div>
@@ -373,36 +370,30 @@ export function OfflineContentManager({
       {/* Offline manager toggle */}
       <button
         onClick={() => setShowManager(!showManager)}
-        className="manager-toggle"
-        title="Manage offline content"
+        className='manager-toggle'
+        title='Manage offline content'
       >
-        <span className="settings-icon">⚙️</span>
+        <span className='settings-icon'>⚙️</span>
       </button>
 
       {/* Offline content manager */}
       {showManager && (
-        <div className="offline-manager-panel">
-          <div className="panel-header">
+        <div className='offline-manager-panel'>
+          <div className='panel-header'>
             <h3>Offline Content</h3>
-            <button
-              onClick={() => setShowManager(false)}
-              className="close-button"
-            >
+            <button onClick={() => setShowManager(false)} className='close-button'>
               ✕
             </button>
           </div>
 
           {/* Storage info */}
           {storageInfo && (
-            <div className="storage-info">
+            <div className='storage-info'>
               <h4>Storage Usage</h4>
-              <div className="storage-bar">
-                <div 
-                  className="storage-fill"
-                  style={{ width: `${storageInfo.percentage}%` }}
-                />
+              <div className='storage-bar'>
+                <div className='storage-fill' style={{ width: `${storageInfo.percentage}%` }} />
               </div>
-              <div className="storage-details">
+              <div className='storage-details'>
                 <span>Used: {formatFileSize(storageInfo.used)}</span>
                 <span>Available: {formatFileSize(storageInfo.available)}</span>
               </div>
@@ -410,27 +401,27 @@ export function OfflineContentManager({
           )}
 
           {/* Offline content list */}
-          <div className="content-list">
+          <div className='content-list'>
             <h4>Downloaded Content</h4>
             {offlineContent.length === 0 ? (
-              <p className="no-content">No offline content available</p>
+              <p className='no-content'>No offline content available</p>
             ) : (
-              <div className="content-items">
-                {offlineContent.map((content) => (
-                  <div key={content.id} className="content-item">
-                    <div className="content-info">
-                      <div className="content-title">{content.title}</div>
-                      <div className="content-meta">
+              <div className='content-items'>
+                {offlineContent.map(content => (
+                  <div key={content.id} className='content-item'>
+                    <div className='content-info'>
+                      <div className='content-title'>{content.title}</div>
+                      <div className='content-meta'>
                         {formatFileSize(content.size)} • {content.quality}
                       </div>
-                      <div className="content-date">
+                      <div className='content-date'>
                         Downloaded: {content.downloadedAt.toLocaleDateString()}
                       </div>
                     </div>
                     <button
                       onClick={() => removeContent(content.id)}
-                      className="remove-content-button"
-                      title="Remove from offline storage"
+                      className='remove-content-button'
+                      title='Remove from offline storage'
                     >
                       🗑️
                     </button>
@@ -441,18 +432,15 @@ export function OfflineContentManager({
           </div>
 
           {/* Management actions */}
-          <div className="management-actions">
-            <button
-              onClick={cleanupExpiredContent}
-              className="cleanup-button"
-            >
+          <div className='management-actions'>
+            <button onClick={cleanupExpiredContent} className='cleanup-button'>
               Clean Up Expired
             </button>
             <button
               onClick={() => {
                 offlineContent.forEach(content => removeContent(content.id));
               }}
-              className="clear-all-button"
+              className='clear-all-button'
             >
               Clear All
             </button>
@@ -476,7 +464,7 @@ export const OfflineContentUtils = {
       const index = store.index('lessonId');
       const request = index.get(lessonId);
 
-      return new Promise((resolve) => {
+      return new Promise(resolve => {
         request.onsuccess = () => resolve(!!request.result);
         request.onerror = () => resolve(false);
       });
@@ -496,7 +484,7 @@ export const OfflineContentUtils = {
       const index = store.index('lessonId');
       const request = index.get(lessonId);
 
-      return new Promise((resolve) => {
+      return new Promise(resolve => {
         request.onsuccess = () => {
           const content = request.result as OfflineContent;
           resolve(content?.url || null);

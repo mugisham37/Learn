@@ -1,9 +1,9 @@
 /**
  * Adaptive Video Player Component
- * 
+ *
  * Comprehensive video player with adaptive streaming, access control,
  * offline capabilities, and analytics tracking.
- * 
+ *
  * Features:
  * - HLS/DASH adaptive streaming support
  * - Content access control based on user permissions
@@ -11,7 +11,7 @@
  * - Offline content access
  * - Usage analytics and tracking
  * - Responsive design and accessibility
- * 
+ *
  * Requirements: 13.1, 13.2, 13.3, 13.4, 13.5
  */
 
@@ -85,14 +85,15 @@ export function VideoPlayer({
 
   // Hooks for content access and streaming
   const { hasPermission } = usePermissions();
-  const { data: streamingUrl, loading: urlLoading, error: urlError } = useStreamingUrl(
-    lessonId,
-    selectedQuality === 'auto' ? undefined : selectedQuality
-  );
+  const {
+    data: streamingUrl,
+    loading: urlLoading,
+    error: urlError,
+  } = useStreamingUrl(lessonId, selectedQuality === 'auto' ? undefined : selectedQuality);
 
   // Check content access permissions
-  const hasContentAccess = hasPermission('content:view') && 
-    ContentAccessControl.canAccessContent(courseId, lessonId);
+  const hasContentAccess =
+    hasPermission('content:view') && ContentAccessControl.canAccessContent(courseId, lessonId);
 
   // Initialize video player
   useEffect(() => {
@@ -101,7 +102,7 @@ export function VideoPlayer({
 
     // Set up video source
     video.src = streamingUrl.streamingUrl;
-    
+
     // Configure video for adaptive streaming
     if (video.canPlayType('application/vnd.apple.mpegurl')) {
       // Native HLS support (Safari)
@@ -115,10 +116,10 @@ export function VideoPlayer({
             lowLatencyMode: true,
             backBufferLength: 90,
           });
-          
+
           hls.loadSource(streamingUrl.streamingUrl);
           hls.attachMedia(video);
-          
+
           // Handle quality levels
           hls.on(Hls.Events.MANIFEST_PARSED, () => {
             const qualities: StreamingQuality[] = hls.levels.map((level, index) => ({
@@ -175,7 +176,7 @@ export function VideoPlayer({
 
     const newCurrentTime = video.currentTime;
     const newDuration = video.duration || videoDuration;
-    
+
     setCurrentTime(newCurrentTime);
     setVideoDuration(newDuration);
 
@@ -230,16 +231,19 @@ export function VideoPlayer({
     setIsBuffering(false);
   }, []);
 
-  const handleError = useCallback((e: React.SyntheticEvent<HTMLVideoElement>) => {
-    const video = e.currentTarget;
-    const videoError: VideoError = {
-      code: `ERROR_${video.error?.code || 'UNKNOWN'}`,
-      message: video.error?.message || 'Video playback failed',
-      recoverable: true,
-    };
-    setError(videoError);
-    onError?.(videoError);
-  }, [onError]);
+  const handleError = useCallback(
+    (e: React.SyntheticEvent<HTMLVideoElement>) => {
+      const video = e.currentTarget;
+      const videoError: VideoError = {
+        code: `ERROR_${video.error?.code || 'UNKNOWN'}`,
+        message: video.error?.message || 'Video playback failed',
+        recoverable: true,
+      };
+      setError(videoError);
+      onError?.(videoError);
+    },
+    [onError]
+  );
 
   // Playback controls
   const togglePlay = useCallback(() => {
@@ -253,18 +257,21 @@ export function VideoPlayer({
     }
   }, [isPlaying]);
 
-  const seek = useCallback((time: number) => {
-    const video = videoRef.current;
-    if (!video) return;
+  const seek = useCallback(
+    (time: number) => {
+      const video = videoRef.current;
+      if (!video) return;
 
-    video.currentTime = time;
-    ContentAnalytics.trackVideoEvent('seek', {
-      lessonId,
-      courseId,
-      fromTime: currentTime,
-      toTime: time,
-    });
-  }, [lessonId, courseId, currentTime]);
+      video.currentTime = time;
+      ContentAnalytics.trackVideoEvent('seek', {
+        lessonId,
+        courseId,
+        fromTime: currentTime,
+        toTime: time,
+      });
+    },
+    [lessonId, courseId, currentTime]
+  );
 
   const changeVolume = useCallback((newVolume: number) => {
     const video = videoRef.current;
@@ -299,16 +306,19 @@ export function VideoPlayer({
     }
   }, [isFullscreen]);
 
-  const changeQuality = useCallback((quality: string) => {
-    setSelectedQuality(quality);
-    ContentAnalytics.trackVideoEvent('quality_change', {
-      lessonId,
-      courseId,
-      fromQuality: selectedQuality,
-      toQuality: quality,
-      currentTime,
-    });
-  }, [lessonId, courseId, selectedQuality, currentTime]);
+  const changeQuality = useCallback(
+    (quality: string) => {
+      setSelectedQuality(quality);
+      ContentAnalytics.trackVideoEvent('quality_change', {
+        lessonId,
+        courseId,
+        fromQuality: selectedQuality,
+        toQuality: quality,
+        currentTime,
+      });
+    },
+    [lessonId, courseId, selectedQuality, currentTime]
+  );
 
   // Handle fullscreen changes
   useEffect(() => {
@@ -325,7 +335,7 @@ export function VideoPlayer({
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     const secs = Math.floor(seconds % 60);
-    
+
     if (hours > 0) {
       return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     }
@@ -346,27 +356,18 @@ export function VideoPlayer({
 
   // Show loading state
   if (urlLoading) {
-    return (
-      <ProgressiveLoader
-        title={title}
-        thumbnail={thumbnail}
-        className={className}
-      />
-    );
+    return <ProgressiveLoader title={title} thumbnail={thumbnail} className={className} />;
   }
 
   // Show error state
   if (urlError || error) {
     return (
       <div className={`video-player-error ${className}`}>
-        <div className="error-content">
+        <div className='error-content'>
           <h3>Video Unavailable</h3>
           <p>{error?.message || urlError?.message || 'Failed to load video'}</p>
           {error?.recoverable && (
-            <button 
-              onClick={() => window.location.reload()}
-              className="retry-button"
-            >
+            <button onClick={() => window.location.reload()} className='retry-button'>
               Retry
             </button>
           )}
@@ -377,10 +378,10 @@ export function VideoPlayer({
 
   return (
     <div className={`video-player ${className} ${isFullscreen ? 'fullscreen' : ''}`}>
-      <div className="video-container">
+      <div className='video-container'>
         <video
           ref={videoRef}
-          className="video-element"
+          className='video-element'
           poster={thumbnail}
           autoPlay={autoPlay}
           muted={muted}
@@ -396,47 +397,47 @@ export function VideoPlayer({
 
         {/* Loading overlay */}
         {isBuffering && (
-          <div className="loading-overlay">
-            <div className="spinner" />
+          <div className='loading-overlay'>
+            <div className='spinner' />
             <span>Loading...</span>
           </div>
         )}
 
         {/* Custom controls */}
         {controls && (
-          <div className="video-controls">
-            <div className="progress-bar">
+          <div className='video-controls'>
+            <div className='progress-bar'>
               <input
-                type="range"
+                type='range'
                 min={0}
                 max={videoDuration}
                 value={currentTime}
-                onChange={(e) => seek(Number(e.target.value))}
-                className="progress-slider"
+                onChange={e => seek(Number(e.target.value))}
+                className='progress-slider'
               />
             </div>
 
-            <div className="control-buttons">
-              <button onClick={togglePlay} className="play-pause-btn">
+            <div className='control-buttons'>
+              <button onClick={togglePlay} className='play-pause-btn'>
                 {isPlaying ? '⏸️' : '▶️'}
               </button>
 
-              <div className="volume-control">
-                <button onClick={toggleMute} className="mute-btn">
+              <div className='volume-control'>
+                <button onClick={toggleMute} className='mute-btn'>
                   {isMuted ? '🔇' : '🔊'}
                 </button>
                 <input
-                  type="range"
+                  type='range'
                   min={0}
                   max={1}
                   step={0.1}
                   value={isMuted ? 0 : volume}
-                  onChange={(e) => changeVolume(Number(e.target.value))}
-                  className="volume-slider"
+                  onChange={e => changeVolume(Number(e.target.value))}
+                  className='volume-slider'
                 />
               </div>
 
-              <div className="time-display">
+              <div className='time-display'>
                 {formatTime(currentTime)} / {formatTime(videoDuration)}
               </div>
 
@@ -444,11 +445,11 @@ export function VideoPlayer({
               {availableQualities.length > 0 && (
                 <select
                   value={selectedQuality}
-                  onChange={(e) => changeQuality(e.target.value)}
-                  className="quality-selector"
+                  onChange={e => changeQuality(e.target.value)}
+                  className='quality-selector'
                 >
-                  <option value="auto">Auto</option>
-                  {availableQualities.map((quality) => (
+                  <option value='auto'>Auto</option>
+                  {availableQualities.map(quality => (
                     <option key={quality.resolution} value={quality.resolution}>
                       {quality.label}
                     </option>
@@ -456,7 +457,7 @@ export function VideoPlayer({
                 </select>
               )}
 
-              <button onClick={toggleFullscreen} className="fullscreen-btn">
+              <button onClick={toggleFullscreen} className='fullscreen-btn'>
                 {isFullscreen ? '⛶' : '⛶'}
               </button>
             </div>

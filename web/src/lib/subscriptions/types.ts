@@ -1,6 +1,6 @@
 /**
  * Subscription System Types
- * 
+ *
  * Type definitions for the real-time subscription system including
  * connection management, subscription lifecycle, and error handling.
  */

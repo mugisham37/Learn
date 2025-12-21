@@ -1,12 +1,12 @@
 /**
  * Search and Filter State Management
- * 
+ *
  * Provides comprehensive state management for search and filtering with:
  * - Search filter state management with persistence
  * - URL synchronization for search parameters
  * - Faceted search state with filter combinations
  * - Search history and saved searches
- * 
+ *
  * Requirements: 10.3
  */
 
@@ -75,26 +75,26 @@ export interface SearchState {
   // Current search
   filters: SearchFilters;
   facets: SearchFacets | null;
-  
+
   // Search results
   results: SearchResult[]; // Properly typed search results
   totalCount: number;
   isLoading: boolean;
   error: string | null;
-  
+
   // Pagination
   currentPage: number;
   pageSize: number;
   hasNextPage: boolean;
-  
+
   // History and saved searches
   history: SearchHistory[];
   savedSearches: SavedSearch[];
-  
+
   // UI state
   isFiltersVisible: boolean;
   activeFilterCount: number;
-  
+
   // URL synchronization
   isUrlSynced: boolean;
   urlUpdatePending: boolean;
@@ -107,27 +107,27 @@ export interface SearchActions {
   clearFilter: (key: keyof SearchFilters) => void;
   clearAllFilters: () => void;
   applyFilters: (filters: Partial<SearchFilters>) => void;
-  
+
   // Search operations
   search: () => Promise<void>;
   loadMore: () => Promise<void>;
   refresh: () => Promise<void>;
-  
+
   // History operations
   addToHistory: (resultCount: number) => void;
   clearHistory: () => void;
   loadFromHistory: (historyItem: SearchHistory) => void;
-  
+
   // Saved searches
   saveSearch: (name: string) => void;
   loadSavedSearch: (savedSearch: SavedSearch) => void;
   deleteSavedSearch: (id: string) => void;
   updateSavedSearch: (id: string, updates: Partial<SavedSearch>) => void;
-  
+
   // UI operations
   toggleFilters: () => void;
   setPage: (page: number) => void;
-  
+
   // URL synchronization
   syncFromUrl: () => void;
   syncToUrl: () => void;
@@ -136,13 +136,19 @@ export interface SearchActions {
 // Action Types
 type SearchAction =
   | { type: 'SET_QUERY'; payload: string }
-  | { type: 'SET_FILTER'; payload: { key: keyof SearchFilters; value: SearchFilters[keyof SearchFilters] } }
+  | {
+      type: 'SET_FILTER';
+      payload: { key: keyof SearchFilters; value: SearchFilters[keyof SearchFilters] };
+    }
   | { type: 'CLEAR_FILTER'; payload: keyof SearchFilters }
   | { type: 'CLEAR_ALL_FILTERS' }
   | { type: 'APPLY_FILTERS'; payload: Partial<SearchFilters> }
   | { type: 'SET_LOADING'; payload: boolean }
   | { type: 'SET_ERROR'; payload: string | null }
-  | { type: 'SET_RESULTS'; payload: { results: SearchResult[]; totalCount: number; hasNextPage: boolean } }
+  | {
+      type: 'SET_RESULTS';
+      payload: { results: SearchResult[]; totalCount: number; hasNextPage: boolean };
+    }
   | { type: 'APPEND_RESULTS'; payload: { results: SearchResult[]; hasNextPage: boolean } }
   | { type: 'SET_FACETS'; payload: SearchFacets }
   | { type: 'SET_PAGE'; payload: number }
@@ -189,7 +195,7 @@ function generateId(): string {
 
 function countActiveFilters(filters: SearchFilters): number {
   let count = 0;
-  
+
   if (filters.query) count++;
   if (filters.category) count++;
   if (filters.difficulty?.length) count++;
@@ -199,13 +205,13 @@ function countActiveFilters(filters: SearchFilters): number {
   if (filters.instructor) count++;
   if (filters.language) count++;
   if (filters.tags?.length) count++;
-  
+
   return count;
 }
 
 function filtersToUrlParams(filters: SearchFilters): URLSearchParams {
   const params = new URLSearchParams();
-  
+
   if (filters.query) params.set('q', filters.query);
   if (filters.category) params.set('category', filters.category);
   if (filters.difficulty?.length) params.set('difficulty', filters.difficulty.join(','));
@@ -223,7 +229,7 @@ function filtersToUrlParams(filters: SearchFilters): URLSearchParams {
   if (filters.tags?.length) params.set('tags', filters.tags.join(','));
   if (filters.sortBy) params.set('sortBy', filters.sortBy);
   if (filters.sortOrder) params.set('sortOrder', filters.sortOrder);
-  
+
   return params;
 }
 
@@ -233,13 +239,13 @@ function urlParamsToFilters(params: URLSearchParams): SearchFilters {
     sortBy: (params.get('sortBy') as SearchFilters['sortBy']) || 'relevance',
     sortOrder: (params.get('sortOrder') as SearchFilters['sortOrder']) || 'desc',
   };
-  
+
   const category = params.get('category');
   if (category) filters.category = category;
-  
+
   const difficulty = params.get('difficulty');
   if (difficulty) filters.difficulty = difficulty.split(',');
-  
+
   const priceMin = params.get('priceMin');
   const priceMax = params.get('priceMax');
   if (priceMin && priceMax) {
@@ -248,10 +254,10 @@ function urlParamsToFilters(params: URLSearchParams): SearchFilters {
       max: parseInt(priceMax, 10),
     };
   }
-  
+
   const rating = params.get('rating');
   if (rating) filters.rating = parseInt(rating, 10);
-  
+
   const durationMin = params.get('durationMin');
   const durationMax = params.get('durationMax');
   if (durationMin && durationMax) {
@@ -260,16 +266,16 @@ function urlParamsToFilters(params: URLSearchParams): SearchFilters {
       max: parseInt(durationMax, 10),
     };
   }
-  
+
   const instructor = params.get('instructor');
   if (instructor) filters.instructor = instructor;
-  
+
   const language = params.get('language');
   if (language) filters.language = language;
-  
+
   const tags = params.get('tags');
   if (tags) filters.tags = tags.split(',');
-  
+
   return filters;
 }
 
@@ -298,7 +304,7 @@ function searchReducer(state: SearchState, action: SearchAction): SearchState {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { [action.payload]: _removedFilter, ...remainingFilters } = state.filters;
       // Ensure required properties are present
-      const clearedFilters: SearchFilters = { 
+      const clearedFilters: SearchFilters = {
         query: '',
         sortBy: 'relevance',
         sortOrder: 'desc',
@@ -415,9 +421,7 @@ function searchReducer(state: SearchState, action: SearchAction): SearchState {
       return {
         ...state,
         savedSearches: state.savedSearches.map(search =>
-          search.id === action.payload.id
-            ? { ...search, ...action.payload.updates }
-            : search
+          search.id === action.payload.id ? { ...search, ...action.payload.updates } : search
         ),
       };
 
@@ -457,10 +461,12 @@ export function useSearch(): [SearchState, SearchActions] {
     const savedHistory = localStorage.getItem('search-history');
     if (savedHistory) {
       try {
-        const history = JSON.parse(savedHistory).map((item: SearchHistory & { timestamp: string }) => ({
-          ...item,
-          timestamp: new Date(item.timestamp),
-        }));
+        const history = JSON.parse(savedHistory).map(
+          (item: SearchHistory & { timestamp: string }) => ({
+            ...item,
+            timestamp: new Date(item.timestamp),
+          })
+        );
         history.forEach((item: SearchHistory) => {
           dispatch({ type: 'ADD_TO_HISTORY', payload: item });
         });
@@ -473,11 +479,13 @@ export function useSearch(): [SearchState, SearchActions] {
     const savedSearches = localStorage.getItem('saved-searches');
     if (savedSearches) {
       try {
-        const searches = JSON.parse(savedSearches).map((item: SavedSearch & { createdAt: string; lastUsed: string }) => ({
-          ...item,
-          createdAt: new Date(item.createdAt),
-          lastUsed: new Date(item.lastUsed),
-        }));
+        const searches = JSON.parse(savedSearches).map(
+          (item: SavedSearch & { createdAt: string; lastUsed: string }) => ({
+            ...item,
+            createdAt: new Date(item.createdAt),
+            lastUsed: new Date(item.lastUsed),
+          })
+        );
         dispatch({ type: 'SET_SAVED_SEARCHES', payload: searches });
       } catch (_error) {
         console.error('Failed to load saved searches:', _error);
@@ -518,7 +526,7 @@ export function useSearch(): [SearchState, SearchActions] {
     urlSyncTimeoutRef.current = setTimeout(() => {
       const params = filtersToUrlParams(state.filters);
       const newUrl = `${router.pathname}?${params.toString()}`;
-      
+
       if (newUrl !== router.asPath) {
         router.replace(newUrl, undefined, { shallow: true });
       }
@@ -555,11 +563,11 @@ export function useSearch(): [SearchState, SearchActions] {
 
     search: useCallback(async () => {
       dispatch({ type: 'SET_LOADING', payload: true });
-      
+
       try {
         // In a real implementation, this would call the GraphQL search query
         await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
-        
+
         // Mock results
         const mockResults: SearchResult[] = Array.from({ length: state.pageSize }, (_, i) => ({
           id: `result-${i}`,
@@ -568,7 +576,7 @@ export function useSearch(): [SearchState, SearchActions] {
           type: 'course',
           url: `/course/${i + 1}`,
         }));
-        
+
         const mockFacets: SearchFacets = {
           categories: [
             { value: 'programming', label: 'Programming', count: 150 },
@@ -584,14 +592,17 @@ export function useSearch(): [SearchState, SearchActions] {
           priceRanges: [],
           ratings: [],
         };
-        
-        dispatch({ type: 'SET_RESULTS', payload: { 
-          results: mockResults, 
-          totalCount: 200, 
-          hasNextPage: true 
-        }});
+
+        dispatch({
+          type: 'SET_RESULTS',
+          payload: {
+            results: mockResults,
+            totalCount: 200,
+            hasNextPage: true,
+          },
+        });
         dispatch({ type: 'SET_FACETS', payload: mockFacets });
-        
+
         // Add to history
         const historyItem: SearchHistory = {
           id: generateId(),
@@ -601,7 +612,7 @@ export function useSearch(): [SearchState, SearchActions] {
           resultCount: 200,
         };
         dispatch({ type: 'ADD_TO_HISTORY', payload: historyItem });
-        
+
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
       } catch (_error) {
         dispatch({ type: 'SET_ERROR', payload: 'Search failed. Please try again.' });
@@ -610,13 +621,13 @@ export function useSearch(): [SearchState, SearchActions] {
 
     loadMore: useCallback(async () => {
       if (!state.hasNextPage || state.isLoading) return;
-      
+
       dispatch({ type: 'SET_LOADING', payload: true });
-      
+
       try {
         // In a real implementation, this would call the GraphQL search query with pagination
         await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
-        
+
         // Mock additional results
         const mockResults: SearchResult[] = Array.from({ length: state.pageSize }, (_, i) => ({
           id: `result-${state.results.length + i}`,
@@ -625,27 +636,36 @@ export function useSearch(): [SearchState, SearchActions] {
           type: 'course',
           url: `/course/${state.results.length + i + 1}`,
         }));
-        
-        dispatch({ type: 'APPEND_RESULTS', payload: { 
-          results: mockResults, 
-          hasNextPage: state.results.length + mockResults.length < state.totalCount 
-        }});
-        
+
+        dispatch({
+          type: 'APPEND_RESULTS',
+          payload: {
+            results: mockResults,
+            hasNextPage: state.results.length + mockResults.length < state.totalCount,
+          },
+        });
+
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
       } catch (_error) {
         dispatch({ type: 'SET_ERROR', payload: 'Failed to load more results.' });
       }
-    }, [state.hasNextPage, state.isLoading, state.pageSize, state.results.length, state.totalCount]),
+    }, [
+      state.hasNextPage,
+      state.isLoading,
+      state.pageSize,
+      state.results.length,
+      state.totalCount,
+    ]),
 
     refresh: useCallback(async () => {
       dispatch({ type: 'SET_PAGE', payload: 1 });
       // Trigger search by dispatching loading state
       dispatch({ type: 'SET_LOADING', payload: true });
-      
+
       try {
         // In a real implementation, this would call the GraphQL search query
         await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
-        
+
         // Mock results
         const mockResults = Array.from({ length: state.pageSize }, (_, i) => ({
           id: `result-${i}`,
@@ -654,29 +674,35 @@ export function useSearch(): [SearchState, SearchActions] {
           type: 'course' as const,
           url: `/course/${i + 1}`,
         }));
-        
-        dispatch({ type: 'SET_RESULTS', payload: { 
-          results: mockResults, 
-          totalCount: 200, 
-          hasNextPage: true 
-        }});
-        
+
+        dispatch({
+          type: 'SET_RESULTS',
+          payload: {
+            results: mockResults,
+            totalCount: 200,
+            hasNextPage: true,
+          },
+        });
+
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
       } catch (_error) {
         dispatch({ type: 'SET_ERROR', payload: 'Search failed. Please try again.' });
       }
     }, [state.pageSize]),
 
-    addToHistory: useCallback((resultCount: number) => {
-      const historyItem: SearchHistory = {
-        id: generateId(),
-        query: state.filters.query,
-        filters: state.filters,
-        timestamp: new Date(),
-        resultCount,
-      };
-      dispatch({ type: 'ADD_TO_HISTORY', payload: historyItem });
-    }, [state.filters]),
+    addToHistory: useCallback(
+      (resultCount: number) => {
+        const historyItem: SearchHistory = {
+          id: generateId(),
+          query: state.filters.query,
+          filters: state.filters,
+          timestamp: new Date(),
+          resultCount,
+        };
+        dispatch({ type: 'ADD_TO_HISTORY', payload: historyItem });
+      },
+      [state.filters]
+    ),
 
     clearHistory: useCallback(() => {
       dispatch({ type: 'CLEAR_HISTORY' });
@@ -687,30 +713,36 @@ export function useSearch(): [SearchState, SearchActions] {
       dispatch({ type: 'LOAD_FROM_HISTORY', payload: historyItem });
     }, []),
 
-    saveSearch: useCallback((name: string) => {
-      const savedSearch: SavedSearch = {
-        id: generateId(),
-        name,
-        query: state.filters.query,
-        filters: state.filters,
-        createdAt: new Date(),
-        lastUsed: new Date(),
-        useCount: 1,
-      };
-      dispatch({ type: 'ADD_SAVED_SEARCH', payload: savedSearch });
-    }, [state.filters]),
+    saveSearch: useCallback(
+      (name: string) => {
+        const savedSearch: SavedSearch = {
+          id: generateId(),
+          name,
+          query: state.filters.query,
+          filters: state.filters,
+          createdAt: new Date(),
+          lastUsed: new Date(),
+          useCount: 1,
+        };
+        dispatch({ type: 'ADD_SAVED_SEARCH', payload: savedSearch });
+      },
+      [state.filters]
+    ),
 
     loadSavedSearch: useCallback((savedSearch: SavedSearch) => {
       dispatch({ type: 'APPLY_FILTERS', payload: savedSearch.filters });
-      
+
       // Update usage statistics
-      dispatch({ type: 'UPDATE_SAVED_SEARCH', payload: {
-        id: savedSearch.id,
-        updates: {
-          lastUsed: new Date(),
-          useCount: savedSearch.useCount + 1,
+      dispatch({
+        type: 'UPDATE_SAVED_SEARCH',
+        payload: {
+          id: savedSearch.id,
+          updates: {
+            lastUsed: new Date(),
+            useCount: savedSearch.useCount + 1,
+          },
         },
-      }});
+      });
     }, []),
 
     deleteSavedSearch: useCallback((id: string) => {
@@ -791,7 +823,7 @@ export function getSearchSuggestions(query: string): string[] {
     'Python programming',
     'Web design',
   ];
-  
+
   return mockSuggestions.filter(suggestion =>
     suggestion.toLowerCase().includes(query.toLowerCase())
   );
@@ -799,12 +831,5 @@ export function getSearchSuggestions(query: string): string[] {
 
 export function getPopularSearches(): string[] {
   // In a real implementation, this would come from analytics
-  return [
-    'React',
-    'JavaScript',
-    'Python',
-    'Web Development',
-    'Machine Learning',
-    'UI/UX Design',
-  ];
+  return ['React', 'JavaScript', 'Python', 'Web Development', 'Machine Learning', 'UI/UX Design'];
 }

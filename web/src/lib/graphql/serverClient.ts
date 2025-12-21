@@ -1,9 +1,9 @@
 /**
  * Server-side GraphQL Client
- * 
+ *
  * Provides GraphQL client functionality for server-side rendering and API routes.
  * Handles authentication, error handling, and caching for SSR/SSG operations.
- * 
+ *
  * Requirements: 8.2, 8.3
  */
 
@@ -27,7 +27,7 @@ export function createServerClient(accessToken?: string) {
   const authLink = setContext(async (_, { headers }) => {
     // Get token from parameter or cookies
     let token = accessToken;
-    
+
     if (!token) {
       try {
         const cookieStore = cookies();
@@ -51,10 +51,9 @@ export function createServerClient(accessToken?: string) {
   const errorLink = onError(({ graphQLErrors, networkError, operation, forward }) => {
     if (graphQLErrors) {
       graphQLErrors.forEach(({ message, locations, path, extensions }) => {
-        console.error(
-          `GraphQL error: Message: ${message}, Location: ${locations}, Path: ${path}`,
-          { extensions }
-        );
+        console.error(`GraphQL error: Message: ${message}, Location: ${locations}, Path: ${path}`, {
+          extensions,
+        });
       });
     }
 
@@ -123,7 +122,7 @@ export async function executeServerQuery<T = any, V = any>(
 }> {
   try {
     const client = createServerClient(accessToken);
-    
+
     const result = await client.query({
       query,
       variables,
@@ -137,7 +136,7 @@ export async function executeServerQuery<T = any, V = any>(
     };
   } catch (error) {
     console.error('Server-side GraphQL query error:', error);
-    
+
     return {
       data: null,
       errors: [error],
@@ -159,7 +158,7 @@ export async function executeServerMutation<T = any, V = any>(
 }> {
   try {
     const client = createServerClient(accessToken);
-    
+
     const result = await client.mutate({
       mutation,
       variables,
@@ -171,7 +170,7 @@ export async function executeServerMutation<T = any, V = any>(
     };
   } catch (error) {
     console.error('Server-side GraphQL mutation error:', error);
-    
+
     return {
       data: null,
       errors: [error],
@@ -219,12 +218,14 @@ export const serverGraphQL = {
   /**
    * Fetch courses for server-side rendering
    */
-  async fetchCourses(variables: {
-    first?: number;
-    after?: string;
-    filter?: any;
-    sort?: any;
-  } = {}) {
+  async fetchCourses(
+    variables: {
+      first?: number;
+      after?: string;
+      filter?: any;
+      sort?: any;
+    } = {}
+  ) {
     const COURSES_QUERY = `
       query Courses($first: Int, $after: String, $filter: CourseFilter, $sort: CourseSort) {
         courses(first: $first, after: $after, filter: $filter, sort: $sort) {
@@ -337,11 +338,14 @@ export const serverGraphQL = {
   /**
    * Fetch user enrollments for server-side rendering
    */
-  async fetchUserEnrollments(accessToken: string, variables: {
-    first?: number;
-    after?: string;
-    filter?: any;
-  } = {}) {
+  async fetchUserEnrollments(
+    accessToken: string,
+    variables: {
+      first?: number;
+      after?: string;
+      filter?: any;
+    } = {}
+  ) {
     const USER_ENROLLMENTS_QUERY = `
       query MyEnrollments($first: Int, $after: String, $filter: EnrollmentFilter) {
         myEnrollments(first: $first, after: $after, filter: $filter) {

@@ -1,6 +1,6 @@
 /**
  * Cache Provider Component
- * 
+ *
  * React provider component that provides comprehensive cache management functionality
  * with backend integration, persistence, and optimization.
  */
@@ -10,7 +10,11 @@
 import React, { createContext, useContext, useCallback, useState, useEffect } from 'react';
 import { useApolloClient } from '@apollo/client/react';
 import { InMemoryCache } from '@apollo/client';
-import { BackendCacheManager, createBackendCacheManager, BackendModule } from './backendIntegration';
+import {
+  BackendCacheManager,
+  createBackendCacheManager,
+  BackendModule,
+} from './backendIntegration';
 import { cacheConfig } from '../config';
 
 export interface CacheContextValue {
@@ -93,21 +97,21 @@ export interface CacheProviderProps {
  * Cache Provider component that provides comprehensive cache management functionality
  * with backend integration, persistence, and optimization
  */
-export function CacheProvider({ 
-  children, 
+export function CacheProvider({
+  children,
   enablePersistence = cacheConfig.enablePersistence,
   enableOptimization = true,
-  persistenceKey = 'lms-apollo-cache'
+  persistenceKey = 'lms-apollo-cache',
 }: CacheProviderProps) {
   const client = useApolloClient();
   const cache = client.cache as InMemoryCache;
   const [backendManager, setBackendManager] = useState<BackendCacheManager | null>(null);
-  const [cacheStats, setCacheStats] = useState({ 
-    size: 0, 
-    entities: 0, 
-    queries: 0, 
+  const [cacheStats, setCacheStats] = useState({
+    size: 0,
+    entities: 0,
+    queries: 0,
     subscriptions: 0,
-    memoryUsage: '0 MB'
+    memoryUsage: '0 MB',
   });
 
   // Initialize backend cache manager
@@ -117,7 +121,7 @@ export function CacheProvider({
       enableOptimization,
       persistenceKey,
     });
-    
+
     setBackendManager(manager);
 
     // Update cache stats periodically
@@ -139,33 +143,36 @@ export function CacheProvider({
 
   const clearCache = useCallback(async () => {
     await client.clearStore();
-    setCacheStats({ 
-      size: 0, 
-      entities: 0, 
-      queries: 0, 
+    setCacheStats({
+      size: 0,
+      entities: 0,
+      queries: 0,
       subscriptions: 0,
-      memoryUsage: '0 MB'
+      memoryUsage: '0 MB',
     });
-    
+
     // Clear persisted cache as well
     if (backendManager) {
       backendManager.clearPersistedCache();
     }
   }, [client, backendManager]);
 
-  const clearCacheEntries = useCallback(async (keys: string[]) => {
-    // Clear specific cache entries
-    keys.forEach(key => {
-      client.cache.evict({ id: key });
-    });
-    client.cache.gc();
-    
-    // Update stats
-    if (backendManager) {
-      const healthReport = backendManager.getHealthReport();
-      setCacheStats(healthReport.stats);
-    }
-  }, [client, backendManager]);
+  const clearCacheEntries = useCallback(
+    async (keys: string[]) => {
+      // Clear specific cache entries
+      keys.forEach(key => {
+        client.cache.evict({ id: key });
+      });
+      client.cache.gc();
+
+      // Update stats
+      if (backendManager) {
+        const healthReport = backendManager.getHealthReport();
+        setCacheStats(healthReport.stats);
+      }
+    },
+    [client, backendManager]
+  );
 
   const getCacheStats = useCallback(() => {
     return cacheStats;
@@ -175,12 +182,15 @@ export function CacheProvider({
     await client.refetchQueries({ include: 'active' });
   }, [client]);
 
-  const getModuleStats = useCallback((module: BackendModule) => {
-    if (!backendManager) {
-      return { entities: 0, queries: 0, memoryUsage: '0 MB' };
-    }
-    return backendManager.getModuleStats(module);
-  }, [backendManager]);
+  const getModuleStats = useCallback(
+    (module: BackendModule) => {
+      if (!backendManager) {
+        return { entities: 0, queries: 0, memoryUsage: '0 MB' };
+      }
+      return backendManager.getModuleStats(module);
+    },
+    [backendManager]
+  );
 
   const persistCache = useCallback(() => {
     if (!backendManager) return false;
@@ -223,11 +233,7 @@ export function CacheProvider({
     getHealthReport,
   };
 
-  return (
-    <CacheContext.Provider value={contextValue}>
-      {children}
-    </CacheContext.Provider>
-  );
+  return <CacheContext.Provider value={contextValue}>{children}</CacheContext.Provider>;
 }
 
 /**
@@ -254,22 +260,28 @@ export function useBackendCacheManager(): BackendCacheManager | null {
  */
 export function useModuleCache(module: BackendModule) {
   const { backendManager, getModuleStats } = useCacheManager();
-  
-  const executeOperation = useCallback(async (operation: Parameters<BackendCacheManager['executeOperation']>[0]) => {
-    if (!backendManager) {
-      throw new Error('Backend cache manager not initialized');
-    }
-    return backendManager.executeOperation({ ...operation, module });
-  }, [backendManager, module]);
+
+  const executeOperation = useCallback(
+    async (operation: Parameters<BackendCacheManager['executeOperation']>[0]) => {
+      if (!backendManager) {
+        throw new Error('Backend cache manager not initialized');
+      }
+      return backendManager.executeOperation({ ...operation, module });
+    },
+    [backendManager, module]
+  );
 
   const getStats = useCallback(() => {
     return getModuleStats(module);
   }, [getModuleStats, module]);
 
-  const warmCache = useCallback(async (queries: Parameters<BackendCacheManager['warmModuleCache']>[1]) => {
-    if (!backendManager) return;
-    return backendManager.warmModuleCache(module, queries);
-  }, [backendManager, module]);
+  const warmCache = useCallback(
+    async (queries: Parameters<BackendCacheManager['warmModuleCache']>[1]) => {
+      if (!backendManager) return;
+      return backendManager.warmModuleCache(module, queries);
+    },
+    [backendManager, module]
+  );
 
   return {
     executeOperation,

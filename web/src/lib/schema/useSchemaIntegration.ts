@@ -1,14 +1,19 @@
 /**
  * Schema Integration React Hook
- * 
+ *
  * This hook provides React integration for GraphQL schema management,
  * including synchronization status and validation results.
- * 
+ *
  * Requirements: 1.1, 1.2, 1.3, 1.5
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { schemaIntegration, type SchemaValidationResult, type SchemaMetadata, type SchemaSyncOptions } from './schemaIntegration.js';
+import {
+  schemaIntegration,
+  type SchemaValidationResult,
+  type SchemaMetadata,
+  type SchemaSyncOptions,
+} from './schemaIntegration.js';
 
 /**
  * Schema integration hook state
@@ -18,16 +23,16 @@ interface UseSchemaIntegrationState {
   isLoading: boolean;
   isValidating: boolean;
   isSyncing: boolean;
-  
+
   // Data
   metadata: SchemaMetadata | null;
   validation: SchemaValidationResult | null;
   schemaSDL: string | null;
-  
+
   // Error handling
   error: string | null;
   lastSyncAt: Date | null;
-  
+
   // Health status
   healthScore: number;
   healthStatus: 'excellent' | 'good' | 'fair' | 'poor' | 'unknown';
@@ -51,12 +56,12 @@ interface UseSchemaIntegrationReturn extends UseSchemaIntegrationState {
   sync: (options?: SchemaSyncOptions) => Promise<void>;
   validate: () => Promise<void>;
   reset: () => void;
-  
+
   // Computed values
   isHealthy: boolean;
   hasPlaceholders: boolean;
   needsImprovement: boolean;
-  
+
   // Statistics
   stats: SchemaMetadata['stats'] | null;
 }
@@ -100,49 +105,52 @@ export function useSchemaIntegration(
   }, []);
 
   // Sync schema from backend
-  const sync = useCallback(async (syncOptions: SchemaSyncOptions = {}) => {
-    if (state.isSyncing) {
-      return; // Prevent concurrent syncs
-    }
+  const sync = useCallback(
+    async (syncOptions: SchemaSyncOptions = {}) => {
+      if (state.isSyncing) {
+        return; // Prevent concurrent syncs
+      }
 
-    updateState({ 
-      isSyncing: true, 
-      isLoading: true, 
-      error: null 
-    });
-
-    try {
-      const result = await schemaIntegration.synchronize({
-        endpoint,
-        ...syncOptions,
+      updateState({
+        isSyncing: true,
+        isLoading: true,
+        error: null,
       });
 
-      if (result.success) {
-        updateState({
-          metadata: result.metadata || null,
-          validation: result.validation || null,
-          schemaSDL: result.schemaSDL || null,
-          lastSyncAt: new Date(),
-          healthScore: result.validation?.health.score || 0,
-          healthStatus: result.validation?.health.status || 'unknown',
-          error: null,
+      try {
+        const result = await schemaIntegration.synchronize({
+          endpoint,
+          ...syncOptions,
         });
-      } else {
+
+        if (result.success) {
+          updateState({
+            metadata: result.metadata || null,
+            validation: result.validation || null,
+            schemaSDL: result.schemaSDL || null,
+            lastSyncAt: new Date(),
+            healthScore: result.validation?.health.score || 0,
+            healthStatus: result.validation?.health.status || 'unknown',
+            error: null,
+          });
+        } else {
+          updateState({
+            error: result.error || 'Schema synchronization failed',
+          });
+        }
+      } catch (error) {
         updateState({
-          error: result.error || 'Schema synchronization failed',
+          error: (error as Error).message,
+        });
+      } finally {
+        updateState({
+          isSyncing: false,
+          isLoading: false,
         });
       }
-    } catch (error) {
-      updateState({
-        error: (error as Error).message,
-      });
-    } finally {
-      updateState({ 
-        isSyncing: false, 
-        isLoading: false 
-      });
-    }
-  }, [state.isSyncing, endpoint, updateState]);
+    },
+    [state.isSyncing, endpoint, updateState]
+  );
 
   // Validate current schema
   const validate = useCallback(async () => {
@@ -150,9 +158,9 @@ export function useSchemaIntegration(
       return; // Prevent concurrent validations
     }
 
-    updateState({ 
-      isValidating: true, 
-      error: null 
+    updateState({
+      isValidating: true,
+      error: null,
     });
 
     try {
@@ -176,8 +184,8 @@ export function useSchemaIntegration(
         error: (error as Error).message,
       });
     } finally {
-      updateState({ 
-        isValidating: false 
+      updateState({
+        isValidating: false,
       });
     }
   }, [state.isValidating, sync, updateState]);
@@ -233,21 +241,20 @@ export function useSchemaIntegration(
 
   // Computed values
   const isHealthy = state.healthScore >= 70;
-  const hasPlaceholders = state.validation?.errors.some(
-    error => error.code === 'PLACEHOLDER_OPERATIONS'
-  ) || false;
+  const hasPlaceholders =
+    state.validation?.errors.some(error => error.code === 'PLACEHOLDER_OPERATIONS') || false;
   const needsImprovement = state.healthScore < 60;
   const stats = state.metadata?.stats || null;
 
   return {
     // State
     ...state,
-    
+
     // Actions
     sync,
     validate,
     reset,
-    
+
     // Computed values
     isHealthy,
     hasPlaceholders,
@@ -260,15 +267,10 @@ export function useSchemaIntegration(
  * Hook for schema health monitoring
  */
 export function useSchemaHealth() {
-  const { 
-    healthScore, 
-    healthStatus, 
-    validation, 
-    isHealthy, 
-    needsImprovement 
-  } = useSchemaIntegration({ 
-    validateOnMount: true 
-  });
+  const { healthScore, healthStatus, validation, isHealthy, needsImprovement } =
+    useSchemaIntegration({
+      validateOnMount: true,
+    });
 
   const recommendations = validation?.health.recommendations || [];
   const criticalIssues = validation?.errors.filter(e => e.severity === 'error') || [];
@@ -290,8 +292,8 @@ export function useSchemaHealth() {
  * Hook for schema statistics
  */
 export function useSchemaStats() {
-  const { stats, metadata, validation } = useSchemaIntegration({ 
-    validateOnMount: true 
+  const { stats, metadata, validation } = useSchemaIntegration({
+    validateOnMount: true,
   });
 
   return {

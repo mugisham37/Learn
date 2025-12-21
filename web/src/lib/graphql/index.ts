@@ -1,6 +1,6 @@
 /**
  * GraphQL Client Module
- * 
+ *
  * Exports the configured Apollo Client and related utilities.
  */
 

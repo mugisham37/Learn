@@ -1,17 +1,17 @@
 /**
  * Search Utilities
- * 
+ *
  * Utility functions for search functionality including query processing,
  * result formatting, analytics tracking, and search optimization helpers.
- * 
+ *
  * Requirements: 2.2 - Complete Module Hook Implementation (Search)
  */
 
-import type { 
-  SearchFilters, 
-  CourseSearchResult, 
-  LessonSearchResult, 
-  SearchFacets 
+import type {
+  SearchFilters,
+  CourseSearchResult,
+  LessonSearchResult,
+  SearchFacets,
 } from '../../hooks/useSearch';
 
 // Extend Window interface for gtag
@@ -54,17 +54,20 @@ export function extractSearchTerms(query: string): string[] {
 /**
  * Generate search suggestions based on query
  */
-export function generateQuerySuggestions(query: string, existingResults?: CourseSearchResult[]): string[] {
+export function generateQuerySuggestions(
+  query: string,
+  existingResults?: CourseSearchResult[]
+): string[] {
   const suggestions: string[] = [];
   const terms = extractSearchTerms(query);
-  
+
   // Add term variations
   terms.forEach(term => {
     QUERY_EXPANSIONS[term]?.forEach(expansion => {
       suggestions.push(query.replace(term, expansion));
     });
   });
-  
+
   // Add category-based suggestions from results
   if (existingResults) {
     const categories = [...new Set(existingResults.map(r => r.category))];
@@ -72,7 +75,7 @@ export function generateQuerySuggestions(query: string, existingResults?: Course
       suggestions.push(`${query} ${category.toLowerCase()}`);
     });
   }
-  
+
   return [...new Set(suggestions)].slice(0, 8);
 }
 
@@ -97,13 +100,7 @@ export function buildElasticsearchQuery(
     esQuery.bool.must.push({
       multi_match: {
         query: sanitizeSearchQuery(query),
-        fields: [
-          'title^3',
-          'description^2',
-          'lessonContent',
-          'instructorName',
-          'category',
-        ],
+        fields: ['title^3', 'description^2', 'lessonContent', 'instructorName', 'category'],
         type: 'best_fields',
         fuzziness: 'AUTO',
       },
@@ -124,19 +121,19 @@ export function buildElasticsearchQuery(
   }
 
   if (filters.priceRange) {
-    const priceFilter: ElasticsearchRangeQuery = { 
-      range: { 
-        price: {} 
-      } 
+    const priceFilter: ElasticsearchRangeQuery = {
+      range: {
+        price: {},
+      },
     };
-    
+
     if (filters.priceRange.min !== undefined) {
       priceFilter.range.price!.gte = filters.priceRange.min;
     }
     if (filters.priceRange.max !== undefined) {
       priceFilter.range.price!.lte = filters.priceRange.max;
     }
-    
+
     esQuery.bool.filter.push(priceFilter as unknown as Record<string, unknown>);
   }
 
@@ -349,17 +346,13 @@ export function getSearchMetrics(): SearchMetrics {
 /**
  * Update search performance metrics
  */
-export function updateSearchMetrics(
-  searchTime: number,
-  resultCount: number,
-  query: string
-) {
+export function updateSearchMetrics(searchTime: number, resultCount: number, query: string) {
   const metrics = getSearchMetrics();
-  
+
   metrics.totalSearches++;
   metrics.totalSearchTime += searchTime;
   metrics.averageSearchTime = metrics.totalSearchTime / metrics.totalSearches;
-  
+
   if (resultCount === 0) {
     metrics.zeroResultSearches++;
     metrics.zeroResultQueries.push(query);
@@ -370,13 +363,13 @@ export function updateSearchMetrics(
   } else {
     metrics.successfulSearches++;
   }
-  
+
   metrics.successRate = metrics.successfulSearches / metrics.totalSearches;
-  
+
   if (typeof window !== 'undefined') {
     localStorage.setItem('search_metrics', JSON.stringify(metrics));
   }
-  
+
   return metrics;
 }
 
@@ -389,26 +382,26 @@ export function updateSearchMetrics(
  */
 export function calculateRelevanceScore(result: CourseSearchResult): number {
   let score = result.searchBoost || 1;
-  
+
   // Boost based on ratings
   if (result.averageRating) {
     score += (result.averageRating - 3) * 0.2; // Boost 4+ star courses
   }
-  
+
   // Boost based on enrollment count
   score += Math.log10(result.enrollmentCount + 1) * 0.1;
-  
+
   // Boost recent content
-  const daysSincePublished = result.publishedAt 
+  const daysSincePublished = result.publishedAt
     ? (Date.now() - new Date(result.publishedAt).getTime()) / (1000 * 60 * 60 * 24)
     : Infinity;
-  
+
   if (daysSincePublished < 30) {
     score += 0.3;
   } else if (daysSincePublished < 90) {
     score += 0.1;
   }
-  
+
   return Math.round(score * 100) / 100;
 }
 
@@ -423,37 +416,39 @@ export function optimizeResultsForUser(
     return results;
   }
 
-  return results.map(result => {
-    let boostScore = 0;
+  return results
+    .map(result => {
+      let boostScore = 0;
 
-    // Boost preferred categories
-    if (userPreferences.preferredCategories?.includes(result.category)) {
-      boostScore += 0.5;
-    }
-
-    // Boost appropriate difficulty level
-    if (userPreferences.skillLevel) {
-      const userLevel = userPreferences.skillLevel.toUpperCase();
-      if (result.difficulty === userLevel) {
-        boostScore += 0.3;
-      } else if (
-        (userLevel === 'BEGINNER' && result.difficulty === 'INTERMEDIATE') ||
-        (userLevel === 'INTERMEDIATE' && result.difficulty === 'ADVANCED')
-      ) {
-        boostScore += 0.1; // Slight boost for next level
+      // Boost preferred categories
+      if (userPreferences.preferredCategories?.includes(result.category)) {
+        boostScore += 0.5;
       }
-    }
 
-    // Boost preferred price range
-    if (userPreferences.maxPrice && parseFloat(result.price) <= userPreferences.maxPrice) {
-      boostScore += 0.2;
-    }
+      // Boost appropriate difficulty level
+      if (userPreferences.skillLevel) {
+        const userLevel = userPreferences.skillLevel.toUpperCase();
+        if (result.difficulty === userLevel) {
+          boostScore += 0.3;
+        } else if (
+          (userLevel === 'BEGINNER' && result.difficulty === 'INTERMEDIATE') ||
+          (userLevel === 'INTERMEDIATE' && result.difficulty === 'ADVANCED')
+        ) {
+          boostScore += 0.1; // Slight boost for next level
+        }
+      }
 
-    return {
-      ...result,
-      personalizedScore: (result.searchBoost || 1) + boostScore,
-    };
-  }).sort((a, b) => (b.personalizedScore || 0) - (a.personalizedScore || 0));
+      // Boost preferred price range
+      if (userPreferences.maxPrice && parseFloat(result.price) <= userPreferences.maxPrice) {
+        boostScore += 0.2;
+      }
+
+      return {
+        ...result,
+        personalizedScore: (result.searchBoost || 1) + boostScore,
+      };
+    })
+    .sort((a, b) => (b.personalizedScore || 0) - (a.personalizedScore || 0));
 }
 
 /**
@@ -464,22 +459,22 @@ export function generatePersonalizedSuggestions(
   trendingSearches: string[]
 ): string[] {
   const suggestions = new Set<string>();
-  
+
   // Add recent searches (last 5)
   userSearchHistory.slice(-5).forEach(query => {
     suggestions.add(query);
   });
-  
+
   // Add trending searches
   trendingSearches.slice(0, 5).forEach(query => {
     suggestions.add(query);
   });
-  
+
   // Add category-based suggestions
   POPULAR_CATEGORIES.forEach(category => {
     suggestions.add(category);
   });
-  
+
   return Array.from(suggestions).slice(0, 10);
 }
 
@@ -488,20 +483,37 @@ export function generatePersonalizedSuggestions(
 // ============================================================================
 
 const STOP_WORDS = [
-  'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'is', 'are', 'was', 'were'
+  'the',
+  'a',
+  'an',
+  'and',
+  'or',
+  'but',
+  'in',
+  'on',
+  'at',
+  'to',
+  'for',
+  'of',
+  'with',
+  'by',
+  'is',
+  'are',
+  'was',
+  'were',
 ];
 
 const QUERY_EXPANSIONS: Record<string, string[]> = {
-  'js': ['javascript'],
-  'react': ['reactjs', 'react.js'],
-  'node': ['nodejs', 'node.js'],
-  'python': ['py'],
-  'css': ['styling', 'styles'],
-  'html': ['markup'],
-  'api': ['rest', 'graphql'],
-  'db': ['database'],
-  'ml': ['machine learning'],
-  'ai': ['artificial intelligence'],
+  js: ['javascript'],
+  react: ['reactjs', 'react.js'],
+  node: ['nodejs', 'node.js'],
+  python: ['py'],
+  css: ['styling', 'styles'],
+  html: ['markup'],
+  api: ['rest', 'graphql'],
+  db: ['database'],
+  ml: ['machine learning'],
+  ai: ['artificial intelligence'],
 };
 
 const DIFFICULTY_ORDER = ['BEGINNER', 'INTERMEDIATE', 'ADVANCED'];
@@ -533,7 +545,14 @@ const DEFAULT_METRICS: SearchMetrics = {
 export interface ProcessedFacets {
   categories: Array<{ key: string; count: number; label: string; percentage: number }>;
   difficulties: Array<{ key: string; count: number; label: string; percentage: number }>;
-  priceRanges: Array<{ key: string; count: number; label: string; percentage: number; from?: number; to?: number }>;
+  priceRanges: Array<{
+    key: string;
+    count: number;
+    label: string;
+    percentage: number;
+    from?: number;
+    to?: number;
+  }>;
   ratings: Array<{ key: string; count: number; label: string; percentage: number; from?: number }>;
   languages: Array<{ key: string; count: number; label: string; percentage: number }>;
 }
@@ -595,10 +614,10 @@ function formatDate(dateString: string): string {
 
 function formatDuration(minutes?: number): string {
   if (!minutes) return 'N/A';
-  
+
   const hours = Math.floor(minutes / 60);
   const remainingMinutes = minutes % 60;
-  
+
   if (hours > 0) {
     return `${hours}h ${remainingMinutes}m`;
   }
@@ -633,24 +652,24 @@ function formatRatingLabel(from?: number): string {
 
 function formatLanguageLabel(language: string): string {
   const languageNames: Record<string, string> = {
-    'en': 'English',
-    'es': 'Spanish',
-    'fr': 'French',
-    'de': 'German',
-    'it': 'Italian',
-    'pt': 'Portuguese',
-    'ru': 'Russian',
-    'zh': 'Chinese',
-    'ja': 'Japanese',
-    'ko': 'Korean',
+    en: 'English',
+    es: 'Spanish',
+    fr: 'French',
+    de: 'German',
+    it: 'Italian',
+    pt: 'Portuguese',
+    ru: 'Russian',
+    zh: 'Chinese',
+    ja: 'Japanese',
+    ko: 'Korean',
   };
-  
+
   return languageNames[language] || language.toUpperCase();
 }
 
 function extractHighlights(highlight?: Record<string, unknown>): string[] {
   if (!highlight) return [];
-  
+
   const highlights: string[] = [];
   Object.values(highlight).forEach(value => {
     if (Array.isArray(value)) {
@@ -659,7 +678,7 @@ function extractHighlights(highlight?: Record<string, unknown>): string[] {
       highlights.push(value);
     }
   });
-  
+
   return highlights.slice(0, 3); // Limit to 3 highlights
 }
 
@@ -672,7 +691,7 @@ function sanitizeFilters(filters: SearchFilters): SearchFilters {
 
 function getSessionId(): string {
   if (typeof window === 'undefined') return 'server';
-  
+
   let sessionId = sessionStorage.getItem('search_session_id');
   if (!sessionId) {
     sessionId = Math.random().toString(36).substring(2, 15);
@@ -686,12 +705,12 @@ function storeLocalAnalytics(event: Record<string, unknown>): void {
     const stored = localStorage.getItem('search_analytics') || '[]';
     const analytics = JSON.parse(stored);
     analytics.push(event);
-    
+
     // Keep only last 1000 events
     if (analytics.length > 1000) {
       analytics.splice(0, analytics.length - 1000);
     }
-    
+
     localStorage.setItem('search_analytics', JSON.stringify(analytics));
   } catch (error) {
     console.warn('Failed to store search analytics:', error);

@@ -1,6 +1,6 @@
 /**
  * Logout API Route
- * 
+ *
  * Next.js API route that handles user logout by invalidating tokens
  * on the backend and clearing secure cookies.
  */
@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
 
     // Get access token for authentication (if available)
     let accessToken: string | undefined;
-    
+
     if (process.env.NODE_ENV === 'production') {
       accessToken = request.cookies.get('access-token')?.value;
     } else {
@@ -77,8 +77,8 @@ export async function POST(request: NextRequest) {
       });
 
       if (response.ok) {
-        const data = await response.json() as LogoutResponse;
-        
+        const data = (await response.json()) as LogoutResponse;
+
         // Log any GraphQL errors but don't fail the logout
         if (data.errors && data.errors.length > 0) {
           console.warn('Logout GraphQL errors:', data.errors);
@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
     return response;
   } catch (error) {
     console.error('Logout API error:', error);
-    
+
     // Even on error, clear cookies and return success
     // The user should be logged out on the frontend
     const response = NextResponse.json({ success: true });

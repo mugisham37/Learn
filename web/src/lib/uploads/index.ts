@@ -1,6 +1,6 @@
 /**
  * Upload System - Main Export
- * 
+ *
  * Comprehensive file upload system with presigned URL workflow,
  * progress tracking, queue management, and error recovery.
  */
@@ -35,12 +35,7 @@ export {
 export { UploadQueue } from './uploadQueue';
 
 // React Hooks
-export {
-  useFileUpload,
-  useVideoUpload,
-  useUploadQueue,
-  useUploadProgress,
-} from './uploadHooks';
+export { useFileUpload, useVideoUpload, useUploadQueue, useUploadProgress } from './uploadHooks';
 
 // Re-export commonly used types for convenience
 export type { UploadQueueConfig as QueueConfig } from './uploadTypes';

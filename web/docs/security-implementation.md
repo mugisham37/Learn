@@ -16,6 +16,7 @@ This document describes the comprehensive security implementation for the fronte
 - **Automatic Integration**: Seamless integration with GraphQL mutations and form submissions
 
 **Usage**:
+
 ```typescript
 import { CSRFProtector } from '@/lib/security/csrfProtection';
 
@@ -27,6 +28,7 @@ const isValid = await CSRFProtector.validateCSRFToken(token);
 ```
 
 **Configuration**:
+
 - Production: Enabled with strict `sameSite` policy
 - Development: Disabled for easier testing
 - Token lifetime: 1 hour with automatic renewal
@@ -41,12 +43,14 @@ const isValid = await CSRFProtector.validateCSRFToken(token);
 - **Automatic Refresh**: Seamless token refresh before expiration
 
 **Features**:
+
 - Environment-specific storage strategies
 - Token encryption in production environments
 - Secure token transmission over HTTPS
 - Automatic cleanup of expired tokens
 
 **Usage**:
+
 ```typescript
 import { secureTokenStorage } from '@/lib/security/tokenSecurity';
 
@@ -67,6 +71,7 @@ const accessToken = await secureTokenStorage.getAccessToken();
 - **Form Validation Schemas**: Pre-built Zod schemas for common forms
 
 **Validation Types**:
+
 - **String Sanitization**: Null byte removal, Unicode normalization, length limits
 - **Email Validation**: RFC-compliant email validation with security checks
 - **Password Validation**: Strength requirements and common password detection
@@ -74,6 +79,7 @@ const accessToken = await secureTokenStorage.getAccessToken();
 - **File Validation**: MIME type, size, and extension validation
 
 **Usage**:
+
 ```typescript
 import { inputValidator, FormValidationSchemas } from '@/lib/security/inputValidation';
 
@@ -94,12 +100,14 @@ const formResult = validateFormData(data, FormValidationSchemas.userRegistration
 - **Suspicious Activity Detection**: Pattern matching for malicious requests
 
 **Rate Limits**:
+
 - General API: 100 requests per 15 minutes
 - Authentication: 5 requests per 15 minutes
 - File Upload: 10 requests per hour
 - GraphQL Mutations: 50 requests per 5 minutes
 
 **Usage**:
+
 ```typescript
 // Automatically applied via Next.js middleware
 // No manual integration required
@@ -115,6 +123,7 @@ const formResult = validateFormData(data, FormValidationSchemas.userRegistration
 - **XSS Protection**: Content sanitization and CSP integration
 
 **Security Headers Applied**:
+
 ```
 X-Content-Type-Options: nosniff
 X-Frame-Options: DENY
@@ -139,7 +148,7 @@ export async function middleware(request: NextRequest) {
   if (securityResponse && securityResponse.status !== 200) {
     return securityResponse;
   }
-  
+
   // Continue with authentication and route protection
   // ...
 }
@@ -171,7 +180,7 @@ const {
   secureMutationRequest,
   secureFileUpload,
   isSafeUrl,
-  getSecurityAudit
+  getSecurityAudit,
 } = useSecurityIntegration();
 ```
 
@@ -180,6 +189,7 @@ const {
 ### Environment-Specific Settings
 
 **Production**:
+
 - CSRF protection: Enabled
 - Token encryption: Enabled
 - XSS protection: Strict mode
@@ -187,6 +197,7 @@ const {
 - CSP: Strict policy
 
 **Development**:
+
 - CSRF protection: Disabled for easier testing
 - Token encryption: Disabled
 - XSS protection: Relaxed mode
@@ -194,6 +205,7 @@ const {
 - CSP: Report-only mode
 
 **Test**:
+
 - All security features: Minimal configuration for fast testing
 - Token expiration: Reduced for faster test cycles
 
@@ -229,21 +241,25 @@ interface SecurityEvent {
 ## Best Practices Implemented
 
 ### 1. Defense in Depth
+
 - Multiple layers of security validation
 - Client-side and server-side validation
 - Input sanitization at multiple points
 
 ### 2. Secure by Default
+
 - Production-ready security settings by default
 - Automatic security header application
 - Secure token storage mechanisms
 
 ### 3. Privacy Protection
+
 - Client identification hashing
 - Minimal data collection for security purposes
 - Secure token transmission
 
 ### 4. Performance Optimization
+
 - Efficient rate limiting with cleanup
 - Minimal overhead security checks
 - Caching of security configurations
@@ -276,11 +292,13 @@ const audit = getSecurityAudit();
 ## Compliance and Standards
 
 ### Standards Compliance
+
 - OWASP Top 10 protection
 - RFC-compliant implementations (JWT, email, etc.)
 - Industry best practices for web security
 
 ### Regulatory Compliance
+
 - GDPR-compliant data handling
 - SOC 2 security controls
 - PCI DSS considerations for payment data
@@ -288,11 +306,13 @@ const audit = getSecurityAudit();
 ## Maintenance and Updates
 
 ### Regular Security Updates
+
 - Dependency vulnerability scanning
 - Security configuration reviews
 - Threat model updates
 
 ### Documentation Maintenance
+
 - Security implementation documentation
 - Developer security guidelines
 - Incident response procedures

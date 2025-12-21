@@ -1,9 +1,9 @@
 /**
  * File Security Validation Utilities
- * 
+ *
  * Comprehensive file security validation for upload operations.
  * Provides file type validation, content validation, and malware scanning.
- * 
+ *
  * Requirements: 13.4
  */
 
@@ -30,12 +30,16 @@ export class FileTypeValidator {
 
     // Check file size
     if (file.size > securityConfig.fileUpload.maxFileSize) {
-      errors.push(`File size ${file.size} exceeds maximum allowed size of ${securityConfig.fileUpload.maxFileSize} bytes`);
+      errors.push(
+        `File size ${file.size} exceeds maximum allowed size of ${securityConfig.fileUpload.maxFileSize} bytes`
+      );
     }
 
     // Check file name length
     if (file.name.length > SECURITY_CONSTANTS.MAX_FILE_NAME_LENGTH) {
-      errors.push(`File name exceeds maximum length of ${SECURITY_CONSTANTS.MAX_FILE_NAME_LENGTH} characters`);
+      errors.push(
+        `File name exceeds maximum length of ${SECURITY_CONSTANTS.MAX_FILE_NAME_LENGTH} characters`
+      );
     }
 
     // Check for suspicious file extensions
@@ -52,9 +56,9 @@ export class FileTypeValidator {
 
     // Validate file name for suspicious patterns
     const suspiciousPatterns = [
-      /\.\./,  // Directory traversal
-      /[<>:"|?*]/,  // Invalid filename characters
-      /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/i,  // Windows reserved names
+      /\.\./, // Directory traversal
+      /[<>:"|?*]/, // Invalid filename characters
+      /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/i, // Windows reserved names
     ];
 
     for (const pattern of suspiciousPatterns) {
@@ -90,10 +94,10 @@ export class FileTypeValidator {
    * Detect actual MIME type from file content
    */
   static async detectMimeType(file: File): Promise<string> {
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       const reader = new FileReader();
-      
-      reader.onload = (event) => {
+
+      reader.onload = event => {
         const arrayBuffer = event.target?.result as ArrayBuffer;
         if (!arrayBuffer) {
           resolve(file.type);
@@ -106,7 +110,7 @@ export class FileTypeValidator {
       };
 
       reader.onerror = () => resolve(file.type);
-      
+
       // Read first 512 bytes for signature detection
       const blob = file.slice(0, 512);
       reader.readAsArrayBuffer(blob);
@@ -120,28 +124,28 @@ export class FileTypeValidator {
     // Common file signatures
     const signatures: Array<{ signature: number[]; mimeType: string }> = [
       // Images
-      { signature: [0xFF, 0xD8, 0xFF], mimeType: 'image/jpeg' },
-      { signature: [0x89, 0x50, 0x4E, 0x47], mimeType: 'image/png' },
+      { signature: [0xff, 0xd8, 0xff], mimeType: 'image/jpeg' },
+      { signature: [0x89, 0x50, 0x4e, 0x47], mimeType: 'image/png' },
       { signature: [0x47, 0x49, 0x46, 0x38], mimeType: 'image/gif' },
       { signature: [0x52, 0x49, 0x46, 0x46], mimeType: 'image/webp' }, // RIFF (WebP container)
-      
+
       // Videos
       { signature: [0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70], mimeType: 'video/mp4' },
-      { signature: [0x1A, 0x45, 0xDF, 0xA3], mimeType: 'video/webm' },
-      
+      { signature: [0x1a, 0x45, 0xdf, 0xa3], mimeType: 'video/webm' },
+
       // Documents
       { signature: [0x25, 0x50, 0x44, 0x46], mimeType: 'application/pdf' },
-      { signature: [0x50, 0x4B, 0x03, 0x04], mimeType: 'application/zip' }, // Also used by Office docs
-      { signature: [0xD0, 0xCF, 0x11, 0xE0], mimeType: 'application/msword' },
-      
+      { signature: [0x50, 0x4b, 0x03, 0x04], mimeType: 'application/zip' }, // Also used by Office docs
+      { signature: [0xd0, 0xcf, 0x11, 0xe0], mimeType: 'application/msword' },
+
       // Archives
-      { signature: [0x50, 0x4B, 0x05, 0x06], mimeType: 'application/zip' },
-      { signature: [0x50, 0x4B, 0x07, 0x08], mimeType: 'application/zip' },
-      { signature: [0x1F, 0x8B, 0x08], mimeType: 'application/gzip' },
-      
+      { signature: [0x50, 0x4b, 0x05, 0x06], mimeType: 'application/zip' },
+      { signature: [0x50, 0x4b, 0x07, 0x08], mimeType: 'application/zip' },
+      { signature: [0x1f, 0x8b, 0x08], mimeType: 'application/gzip' },
+
       // Executables (dangerous)
-      { signature: [0x4D, 0x5A], mimeType: 'application/x-msdownload' }, // PE executable
-      { signature: [0x7F, 0x45, 0x4C, 0x46], mimeType: 'application/x-executable' }, // ELF
+      { signature: [0x4d, 0x5a], mimeType: 'application/x-msdownload' }, // PE executable
+      { signature: [0x7f, 0x45, 0x4c, 0x46], mimeType: 'application/x-executable' }, // ELF
     ];
 
     for (const { signature, mimeType } of signatures) {
@@ -185,10 +189,12 @@ export class FileContentValidator {
     try {
       // Detect actual MIME type
       const actualMimeType = await FileTypeValidator.detectMimeType(file);
-      
+
       // Check if declared type matches actual type
       if (file.type !== actualMimeType && actualMimeType) {
-        warnings.push(`Declared MIME type '${file.type}' doesn't match detected type '${actualMimeType}'`);
+        warnings.push(
+          `Declared MIME type '${file.type}' doesn't match detected type '${actualMimeType}'`
+        );
       }
 
       // Check for executable files disguised as other types
@@ -217,7 +223,9 @@ export class FileContentValidator {
     } catch (error) {
       return {
         valid: false,
-        errors: [`Content validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`],
+        errors: [
+          `Content validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        ],
         warnings,
         fileType: file.type,
       };
@@ -282,9 +290,10 @@ export class FileContentValidator {
       if (file.size < expectedMinSize) {
         warnings.push('File size is smaller than expected for image dimensions');
       }
-
     } catch (error) {
-      errors.push(`Image validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      errors.push(
+        `Image validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
 
     return {
@@ -300,7 +309,7 @@ export class FileContentValidator {
    */
   private static getExpectedImageSize(mimeType: string, width: number, height: number): number {
     const pixels = width * height;
-    
+
     switch (mimeType) {
       case 'image/png':
         return Math.max(pixels * 0.1, 100); // PNG can be very compressed
@@ -322,7 +331,7 @@ export class FileContentValidator {
 
     try {
       const text = await this.readFileAsText(file);
-      
+
       // Check for suspicious content patterns
       const suspiciousPatterns = [
         /<script[\s\S]*?<\/script>/gi,
@@ -352,7 +361,6 @@ export class FileContentValidator {
       if (lines.some(line => line.length > maxLineLength)) {
         warnings.push('Text file contains very long lines');
       }
-
     } catch {
       errors.push('Text validation failed');
     }
@@ -371,9 +379,9 @@ export class FileContentValidator {
   private static async readFileAsText(file: File): Promise<string> {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      
-      reader.onload = (event) => {
-        resolve(event.target?.result as string || '');
+
+      reader.onload = event => {
+        resolve((event.target?.result as string) || '');
       };
 
       reader.onerror = () => {
@@ -425,7 +433,8 @@ export class MalwareScanner {
       if (file.size === 0) {
         threats.push('Empty file detected');
         confidence += 0.3;
-      } else if (file.size > 500 * 1024 * 1024) { // 500MB
+      } else if (file.size > 500 * 1024 * 1024) {
+        // 500MB
         threats.push('Unusually large file size');
         confidence += 0.2;
       }
@@ -433,7 +442,12 @@ export class MalwareScanner {
       // Check MIME type vs extension mismatch
       const actualMimeType = await FileTypeValidator.detectMimeType(file);
       const expectedMimeType = this.getExpectedMimeType(extension);
-      if (expectedMimeType && actualMimeType && actualMimeType !== expectedMimeType && actualMimeType !== file.type) {
+      if (
+        expectedMimeType &&
+        actualMimeType &&
+        actualMimeType !== expectedMimeType &&
+        actualMimeType !== file.type
+      ) {
         threats.push('MIME type mismatch detected');
         confidence += 0.6;
       }
@@ -474,16 +488,16 @@ export class MalwareScanner {
    */
   private static getExpectedMimeType(extension: string): string | null {
     const mimeMap: Record<string, string> = {
-      'jpg': 'image/jpeg',
-      'jpeg': 'image/jpeg',
-      'png': 'image/png',
-      'gif': 'image/gif',
-      'webp': 'image/webp',
-      'pdf': 'application/pdf',
-      'txt': 'text/plain',
-      'mp4': 'video/mp4',
-      'webm': 'video/webm',
-      'zip': 'application/zip',
+      jpg: 'image/jpeg',
+      jpeg: 'image/jpeg',
+      png: 'image/png',
+      gif: 'image/gif',
+      webp: 'image/webp',
+      pdf: 'application/pdf',
+      txt: 'text/plain',
+      mp4: 'video/mp4',
+      webm: 'video/webm',
+      zip: 'application/zip',
     };
 
     return mimeMap[extension] || null;
@@ -492,7 +506,9 @@ export class MalwareScanner {
   /**
    * Scan file content for suspicious patterns
    */
-  private static async scanFileContent(file: File): Promise<{ threats: string[]; confidence: number }> {
+  private static async scanFileContent(
+    file: File
+  ): Promise<{ threats: string[]; confidence: number }> {
     const threats: string[] = [];
     let confidence = 0;
 
@@ -504,10 +520,10 @@ export class MalwareScanner {
 
       // Check for executable signatures
       const executableSignatures = [
-        [0x4D, 0x5A], // PE executable
-        [0x7F, 0x45, 0x4C, 0x46], // ELF
-        [0xCA, 0xFE, 0xBA, 0xBE], // Mach-O
-        [0xFE, 0xED, 0xFA, 0xCE], // Mach-O
+        [0x4d, 0x5a], // PE executable
+        [0x7f, 0x45, 0x4c, 0x46], // ELF
+        [0xca, 0xfe, 0xba, 0xbe], // Mach-O
+        [0xfe, 0xed, 0xfa, 0xce], // Mach-O
       ];
 
       for (const signature of executableSignatures) {
@@ -543,7 +559,6 @@ export class MalwareScanner {
         threats.push('Polyglot file detected');
         confidence += 0.7;
       }
-
     } catch {
       // Ignore decoding errors for binary files
     }
@@ -574,10 +589,10 @@ export class MalwareScanner {
   private static isPolyglotFile(bytes: Uint8Array): boolean {
     // Simple heuristic: check if file starts with multiple format signatures
     const signatures = [
-      [0xFF, 0xD8, 0xFF], // JPEG
-      [0x89, 0x50, 0x4E, 0x47], // PNG
+      [0xff, 0xd8, 0xff], // JPEG
+      [0x89, 0x50, 0x4e, 0x47], // PNG
       [0x25, 0x50, 0x44, 0x46], // PDF
-      [0x50, 0x4B, 0x03, 0x04], // ZIP
+      [0x50, 0x4b, 0x03, 0x04], // ZIP
     ];
 
     let matchCount = 0;
@@ -728,4 +743,5 @@ export const fileSecurityValidator = new FileSecurityValidator();
 export const validateFileType = FileTypeValidator.validateFileType;
 export const validateFileContent = FileContentValidator.validateContent;
 export const scanFileForMalware = MalwareScanner.scanFile;
-export const createFileValidator = (options?: Partial<SecureUploadOptions>) => new FileSecurityValidator(options);
+export const createFileValidator = (options?: Partial<SecureUploadOptions>) =>
+  new FileSecurityValidator(options);

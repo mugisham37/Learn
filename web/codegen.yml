@@ -1,14 +1,14 @@
 overwrite: true
-schema: 
-  - "schema.graphql"
-documents: "src/**/*.{ts,tsx,graphql,gql}"
+schema:
+  - 'schema.graphql'
+documents: 'src/**/*.{ts,tsx,graphql,gql}'
 watch: true
 generates:
   src/types/schema.ts:
     plugins:
-      - "typescript"
-      - "typescript-operations"
-      - "typescript-react-apollo"
+      - 'typescript'
+      - 'typescript-operations'
+      - 'typescript-react-apollo'
     config:
       # React Apollo Configuration
       withHooks: true
@@ -17,7 +17,7 @@ generates:
       withMutationFn: true
       withRefetchFn: true
       withSubscriptionHooks: true
-      
+
       # TypeScript Configuration
       skipTypename: false
       enumsAsTypes: true
@@ -26,14 +26,14 @@ generates:
       strictScalars: true
       useTypeImports: true
       immutableTypes: true
-      
+
       # Scalar Mappings
       scalars:
         DateTime: string
         Upload: File
         JSON: any
         ID: string
-        
+
       # Naming Conventions
       namingConvention:
         typeNames: pascal-case#pascalCase
@@ -41,7 +41,7 @@ generates:
         fieldNames: camelCase
         variableNames: camelCase
         transformUnderscore: true
-        
+
       # Optional Handling
       avoidOptionals:
         field: true
@@ -50,37 +50,37 @@ generates:
         defaultValue: false
       maybeValue: T | null | undefined
       inputMaybeValue: T | null | undefined
-      
+
       # Operation Naming
       omitOperationSuffix: false
-      operationResultSuffix: "Result"
-      documentVariableSuffix: "Document"
-      fragmentVariableSuffix: "FragmentDoc"
-      
+      operationResultSuffix: 'Result'
+      documentVariableSuffix: 'Document'
+      fragmentVariableSuffix: 'FragmentDoc'
+
       # Apollo Client Integration
-      apolloReactHooksImportFrom: "@apollo/client"
-      apolloReactCommonImportFrom: "@apollo/client"
+      apolloReactHooksImportFrom: '@apollo/client'
+      apolloReactCommonImportFrom: '@apollo/client'
       reactApolloVersion: 3
-      
+
       # Code Generation Options
       defaultScalarType: unknown
       nonOptionalTypename: true
       preResolveTypes: true
       skipTypeNameForRoot: false
-      
+
       # Documentation
       addDocBlocks: true
-      
+
       # Performance
       dedupeOperationSuffix: true
-      
+
       # Schema Integration
       declarationKind: 'interface'
-      
+
   # Generate separate types for forms and validation
   src/types/forms.ts:
     plugins:
-      - "typescript"
+      - 'typescript'
     config:
       onlyOperationTypes: true
       skipTypename: true
@@ -98,18 +98,18 @@ generates:
         object: false
       maybeValue: T | null | undefined
       inputMaybeValue: T | null | undefined
-      
+
   # Generate introspection result for development tools
   src/types/introspection.json:
     plugins:
-      - "introspection"
+      - 'introspection'
     config:
       minify: true
-      
+
   # Generate GraphQL schema types for backend integration
   src/types/graphql-responses.ts:
     plugins:
-      - "typescript"
+      - 'typescript'
     config:
       skipTypename: false
       enumsAsTypes: true
@@ -127,7 +127,7 @@ generates:
         object: false
       maybeValue: T | null | undefined
       inputMaybeValue: T | null | undefined
-      
+
 hooks:
   afterAllFileWrite:
     - prettier --write

@@ -1,6 +1,6 @@
 /**
  * Core Subscription Hooks
- * 
+ *
  * React hooks for managing GraphQL subscriptions with automatic cache integration,
  * error handling, and cleanup. Provides hooks for messages, progress updates,
  * notifications, and user presence.
@@ -10,11 +10,11 @@ import { useEffect, useRef, useCallback } from 'react';
 import React from 'react';
 import { useApolloClient } from '@apollo/client/react';
 import { DocumentNode } from 'graphql';
-import { 
+import {
   MessageUpdatesDocument,
   ProgressUpdatesDocument,
   type MessageUpdatesSubscriptionResult,
-  type ProgressUpdatesSubscriptionResult 
+  type ProgressUpdatesSubscriptionResult,
 } from '@/types/schema';
 import { SubscriptionHookResult, SubscriptionOptions } from './types';
 import { useSubscriptionContext } from './SubscriptionProvider';
@@ -36,7 +36,7 @@ export function useSubscription<TData = Record<string, unknown>>(
  */
 export function useSubscriptionState() {
   const { connectionStatus, isConnected } = useSubscriptionContext();
-  
+
   return {
     connectionStatus,
     isConnected,
@@ -55,9 +55,7 @@ function useBaseSubscription<TData, TVariables = Record<string, unknown>>(
   const { isConnected } = useSubscriptionContext();
   const cleanupRef = useRef<(() => void) | null>(null);
 
-  const {
-    skip = false,
-  } = options;
+  const { skip = false } = options;
 
   // Simplified subscription state management
   const [subscriptionState, setSubscriptionState] = React.useState<{
@@ -95,7 +93,7 @@ function useBaseSubscription<TData, TVariables = Record<string, unknown>>(
 
 /**
  * Hook for subscribing to real-time message updates
- * 
+ *
  * @param userId - User ID to filter messages for
  * @param options - Subscription options
  */
@@ -105,55 +103,55 @@ export function useMessageSubscription(
 ): SubscriptionHookResult<MessageUpdatesSubscriptionResult> {
   const apolloClient = useApolloClient();
 
-  const handleMessageUpdate = useCallback((data: Record<string, unknown>) => {
-    // Update Apollo cache with new message data
-    try {
-      apolloClient.cache.modify({
-        fields: {
-          conversations(existingConversations = []) {
-            // Update conversation cache with new message
-            const messageData = data as Record<string, unknown>;
-            return existingConversations.map((conversation: Record<string, unknown>) => {
-              if (conversation.id === messageData?.conversationId) {
-                return {
-                  ...conversation,
-                  lastMessage: messageData,
-                  updatedAt: new Date().toISOString(),
-                  unreadCount: (conversation.unreadCount as number) + 1,
-                };
-              }
-              return conversation;
-            });
+  const handleMessageUpdate = useCallback(
+    (data: Record<string, unknown>) => {
+      // Update Apollo cache with new message data
+      try {
+        apolloClient.cache.modify({
+          fields: {
+            conversations(existingConversations = []) {
+              // Update conversation cache with new message
+              const messageData = data as Record<string, unknown>;
+              return existingConversations.map((conversation: Record<string, unknown>) => {
+                if (conversation.id === messageData?.conversationId) {
+                  return {
+                    ...conversation,
+                    lastMessage: messageData,
+                    updatedAt: new Date().toISOString(),
+                    unreadCount: (conversation.unreadCount as number) + 1,
+                  };
+                }
+                return conversation;
+              });
+            },
+            messages(existingMessages = []) {
+              // Add new message to the message list
+              return [data, ...existingMessages];
+            },
           },
-          messages(existingMessages = []) {
-            // Add new message to the message list
-            return [data, ...existingMessages];
-          },
-        },
-      });
-    } catch (error) {
-      console.warn('Failed to update message cache:', error);
-    }
+        });
+      } catch (error) {
+        console.warn('Failed to update message cache:', error);
+      }
 
-    // Call user-provided callback
-    if (options.onSubscriptionData) {
-      options.onSubscriptionData(data);
-    }
-  }, [apolloClient.cache, options]);
-
-  return useBaseSubscription<MessageUpdatesSubscriptionResult>(
-    MessageUpdatesDocument,
-    {
-      ...options,
-      variables: { userId },
-      onSubscriptionData: handleMessageUpdate,
-    }
+      // Call user-provided callback
+      if (options.onSubscriptionData) {
+        options.onSubscriptionData(data);
+      }
+    },
+    [apolloClient.cache, options]
   );
+
+  return useBaseSubscription<MessageUpdatesSubscriptionResult>(MessageUpdatesDocument, {
+    ...options,
+    variables: { userId },
+    onSubscriptionData: handleMessageUpdate,
+  });
 }
 
 /**
  * Hook for subscribing to real-time progress updates
- * 
+ *
  * @param enrollmentId - Enrollment ID to track progress for
  * @param options - Subscription options
  */
@@ -163,65 +161,67 @@ export function useProgressSubscription(
 ): SubscriptionHookResult<ProgressUpdatesSubscriptionResult> {
   const apolloClient = useApolloClient();
 
-  const handleProgressUpdate = useCallback((data: Record<string, unknown>) => {
-    // Update Apollo cache with new progress data
-    try {
-      apolloClient.cache.modify({
-        fields: {
-          enrollments(existingEnrollments = []) {
-            // Update enrollment progress in cache
-            const progressData = data as Record<string, unknown>;
-            return existingEnrollments.map((enrollment: Record<string, unknown>) => {
-              if (enrollment.id === progressData?.enrollmentId) {
-                return {
-                  ...enrollment,
-                  progress: progressData.progress || enrollment.progress,
-                  completedLessons: progressData.completedLessons || enrollment.completedLessons,
-                  lastAccessDate: new Date().toISOString(),
-                  ...(progressData.completed === true ? { completedAt: new Date().toISOString() } : {}),
-                };
-              }
-              return enrollment;
-            });
+  const handleProgressUpdate = useCallback(
+    (data: Record<string, unknown>) => {
+      // Update Apollo cache with new progress data
+      try {
+        apolloClient.cache.modify({
+          fields: {
+            enrollments(existingEnrollments = []) {
+              // Update enrollment progress in cache
+              const progressData = data as Record<string, unknown>;
+              return existingEnrollments.map((enrollment: Record<string, unknown>) => {
+                if (enrollment.id === progressData?.enrollmentId) {
+                  return {
+                    ...enrollment,
+                    progress: progressData.progress || enrollment.progress,
+                    completedLessons: progressData.completedLessons || enrollment.completedLessons,
+                    lastAccessDate: new Date().toISOString(),
+                    ...(progressData.completed === true
+                      ? { completedAt: new Date().toISOString() }
+                      : {}),
+                  };
+                }
+                return enrollment;
+              });
+            },
+            courseProgress(existingProgress = []) {
+              // Update course-specific progress
+              return existingProgress.map((progress: Record<string, unknown>) => {
+                if (progress.enrollmentId === (data as Record<string, unknown>)?.enrollmentId) {
+                  return {
+                    ...progress,
+                    ...data,
+                    updatedAt: new Date().toISOString(),
+                  };
+                }
+                return progress;
+              });
+            },
           },
-          courseProgress(existingProgress = []) {
-            // Update course-specific progress
-            return existingProgress.map((progress: Record<string, unknown>) => {
-              if (progress.enrollmentId === (data as Record<string, unknown>)?.enrollmentId) {
-                return {
-                  ...progress,
-                  ...data,
-                  updatedAt: new Date().toISOString(),
-                };
-              }
-              return progress;
-            });
-          },
-        },
-      });
-    } catch (error) {
-      console.warn('Failed to update progress cache:', error);
-    }
+        });
+      } catch (error) {
+        console.warn('Failed to update progress cache:', error);
+      }
 
-    // Call user-provided callback
-    if (options.onSubscriptionData) {
-      options.onSubscriptionData(data);
-    }
-  }, [apolloClient.cache, options]);
-
-  return useBaseSubscription<ProgressUpdatesSubscriptionResult>(
-    ProgressUpdatesDocument,
-    {
-      ...options,
-      variables: { enrollmentId },
-      onSubscriptionData: handleProgressUpdate,
-    }
+      // Call user-provided callback
+      if (options.onSubscriptionData) {
+        options.onSubscriptionData(data);
+      }
+    },
+    [apolloClient.cache, options]
   );
+
+  return useBaseSubscription<ProgressUpdatesSubscriptionResult>(ProgressUpdatesDocument, {
+    ...options,
+    variables: { enrollmentId },
+    onSubscriptionData: handleProgressUpdate,
+  });
 }
 
 /**
  * Hook for subscribing to real-time notifications
- * 
+ *
  * @param userId - User ID to receive notifications for
  * @param options - Subscription options
  */
@@ -231,34 +231,37 @@ export function useNotificationSubscription(
 ): SubscriptionHookResult<MessageUpdatesSubscriptionResult> {
   const apolloClient = useApolloClient();
 
-  const handleNotificationUpdate = useCallback((data: Record<string, unknown>) => {
-    // Update Apollo cache with new notification data
-    try {
-      apolloClient.cache.modify({
-        fields: {
-          notifications(existingNotifications = []) {
-            // Add new notification to the beginning of the list
-            return [data, ...existingNotifications];
+  const handleNotificationUpdate = useCallback(
+    (data: Record<string, unknown>) => {
+      // Update Apollo cache with new notification data
+      try {
+        apolloClient.cache.modify({
+          fields: {
+            notifications(existingNotifications = []) {
+              // Add new notification to the beginning of the list
+              return [data, ...existingNotifications];
+            },
+            unreadNotificationCount(existingCount = 0) {
+              // Increment unread count
+              return existingCount + 1;
+            },
+            userNotifications(existingUserNotifications = []) {
+              // Update user-specific notifications
+              return [data, ...existingUserNotifications];
+            },
           },
-          unreadNotificationCount(existingCount = 0) {
-            // Increment unread count
-            return existingCount + 1;
-          },
-          userNotifications(existingUserNotifications = []) {
-            // Update user-specific notifications
-            return [data, ...existingUserNotifications];
-          },
-        },
-      });
-    } catch (error) {
-      console.warn('Failed to update notification cache:', error);
-    }
+        });
+      } catch (error) {
+        console.warn('Failed to update notification cache:', error);
+      }
 
-    // Call user-provided callback
-    if (options.onSubscriptionData) {
-      options.onSubscriptionData(data);
-    }
-  }, [apolloClient.cache, options]);
+      // Call user-provided callback
+      if (options.onSubscriptionData) {
+        options.onSubscriptionData(data);
+      }
+    },
+    [apolloClient.cache, options]
+  );
 
   // For now, using a placeholder subscription document
   // In a real implementation, this would be a proper notification subscription
@@ -274,7 +277,7 @@ export function useNotificationSubscription(
 
 /**
  * Hook for subscribing to user presence updates
- * 
+ *
  * @param courseId - Course ID to track presence in
  * @param options - Subscription options
  */
@@ -284,63 +287,75 @@ export function usePresenceSubscription(
 ): SubscriptionHookResult<MessageUpdatesSubscriptionResult> {
   const apolloClient = useApolloClient();
 
-  const handlePresenceUpdate = useCallback((data: Record<string, unknown>) => {
-    // Update Apollo cache with presence data
-    try {
-      apolloClient.cache.modify({
-        fields: {
-          coursePresence(existingPresence = []) {
-            // Update user presence in course
-            const presenceData = data as Record<string, unknown>;
-            const existingIndex = existingPresence.findIndex(
-              (presence: Record<string, unknown>) => presence.userId === presenceData?.userId
-            );
-            
-            if (existingIndex >= 0) {
-              // Update existing presence
-              const updatedPresence = [...existingPresence];
-              updatedPresence[existingIndex] = {
-                ...updatedPresence[existingIndex],
-                status: presenceData.status,
-                lastSeen: presenceData.lastSeen || new Date().toISOString(),
-                isTyping: presenceData.isTyping || false,
-              };
-              return updatedPresence;
-            } else {
-              // Add new presence
-              return [...existingPresence, {
-                userId: presenceData.userId,
-                status: presenceData.status,
-                lastSeen: presenceData.lastSeen || new Date().toISOString(),
-                isTyping: presenceData.isTyping || false,
-              }];
-            }
-          },
-          onlineUsers(existingOnlineUsers = []) {
-            // Update online users list
-            const presenceData = data as Record<string, unknown>;
-            if (presenceData.status === 'online') {
-              // Add to online users if not already present
-              if (!existingOnlineUsers.some((user: Record<string, unknown>) => user.id === presenceData.userId)) {
-                return [...existingOnlineUsers, { id: presenceData.userId }];
-              }
-            } else {
-              // Remove from online users
-              return existingOnlineUsers.filter((user: Record<string, unknown>) => user.id !== presenceData.userId);
-            }
-            return existingOnlineUsers;
-          },
-        },
-      });
-    } catch (error) {
-      console.warn('Failed to update presence cache:', error);
-    }
+  const handlePresenceUpdate = useCallback(
+    (data: Record<string, unknown>) => {
+      // Update Apollo cache with presence data
+      try {
+        apolloClient.cache.modify({
+          fields: {
+            coursePresence(existingPresence = []) {
+              // Update user presence in course
+              const presenceData = data as Record<string, unknown>;
+              const existingIndex = existingPresence.findIndex(
+                (presence: Record<string, unknown>) => presence.userId === presenceData?.userId
+              );
 
-    // Call user-provided callback
-    if (options.onSubscriptionData) {
-      options.onSubscriptionData(data);
-    }
-  }, [apolloClient.cache, options]);
+              if (existingIndex >= 0) {
+                // Update existing presence
+                const updatedPresence = [...existingPresence];
+                updatedPresence[existingIndex] = {
+                  ...updatedPresence[existingIndex],
+                  status: presenceData.status,
+                  lastSeen: presenceData.lastSeen || new Date().toISOString(),
+                  isTyping: presenceData.isTyping || false,
+                };
+                return updatedPresence;
+              } else {
+                // Add new presence
+                return [
+                  ...existingPresence,
+                  {
+                    userId: presenceData.userId,
+                    status: presenceData.status,
+                    lastSeen: presenceData.lastSeen || new Date().toISOString(),
+                    isTyping: presenceData.isTyping || false,
+                  },
+                ];
+              }
+            },
+            onlineUsers(existingOnlineUsers = []) {
+              // Update online users list
+              const presenceData = data as Record<string, unknown>;
+              if (presenceData.status === 'online') {
+                // Add to online users if not already present
+                if (
+                  !existingOnlineUsers.some(
+                    (user: Record<string, unknown>) => user.id === presenceData.userId
+                  )
+                ) {
+                  return [...existingOnlineUsers, { id: presenceData.userId }];
+                }
+              } else {
+                // Remove from online users
+                return existingOnlineUsers.filter(
+                  (user: Record<string, unknown>) => user.id !== presenceData.userId
+                );
+              }
+              return existingOnlineUsers;
+            },
+          },
+        });
+      } catch (error) {
+        console.warn('Failed to update presence cache:', error);
+      }
+
+      // Call user-provided callback
+      if (options.onSubscriptionData) {
+        options.onSubscriptionData(data);
+      }
+    },
+    [apolloClient.cache, options]
+  );
 
   // For now, using a placeholder subscription document
   // In a real implementation, this would be a proper presence subscription
@@ -356,7 +371,7 @@ export function usePresenceSubscription(
 
 /**
  * Hook for managing multiple subscriptions with a single connection status
- * 
+ *
  * @param subscriptions - Array of subscription configurations
  */
 export function useMultipleSubscriptions(
@@ -371,7 +386,7 @@ export function useMultipleSubscriptions(
   connected: boolean;
 } {
   const { isConnected } = useSubscriptionContext();
-  
+
   // Simplified implementation for multiple subscriptions
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<Error | undefined>(undefined);

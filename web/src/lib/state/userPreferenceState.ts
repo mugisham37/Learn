@@ -1,12 +1,12 @@
 /**
  * User Preference Management State
- * 
+ *
  * Provides comprehensive state management for user preferences with:
  * - User preference state with automatic persistence
  * - Notification preference management
  * - Theme and display preference handling
  * - Preference synchronization across devices
- * 
+ *
  * Requirements: 10.5
  */
 
@@ -130,38 +130,38 @@ export interface PreferenceActions {
   togglePushNotification: (type: keyof NotificationPreferences['push']) => void;
   toggleInAppNotification: (type: keyof NotificationPreferences['inApp']) => void;
   updateDigestSettings: (settings: Partial<NotificationPreferences['digest']>) => void;
-  
+
   // Display preferences
   updateDisplayPreferences: (updates: Partial<DisplayPreferences>) => void;
   setTheme: (theme: DisplayPreferences['theme']) => void;
   setLanguage: (language: string) => void;
   setTimezone: (timezone: string) => void;
   setFontSize: (fontSize: DisplayPreferences['fontSize']) => void;
-  
+
   // Learning preferences
   updateLearningPreferences: (updates: Partial<LearningPreferences>) => void;
   setPlaybackSpeed: (speed: number) => void;
   setVideoQuality: (quality: LearningPreferences['videoQuality']) => void;
   updateStudyGoal: (goal: Partial<LearningPreferences['studyGoal']>) => void;
-  
+
   // Privacy preferences
   updatePrivacyPreferences: (updates: Partial<PrivacyPreferences>) => void;
   setProfileVisibility: (visibility: PrivacyPreferences['profileVisibility']) => void;
-  
+
   // Accessibility preferences
   updateAccessibilityPreferences: (updates: Partial<AccessibilityPreferences>) => void;
-  
+
   // General operations
   savePreferences: () => Promise<void>;
   loadPreferences: () => Promise<void>;
   resetToDefaults: () => void;
   exportPreferences: () => string;
   importPreferences: (data: string) => Promise<void>;
-  
+
   // Sync operations
   syncPreferences: () => Promise<void>;
   resolveConflict: (resolution: 'keep-local' | 'keep-remote' | 'merge') => Promise<void>;
-  
+
   // Utility operations
   getPreferenceValue: <T>(path: string) => T | undefined;
   setPreferenceValue: (path: string, value: unknown) => void;
@@ -177,7 +177,10 @@ type PreferenceAction =
   | { type: 'SET_UNSAVED_CHANGES'; payload: boolean }
   | { type: 'SET_SYNC_STATUS'; payload: PreferenceState['syncStatus'] }
   | { type: 'SET_SYNC_ERROR'; payload: string | null }
-  | { type: 'SET_CONFLICT'; payload: { localVersion: UserPreferences; remoteVersion: UserPreferences } }
+  | {
+      type: 'SET_CONFLICT';
+      payload: { localVersion: UserPreferences; remoteVersion: UserPreferences };
+    }
   | { type: 'CLEAR_CONFLICT' }
   | { type: 'RESET_TO_DEFAULTS' };
 
@@ -287,23 +290,29 @@ const initialState: PreferenceState = {
 function generateDeviceId(): string {
   const stored = localStorage.getItem('device-id');
   if (stored) return stored;
-  
+
   const deviceId = Math.random().toString(36).substring(2, 18);
   localStorage.setItem('device-id', deviceId);
   return deviceId;
 }
 
-function deepMerge(target: Record<string, unknown>, source: Record<string, unknown>): Record<string, unknown> {
+function deepMerge(
+  target: Record<string, unknown>,
+  source: Record<string, unknown>
+): Record<string, unknown> {
   const result = { ...target };
-  
+
   for (const key in source) {
     if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
-      result[key] = deepMerge(target[key] as Record<string, unknown> || {}, source[key] as Record<string, unknown>);
+      result[key] = deepMerge(
+        (target[key] as Record<string, unknown>) || {},
+        source[key] as Record<string, unknown>
+      );
     } else {
       result[key] = source[key];
     }
   }
-  
+
   return result;
 }
 
@@ -316,7 +325,11 @@ function getNestedValue<T = unknown>(obj: Record<string, unknown>, path: string)
   }, obj) as T | undefined;
 }
 
-function setNestedValue(obj: Record<string, unknown>, path: string, value: unknown): Record<string, unknown> {
+function setNestedValue(
+  obj: Record<string, unknown>,
+  path: string,
+  value: unknown
+): Record<string, unknown> {
   const keys = path.split('.');
   const lastKey = keys.pop()!;
   const target = keys.reduce((current, key) => {
@@ -325,7 +338,7 @@ function setNestedValue(obj: Record<string, unknown>, path: string, value: unkno
     }
     return current[key] as Record<string, unknown>;
   }, obj);
-  
+
   target[lastKey] = value;
   return { ...obj };
 }
@@ -361,7 +374,7 @@ function preferenceReducer(state: PreferenceState, action: PreferenceAction): Pr
 
     case 'UPDATE_PREFERENCES':
       const mergedPreferences = deepMerge(
-        state.preferences as unknown as Record<string, unknown>, 
+        state.preferences as unknown as Record<string, unknown>,
         action.payload as unknown as Record<string, unknown>
       ) as unknown as UserPreferences;
       return {
@@ -474,9 +487,12 @@ export function useUserPreferences(): [PreferenceState, PreferenceActions] {
 
   // Periodic sync
   useEffect(() => {
-    const interval = setInterval(() => {
-      // Sync will be handled by a separate effect after actions are defined
-    }, 5 * 60 * 1000); // Sync every 5 minutes
+    const interval = setInterval(
+      () => {
+        // Sync will be handled by a separate effect after actions are defined
+      },
+      5 * 60 * 1000
+    ); // Sync every 5 minutes
 
     syncIntervalRef.current = interval;
 
@@ -491,7 +507,7 @@ export function useUserPreferences(): [PreferenceState, PreferenceActions] {
   useEffect(() => {
     const theme = state.preferences.display.theme;
     const root = document.documentElement;
-    
+
     if (theme === 'system') {
       const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
       root.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
@@ -504,7 +520,7 @@ export function useUserPreferences(): [PreferenceState, PreferenceActions] {
   useEffect(() => {
     const { accessibility, display } = state.preferences;
     const root = document.documentElement;
-    
+
     root.style.setProperty('--reduced-motion', display.reducedMotion ? '1' : '0');
     root.setAttribute('data-high-contrast', display.highContrast.toString());
     root.setAttribute('data-keyboard-navigation', accessibility.keyboardNavigation.toString());
@@ -514,176 +530,278 @@ export function useUserPreferences(): [PreferenceState, PreferenceActions] {
 
   // Actions
   const actions: PreferenceActions = {
-    updateNotificationPreferences: useCallback((updates: Partial<NotificationPreferences>) => {
-      dispatch({ type: 'UPDATE_PREFERENCES', payload: { 
-        notifications: {
-          ...state.preferences.notifications,
-          ...updates,
-        }
-      } });
-    }, [state.preferences.notifications]),
-
-    toggleEmailNotification: useCallback((type: keyof NotificationPreferences['email']) => {
-      const currentValue = state.preferences.notifications.email[type];
-      dispatch({ type: 'UPDATE_PREFERENCES', payload: {
-        notifications: {
-          ...state.preferences.notifications,
-          email: {
-            ...state.preferences.notifications.email,
-            [type]: !currentValue,
+    updateNotificationPreferences: useCallback(
+      (updates: Partial<NotificationPreferences>) => {
+        dispatch({
+          type: 'UPDATE_PREFERENCES',
+          payload: {
+            notifications: {
+              ...state.preferences.notifications,
+              ...updates,
+            },
           },
-        },
-      }});
-    }, [state.preferences.notifications]),
+        });
+      },
+      [state.preferences.notifications]
+    ),
 
-    togglePushNotification: useCallback((type: keyof NotificationPreferences['push']) => {
-      const currentValue = state.preferences.notifications.push[type];
-      dispatch({ type: 'UPDATE_PREFERENCES', payload: {
-        notifications: {
-          ...state.preferences.notifications,
-          push: {
-            ...state.preferences.notifications.push,
-            [type]: !currentValue,
+    toggleEmailNotification: useCallback(
+      (type: keyof NotificationPreferences['email']) => {
+        const currentValue = state.preferences.notifications.email[type];
+        dispatch({
+          type: 'UPDATE_PREFERENCES',
+          payload: {
+            notifications: {
+              ...state.preferences.notifications,
+              email: {
+                ...state.preferences.notifications.email,
+                [type]: !currentValue,
+              },
+            },
           },
-        },
-      }});
-    }, [state.preferences.notifications]),
+        });
+      },
+      [state.preferences.notifications]
+    ),
 
-    toggleInAppNotification: useCallback((type: keyof NotificationPreferences['inApp']) => {
-      const currentValue = state.preferences.notifications.inApp[type];
-      dispatch({ type: 'UPDATE_PREFERENCES', payload: {
-        notifications: {
-          ...state.preferences.notifications,
-          inApp: {
-            ...state.preferences.notifications.inApp,
-            [type]: !currentValue,
+    togglePushNotification: useCallback(
+      (type: keyof NotificationPreferences['push']) => {
+        const currentValue = state.preferences.notifications.push[type];
+        dispatch({
+          type: 'UPDATE_PREFERENCES',
+          payload: {
+            notifications: {
+              ...state.preferences.notifications,
+              push: {
+                ...state.preferences.notifications.push,
+                [type]: !currentValue,
+              },
+            },
           },
-        },
-      }});
-    }, [state.preferences.notifications]),
+        });
+      },
+      [state.preferences.notifications]
+    ),
 
-    updateDigestSettings: useCallback((settings: Partial<NotificationPreferences['digest']>) => {
-      dispatch({ type: 'UPDATE_PREFERENCES', payload: {
-        notifications: {
-          ...state.preferences.notifications,
-          digest: {
-            ...state.preferences.notifications.digest,
-            ...settings,
+    toggleInAppNotification: useCallback(
+      (type: keyof NotificationPreferences['inApp']) => {
+        const currentValue = state.preferences.notifications.inApp[type];
+        dispatch({
+          type: 'UPDATE_PREFERENCES',
+          payload: {
+            notifications: {
+              ...state.preferences.notifications,
+              inApp: {
+                ...state.preferences.notifications.inApp,
+                [type]: !currentValue,
+              },
+            },
           },
-        },
-      }});
-    }, [state.preferences.notifications]),
+        });
+      },
+      [state.preferences.notifications]
+    ),
 
-    updateDisplayPreferences: useCallback((updates: Partial<DisplayPreferences>) => {
-      dispatch({ type: 'UPDATE_PREFERENCES', payload: { 
-        display: {
-          ...state.preferences.display,
-          ...updates,
-        }
-      } });
-    }, [state.preferences.display]),
-
-    setTheme: useCallback((theme: DisplayPreferences['theme']) => {
-      dispatch({ type: 'UPDATE_PREFERENCES', payload: {
-        display: {
-          ...state.preferences.display,
-          theme,
-        },
-      }});
-    }, [state.preferences.display]),
-
-    setLanguage: useCallback((language: string) => {
-      dispatch({ type: 'UPDATE_PREFERENCES', payload: {
-        display: {
-          ...state.preferences.display,
-          language,
-        },
-      }});
-    }, [state.preferences.display]),
-
-    setTimezone: useCallback((timezone: string) => {
-      dispatch({ type: 'UPDATE_PREFERENCES', payload: {
-        display: {
-          ...state.preferences.display,
-          timezone,
-        },
-      }});
-    }, [state.preferences.display]),
-
-    setFontSize: useCallback((fontSize: DisplayPreferences['fontSize']) => {
-      dispatch({ type: 'UPDATE_PREFERENCES', payload: {
-        display: {
-          ...state.preferences.display,
-          fontSize,
-        },
-      }});
-    }, [state.preferences.display]),
-
-    updateLearningPreferences: useCallback((updates: Partial<LearningPreferences>) => {
-      dispatch({ type: 'UPDATE_PREFERENCES', payload: { 
-        learning: {
-          ...state.preferences.learning,
-          ...updates,
-        }
-      } });
-    }, [state.preferences.learning]),
-
-    setPlaybackSpeed: useCallback((speed: number) => {
-      dispatch({ type: 'UPDATE_PREFERENCES', payload: {
-        learning: {
-          ...state.preferences.learning,
-          playbackSpeed: speed,
-        },
-      }});
-    }, [state.preferences.learning]),
-
-    setVideoQuality: useCallback((quality: LearningPreferences['videoQuality']) => {
-      dispatch({ type: 'UPDATE_PREFERENCES', payload: {
-        learning: {
-          ...state.preferences.learning,
-          videoQuality: quality,
-        },
-      }});
-    }, [state.preferences.learning]),
-
-    updateStudyGoal: useCallback((goal: Partial<LearningPreferences['studyGoal']>) => {
-      dispatch({ type: 'UPDATE_PREFERENCES', payload: {
-        learning: {
-          ...state.preferences.learning,
-          studyGoal: {
-            ...state.preferences.learning.studyGoal,
-            ...goal,
+    updateDigestSettings: useCallback(
+      (settings: Partial<NotificationPreferences['digest']>) => {
+        dispatch({
+          type: 'UPDATE_PREFERENCES',
+          payload: {
+            notifications: {
+              ...state.preferences.notifications,
+              digest: {
+                ...state.preferences.notifications.digest,
+                ...settings,
+              },
+            },
           },
-        },
-      }});
-    }, [state.preferences.learning]),
+        });
+      },
+      [state.preferences.notifications]
+    ),
 
-    updatePrivacyPreferences: useCallback((updates: Partial<PrivacyPreferences>) => {
-      dispatch({ type: 'UPDATE_PREFERENCES', payload: { 
-        privacy: {
-          ...state.preferences.privacy,
-          ...updates,
-        }
-      } });
-    }, [state.preferences.privacy]),
+    updateDisplayPreferences: useCallback(
+      (updates: Partial<DisplayPreferences>) => {
+        dispatch({
+          type: 'UPDATE_PREFERENCES',
+          payload: {
+            display: {
+              ...state.preferences.display,
+              ...updates,
+            },
+          },
+        });
+      },
+      [state.preferences.display]
+    ),
 
-    setProfileVisibility: useCallback((visibility: PrivacyPreferences['profileVisibility']) => {
-      dispatch({ type: 'UPDATE_PREFERENCES', payload: {
-        privacy: {
-          ...state.preferences.privacy,
-          profileVisibility: visibility,
-        },
-      }});
-    }, [state.preferences.privacy]),
+    setTheme: useCallback(
+      (theme: DisplayPreferences['theme']) => {
+        dispatch({
+          type: 'UPDATE_PREFERENCES',
+          payload: {
+            display: {
+              ...state.preferences.display,
+              theme,
+            },
+          },
+        });
+      },
+      [state.preferences.display]
+    ),
 
-    updateAccessibilityPreferences: useCallback((updates: Partial<AccessibilityPreferences>) => {
-      dispatch({ type: 'UPDATE_PREFERENCES', payload: { 
-        accessibility: {
-          ...state.preferences.accessibility,
-          ...updates,
-        }
-      } });
-    }, [state.preferences.accessibility]),
+    setLanguage: useCallback(
+      (language: string) => {
+        dispatch({
+          type: 'UPDATE_PREFERENCES',
+          payload: {
+            display: {
+              ...state.preferences.display,
+              language,
+            },
+          },
+        });
+      },
+      [state.preferences.display]
+    ),
+
+    setTimezone: useCallback(
+      (timezone: string) => {
+        dispatch({
+          type: 'UPDATE_PREFERENCES',
+          payload: {
+            display: {
+              ...state.preferences.display,
+              timezone,
+            },
+          },
+        });
+      },
+      [state.preferences.display]
+    ),
+
+    setFontSize: useCallback(
+      (fontSize: DisplayPreferences['fontSize']) => {
+        dispatch({
+          type: 'UPDATE_PREFERENCES',
+          payload: {
+            display: {
+              ...state.preferences.display,
+              fontSize,
+            },
+          },
+        });
+      },
+      [state.preferences.display]
+    ),
+
+    updateLearningPreferences: useCallback(
+      (updates: Partial<LearningPreferences>) => {
+        dispatch({
+          type: 'UPDATE_PREFERENCES',
+          payload: {
+            learning: {
+              ...state.preferences.learning,
+              ...updates,
+            },
+          },
+        });
+      },
+      [state.preferences.learning]
+    ),
+
+    setPlaybackSpeed: useCallback(
+      (speed: number) => {
+        dispatch({
+          type: 'UPDATE_PREFERENCES',
+          payload: {
+            learning: {
+              ...state.preferences.learning,
+              playbackSpeed: speed,
+            },
+          },
+        });
+      },
+      [state.preferences.learning]
+    ),
+
+    setVideoQuality: useCallback(
+      (quality: LearningPreferences['videoQuality']) => {
+        dispatch({
+          type: 'UPDATE_PREFERENCES',
+          payload: {
+            learning: {
+              ...state.preferences.learning,
+              videoQuality: quality,
+            },
+          },
+        });
+      },
+      [state.preferences.learning]
+    ),
+
+    updateStudyGoal: useCallback(
+      (goal: Partial<LearningPreferences['studyGoal']>) => {
+        dispatch({
+          type: 'UPDATE_PREFERENCES',
+          payload: {
+            learning: {
+              ...state.preferences.learning,
+              studyGoal: {
+                ...state.preferences.learning.studyGoal,
+                ...goal,
+              },
+            },
+          },
+        });
+      },
+      [state.preferences.learning]
+    ),
+
+    updatePrivacyPreferences: useCallback(
+      (updates: Partial<PrivacyPreferences>) => {
+        dispatch({
+          type: 'UPDATE_PREFERENCES',
+          payload: {
+            privacy: {
+              ...state.preferences.privacy,
+              ...updates,
+            },
+          },
+        });
+      },
+      [state.preferences.privacy]
+    ),
+
+    setProfileVisibility: useCallback(
+      (visibility: PrivacyPreferences['profileVisibility']) => {
+        dispatch({
+          type: 'UPDATE_PREFERENCES',
+          payload: {
+            privacy: {
+              ...state.preferences.privacy,
+              profileVisibility: visibility,
+            },
+          },
+        });
+      },
+      [state.preferences.privacy]
+    ),
+
+    updateAccessibilityPreferences: useCallback(
+      (updates: Partial<AccessibilityPreferences>) => {
+        dispatch({
+          type: 'UPDATE_PREFERENCES',
+          payload: {
+            accessibility: {
+              ...state.preferences.accessibility,
+              ...updates,
+            },
+          },
+        });
+      },
+      [state.preferences.accessibility]
+    ),
 
     savePreferences: useCallback(async () => {
       if (!state.hasUnsavedChanges) return;
@@ -742,7 +860,7 @@ export function useUserPreferences(): [PreferenceState, PreferenceActions] {
     importPreferences: useCallback(async (data: string) => {
       try {
         const preferences = JSON.parse(data);
-        
+
         // Validate the structure (basic validation)
         if (!preferences.notifications || !preferences.display || !preferences.learning) {
           throw new Error('Invalid preference data structure');
@@ -801,10 +919,13 @@ export function useUserPreferences(): [PreferenceState, PreferenceActions] {
             version: state.preferences.version + 1,
           };
 
-          dispatch({ type: 'SET_CONFLICT', payload: {
-            localVersion: state.preferences,
-            remoteVersion,
-          }});
+          dispatch({
+            type: 'SET_CONFLICT',
+            payload: {
+              localVersion: state.preferences,
+              remoteVersion,
+            },
+          });
           dispatch({ type: 'SET_SYNC_STATUS', payload: 'error' });
           dispatch({ type: 'SET_SYNC_ERROR', payload: 'Sync conflict detected' });
         } else {
@@ -823,73 +944,82 @@ export function useUserPreferences(): [PreferenceState, PreferenceActions] {
       }
     }, [state.syncStatus, state.preferences]),
 
-    resolveConflict: useCallback(async (resolution: 'keep-local' | 'keep-remote' | 'merge') => {
-      if (!state.conflictResolution.hasConflict) return;
+    resolveConflict: useCallback(
+      async (resolution: 'keep-local' | 'keep-remote' | 'merge') => {
+        if (!state.conflictResolution.hasConflict) return;
 
-      const { localVersion, remoteVersion } = state.conflictResolution;
-      if (!localVersion || !remoteVersion) return;
+        const { localVersion, remoteVersion } = state.conflictResolution;
+        if (!localVersion || !remoteVersion) return;
 
-      let resolvedPreferences: UserPreferences;
+        let resolvedPreferences: UserPreferences;
 
-      switch (resolution) {
-        case 'keep-local':
-          resolvedPreferences = { ...localVersion, version: localVersion.version + 1 };
-          break;
-        case 'keep-remote':
-          resolvedPreferences = { ...remoteVersion, version: remoteVersion.version + 1 };
-          break;
-        case 'merge':
-          resolvedPreferences = {
-            ...deepMerge(
-              remoteVersion as unknown as Record<string, unknown>, 
-              localVersion as unknown as Record<string, unknown>
-            ) as unknown as UserPreferences,
-            version: Math.max(localVersion.version, remoteVersion.version) + 1,
-          };
-          break;
-        default:
-          return;
-      }
-
-      try {
-        dispatch({ type: 'SET_PREFERENCES', payload: resolvedPreferences });
-        dispatch({ type: 'CLEAR_CONFLICT' });
-        // Call savePreferences logic directly to avoid dependency issues
-        dispatch({ type: 'SET_SAVING', payload: true });
-        try {
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          const updatedPreferences = {
-            ...resolvedPreferences,
-            lastSynced: new Date(),
-          };
-          dispatch({ type: 'SET_PREFERENCES', payload: updatedPreferences });
-          localStorage.setItem('user-preferences', JSON.stringify(updatedPreferences));
-        } catch (saveError) {
-          dispatch({ type: 'SET_ERROR', payload: 'Failed to save preferences' });
-          console.error('Failed to save preferences:', saveError);
-        } finally {
-          dispatch({ type: 'SET_SAVING', payload: false });
+        switch (resolution) {
+          case 'keep-local':
+            resolvedPreferences = { ...localVersion, version: localVersion.version + 1 };
+            break;
+          case 'keep-remote':
+            resolvedPreferences = { ...remoteVersion, version: remoteVersion.version + 1 };
+            break;
+          case 'merge':
+            resolvedPreferences = {
+              ...(deepMerge(
+                remoteVersion as unknown as Record<string, unknown>,
+                localVersion as unknown as Record<string, unknown>
+              ) as unknown as UserPreferences),
+              version: Math.max(localVersion.version, remoteVersion.version) + 1,
+            };
+            break;
+          default:
+            return;
         }
-        dispatch({ type: 'SET_SYNC_STATUS', payload: 'synced' });
-        dispatch({ type: 'SET_SYNC_ERROR', payload: null });
-      } catch (error) {
-        dispatch({ type: 'SET_SYNC_ERROR', payload: 'Failed to resolve conflict' });
-        console.error('Failed to resolve conflict:', error);
-      }
-    }, [state.conflictResolution]),
 
-    getPreferenceValue: useCallback(<T>(path: string): T | undefined => {
-      return getNestedValue<T>(state.preferences as unknown as Record<string, unknown>, path);
-    }, [state.preferences]),
+        try {
+          dispatch({ type: 'SET_PREFERENCES', payload: resolvedPreferences });
+          dispatch({ type: 'CLEAR_CONFLICT' });
+          // Call savePreferences logic directly to avoid dependency issues
+          dispatch({ type: 'SET_SAVING', payload: true });
+          try {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            const updatedPreferences = {
+              ...resolvedPreferences,
+              lastSynced: new Date(),
+            };
+            dispatch({ type: 'SET_PREFERENCES', payload: updatedPreferences });
+            localStorage.setItem('user-preferences', JSON.stringify(updatedPreferences));
+          } catch (saveError) {
+            dispatch({ type: 'SET_ERROR', payload: 'Failed to save preferences' });
+            console.error('Failed to save preferences:', saveError);
+          } finally {
+            dispatch({ type: 'SET_SAVING', payload: false });
+          }
+          dispatch({ type: 'SET_SYNC_STATUS', payload: 'synced' });
+          dispatch({ type: 'SET_SYNC_ERROR', payload: null });
+        } catch (error) {
+          dispatch({ type: 'SET_SYNC_ERROR', payload: 'Failed to resolve conflict' });
+          console.error('Failed to resolve conflict:', error);
+        }
+      },
+      [state.conflictResolution]
+    ),
 
-    setPreferenceValue: useCallback((path: string, value: unknown) => {
-      const updatedPreferences = setNestedValue(
-        state.preferences as unknown as Record<string, unknown>, 
-        path, 
-        value
-      ) as unknown as UserPreferences;
-      dispatch({ type: 'UPDATE_PREFERENCES', payload: updatedPreferences });
-    }, [state.preferences]),
+    getPreferenceValue: useCallback(
+      <T>(path: string): T | undefined => {
+        return getNestedValue<T>(state.preferences as unknown as Record<string, unknown>, path);
+      },
+      [state.preferences]
+    ),
+
+    setPreferenceValue: useCallback(
+      (path: string, value: unknown) => {
+        const updatedPreferences = setNestedValue(
+          state.preferences as unknown as Record<string, unknown>,
+          path,
+          value
+        ) as unknown as UserPreferences;
+        dispatch({ type: 'UPDATE_PREFERENCES', payload: updatedPreferences });
+      },
+      [state.preferences]
+    ),
   };
 
   // Load preferences from server on mount - now that actions are defined
@@ -913,11 +1043,14 @@ export function useUserPreferences(): [PreferenceState, PreferenceActions] {
 
   // Periodic sync - now that actions are defined
   useEffect(() => {
-    const interval = setInterval(() => {
-      if (state.syncStatus !== 'syncing') {
-        actions.syncPreferences();
-      }
-    }, 5 * 60 * 1000); // Sync every 5 minutes
+    const interval = setInterval(
+      () => {
+        if (state.syncStatus !== 'syncing') {
+          actions.syncPreferences();
+        }
+      },
+      5 * 60 * 1000
+    ); // Sync every 5 minutes
 
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -939,7 +1072,11 @@ export function useUserPreferences(): [PreferenceState, PreferenceActions] {
 }
 
 // Utility functions for external use
-export function getPreferenceCategories(): Array<{ key: keyof UserPreferences; label: string; description: string }> {
+export function getPreferenceCategories(): Array<{
+  key: keyof UserPreferences;
+  label: string;
+  description: string;
+}> {
   return [
     {
       key: 'notifications',

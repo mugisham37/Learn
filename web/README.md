@@ -9,6 +9,7 @@ This project has been initialized with all core infrastructure and dependencies 
 ### What's Been Set Up
 
 #### 1. Core Dependencies ✅
+
 - **Next.js 16** - React framework with App Router
 - **TypeScript 5** - Strict type safety enabled
 - **Apollo Client 4** - GraphQL client with caching
@@ -22,6 +23,7 @@ This project has been initialized with all core infrastructure and dependencies 
 - **graphql-ws** - WebSocket subscriptions
 
 #### 2. TypeScript Configuration ✅
+
 - Strict mode enabled with comprehensive type checking
 - Path aliases configured for clean imports:
   - `@/*` → `./src/*`
@@ -37,6 +39,7 @@ This project has been initialized with all core infrastructure and dependencies 
 - No fallthrough cases in switch statements
 
 #### 3. Testing Infrastructure ✅
+
 - **Vitest** configured with jsdom environment
 - **Property-based testing** utilities with fast-check
 - Minimum 100 iterations per property test (as required by spec)
@@ -46,6 +49,7 @@ This project has been initialized with all core infrastructure and dependencies 
 - Global test configuration and setup
 
 #### 4. GraphQL Code Generation ✅
+
 - Automatic type generation from GraphQL schema
 - TypeScript types for queries, mutations, and subscriptions
 - React Apollo hooks generation
@@ -56,12 +60,14 @@ This project has been initialized with all core infrastructure and dependencies 
 - Consistent naming conventions
 
 #### 5. Code Quality Tools ✅
+
 - **ESLint** configured with Next.js and TypeScript rules
 - **Prettier** configured for consistent formatting
 - Pre-commit hooks ready for integration
 - Strict linting rules with warnings for `any` types
 
 #### 6. Project Structure ✅
+
 ```
 web/
 ├── src/
@@ -91,11 +97,14 @@ web/
 ## Getting Started
 
 ### Prerequisites
+
 - Node.js 20+ installed
 - Backend GraphQL server running (optional for development)
 
 ### Installation
+
 Dependencies are already installed. If you need to reinstall:
+
 ```bash
 npm install
 ```
@@ -103,11 +112,13 @@ npm install
 ### Development Commands
 
 #### Run Development Server
+
 ```bash
 npm run dev
 ```
 
 #### Generate GraphQL Types
+
 ```bash
 # Extract schema from running backend and generate types
 npm run codegen
@@ -120,6 +131,7 @@ npm run codegen:dev
 ```
 
 #### Testing
+
 ```bash
 # Run all tests
 npm test
@@ -135,6 +147,7 @@ npm run test:coverage
 ```
 
 #### Code Quality
+
 ```bash
 # Lint code
 npm run lint
@@ -146,7 +159,9 @@ npx prettier --write .
 ### Configuration
 
 #### Environment Variables
+
 Create a `.env.local` file:
+
 ```env
 NEXT_PUBLIC_GRAPHQL_ENDPOINT=http://localhost:4000/graphql
 NEXT_PUBLIC_WS_ENDPOINT=ws://localhost:4000/graphql
@@ -155,7 +170,9 @@ NEXT_PUBLIC_JWT_SECRET=your-secret-key
 ```
 
 #### GraphQL Schema
+
 The project includes a placeholder schema. To use the real backend schema:
+
 1. Start the backend server
 2. Run `npm run codegen`
 3. Types will be automatically generated in `src/types/schema.ts`
@@ -165,11 +182,13 @@ The project includes a placeholder schema. To use the real backend schema:
 This project uses property-based testing to ensure correctness across many input variations.
 
 ### Configuration
+
 - Minimum 100 iterations per test (as required by spec)
 - Configurable seed for reproducibility
 - Verbose mode in development
 
 ### Usage Example
+
 ```typescript
 import { propertyTest, generators } from '@/test/property-test-utils';
 import * as fc from 'fast-check';
@@ -189,6 +208,7 @@ propertyTest(
 ```
 
 ### Available Generators
+
 - `generators.id()` - UUID
 - `generators.email()` - Email address
 - `generators.userProfile()` - Complete user object
@@ -202,23 +222,27 @@ propertyTest(
 The foundation is ready! Here's what comes next:
 
 ### Task 2: GraphQL Client Foundation
+
 - [ ] Create Apollo Client configuration
 - [ ] Implement authentication link
 - [ ] Create error handling link
 - [ ] Implement retry link with exponential backoff
 
 ### Task 3: Authentication System
+
 - [ ] Build JWT token management
 - [ ] Create React Context for auth state
 - [ ] Implement role-based access control
 - [ ] Set up secure token storage
 
 ### Task 4: Core Data Fetching Hooks
+
 - [ ] Create domain-specific hooks for all backend modules
 - [ ] Implement consistent API patterns
 - [ ] Add optimistic updates
 
 ### Task 5: Real-time Subscription System
+
 - [ ] Implement WebSocket connection management
 - [ ] Create subscription hooks
 - [ ] Add automatic reconnection
@@ -226,12 +250,14 @@ The foundation is ready! Here's what comes next:
 ## Testing Strategy
 
 ### Dual Testing Approach
+
 1. **Unit Tests**: Specific examples, edge cases, error conditions
 2. **Property Tests**: Universal properties across all inputs
 
 Both are complementary and necessary for comprehensive coverage.
 
 ### Running Tests
+
 ```bash
 # All tests
 npm test
@@ -246,13 +272,16 @@ npm run test:watch
 ## Architecture
 
 ### Module Organization
+
 - `lib/` - Core infrastructure (GraphQL, auth, uploads, subscriptions)
 - `hooks/` - Domain-specific React hooks
 - `types/` - TypeScript type definitions
 - `test/` - Testing utilities and setup
 
 ### Integration with Backend
+
 The foundation layer maps to the backend's 11 core modules:
+
 1. Users - Authentication, profiles
 2. Courses - Course management
 3. Content - File uploads, video processing
@@ -268,6 +297,7 @@ The foundation layer maps to the backend's 11 core modules:
 ## Contributing
 
 ### Code Style
+
 - Use TypeScript strict mode
 - Follow ESLint rules
 - Format with Prettier
@@ -275,6 +305,7 @@ The foundation layer maps to the backend's 11 core modules:
 - Document public APIs with JSDoc
 
 ### Testing Requirements
+
 - Write both unit tests and property tests
 - Property tests must run minimum 100 iterations
 - Tag property tests with feature and property number

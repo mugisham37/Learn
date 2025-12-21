@@ -1,10 +1,10 @@
 /**
  * Error Handling and Recovery System
- * 
+ *
  * Comprehensive error handling system with classification, recovery,
  * tracking, and user-friendly messaging. Provides a complete solution
  * for handling all types of errors in the frontend application.
- * 
+ *
  * Includes backend-specific error integration for the LMS system.
  */
 
@@ -61,39 +61,28 @@ export {
 } from './backendErrorLink';
 
 // Error classification system
-export { 
-  ErrorClassifier,
-  errorClassifier 
-} from './errorClassifier';
+export { ErrorClassifier, errorClassifier } from './errorClassifier';
 
 // Error message mapping with localization
-export { 
+export {
   ErrorMessageMapper,
   errorMessageMapper,
   errorMessageUtils,
-  type SupportedLocale
+  type SupportedLocale,
 } from './errorMessages';
 
 // Error recovery strategies
-export { 
-  ErrorRecoveryManager,
-  NetworkErrorRecovery,
-  errorRecoveryManager 
-} from './errorRecovery';
+export { ErrorRecoveryManager, NetworkErrorRecovery, errorRecoveryManager } from './errorRecovery';
 
 // Error tracking integration
-export { 
+export {
   ErrorTrackingManager,
   createErrorTrackingService,
-  errorTrackingManager 
+  errorTrackingManager,
 } from './errorTracking';
 
 // Main error handler
-export { 
-  ErrorHandler,
-  errorHandler,
-  errorHandlerUtils 
-} from './errorHandler';
+export { ErrorHandler, errorHandler, errorHandlerUtils } from './errorHandler';
 
 // React error boundary components
 export {
@@ -102,7 +91,7 @@ export {
   RouteErrorBoundary,
   FormErrorBoundary,
   withErrorBoundary,
-  useErrorHandler
+  useErrorHandler,
 } from './ErrorBoundary';
 
 /**
@@ -111,28 +100,28 @@ export {
 export async function initializeErrorHandling(config?: {
   /** Sentry DSN for error tracking */
   sentryDsn?: string;
-  
+
   /** Environment (development, staging, production) */
   environment?: string;
-  
+
   /** Application version */
   version?: string;
-  
+
   /** Default locale for error messages */
   locale?: string;
-  
+
   /** Whether to enable error tracking */
   enableTracking?: boolean;
-  
+
   /** Whether to enable error recovery */
   enableRecovery?: boolean;
-  
+
   /** Sample rate for error reporting (0.0 to 1.0) */
   sampleRate?: number;
-  
+
   /** Sample rate for performance monitoring (0.0 to 1.0) */
   tracesSampleRate?: number;
-  
+
   /** Backend integration settings */
   backendIntegration?: {
     /** Backend version for correlation */
@@ -164,7 +153,7 @@ export async function initializeErrorHandling(config?: {
     // Initialize error tracking with backend integration
     if (enableTracking) {
       const backendSentryConfig = createBackendSentryConfig();
-      
+
       await errorTrackingManager.initialize({
         ...(sentryDsn && { dsn: sentryDsn }),
         environment,
@@ -197,14 +186,14 @@ export async function initializeErrorHandling(config?: {
     // Set up network monitoring
     if (typeof window !== 'undefined') {
       NetworkErrorRecovery.startNetworkMonitoring();
-      
+
       // Set up backend error event listeners
-      window.addEventListener('backend:error-notification', (event) => {
+      window.addEventListener('backend:error-notification', event => {
         const detail = (event as CustomEvent).detail;
         console.info('Backend error notification:', detail);
       });
-      
-      window.addEventListener('backend:error-metrics', (event) => {
+
+      window.addEventListener('backend:error-metrics', event => {
         const detail = (event as CustomEvent).detail;
         console.info('Backend error metrics:', detail);
       });
@@ -244,9 +233,13 @@ export const quickErrorHandling = {
   /**
    * Handle GraphQL errors from Apollo Client
    */
-  handleApolloError: async (error: ApolloError, operationName: string, variables?: Record<string, unknown>) => {
+  handleApolloError: async (
+    error: ApolloError,
+    operationName: string,
+    variables?: Record<string, unknown>
+  ) => {
     const { errorHandler } = await import('./errorHandler');
-    
+
     const context = {
       operation: operationName,
       ...(variables && { variables }),
@@ -271,7 +264,7 @@ export const quickErrorHandling = {
    */
   handleUploadError: async (error: UploadError, uploadId: string, fileName?: string) => {
     const { errorHandler } = await import('./errorHandler');
-    
+
     const context = {
       operation: 'file_upload',
       metadata: { uploadId, fileName },
@@ -279,12 +272,15 @@ export const quickErrorHandling = {
     };
 
     if (error.code && error.message) {
-      return errorHandler.handleUploadError({
-        code: error.code,
-        message: error.message,
-        uploadId,
-        ...(fileName && { fileName }),
-      }, context);
+      return errorHandler.handleUploadError(
+        {
+          code: error.code,
+          message: error.message,
+          uploadId,
+          ...(fileName && { fileName }),
+        },
+        context
+      );
     } else {
       return errorHandler.handleRuntimeError(error, context);
     }
@@ -295,7 +291,7 @@ export const quickErrorHandling = {
    */
   handleSubscriptionError: async (error: SubscriptionError, subscriptionName: string) => {
     const { errorHandler } = await import('./errorHandler');
-    
+
     const context = {
       operation: subscriptionName,
       requestId: `sub_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
@@ -309,7 +305,7 @@ export const quickErrorHandling = {
    */
   handleRuntimeError: async (error: Error, operation?: string) => {
     const { errorHandler } = await import('./errorHandler');
-    
+
     const context = {
       operation: operation || 'runtime',
       requestId: `runtime_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,

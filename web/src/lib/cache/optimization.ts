@@ -1,9 +1,9 @@
 /**
  * Cache Optimization Utilities
- * 
+ *
  * Cache size monitoring and management, cache eviction strategies,
  * cache warming utilities, and cache performance monitoring.
- * 
+ *
  * Requirements: 12.4
  */
 
@@ -63,7 +63,11 @@ export interface CacheOptimizationConfig {
 
 // Apollo Client interface for cache operations
 interface ApolloClientLike {
-  query: (options: { query: DocumentNode; variables?: Record<string, unknown>; fetchPolicy?: string }) => Promise<unknown>;
+  query: (options: {
+    query: DocumentNode;
+    variables?: Record<string, unknown>;
+    fetchPolicy?: string;
+  }) => Promise<unknown>;
 }
 
 // =============================================================================
@@ -80,7 +84,7 @@ export const LRUEvictionStrategy: CacheEvictionStrategy = {
     const age = Date.now() - entry.lastAccessed.getTime();
     return age > ageThreshold && metrics.memoryUsage > 0.8;
   },
-  priority: (entry) => {
+  priority: entry => {
     return Date.now() - entry.lastAccessed.getTime();
   },
 };
@@ -94,7 +98,7 @@ export const LFUEvictionStrategy: CacheEvictionStrategy = {
     const minAccessThreshold = 2;
     return entry.accessCount < minAccessThreshold && metrics.memoryUsage > 0.7;
   },
-  priority: (entry) => {
+  priority: entry => {
     return 1 / (entry.accessCount + 1);
   },
 };
@@ -108,7 +112,7 @@ export const SizeBasedEvictionStrategy: CacheEvictionStrategy = {
     const sizeThreshold = 1024 * 1024; // 1MB
     return entry.size > sizeThreshold && metrics.memoryUsage > 0.6;
   },
-  priority: (entry) => {
+  priority: entry => {
     return entry.size;
   },
 };
@@ -123,7 +127,7 @@ export const TTLEvictionStrategy: CacheEvictionStrategy = {
     const age = Date.now() - entry.created.getTime();
     return age > ttl && metrics.memoryUsage > 0.5;
   },
-  priority: (entry) => {
+  priority: entry => {
     return Date.now() - entry.created.getTime();
   },
 };
@@ -138,10 +142,7 @@ export class CacheOptimizer {
   private config: CacheOptimizationConfig;
   private cleanupInterval: NodeJS.Timeout | null = null;
 
-  constructor(
-    cache: InMemoryCache,
-    config: Partial<CacheOptimizationConfig> = {}
-  ) {
+  constructor(cache: InMemoryCache, config: Partial<CacheOptimizationConfig> = {}) {
     this.cache = cache;
     this.monitor = new CacheMonitor(cache);
     this.config = {
@@ -174,7 +175,7 @@ export class CacheOptimizer {
    */
   private performCleanup(): void {
     const metrics = this.monitor.getMetrics();
-    
+
     if (metrics.estimatedSize <= this.config.maxSize) {
       return; // No cleanup needed
     }
@@ -184,8 +185,8 @@ export class CacheOptimizer {
 
     // Apply eviction strategies
     for (const strategy of this.config.evictionStrategies) {
-      const candidates = entries.filter(entry => 
-        strategy.shouldEvict(entry, metrics) && !toEvict.includes(entry)
+      const candidates = entries.filter(
+        entry => strategy.shouldEvict(entry, metrics) && !toEvict.includes(entry)
       );
 
       // Sort by priority (higher priority = more likely to evict)
@@ -238,7 +239,7 @@ export class CacheOptimizer {
     // Process queries in batches
     for (let i = 0; i < sortedQueries.length; i += maxConcurrent) {
       const batch = sortedQueries.slice(i, i + maxConcurrent);
-      
+
       const promises = batch.map(async ({ query, variables }) => {
         try {
           const timeoutPromise = new Promise((_, reject) => {
@@ -246,10 +247,10 @@ export class CacheOptimizer {
           });
 
           await Promise.race([
-            client.query({ 
-              query, 
-              ...(variables && { variables }), 
-              fetchPolicy: 'cache-first' 
+            client.query({
+              query,
+              ...(variables && { variables }),
+              fetchPolicy: 'cache-first',
             }),
             timeoutPromise,
           ]);
@@ -261,10 +262,10 @@ export class CacheOptimizer {
           if (retryFailed) {
             // Retry once
             try {
-              await client.query({ 
-                query, 
-                ...(variables && { variables }), 
-                fetchPolicy: 'network-only' 
+              await client.query({
+                query,
+                ...(variables && { variables }),
+                fetchPolicy: 'network-only',
               });
             } catch (retryError) {
               console.warn(`[Cache] Failed to warm query after retry:`, retryError);
@@ -400,16 +401,16 @@ export async function preloadCriticalData(
 ): Promise<void> {
   const { timeout = 5000, maxConcurrent = 5 } = options;
 
-  const promises = queries.slice(0, maxConcurrent).map(async (query) => {
+  const promises = queries.slice(0, maxConcurrent).map(async query => {
     try {
       const timeoutPromise = new Promise((_, reject) => {
         setTimeout(() => reject(new Error('Preload timeout')), timeout);
       });
 
       await Promise.race([
-        client.query({ 
-          query, 
-          fetchPolicy: 'cache-first' 
+        client.query({
+          query,
+          fetchPolicy: 'cache-first',
         }),
         timeoutPromise,
       ]);
@@ -433,7 +434,9 @@ export function useCacheMetrics(optimizer: CacheOptimizer): {
   report: ReturnType<CacheOptimizer['getOptimizationReport']>;
   optimize: () => void;
 } {
-  const [metrics, setMetrics] = React.useState<CacheMetrics>(optimizer.getOptimizationReport().metrics);
+  const [metrics, setMetrics] = React.useState<CacheMetrics>(
+    optimizer.getOptimizationReport().metrics
+  );
   const [report, setReport] = React.useState(optimizer.getOptimizationReport());
 
   React.useEffect(() => {

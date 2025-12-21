@@ -1,11 +1,6 @@
 import { gql } from '@apollo/client';
 import type * as ApolloReactCommon from '@apollo/client';
-import {
-  useQuery,
-  useLazyQuery,
-  useMutation,
-  useSubscription
-} from '@apollo/client/react';
+import { useQuery, useLazyQuery, useMutation, useSubscription } from '@apollo/client/react';
 export type Maybe<T> = T | null | undefined;
 export type InputMaybe<T> = T | null | undefined;
 export type Exact<T extends { [key: string]: unknown }> = { [K in keyof T]: T[K] };
@@ -188,22 +183,13 @@ export function useGetCoursesQuery(
   baseOptions?: ApolloReactCommon.QueryOptions<GetCoursesQueryResult, GetCoursesQueryVariables>
 ) {
   const options = baseOptions || {};
-  return useQuery<GetCoursesQueryResult, GetCoursesQueryVariables>(
-    GetCoursesDocument,
-    options
-  );
+  return useQuery<GetCoursesQueryResult, GetCoursesQueryVariables>(GetCoursesDocument, options);
 }
 export function useGetCoursesLazyQuery(
-  baseOptions?: ApolloReactCommon.QueryOptions<
-    GetCoursesQueryResult,
-    GetCoursesQueryVariables
-  >
+  baseOptions?: ApolloReactCommon.QueryOptions<GetCoursesQueryResult, GetCoursesQueryVariables>
 ) {
   const options = baseOptions || {};
-  return useLazyQuery<GetCoursesQueryResult, GetCoursesQueryVariables>(
-    GetCoursesDocument,
-    options
-  );
+  return useLazyQuery<GetCoursesQueryResult, GetCoursesQueryVariables>(GetCoursesDocument, options);
 }
 export type GetCoursesQueryHookResult = ReturnType<typeof useGetCoursesQuery>;
 export type GetCoursesLazyQueryHookResult = ReturnType<typeof useGetCoursesLazyQuery>;
@@ -240,10 +226,7 @@ export function useLoginMutation(
   baseOptions?: ApolloReactCommon.MutationOptions<LoginMutationResult, LoginMutationVariables>
 ) {
   const options = baseOptions || {};
-  return useMutation<LoginMutationResult, LoginMutationVariables>(
-    LoginDocument,
-    options
-  );
+  return useMutation<LoginMutationResult, LoginMutationVariables>(LoginDocument, options);
 }
 export type LoginMutationHookResult = ReturnType<typeof useLoginMutation>;
 export type LoginMutationResultType = ReturnType<typeof useLoginMutation>[1];
@@ -321,10 +304,10 @@ export function useMessageUpdatesSubscription(
   >
 ) {
   const options = baseOptions || {};
-  return useSubscription<
-    MessageUpdatesSubscriptionResult,
-    MessageUpdatesSubscriptionVariables
-  >(MessageUpdatesDocument, options);
+  return useSubscription<MessageUpdatesSubscriptionResult, MessageUpdatesSubscriptionVariables>(
+    MessageUpdatesDocument,
+    options
+  );
 }
 export type MessageUpdatesSubscriptionHookResult = ReturnType<typeof useMessageUpdatesSubscription>;
 export type MessageUpdatesSubscriptionResultType = ReturnType<typeof useMessageUpdatesSubscription>;
@@ -356,12 +339,14 @@ export function useProgressUpdatesSubscription(
   >
 ) {
   const options = baseOptions || {};
-  return useSubscription<
-    ProgressUpdatesSubscriptionResult,
-    ProgressUpdatesSubscriptionVariables
-  >(ProgressUpdatesDocument, options);
+  return useSubscription<ProgressUpdatesSubscriptionResult, ProgressUpdatesSubscriptionVariables>(
+    ProgressUpdatesDocument,
+    options
+  );
 }
 export type ProgressUpdatesSubscriptionHookResult = ReturnType<
   typeof useProgressUpdatesSubscription
 >;
-export type ProgressUpdatesSubscriptionResultType = ReturnType<typeof useProgressUpdatesSubscription>;
+export type ProgressUpdatesSubscriptionResultType = ReturnType<
+  typeof useProgressUpdatesSubscription
+>;

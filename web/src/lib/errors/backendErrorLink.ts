@@ -1,6 +1,6 @@
 /**
  * Backend-Specific GraphQL Error Link
- * 
+ *
  * Apollo Link that handles backend-specific GraphQL errors with proper
  * classification, recovery, and integration with the error handling system.
  */
@@ -15,7 +15,7 @@ import { isBackendError } from './backendErrorMapping';
 export function createBackendErrorLink() {
   return onError(({ graphQLErrors, networkError, operation, forward }) => {
     const operationName = operation.operationName || 'Unknown';
-    
+
     // Create context for error handling
     const context = {
       operation: operationName,
@@ -25,9 +25,9 @@ export function createBackendErrorLink() {
 
     // Handle GraphQL errors with backend integration
     if (graphQLErrors) {
-      graphQLErrors.forEach(async (error) => {
+      graphQLErrors.forEach(async error => {
         const errorCode = error.extensions?.code;
-        
+
         // Log backend vs non-backend errors differently
         if (errorCode && isBackendError(errorCode)) {
           console.group('🔗 Backend GraphQL Error');
@@ -36,7 +36,7 @@ export function createBackendErrorLink() {
           console.error('Operation:', operationName);
           console.error('Variables:', operation.variables);
           console.groupEnd();
-          
+
           // Handle with backend-specific error handling
           await errorHandler.handleGraphQLError(error, context);
         } else {
@@ -44,7 +44,7 @@ export function createBackendErrorLink() {
           console.error('Error:', error);
           console.error('Operation:', operationName);
           console.groupEnd();
-          
+
           // Handle with standard error handling
           await errorHandler.handleGraphQLError(error, context);
         }
@@ -57,7 +57,7 @@ export function createBackendErrorLink() {
       console.error('Network Error:', networkError);
       console.error('Operation:', operationName);
       console.groupEnd();
-      
+
       // Handle network error with backend context
       errorHandler.handleNetworkError(networkError, undefined, context);
     }
@@ -73,26 +73,28 @@ export function createBackendRetryLink() {
     if (graphQLErrors) {
       for (const error of graphQLErrors) {
         const errorCode = error.extensions?.code;
-        
+
         // Handle token refresh for backend authentication errors
         if (errorCode === 'TOKEN_EXPIRED' || errorCode === 'UNAUTHENTICATED') {
           // Emit token refresh event
           if (typeof window !== 'undefined') {
-            window.dispatchEvent(new CustomEvent('auth:token-refresh-needed', {
-              detail: { operation: operation.operationName }
-            }));
+            window.dispatchEvent(
+              new CustomEvent('auth:token-refresh-needed', {
+                detail: { operation: operation.operationName },
+              })
+            );
           }
-          
+
           // Return observable that waits for token refresh
-          return new Promise((resolve) => {
+          return new Promise(resolve => {
             const handleRefreshComplete = () => {
               window.removeEventListener('auth:token-refresh-complete', handleRefreshComplete);
               // Retry the operation
               resolve(forward(operation));
             };
-            
+
             window.addEventListener('auth:token-refresh-complete', handleRefreshComplete);
-            
+
             // Timeout after 10 seconds
             setTimeout(() => {
               window.removeEventListener('auth:token-refresh-complete', handleRefreshComplete);
@@ -100,12 +102,12 @@ export function createBackendRetryLink() {
             }, 10000);
           });
         }
-        
+
         // Handle rate limiting with exponential backoff
         if (errorCode === 'RATE_LIMITED') {
           const retryAfter = error.extensions?.retryAfter || 1000;
-          
-          return new Promise((resolve) => {
+
+          return new Promise(resolve => {
             setTimeout(() => {
               resolve(forward(operation));
             }, retryAfter);
@@ -113,23 +115,23 @@ export function createBackendRetryLink() {
         }
       }
     }
-    
+
     // Handle network errors with retry logic
     if (networkError && 'statusCode' in networkError) {
       const statusCode = (networkError as { statusCode: number }).statusCode;
-      
+
       // Retry on 5xx errors
       if (statusCode >= 500) {
-        return new Promise((resolve) => {
+        return new Promise(resolve => {
           setTimeout(() => {
             resolve(forward(operation));
           }, 2000); // 2 second delay for server errors
         });
       }
-      
+
       // Retry on timeout
       if (statusCode === 408) {
-        return new Promise((resolve) => {
+        return new Promise(resolve => {
           setTimeout(() => {
             resolve(forward(operation));
           }, 1000); // 1 second delay for timeouts
@@ -151,39 +153,42 @@ export function enrichBackendErrorContext(error: {
   };
 }) {
   const context: Record<string, unknown> = {};
-  
+
   if (error.extensions) {
     // Add backend trace correlation
     if (error.extensions.traceId) {
       context.backendTraceId = error.extensions.traceId;
     }
-    
+
     // Add backend request correlation
     if (error.extensions.requestId) {
       context.backendRequestId = error.extensions.requestId;
     }
-    
+
     // Add backend timestamp
     if (error.extensions.timestamp) {
       context.backendTimestamp = error.extensions.timestamp;
     }
   }
-  
+
   return context;
 }
 
 /**
  * Backend error metrics collection
  */
-export function collectBackendErrorMetrics(error: {
-  extensions?: {
-    code?: string;
-    duration?: number;
-    retryCount?: number;
-  };
-}, operation: {
-  operationName?: string;
-}) {
+export function collectBackendErrorMetrics(
+  error: {
+    extensions?: {
+      code?: string;
+      duration?: number;
+      retryCount?: number;
+    };
+  },
+  operation: {
+    operationName?: string;
+  }
+) {
   if (typeof window !== 'undefined' && 'performance' in window) {
     // Collect performance metrics for backend errors
     const metrics = {
@@ -193,11 +198,13 @@ export function collectBackendErrorMetrics(error: {
       retryCount: error.extensions?.retryCount,
       timestamp: Date.now(),
     };
-    
+
     // Emit metrics event for collection
-    window.dispatchEvent(new CustomEvent('backend:error-metrics', {
-      detail: metrics
-    }));
+    window.dispatchEvent(
+      new CustomEvent('backend:error-metrics', {
+        detail: metrics,
+      })
+    );
   }
 }
 
@@ -220,10 +227,12 @@ export function handleBackendErrorNotification(error: {
       severity: error.extensions?.severity || 'medium',
       timestamp: Date.now(),
     };
-    
+
     // Emit notification event for UI handling
-    window.dispatchEvent(new CustomEvent('backend:error-notification', {
-      detail: notification
-    }));
+    window.dispatchEvent(
+      new CustomEvent('backend:error-notification', {
+        detail: notification,
+      })
+    );
   }
 }

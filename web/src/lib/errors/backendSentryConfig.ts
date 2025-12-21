@@ -1,6 +1,6 @@
 /**
  * Backend-Specific Sentry Configuration
- * 
+ *
  * Configures Sentry error tracking with backend-specific settings,
  * error filtering, and integration with the LMS backend monitoring.
  */
@@ -15,25 +15,25 @@ export const BACKEND_SENTRY_CONFIG = {
     staging: process.env.NEXT_PUBLIC_SENTRY_DSN_STAGING,
     production: process.env.NEXT_PUBLIC_SENTRY_DSN,
   },
-  
+
   // Backend integration settings
   integration: {
     // Backend service name for correlation
     serviceName: 'lms-frontend',
-    
+
     // Backend version correlation
     backendVersion: process.env.NEXT_PUBLIC_BACKEND_VERSION,
-    
+
     // Backend environment correlation
     backendEnvironment: process.env.NEXT_PUBLIC_BACKEND_ENV,
-    
+
     // Backend trace correlation
     enableTraceCorrelation: true,
-    
+
     // Backend user correlation
     enableUserCorrelation: true,
   },
-  
+
   // Error filtering for backend errors
   errorFiltering: {
     // Ignore common non-critical errors
@@ -42,81 +42,79 @@ export const BACKEND_SENTRY_CONFIG = {
       'NetworkError',
       'Failed to fetch',
       'Load failed',
-      
+
       // Browser-specific errors
       'Non-Error promise rejection captured',
       'ResizeObserver loop limit exceeded',
       'Script error.',
-      
+
       // Development-only errors
-      ...(process.env.NODE_ENV === 'development' ? [
-        'ChunkLoadError',
-        'Loading chunk',
-        'Loading CSS chunk',
-      ] : []),
+      ...(process.env.NODE_ENV === 'development'
+        ? ['ChunkLoadError', 'Loading chunk', 'Loading CSS chunk']
+        : []),
     ],
-    
+
     // Ignore URLs (for script errors)
     ignoreUrls: [
       // Browser extensions
       /extensions\//i,
       /^chrome:\/\//i,
       /^moz-extension:\/\//i,
-      
+
       // Third-party scripts
       /googletagmanager\.com/i,
       /google-analytics\.com/i,
       /hotjar\.com/i,
     ],
-    
+
     // Sample rate by error type
     sampleRates: {
       // Critical backend errors - always capture
       AUTHENTICATION_ERROR: 1.0,
       AUTHORIZATION_ERROR: 1.0,
-      
+
       // Network errors - sample based on environment
       NETWORK_ERROR: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
-      
+
       // Upload errors - moderate sampling
       UPLOAD_ERROR: 0.5,
-      
+
       // Subscription errors - low sampling (high volume)
       SUBSCRIPTION_ERROR: 0.1,
-      
+
       // Cache errors - very low sampling
       CACHE_ERROR: 0.05,
-      
+
       // Unknown errors - always capture
       UNKNOWN_ERROR: 1.0,
     },
   },
-  
+
   // Performance monitoring
   performance: {
     // Transaction sampling
     tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
-    
+
     // Backend operation tracking
     trackBackendOperations: true,
-    
+
     // GraphQL operation tracking
     trackGraphQLOperations: true,
-    
+
     // Upload operation tracking
     trackUploadOperations: true,
-    
+
     // Real-time operation tracking
     trackRealtimeOperations: false, // High volume, disabled by default
   },
-  
+
   // Backend-specific tags
   defaultTags: {
     component: 'frontend',
     service: 'lms-frontend',
     backend_integration: 'true',
   },
-  
+
   // Backend-specific context
   defaultContext: {
     backend: {
@@ -138,7 +136,7 @@ export const BACKEND_SENTRY_CONFIG = {
  */
 export const BACKEND_SENTRY_LEVELS = {
   low: 'info',
-  medium: 'warning', 
+  medium: 'warning',
   high: 'error',
   critical: 'fatal',
 } as const;
@@ -153,17 +151,17 @@ export function getBackendErrorFingerprint(error: {
   field?: string;
 }): string[] {
   const fingerprint = ['backend-error', error.type, error.code];
-  
+
   // Add operation for more specific grouping
   if (error.operation) {
     fingerprint.push(error.operation);
   }
-  
+
   // Add field for validation errors
   if (error.field && error.type === 'VALIDATION_ERROR') {
     fingerprint.push(error.field);
   }
-  
+
   return fingerprint;
 }
 
@@ -209,7 +207,7 @@ export function getBackendErrorContext(error: {
       backend_integrated: true,
     },
   };
-  
+
   if (error.context?.operation) {
     context.operation = {
       name: error.context.operation,
@@ -217,11 +215,11 @@ export function getBackendErrorContext(error: {
       ...(error.context.requestId && { request_id: error.context.requestId }),
     };
   }
-  
+
   if (error.context?.metadata) {
     context.metadata = error.context.metadata;
   }
-  
+
   return context;
 }
 
@@ -237,10 +235,13 @@ export function shouldReportBackendError(error: {
   if (error.severity === 'critical') {
     return true;
   }
-  
+
   // Check sample rate for error type
-  const sampleRate = BACKEND_SENTRY_CONFIG.errorFiltering.sampleRates[error.type as keyof typeof BACKEND_SENTRY_CONFIG.errorFiltering.sampleRates] || 1.0;
-  
+  const sampleRate =
+    BACKEND_SENTRY_CONFIG.errorFiltering.sampleRates[
+      error.type as keyof typeof BACKEND_SENTRY_CONFIG.errorFiltering.sampleRates
+    ] || 1.0;
+
   return Math.random() < sampleRate;
 }
 
@@ -258,20 +259,20 @@ export function getBackendSentryDSN(): string | undefined {
 export function createBackendSentryConfig() {
   const environment = process.env.NODE_ENV || 'development';
   const dsn = getBackendSentryDSN();
-  
+
   return {
     dsn,
     environment,
     release: process.env.NEXT_PUBLIC_APP_VERSION,
-    
+
     // Sampling rates
     sampleRate: environment === 'production' ? 0.1 : 1.0,
     tracesSampleRate: BACKEND_SENTRY_CONFIG.performance.tracesSampleRate,
-    
+
     // Error filtering
     ignoreErrors: BACKEND_SENTRY_CONFIG.errorFiltering.ignoreErrors,
     denyUrls: BACKEND_SENTRY_CONFIG.errorFiltering.ignoreUrls,
-    
+
     // Default tags and context
     initialScope: {
       tags: BACKEND_SENTRY_CONFIG.defaultTags,
@@ -280,12 +281,12 @@ export function createBackendSentryConfig() {
         frontend: BACKEND_SENTRY_CONFIG.defaultContext.frontend,
       },
     },
-    
+
     // Backend-specific integrations
     integrations: [
       // Add backend-specific integrations here if needed
     ],
-    
+
     // Before send hook for backend error processing
     beforeSend: (event: Record<string, unknown>) => {
       // Add backend-specific processing
@@ -296,10 +297,10 @@ export function createBackendSentryConfig() {
           event.fingerprint = event.fingerprint || ['backend-integrated-error'];
         }
       }
-      
+
       return event;
     },
-    
+
     // Before send transaction hook
     beforeSendTransaction: (event: Record<string, unknown>) => {
       // Add backend-specific transaction processing

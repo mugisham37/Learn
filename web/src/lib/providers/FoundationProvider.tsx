@@ -1,6 +1,6 @@
 /**
  * Foundation Layer Provider Composition
- * 
+ *
  * Combines all foundation layer providers into a single, easy-to-use provider
  * that sets up the complete foundation infrastructure.
  */
@@ -21,10 +21,10 @@ interface FoundationProviderProps {
 
 /**
  * Main Foundation Provider
- * 
+ *
  * Wraps the application with all necessary foundation layer providers
  * in the correct order to ensure proper initialization and dependency resolution.
- * 
+ *
  * @example
  * ```tsx
  * function App() {
@@ -40,9 +40,7 @@ export function FoundationProvider({ children }: FoundationProviderProps) {
   return (
     <ApolloProvider client={apolloClient}>
       <AuthProvider>
-        <SubscriptionProvider>
-          {children}
-        </SubscriptionProvider>
+        <SubscriptionProvider>{children}</SubscriptionProvider>
       </AuthProvider>
     </ApolloProvider>
   );
@@ -50,13 +48,13 @@ export function FoundationProvider({ children }: FoundationProviderProps) {
 
 /**
  * Foundation Provider with Custom Configuration
- * 
+ *
  * Allows for custom configuration of the foundation layer.
  * Useful for testing or different environments.
  */
-export function FoundationProviderWithConfig({ 
-  children, 
-  config 
+export function FoundationProviderWithConfig({
+  children,
+  config,
 }: FoundationProviderProps & { config: FoundationConfig }) {
   // Create Apollo client with custom config
   const customApolloClient = React.useMemo(() => {
@@ -69,9 +67,7 @@ export function FoundationProviderWithConfig({
   return (
     <ApolloProvider client={customApolloClient}>
       <AuthProvider>
-        <SubscriptionProvider>
-          {children}
-        </SubscriptionProvider>
+        <SubscriptionProvider>{children}</SubscriptionProvider>
       </AuthProvider>
     </ApolloProvider>
   );
@@ -79,7 +75,7 @@ export function FoundationProviderWithConfig({
 
 /**
  * Provider Composition Utilities
- * 
+ *
  * Helper functions for composing providers in different configurations.
  */
 export const ProviderUtils = {
@@ -89,9 +85,7 @@ export const ProviderUtils = {
    */
   createMinimalProvider: (children: React.ReactNode) => (
     <ApolloProvider client={apolloClient}>
-      <AuthProvider>
-        {children}
-      </AuthProvider>
+      <AuthProvider>{children}</AuthProvider>
     </ApolloProvider>
   ),
 
@@ -104,12 +98,10 @@ export const ProviderUtils = {
     if (mocks) {
       console.debug('Using test mocks:', mocks);
     }
-    
+
     return (
       <ApolloProvider client={apolloClient}>
-        <AuthProvider>
-          {children}
-        </AuthProvider>
+        <AuthProvider>{children}</AuthProvider>
       </ApolloProvider>
     );
   },

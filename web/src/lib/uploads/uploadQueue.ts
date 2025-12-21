@@ -1,6 +1,6 @@
 /**
  * Upload Queue Management
- * 
+ *
  * Manages concurrent uploads with priority handling, retry logic,
  * and queue statistics.
  */
@@ -36,11 +36,7 @@ export class UploadQueue {
   /**
    * Adds a file to the upload queue
    */
-  addUpload(
-    file: File,
-    options: UploadOptions = {},
-    priority: number = 0
-  ): string {
+  addUpload(file: File, options: UploadOptions = {}, priority: number = 0): string {
     const uploadId = UploadUtils.generateUploadId();
     const normalizedPriority = Math.max(0, Math.min(priority, this.config.priorityLevels - 1));
 
@@ -67,10 +63,10 @@ export class UploadQueue {
 
     this.queue.set(uploadId, queueItem);
     this.emit('added', queueItem);
-    
+
     // Try to start the upload immediately
     this.processQueue();
-    
+
     return uploadId;
   }
 
@@ -88,10 +84,10 @@ export class UploadQueue {
 
     this.queue.delete(uploadId);
     this.emit('removed', item);
-    
+
     // Process queue to start next uploads
     this.processQueue();
-    
+
     return true;
   }
 
@@ -115,10 +111,10 @@ export class UploadQueue {
 
     this.activeUploads.delete(uploadId);
     this.emit('cancelled', item);
-    
+
     // Process queue to start next uploads
     this.processQueue();
-    
+
     return true;
   }
 
@@ -141,10 +137,10 @@ export class UploadQueue {
 
     this.activeUploads.delete(uploadId);
     this.emit('paused', item);
-    
+
     // Process queue to start next uploads
     this.processQueue();
-    
+
     return true;
   }
 
@@ -161,10 +157,10 @@ export class UploadQueue {
     };
 
     this.emit('resumed', item);
-    
+
     // Process queue to start the upload
     this.processQueue();
-    
+
     return true;
   }
 
@@ -187,10 +183,10 @@ export class UploadQueue {
     };
 
     this.emit('retrying', item);
-    
+
     // Process queue to start the upload
     this.processQueue();
-    
+
     return true;
   }
 
@@ -220,7 +216,7 @@ export class UploadQueue {
    */
   getStats(): UploadQueueStats {
     const uploads = Array.from(this.queue.values());
-    
+
     return {
       total: uploads.length,
       pending: uploads.filter(item => item.progress.status === 'pending').length,
@@ -236,13 +232,13 @@ export class UploadQueue {
    */
   pauseAll(): number {
     let pausedCount = 0;
-    
+
     this.activeUploads.forEach(uploadId => {
       if (this.pauseUpload(uploadId)) {
         pausedCount++;
       }
     });
-    
+
     return pausedCount;
   }
 
@@ -251,7 +247,7 @@ export class UploadQueue {
    */
   resumeAll(): number {
     let resumedCount = 0;
-    
+
     this.queue.forEach((item, uploadId) => {
       if (item.progress.status === 'paused') {
         if (this.resumeUpload(uploadId)) {
@@ -259,7 +255,7 @@ export class UploadQueue {
         }
       }
     });
-    
+
     return resumedCount;
   }
 
@@ -268,7 +264,7 @@ export class UploadQueue {
    */
   clearCompleted(): number {
     const completedIds: string[] = [];
-    
+
     this.queue.forEach((item, uploadId) => {
       if (item.progress.status === 'completed') {
         completedIds.push(uploadId);
@@ -328,12 +324,15 @@ export class UploadQueue {
     } else if (progress.status === 'failed') {
       this.activeUploads.delete(uploadId);
       this.emit('failed', item);
-      
+
       // Auto-retry if retries are available
       if (item.retryCount < item.maxRetries) {
-        setTimeout(() => {
-          this.retryUpload(uploadId);
-        }, UploadErrorHandler.getRetryDelay(item.retryCount + 1, this.config.retryDelay));
+        setTimeout(
+          () => {
+            this.retryUpload(uploadId);
+          },
+          UploadErrorHandler.getRetryDelay(item.retryCount + 1, this.config.retryDelay)
+        );
       } else {
         this.processQueue(); // Start next uploads
       }

@@ -1,6 +1,6 @@
 /**
  * Authentication Hooks
- * 
+ *
  * React hooks for authentication state access, user information, permissions,
  * and component-level protection.
  */
@@ -10,7 +10,13 @@
 import { useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthContext } from './authProvider';
-import { createRoleGuard, RouteGuards, type UserRole, type Permission, type CourseContext } from './authGuards';
+import {
+  createRoleGuard,
+  RouteGuards,
+  type UserRole,
+  type Permission,
+  type CourseContext,
+} from './authGuards';
 
 /**
  * Hook for authentication state only (lightweight)
@@ -18,7 +24,7 @@ import { createRoleGuard, RouteGuards, type UserRole, type Permission, type Cour
  */
 export function useAuthState() {
   const context = useAuthContext();
-  
+
   return {
     user: context.user,
     isAuthenticated: context.isAuthenticated,
@@ -33,14 +39,14 @@ export function useAuthState() {
  */
 export function useAuth() {
   const context = useAuthContext();
-  
+
   return {
     // State
     user: context.user,
     isAuthenticated: context.isAuthenticated,
     isLoading: context.isLoading,
     error: context.error,
-    
+
     // Actions
     login: context.login,
     logout: context.logout,
@@ -56,10 +62,10 @@ export function useAuth() {
  */
 export function useUser() {
   const { user, isAuthenticated, isLoading } = useAuth();
-  
+
   const userInfo = useMemo(() => {
     if (!user) return null;
-    
+
     return {
       id: user.id,
       email: user.email,
@@ -69,7 +75,7 @@ export function useUser() {
       updatedAt: user.updatedAt,
     };
   }, [user]);
-  
+
   return {
     user: userInfo,
     isAuthenticated,
@@ -87,37 +93,70 @@ export function useUser() {
 export function usePermissions() {
   const { user } = useAuth();
   const roleGuard = useMemo(() => createRoleGuard(user), [user]);
-  
+
   return {
     // Role checking
     hasRole: useCallback((role: UserRole) => roleGuard.hasRole(role), [roleGuard]),
     hasAnyRole: useCallback((roles: UserRole[]) => roleGuard.hasAnyRole(roles), [roleGuard]),
-    
+
     // Permission checking
-    hasPermission: useCallback((permission: Permission) => roleGuard.hasPermission(permission), [roleGuard]),
-    hasAnyPermission: useCallback((permissions: Permission[]) => roleGuard.hasAnyPermission(permissions), [roleGuard]),
-    
+    hasPermission: useCallback(
+      (permission: Permission) => roleGuard.hasPermission(permission),
+      [roleGuard]
+    ),
+    hasAnyPermission: useCallback(
+      (permissions: Permission[]) => roleGuard.hasAnyPermission(permissions),
+      [roleGuard]
+    ),
+
     // Course-specific permissions
-    canAccessCourse: useCallback((courseContext: CourseContext) => roleGuard.canAccessCourse(courseContext), [roleGuard]),
-    canEditCourse: useCallback((courseContext: CourseContext) => roleGuard.canEditCourse(courseContext), [roleGuard]),
-    canDeleteCourse: useCallback((courseContext: CourseContext) => roleGuard.canDeleteCourse(courseContext), [roleGuard]),
-    canPublishCourse: useCallback((courseContext: CourseContext) => roleGuard.canPublishCourse(courseContext), [roleGuard]),
-    canEnrollInCourse: useCallback((courseContext: CourseContext) => roleGuard.canEnrollInCourse(courseContext), [roleGuard]),
-    
+    canAccessCourse: useCallback(
+      (courseContext: CourseContext) => roleGuard.canAccessCourse(courseContext),
+      [roleGuard]
+    ),
+    canEditCourse: useCallback(
+      (courseContext: CourseContext) => roleGuard.canEditCourse(courseContext),
+      [roleGuard]
+    ),
+    canDeleteCourse: useCallback(
+      (courseContext: CourseContext) => roleGuard.canDeleteCourse(courseContext),
+      [roleGuard]
+    ),
+    canPublishCourse: useCallback(
+      (courseContext: CourseContext) => roleGuard.canPublishCourse(courseContext),
+      [roleGuard]
+    ),
+    canEnrollInCourse: useCallback(
+      (courseContext: CourseContext) => roleGuard.canEnrollInCourse(courseContext),
+      [roleGuard]
+    ),
+
     // Assignment permissions
-    canGradeAssignments: useCallback((courseContext?: CourseContext) => roleGuard.canGradeAssignments(courseContext), [roleGuard]),
-    canSubmitAssignments: useCallback((courseContext?: CourseContext) => roleGuard.canSubmitAssignments(courseContext), [roleGuard]),
-    
+    canGradeAssignments: useCallback(
+      (courseContext?: CourseContext) => roleGuard.canGradeAssignments(courseContext),
+      [roleGuard]
+    ),
+    canSubmitAssignments: useCallback(
+      (courseContext?: CourseContext) => roleGuard.canSubmitAssignments(courseContext),
+      [roleGuard]
+    ),
+
     // General permissions
     canManageUsers: useCallback(() => roleGuard.canManageUsers(), [roleGuard]),
-    canViewAnalytics: useCallback((courseContext?: CourseContext) => roleGuard.canViewAnalytics(courseContext), [roleGuard]),
+    canViewAnalytics: useCallback(
+      (courseContext?: CourseContext) => roleGuard.canViewAnalytics(courseContext),
+      [roleGuard]
+    ),
     canAccessAdmin: useCallback(() => roleGuard.canAccessAdmin(), [roleGuard]),
-    
+
     // Route permissions
     canAccessStudentRoutes: useCallback(() => RouteGuards.canAccessStudentRoutes(user), [user]),
     canAccessEducatorRoutes: useCallback(() => RouteGuards.canAccessEducatorRoutes(user), [user]),
     canAccessAdminRoutes: useCallback(() => RouteGuards.canAccessAdminRoutes(user), [user]),
-    canAccessCourseManagement: useCallback(() => RouteGuards.canAccessCourseManagement(user), [user]),
+    canAccessCourseManagement: useCallback(
+      () => RouteGuards.canAccessCourseManagement(user),
+      [user]
+    ),
     canAccessAnalytics: useCallback(() => RouteGuards.canAccessAnalytics(user), [user]),
   };
 }
@@ -130,93 +169,111 @@ export function useAuthGuard() {
   const { isAuthenticated, isLoading, user } = useAuth();
   const router = useRouter();
   const permissions = usePermissions();
-  
+
   /**
    * Require authentication - redirect to login if not authenticated
    */
-  const requireAuth = useCallback((redirectTo: string = '/login') => {
-    if (!isLoading && !isAuthenticated) {
-      router.push(redirectTo);
-      return false;
-    }
-    return isAuthenticated;
-  }, [isAuthenticated, isLoading, router]);
-  
+  const requireAuth = useCallback(
+    (redirectTo: string = '/login') => {
+      if (!isLoading && !isAuthenticated) {
+        router.push(redirectTo);
+        return false;
+      }
+      return isAuthenticated;
+    },
+    [isAuthenticated, isLoading, router]
+  );
+
   /**
    * Require specific role - redirect if user doesn't have role
    */
-  const requireRole = useCallback((role: UserRole, redirectTo: string = '/unauthorized') => {
-    if (!requireAuth()) return false;
-    
-    if (!permissions.hasRole(role)) {
-      router.push(redirectTo);
-      return false;
-    }
-    return true;
-  }, [requireAuth, permissions, router]);
-  
+  const requireRole = useCallback(
+    (role: UserRole, redirectTo: string = '/unauthorized') => {
+      if (!requireAuth()) return false;
+
+      if (!permissions.hasRole(role)) {
+        router.push(redirectTo);
+        return false;
+      }
+      return true;
+    },
+    [requireAuth, permissions, router]
+  );
+
   /**
    * Require any of the specified roles
    */
-  const requireAnyRole = useCallback((roles: UserRole[], redirectTo: string = '/unauthorized') => {
-    if (!requireAuth()) return false;
-    
-    if (!permissions.hasAnyRole(roles)) {
-      router.push(redirectTo);
-      return false;
-    }
-    return true;
-  }, [requireAuth, permissions, router]);
-  
+  const requireAnyRole = useCallback(
+    (roles: UserRole[], redirectTo: string = '/unauthorized') => {
+      if (!requireAuth()) return false;
+
+      if (!permissions.hasAnyRole(roles)) {
+        router.push(redirectTo);
+        return false;
+      }
+      return true;
+    },
+    [requireAuth, permissions, router]
+  );
+
   /**
    * Require specific permission
    */
-  const requirePermission = useCallback((permission: Permission, redirectTo: string = '/unauthorized') => {
-    if (!requireAuth()) return false;
-    
-    if (!permissions.hasPermission(permission)) {
-      router.push(redirectTo);
-      return false;
-    }
-    return true;
-  }, [requireAuth, permissions, router]);
-  
+  const requirePermission = useCallback(
+    (permission: Permission, redirectTo: string = '/unauthorized') => {
+      if (!requireAuth()) return false;
+
+      if (!permissions.hasPermission(permission)) {
+        router.push(redirectTo);
+        return false;
+      }
+      return true;
+    },
+    [requireAuth, permissions, router]
+  );
+
   /**
    * Require course access
    */
-  const requireCourseAccess = useCallback((courseContext: CourseContext, redirectTo: string = '/unauthorized') => {
-    if (!requireAuth()) return false;
-    
-    if (!permissions.canAccessCourse(courseContext)) {
-      router.push(redirectTo);
-      return false;
-    }
-    return true;
-  }, [requireAuth, permissions, router]);
-  
+  const requireCourseAccess = useCallback(
+    (courseContext: CourseContext, redirectTo: string = '/unauthorized') => {
+      if (!requireAuth()) return false;
+
+      if (!permissions.canAccessCourse(courseContext)) {
+        router.push(redirectTo);
+        return false;
+      }
+      return true;
+    },
+    [requireAuth, permissions, router]
+  );
+
   /**
    * Check if user can access current route
    */
-  const canAccessRoute = useCallback((requiredRoles?: UserRole[], requiredPermissions?: Permission[]) => {
-    if (!isAuthenticated) return false;
-    
-    if (requiredRoles && !permissions.hasAnyRole(requiredRoles)) {
-      return false;
-    }
-    
-    if (requiredPermissions && !permissions.hasAnyPermission(requiredPermissions)) {
-      return false;
-    }
-    
-    return true;
-  }, [isAuthenticated, permissions]);
-  
+  const canAccessRoute = useCallback(
+    (requiredRoles?: UserRole[], requiredPermissions?: Permission[]) => {
+      if (!isAuthenticated) return false;
+
+      if (requiredRoles && !permissions.hasAnyRole(requiredRoles)) {
+        return false;
+      }
+
+      if (requiredPermissions && !permissions.hasAnyPermission(requiredPermissions)) {
+        return false;
+      }
+
+      return true;
+    },
+    [isAuthenticated, permissions]
+  );
+
   return {
     // State
     isAuthenticated,
     isLoading,
     user,
-    
+
     // Guard functions
     requireAuth,
     requireRole,
@@ -224,12 +281,24 @@ export function useAuthGuard() {
     requirePermission,
     requireCourseAccess,
     canAccessRoute,
-    
+
     // Convenience guards for common routes
-    requireStudent: useCallback((redirectTo?: string) => requireRole('STUDENT', redirectTo), [requireRole]),
-    requireEducator: useCallback((redirectTo?: string) => requireRole('EDUCATOR', redirectTo), [requireRole]),
-    requireAdmin: useCallback((redirectTo?: string) => requireRole('ADMIN', redirectTo), [requireRole]),
-    requireEducatorOrAdmin: useCallback((redirectTo?: string) => requireAnyRole(['EDUCATOR', 'ADMIN'], redirectTo), [requireAnyRole]),
+    requireStudent: useCallback(
+      (redirectTo?: string) => requireRole('STUDENT', redirectTo),
+      [requireRole]
+    ),
+    requireEducator: useCallback(
+      (redirectTo?: string) => requireRole('EDUCATOR', redirectTo),
+      [requireRole]
+    ),
+    requireAdmin: useCallback(
+      (redirectTo?: string) => requireRole('ADMIN', redirectTo),
+      [requireRole]
+    ),
+    requireEducatorOrAdmin: useCallback(
+      (redirectTo?: string) => requireAnyRole(['EDUCATOR', 'ADMIN'], redirectTo),
+      [requireAnyRole]
+    ),
   };
 }
 
@@ -238,158 +307,166 @@ export function useAuthGuard() {
  * Provides utilities for login/logout flows, email verification, and password reset
  */
 export function useAuthActions() {
-  const { 
-    login, 
-    logout, 
-    register, 
-    clearError, 
-    error, 
+  const {
+    login,
+    logout,
+    register,
+    clearError,
+    error,
     isLoading,
     sendEmailVerification,
     verifyEmail,
     requestPasswordReset,
-    resetPassword
+    resetPassword,
   } = useAuth();
   const router = useRouter();
-  
+
   /**
    * Login with redirect
    */
-  const loginWithRedirect = useCallback(async (
-    email: string, 
-    password: string, 
-    redirectTo: string = '/dashboard'
-  ) => {
-    try {
-      await login(email, password);
-      router.push(redirectTo);
-    } catch (err) {
-      // Error is handled by the auth context
-      throw err;
-    }
-  }, [login, router]);
-  
+  const loginWithRedirect = useCallback(
+    async (email: string, password: string, redirectTo: string = '/dashboard') => {
+      try {
+        await login(email, password);
+        router.push(redirectTo);
+      } catch (err) {
+        // Error is handled by the auth context
+        throw err;
+      }
+    },
+    [login, router]
+  );
+
   /**
    * Logout with redirect
    */
-  const logoutWithRedirect = useCallback(async (redirectTo: string = '/') => {
-    try {
-      await logout();
-      router.push(redirectTo);
-    } catch {
-      // Even if logout fails, redirect to home
-      router.push(redirectTo);
-    }
-  }, [logout, router]);
-  
+  const logoutWithRedirect = useCallback(
+    async (redirectTo: string = '/') => {
+      try {
+        await logout();
+        router.push(redirectTo);
+      } catch {
+        // Even if logout fails, redirect to home
+        router.push(redirectTo);
+      }
+    },
+    [logout, router]
+  );
+
   /**
    * Register with redirect
    */
-  const registerWithRedirect = useCallback(async (
-    email: string, 
-    password: string, 
-    fullName: string,
-    redirectTo: string = '/dashboard'
-  ) => {
-    try {
-      await register(email, password, fullName);
-      router.push(redirectTo);
-    } catch (err) {
-      // Error is handled by the auth context
-      throw err;
-    }
-  }, [register, router]);
+  const registerWithRedirect = useCallback(
+    async (
+      email: string,
+      password: string,
+      fullName: string,
+      redirectTo: string = '/dashboard'
+    ) => {
+      try {
+        await register(email, password, fullName);
+        router.push(redirectTo);
+      } catch (err) {
+        // Error is handled by the auth context
+        throw err;
+      }
+    },
+    [register, router]
+  );
 
   /**
    * Send email verification with error handling
    */
-  const sendVerificationEmail = useCallback(async (email: string) => {
-    try {
-      await sendEmailVerification(email);
-      return { success: true, message: 'Verification email sent successfully' };
-    } catch (err) {
-      // Error is handled by the auth context
-      throw err;
-    }
-  }, [sendEmailVerification]);
+  const sendVerificationEmail = useCallback(
+    async (email: string) => {
+      try {
+        await sendEmailVerification(email);
+        return { success: true, message: 'Verification email sent successfully' };
+      } catch (err) {
+        // Error is handled by the auth context
+        throw err;
+      }
+    },
+    [sendEmailVerification]
+  );
 
   /**
    * Verify email with redirect on success
    */
-  const verifyEmailWithRedirect = useCallback(async (
-    token: string, 
-    email: string,
-    redirectTo: string = '/dashboard'
-  ) => {
-    try {
-      const result = await verifyEmail(token, email);
-      if (result.success) {
-        router.push(redirectTo);
+  const verifyEmailWithRedirect = useCallback(
+    async (token: string, email: string, redirectTo: string = '/dashboard') => {
+      try {
+        const result = await verifyEmail(token, email);
+        if (result.success) {
+          router.push(redirectTo);
+        }
+        return result;
+      } catch (err) {
+        // Error is handled by the auth context
+        throw err;
       }
-      return result;
-    } catch (err) {
-      // Error is handled by the auth context
-      throw err;
-    }
-  }, [verifyEmail, router]);
+    },
+    [verifyEmail, router]
+  );
 
   /**
    * Request password reset with success feedback
    */
-  const requestPasswordResetWithFeedback = useCallback(async (email: string) => {
-    try {
-      await requestPasswordReset(email);
-      return { 
-        success: true, 
-        message: 'If an account with that email exists, a password reset link has been sent' 
-      };
-    } catch (err) {
-      // Error is handled by the auth context
-      throw err;
-    }
-  }, [requestPasswordReset]);
+  const requestPasswordResetWithFeedback = useCallback(
+    async (email: string) => {
+      try {
+        await requestPasswordReset(email);
+        return {
+          success: true,
+          message: 'If an account with that email exists, a password reset link has been sent',
+        };
+      } catch (err) {
+        // Error is handled by the auth context
+        throw err;
+      }
+    },
+    [requestPasswordReset]
+  );
 
   /**
    * Reset password with redirect on success
    */
-  const resetPasswordWithRedirect = useCallback(async (
-    token: string,
-    email: string,
-    newPassword: string,
-    redirectTo: string = '/login'
-  ) => {
-    try {
-      const result = await resetPassword(token, email, newPassword);
-      if (result.success) {
-        router.push(redirectTo);
+  const resetPasswordWithRedirect = useCallback(
+    async (token: string, email: string, newPassword: string, redirectTo: string = '/login') => {
+      try {
+        const result = await resetPassword(token, email, newPassword);
+        if (result.success) {
+          router.push(redirectTo);
+        }
+        return result;
+      } catch (err) {
+        // Error is handled by the auth context
+        throw err;
       }
-      return result;
-    } catch (err) {
-      // Error is handled by the auth context
-      throw err;
-    }
-  }, [resetPassword, router]);
-  
+    },
+    [resetPassword, router]
+  );
+
   return {
     // Basic actions
     login,
     logout,
     register,
     clearError,
-    
+
     // Actions with redirect
     loginWithRedirect,
     logoutWithRedirect,
     registerWithRedirect,
-    
+
     // Email verification actions
     sendVerificationEmail,
     verifyEmailWithRedirect,
-    
+
     // Password reset actions
     requestPasswordResetWithFeedback,
     resetPasswordWithRedirect,
-    
+
     // State
     error,
     isLoading,
@@ -402,27 +479,33 @@ export function useAuthActions() {
  */
 export function useResourceOwnership() {
   const { user } = useAuth();
-  
-  const isOwner = useCallback((resourceOwnerId: string) => {
-    return user?.id === resourceOwnerId;
-  }, [user?.id]);
-  
-  const canModifyResource = useCallback((resourceOwnerId: string, requiredPermission?: Permission) => {
-    // Admins can modify any resource
-    if (user?.role === 'ADMIN') return true;
-    
-    // Owner can modify their own resource
-    if (isOwner(resourceOwnerId)) return true;
-    
-    // Check if user has required permission for non-owned resources
-    if (requiredPermission) {
-      const roleGuard = createRoleGuard(user);
-      return roleGuard.hasPermission(requiredPermission);
-    }
-    
-    return false;
-  }, [user, isOwner]);
-  
+
+  const isOwner = useCallback(
+    (resourceOwnerId: string) => {
+      return user?.id === resourceOwnerId;
+    },
+    [user?.id]
+  );
+
+  const canModifyResource = useCallback(
+    (resourceOwnerId: string, requiredPermission?: Permission) => {
+      // Admins can modify any resource
+      if (user?.role === 'ADMIN') return true;
+
+      // Owner can modify their own resource
+      if (isOwner(resourceOwnerId)) return true;
+
+      // Check if user has required permission for non-owned resources
+      if (requiredPermission) {
+        const roleGuard = createRoleGuard(user);
+        return roleGuard.hasPermission(requiredPermission);
+      }
+
+      return false;
+    },
+    [user, isOwner]
+  );
+
   return {
     isOwner,
     canModifyResource,

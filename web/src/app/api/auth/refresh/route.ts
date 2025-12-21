@@ -1,6 +1,6 @@
 /**
  * Refresh Token API Route
- * 
+ *
  * Next.js API route that handles JWT token refresh using the backend GraphQL API.
  * Implements token rotation for enhanced security.
  */
@@ -48,10 +48,7 @@ export async function POST(request: NextRequest) {
 
     // Validate input
     if (!refreshToken) {
-      return NextResponse.json(
-        { error: 'Refresh token is required' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Refresh token is required' }, { status: 400 });
     }
 
     // Call backend GraphQL API
@@ -72,17 +69,17 @@ export async function POST(request: NextRequest) {
       throw new Error(`Backend request failed: ${response.status}`);
     }
 
-    const data = await response.json() as RefreshTokenResponse;
+    const data = (await response.json()) as RefreshTokenResponse;
 
     // Check for GraphQL errors
     if (data.errors && data.errors.length > 0) {
       const error = data.errors[0];
-      
+
       // Clear cookies on refresh failure
       const errorResponse = NextResponse.json(
-        { 
+        {
           error: error.message,
-          code: error.extensions?.code || 'TOKEN_REFRESH_FAILED'
+          code: error.extensions?.code || 'TOKEN_REFRESH_FAILED',
         },
         { status: 401 }
       );
@@ -96,10 +93,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!data.data?.refreshToken) {
-      return NextResponse.json(
-        { error: 'Invalid refresh response' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Invalid refresh response' }, { status: 500 });
     }
 
     const { accessToken, refreshToken: newRefreshToken } = data.data.refreshToken;
@@ -135,12 +129,12 @@ export async function POST(request: NextRequest) {
     return nextResponse;
   } catch (error) {
     console.error('Token refresh API error:', error);
-    
+
     // Clear cookies on error
     const errorResponse = NextResponse.json(
-      { 
+      {
         error: error instanceof Error ? error.message : 'Token refresh failed',
-        code: 'INTERNAL_ERROR'
+        code: 'INTERNAL_ERROR',
       },
       { status: 500 }
     );

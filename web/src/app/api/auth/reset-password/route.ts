@@ -1,6 +1,6 @@
 /**
  * Password Reset API Route
- * 
+ *
  * Next.js API route that handles password reset workflow using the backend GraphQL API.
  * Supports both requesting password reset and confirming with token.
  */
@@ -79,17 +79,20 @@ export async function POST(request: NextRequest) {
       return await requestPasswordReset({ email });
     } else {
       return NextResponse.json(
-        { error: 'Email is required for password reset request, or token and newPassword for reset confirmation' },
+        {
+          error:
+            'Email is required for password reset request, or token and newPassword for reset confirmation',
+        },
         { status: 400 }
       );
     }
   } catch (error) {
     console.error('Password reset API error:', error);
-    
+
     return NextResponse.json(
-      { 
+      {
         error: error instanceof Error ? error.message : 'Password reset failed',
-        code: 'INTERNAL_ERROR'
+        code: 'INTERNAL_ERROR',
       },
       { status: 500 }
     );
@@ -102,10 +105,7 @@ async function requestPasswordReset(input: RequestPasswordResetInput) {
   // Validate email format
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(email)) {
-    return NextResponse.json(
-      { error: 'Invalid email format' },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: 'Invalid email format' }, { status: 400 });
   }
 
   // Call backend GraphQL API
@@ -126,15 +126,15 @@ async function requestPasswordReset(input: RequestPasswordResetInput) {
     throw new Error(`Backend request failed: ${response.status}`);
   }
 
-  const data = await response.json() as RequestPasswordResetResponse;
+  const data = (await response.json()) as RequestPasswordResetResponse;
 
   // Check for GraphQL errors
   if (data.errors && data.errors.length > 0) {
     const error = data.errors[0];
     return NextResponse.json(
-      { 
+      {
         error: error.message,
-        code: error.extensions?.code || 'PASSWORD_RESET_REQUEST_FAILED'
+        code: error.extensions?.code || 'PASSWORD_RESET_REQUEST_FAILED',
       },
       { status: 400 }
     );
@@ -143,7 +143,7 @@ async function requestPasswordReset(input: RequestPasswordResetInput) {
   // Always return success for security (don't reveal if email exists)
   return NextResponse.json({
     success: true,
-    message: 'If an account with that email exists, a password reset link has been sent'
+    message: 'If an account with that email exists, a password reset link has been sent',
   });
 }
 
@@ -184,25 +184,22 @@ async function resetPassword(input: ResetPasswordInput) {
     throw new Error(`Backend request failed: ${response.status}`);
   }
 
-  const data = await response.json() as ResetPasswordResponse;
+  const data = (await response.json()) as ResetPasswordResponse;
 
   // Check for GraphQL errors
   if (data.errors && data.errors.length > 0) {
     const error = data.errors[0];
     return NextResponse.json(
-      { 
+      {
         error: error.message,
-        code: error.extensions?.code || 'PASSWORD_RESET_FAILED'
+        code: error.extensions?.code || 'PASSWORD_RESET_FAILED',
       },
       { status: 400 }
     );
   }
 
   if (!data.data?.resetPassword) {
-    return NextResponse.json(
-      { error: 'Invalid password reset response' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Invalid password reset response' }, { status: 500 });
   }
 
   const { success, user } = data.data.resetPassword;
@@ -210,6 +207,6 @@ async function resetPassword(input: ResetPasswordInput) {
   return NextResponse.json({
     success,
     user,
-    message: success ? 'Password reset successfully' : 'Password reset failed'
+    message: success ? 'Password reset successfully' : 'Password reset failed',
   });
 }

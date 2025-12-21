@@ -1,9 +1,9 @@
 /**
  * Secure Token Storage Implementation
- * 
+ *
  * Enhanced token storage with encryption, secure storage mechanisms,
  * and comprehensive security validation.
- * 
+ *
  * Requirements: 13.1
  */
 
@@ -57,10 +57,10 @@ export class WebCryptoTokenEncryption implements TokenEncryption {
 
     const encoder = new TextEncoder();
     const dataBuffer = encoder.encode(data);
-    
+
     // Generate a random IV for each encryption
     const iv = crypto.getRandomValues(new Uint8Array(12));
-    
+
     const encryptedBuffer = await crypto.subtle.encrypt(
       {
         name: this.algorithm,
@@ -120,9 +120,11 @@ export class WebCryptoTokenEncryption implements TokenEncryption {
    * Check if Web Crypto API is supported
    */
   private isWebCryptoSupported(): boolean {
-    return typeof crypto !== 'undefined' && 
-           typeof crypto.subtle !== 'undefined' &&
-           typeof crypto.subtle.generateKey === 'function';
+    return (
+      typeof crypto !== 'undefined' &&
+      typeof crypto.subtle !== 'undefined' &&
+      typeof crypto.subtle.generateKey === 'function'
+    );
   }
 }
 
@@ -176,7 +178,7 @@ export class EnhancedSecureTokenStorage implements SecureTokenStorage {
 
       const storage = this.getStorage();
       const encryptedToken = storage.getItem(SECURITY_CONSTANTS.TOKEN_STORAGE_KEY);
-      
+
       if (!encryptedToken) {
         return null;
       }
@@ -191,7 +193,10 @@ export class EnhancedSecureTokenStorage implements SecureTokenStorage {
       this.logSecurityEvent({
         type: 'security_error',
         timestamp: new Date(),
-        details: { error: 'Failed to get access token', message: error instanceof Error ? error.message : 'Unknown error' },
+        details: {
+          error: 'Failed to get access token',
+          message: error instanceof Error ? error.message : 'Unknown error',
+        },
         severity: 'medium',
       });
       return null;
@@ -209,7 +214,7 @@ export class EnhancedSecureTokenStorage implements SecureTokenStorage {
 
       const storage = this.getStorage();
       const encryptedToken = storage.getItem(SECURITY_CONSTANTS.REFRESH_TOKEN_STORAGE_KEY);
-      
+
       if (!encryptedToken) {
         return null;
       }
@@ -224,7 +229,10 @@ export class EnhancedSecureTokenStorage implements SecureTokenStorage {
       this.logSecurityEvent({
         type: 'security_error',
         timestamp: new Date(),
-        details: { error: 'Failed to get refresh token', message: error instanceof Error ? error.message : 'Unknown error' },
+        details: {
+          error: 'Failed to get refresh token',
+          message: error instanceof Error ? error.message : 'Unknown error',
+        },
         severity: 'medium',
       });
       return null;
@@ -243,7 +251,7 @@ export class EnhancedSecureTokenStorage implements SecureTokenStorage {
       }
 
       const storage = this.getStorage();
-      
+
       let encryptedAccessToken = accessToken;
       let encryptedRefreshToken = refreshToken;
 
@@ -266,7 +274,10 @@ export class EnhancedSecureTokenStorage implements SecureTokenStorage {
       this.logSecurityEvent({
         type: 'security_error',
         timestamp: new Date(),
-        details: { error: 'Failed to store tokens', message: error instanceof Error ? error.message : 'Unknown error' },
+        details: {
+          error: 'Failed to store tokens',
+          message: error instanceof Error ? error.message : 'Unknown error',
+        },
         severity: 'high',
       });
       throw error;
@@ -298,7 +309,10 @@ export class EnhancedSecureTokenStorage implements SecureTokenStorage {
       this.logSecurityEvent({
         type: 'security_error',
         timestamp: new Date(),
-        details: { error: 'Failed to clear tokens', message: error instanceof Error ? error.message : 'Unknown error' },
+        details: {
+          error: 'Failed to clear tokens',
+          message: error instanceof Error ? error.message : 'Unknown error',
+        },
         severity: 'medium',
       });
     }
@@ -426,7 +440,7 @@ export class TokenValidator {
           error: 'Invalid JWT payload',
         };
       }
-      
+
       const payload = JSON.parse(atob(payloadStr));
       const currentTime = Math.floor(Date.now() / 1000);
       const expirationTime = payload.exp;

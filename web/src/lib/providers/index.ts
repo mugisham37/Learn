@@ -1,13 +1,13 @@
 /**
  * Provider Composition Module
- * 
+ *
  * Exports provider composition utilities for easy foundation layer setup.
  */
 
-export { 
-  FoundationProvider, 
+export {
+  FoundationProvider,
   FoundationProviderWithConfig,
-  ProviderUtils 
+  ProviderUtils,
 } from './FoundationProvider';
 
 // Re-export individual providers for advanced use cases

@@ -1,6 +1,6 @@
 /**
  * Apollo Client Configuration
- * 
+ *
  * Main GraphQL client setup with authentication, error handling, and caching.
  * Provides a fully configured Apollo Client with normalized cache, authentication,
  * error handling, and retry logic. Supports both client-side and server-side rendering.
@@ -20,7 +20,7 @@ import { createCacheConfig } from './cache';
 
 /**
  * Creates and configures the main Apollo Client instance
- * 
+ *
  * Features:
  * - Normalized cache with type policies
  * - Authentication with automatic token injection
@@ -33,7 +33,7 @@ import { createCacheConfig } from './cache';
 async function createApolloClient(ssrMode: boolean = false) {
   // HTTP link for queries and mutations
   const httpLink = createHttpLink({
-    uri: ssrMode 
+    uri: ssrMode
       ? config.graphqlEndpoint // Direct connection on server
       : '/api/graphql', // Use proxy in browser
     credentials: 'include', // Include cookies for authentication
@@ -42,7 +42,7 @@ async function createApolloClient(ssrMode: boolean = false) {
 
   // WebSocket link for subscriptions (client-side only)
   let wsLink: GraphQLWsLink | null = null;
-  
+
   if (!ssrMode && typeof window !== 'undefined') {
     wsLink = new GraphQLWsLink(
       createClient({
@@ -50,7 +50,7 @@ async function createApolloClient(ssrMode: boolean = false) {
         connectionParams: async () => {
           // Get access token for WebSocket authentication
           const accessToken = tokenManager.getAccessToken();
-          
+
           if (accessToken) {
             // Check if token needs refresh
             if (tokenManager.isTokenExpired(accessToken)) {
@@ -64,20 +64,20 @@ async function createApolloClient(ssrMode: boolean = false) {
                 return {};
               }
             }
-            
+
             return {
               authorization: `Bearer ${accessToken}`,
             };
           }
-          
+
           return {};
         },
-        shouldRetry: (closeEvent) => {
+        shouldRetry: closeEvent => {
           // Retry on connection errors but not on authentication failures (4401)
           return closeEvent.code !== 4401;
         },
         retryAttempts: 5,
-        retryWait: async (retries) => {
+        retryWait: async retries => {
           // Exponential backoff with jitter
           const delay = Math.min(1000 * Math.pow(2, retries), 30000);
           const jitter = Math.random() * 0.1 * delay;
@@ -93,8 +93,7 @@ async function createApolloClient(ssrMode: boolean = false) {
         ({ query }) => {
           const definition = getMainDefinition(query);
           return (
-            definition.kind === 'OperationDefinition' &&
-            definition.operation === 'subscription'
+            definition.kind === 'OperationDefinition' && definition.operation === 'subscription'
           );
         },
         wsLink,
@@ -176,13 +175,15 @@ export const apolloClient = (() => {
     // Server-side: create new instance for each request
     return null;
   }
-  
+
   if (!apolloClientInstance) {
-    createApolloClient(false).then(client => {
-      apolloClientInstance = client;
-    }).catch(error => {
-      console.error('Failed to create Apollo Client:', error);
-    });
+    createApolloClient(false)
+      .then(client => {
+        apolloClientInstance = client;
+      })
+      .catch(error => {
+        console.error('Failed to create Apollo Client:', error);
+      });
   }
   return apolloClientInstance;
 })();
@@ -193,7 +194,7 @@ export async function getApolloClient(ssrMode: boolean = false) {
     // Always create new instance for server-side
     return await createApolloClient(true);
   }
-  
+
   if (!apolloClientInstance) {
     apolloClientInstance = await createApolloClient(false);
   }

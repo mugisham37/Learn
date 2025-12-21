@@ -1,6 +1,6 @@
 /**
  * Authentication Components
- * 
+ *
  * React components for protecting routes, rendering content based on authentication state,
  * email verification, and password reset workflows.
  */

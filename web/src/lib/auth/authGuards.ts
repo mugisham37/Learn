@@ -1,6 +1,6 @@
 /**
  * Authentication Guards and Role-Based Access Control
- * 
+ *
  * Permission checking utilities for all user roles and resource access control.
  * Provides helpers for course ownership, enrollment checking, and route protection.
  */
@@ -15,7 +15,7 @@ export type UserRole = EntityUserRole;
 /**
  * Permission types for different resources
  */
-export type Permission = 
+export type Permission =
   | 'course:create'
   | 'course:edit'
   | 'course:delete'
@@ -34,11 +34,7 @@ export type Permission =
  * Role-based permission matrix
  */
 const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
-  STUDENT: [
-    'course:view',
-    'course:enroll',
-    'assignment:submit',
-  ],
+  STUDENT: ['course:view', 'course:enroll', 'assignment:submit'],
   EDUCATOR: [
     'course:create',
     'course:edit',
@@ -108,7 +104,7 @@ export class RoleGuard {
    */
   hasPermission(permission: Permission): boolean {
     if (!this.user?.role) return false;
-    
+
     const userPermissions = ROLE_PERMISSIONS[this.user.role] || [];
     return userPermissions.includes(permission);
   }

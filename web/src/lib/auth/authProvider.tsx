@@ -1,8 +1,8 @@
 /**
  * Authentication Provider
- * 
+ *
  * React Context provider for authentication state management.
- * Handles login, logout, registration flows, email verification, 
+ * Handles login, logout, registration flows, email verification,
  * password reset, and session persistence with backend integration.
  */
 
@@ -24,7 +24,11 @@ interface AuthContextType extends AuthState {
   sendEmailVerification: (email: string) => Promise<void>;
   verifyEmail: (token: string, email: string) => Promise<{ success: boolean; user?: User }>;
   requestPasswordReset: (email: string) => Promise<void>;
-  resetPassword: (token: string, email: string, newPassword: string) => Promise<{ success: boolean; user?: User }>;
+  resetPassword: (
+    token: string,
+    email: string,
+    newPassword: string
+  ) => Promise<{ success: boolean; user?: User }>;
 }
 
 /**
@@ -132,7 +136,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const initializeAuth = useCallback(async () => {
     try {
       const accessToken = tokenManager.getAccessToken();
-      
+
       if (accessToken && !tokenManager.isTokenExpired(accessToken)) {
         // Extract user from valid token
         const user = tokenManager.getUserFromToken(accessToken);
@@ -187,7 +191,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
 
       const data = await response.json();
-      
+
       if (!data.accessToken || !data.user) {
         throw new Error('Invalid login response');
       }
@@ -251,7 +255,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
 
       const data = await response.json();
-      
+
       if (!data.accessToken || !data.user) {
         throw new Error('Invalid registration response');
       }
@@ -315,25 +319,28 @@ export function AuthProvider({ children }: AuthProviderProps) {
   /**
    * Verify email with token
    */
-  const verifyEmail = useCallback(async (token: string, email: string) => {
-    try {
-      const result = await tokenManager.verifyEmail(token, email);
-      
-      // If verification successful and user is currently authenticated, update user data
-      if (result.success && result.user && state.isAuthenticated) {
-        dispatch({ type: 'UPDATE_USER', payload: { user: result.user } });
+  const verifyEmail = useCallback(
+    async (token: string, email: string) => {
+      try {
+        const result = await tokenManager.verifyEmail(token, email);
+
+        // If verification successful and user is currently authenticated, update user data
+        if (result.success && result.user && state.isAuthenticated) {
+          dispatch({ type: 'UPDATE_USER', payload: { user: result.user } });
+        }
+
+        return result;
+      } catch (error) {
+        const authError: AuthError = {
+          code: 'EMAIL_VERIFICATION_FAILED',
+          message: error instanceof Error ? error.message : 'Email verification failed',
+        };
+        dispatch({ type: 'AUTH_ERROR', payload: { error: authError } });
+        throw error;
       }
-      
-      return result;
-    } catch (error) {
-      const authError: AuthError = {
-        code: 'EMAIL_VERIFICATION_FAILED',
-        message: error instanceof Error ? error.message : 'Email verification failed',
-      };
-      dispatch({ type: 'AUTH_ERROR', payload: { error: authError } });
-      throw error;
-    }
-  }, [state.isAuthenticated]);
+    },
+    [state.isAuthenticated]
+  );
 
   /**
    * Request password reset
@@ -388,12 +395,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // Listen for token expiration events from the auth link
     if (typeof window !== 'undefined') {
       window.addEventListener('auth:token-expired', handleTokenExpired);
-      
+
       return () => {
         window.removeEventListener('auth:token-expired', handleTokenExpired);
       };
     }
-    
+
     return undefined;
   }, []);
 
@@ -420,11 +427,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     resetPassword,
   };
 
-  return (
-    <AuthContext.Provider value={contextValue}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>;
 }
 
 /**

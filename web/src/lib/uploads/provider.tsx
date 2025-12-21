@@ -1,6 +1,6 @@
 /**
  * Upload Provider Component
- * 
+ *
  * React provider component that provides upload functionality to child components.
  */
 
@@ -74,11 +74,7 @@ export function UploadProvider({ children, config }: UploadProviderProps) {
     resumeAll,
   };
 
-  return (
-    <UploadContext.Provider value={contextValue}>
-      {children}
-    </UploadContext.Provider>
-  );
+  return <UploadContext.Provider value={contextValue}>{children}</UploadContext.Provider>;
 }
 
 /**

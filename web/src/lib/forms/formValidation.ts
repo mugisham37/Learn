@@ -1,9 +1,9 @@
 /**
  * Form Validation Utilities
- * 
+ *
  * Provides form validation schema generation from GraphQL types,
  * type-safe form submission utilities, and validation helpers.
- * 
+ *
  * Requirements: 2.5 - Form validation schema from GraphQL types
  */
 
@@ -18,7 +18,7 @@ import type {
   AssignmentFormInput,
   LoginFormInput,
   RegistrationFormInput,
-  PasswordChangeFormInput
+  PasswordChangeFormInput,
 } from './formTypes';
 
 // =============================================================================
@@ -33,12 +33,12 @@ export function required(message?: string): ValidationRule<unknown> {
   return {
     required: true,
     message: validationMessage,
-    custom: (value) => {
+    custom: value => {
       if (value == null || value === '' || (Array.isArray(value) && value.length === 0)) {
         return validationMessage;
       }
       return null;
-    }
+    },
   };
 }
 
@@ -49,12 +49,12 @@ export function minLength(min: number, message?: string): ValidationRule<string>
   return {
     minLength: min,
     message: message || `Must be at least ${min} characters`,
-    custom: (value) => {
+    custom: value => {
       if (typeof value === 'string' && value.length < min) {
         return message || `Must be at least ${min} characters`;
       }
       return null;
-    }
+    },
   };
 }
 
@@ -65,12 +65,12 @@ export function maxLength(max: number, message?: string): ValidationRule<string>
   return {
     maxLength: max,
     message: message || `Must be no more than ${max} characters`,
-    custom: (value) => {
+    custom: value => {
       if (typeof value === 'string' && value.length > max) {
         return message || `Must be no more than ${max} characters`;
       }
       return null;
-    }
+    },
   };
 }
 
@@ -81,12 +81,12 @@ export function min(minValue: number, message?: string): ValidationRule<number> 
   return {
     min: minValue,
     message: message || `Must be at least ${minValue}`,
-    custom: (value) => {
+    custom: value => {
       if (typeof value === 'number' && value < minValue) {
         return message || `Must be at least ${minValue}`;
       }
       return null;
-    }
+    },
   };
 }
 
@@ -97,12 +97,12 @@ export function max(maxValue: number, message?: string): ValidationRule<number> 
   return {
     max: maxValue,
     message: message || `Must be no more than ${maxValue}`,
-    custom: (value) => {
+    custom: value => {
       if (typeof value === 'number' && value > maxValue) {
         return message || `Must be no more than ${maxValue}`;
       }
       return null;
-    }
+    },
   };
 }
 
@@ -114,12 +114,12 @@ export function email(message = 'Must be a valid email address'): ValidationRule
   return {
     pattern: emailRegex,
     message,
-    custom: (value) => {
+    custom: value => {
       if (typeof value === 'string' && value && !emailRegex.test(value)) {
         return message;
       }
       return null;
-    }
+    },
   };
 }
 
@@ -129,7 +129,7 @@ export function email(message = 'Must be a valid email address'): ValidationRule
 export function url(message = 'Must be a valid URL'): ValidationRule<string> {
   return {
     message,
-    custom: (value) => {
+    custom: value => {
       if (typeof value === 'string' && value) {
         try {
           new URL(value);
@@ -139,7 +139,7 @@ export function url(message = 'Must be a valid URL'): ValidationRule<string> {
         }
       }
       return null;
-    }
+    },
   };
 }
 
@@ -150,29 +150,31 @@ export function pattern(regex: RegExp, message = 'Invalid format'): ValidationRu
   return {
     pattern: regex,
     message,
-    custom: (value) => {
+    custom: value => {
       if (typeof value === 'string' && value && !regex.test(value)) {
         return message;
       }
       return null;
-    }
+    },
   };
 }
 
 /**
  * Create a password strength validation rule
  */
-export function passwordStrength(message = 'Password must be at least 8 characters with uppercase, lowercase, number, and special character'): ValidationRule<string> {
+export function passwordStrength(
+  message = 'Password must be at least 8 characters with uppercase, lowercase, number, and special character'
+): ValidationRule<string> {
   const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
   return {
     pattern: passwordRegex,
     message,
-    custom: (value) => {
+    custom: value => {
       if (typeof value === 'string' && value && !passwordRegex.test(value)) {
         return message;
       }
       return null;
-    }
+    },
   };
 }
 
@@ -182,7 +184,7 @@ export function passwordStrength(message = 'Password must be at least 8 characte
 export function fileType(allowedTypes: string[], message?: string): ValidationRule<File> {
   return {
     message: message || `File must be one of: ${allowedTypes.join(', ')}`,
-    custom: (value) => {
+    custom: value => {
       if (value instanceof File) {
         const fileExtension = value.name.split('.').pop()?.toLowerCase();
         if (!fileExtension || !allowedTypes.includes(fileExtension)) {
@@ -190,7 +192,7 @@ export function fileType(allowedTypes: string[], message?: string): ValidationRu
         }
       }
       return null;
-    }
+    },
   };
 }
 
@@ -201,22 +203,25 @@ export function fileSize(maxSizeBytes: number, message?: string): ValidationRule
   const maxSizeMB = Math.round(maxSizeBytes / (1024 * 1024));
   return {
     message: message || `File size must be less than ${maxSizeMB}MB`,
-    custom: (value) => {
+    custom: value => {
       if (value instanceof File && value.size > maxSizeBytes) {
         return message || `File size must be less than ${maxSizeMB}MB`;
       }
       return null;
-    }
+    },
   };
 }
 
 /**
  * Create a custom validation rule
  */
-export function custom<T>(validator: (value: T) => string | null, message?: string): ValidationRule<T> {
+export function custom<T>(
+  validator: (value: T) => string | null,
+  message?: string
+): ValidationRule<T> {
   return {
     message,
-    custom: validator
+    custom: validator,
   };
 }
 
@@ -232,15 +237,15 @@ export const profileValidationSchema: ValidationSchema<ProfileFormInput> = {
   bio: {
     maxLength: 500,
     message: 'Bio must be no more than 500 characters',
-    custom: (value) => {
+    custom: value => {
       if (typeof value === 'string' && value.length > 500) {
         return 'Bio must be no more than 500 characters';
       }
       return null;
-    }
+    },
   },
   timezone: required('Timezone is required'),
-  language: required('Language is required')
+  language: required('Language is required'),
 };
 
 /**
@@ -252,7 +257,7 @@ export const courseCreationValidationSchema: ValidationSchema<CourseCreationForm
     minLength: 3,
     maxLength: 100,
     message: 'Title is required and must be between 3-100 characters',
-    custom: (value) => {
+    custom: value => {
       if (!value || typeof value !== 'string') {
         return 'Course title is required';
       }
@@ -263,14 +268,14 @@ export const courseCreationValidationSchema: ValidationSchema<CourseCreationForm
         return 'Title must be no more than 100 characters';
       }
       return null;
-    }
+    },
   },
   description: {
     required: true,
     minLength: 10,
     maxLength: 2000,
     message: 'Description is required and must be between 10-2000 characters',
-    custom: (value) => {
+    custom: value => {
       if (!value || typeof value !== 'string') {
         return 'Course description is required';
       }
@@ -281,7 +286,7 @@ export const courseCreationValidationSchema: ValidationSchema<CourseCreationForm
         return 'Description must be no more than 2000 characters';
       }
       return null;
-    }
+    },
   },
   category: required('Course category is required'),
   difficulty: required('Difficulty level is required'),
@@ -289,34 +294,34 @@ export const courseCreationValidationSchema: ValidationSchema<CourseCreationForm
     min: 0,
     max: 10000,
     message: 'Price must be between 0 and 10,000',
-    custom: (value) => {
+    custom: value => {
       if (value !== undefined && typeof value === 'number') {
         if (value < 0) return 'Price cannot be negative';
         if (value > 10000) return 'Price cannot exceed $10,000';
       }
       return null;
-    }
+    },
   },
   currency: {
-    custom: (value) => {
+    custom: value => {
       if (value && !['USD', 'EUR', 'GBP', 'CAD', 'AUD'].includes(value as string)) {
         return 'Invalid currency code';
       }
       return null;
-    }
+    },
   },
   enrollmentLimit: {
     min: 1,
     message: 'Enrollment limit must be at least 1',
-    custom: (value) => {
+    custom: value => {
       if (value !== undefined && typeof value === 'number' && value < 1) {
         return 'Enrollment limit must be at least 1';
       }
       return null;
-    }
+    },
   },
   thumbnailFile: {
-    custom: (value) => {
+    custom: value => {
       if (value instanceof File) {
         const allowedTypes = ['jpg', 'jpeg', 'png', 'webp'];
         const fileExtension = value.name.split('.').pop()?.toLowerCase();
@@ -325,8 +330,8 @@ export const courseCreationValidationSchema: ValidationSchema<CourseCreationForm
         }
       }
       return null;
-    }
-  }
+    },
+  },
 };
 
 /**
@@ -338,7 +343,7 @@ export const lessonValidationSchema: ValidationSchema<LessonFormInput> = {
     minLength: 3,
     maxLength: 100,
     message: 'Title is required and must be between 3-100 characters',
-    custom: (value) => {
+    custom: value => {
       if (!value || typeof value !== 'string') {
         return 'Lesson title is required';
       }
@@ -349,14 +354,14 @@ export const lessonValidationSchema: ValidationSchema<LessonFormInput> = {
         return 'Title must be no more than 100 characters';
       }
       return null;
-    }
+    },
   },
   description: {
     required: true,
     minLength: 10,
     maxLength: 1000,
     message: 'Description is required and must be between 10-1000 characters',
-    custom: (value) => {
+    custom: value => {
       if (!value || typeof value !== 'string') {
         return 'Lesson description is required';
       }
@@ -367,16 +372,19 @@ export const lessonValidationSchema: ValidationSchema<LessonFormInput> = {
         return 'Description must be no more than 1000 characters';
       }
       return null;
-    }
+    },
   },
   type: required('Lesson type is required'),
   content: {
     custom: (value, formData) => {
-      if (formData?.type === 'TEXT' && (!value || (typeof value === 'string' && value.trim().length === 0))) {
+      if (
+        formData?.type === 'TEXT' &&
+        (!value || (typeof value === 'string' && value.trim().length === 0))
+      ) {
         return 'Content is required for text lessons';
       }
       return null;
-    }
+    },
   },
   videoFile: {
     custom: (value, formData) => {
@@ -395,23 +403,23 @@ export const lessonValidationSchema: ValidationSchema<LessonFormInput> = {
         }
       }
       return null;
-    }
+    },
   },
   duration: {
     min: 1,
     message: 'Duration must be at least 1 second',
-    custom: (value) => {
+    custom: value => {
       if (value !== undefined && typeof value === 'number' && value < 1) {
         return 'Duration must be at least 1 second';
       }
       return null;
-    }
+    },
   },
   orderIndex: {
     required: true,
     min: 0,
     message: 'Order index is required and cannot be negative',
-    custom: (value) => {
+    custom: value => {
       if (value === undefined || value === null) {
         return 'Order index is required';
       }
@@ -419,8 +427,8 @@ export const lessonValidationSchema: ValidationSchema<LessonFormInput> = {
         return 'Order index cannot be negative';
       }
       return null;
-    }
-  }
+    },
+  },
 };
 
 /**
@@ -432,7 +440,7 @@ export const quizValidationSchema: ValidationSchema<QuizFormInput> = {
     minLength: 3,
     maxLength: 100,
     message: 'Title is required and must be between 3-100 characters',
-    custom: (value) => {
+    custom: value => {
       if (!value || typeof value !== 'string') {
         return 'Quiz title is required';
       }
@@ -443,34 +451,34 @@ export const quizValidationSchema: ValidationSchema<QuizFormInput> = {
         return 'Title must be no more than 100 characters';
       }
       return null;
-    }
+    },
   },
   description: {
     maxLength: 500,
     message: 'Description must be no more than 500 characters',
-    custom: (value) => {
+    custom: value => {
       if (typeof value === 'string' && value.length > 500) {
         return 'Description must be no more than 500 characters';
       }
       return null;
-    }
+    },
   },
   timeLimit: {
     min: 1,
     message: 'Time limit must be at least 1 minute',
-    custom: (value) => {
+    custom: value => {
       if (value !== undefined && typeof value === 'number' && value < 1) {
         return 'Time limit must be at least 1 minute';
       }
       return null;
-    }
+    },
   },
   maxAttempts: {
     required: true,
     min: 1,
     max: 10,
     message: 'Maximum attempts is required and must be between 1-10',
-    custom: (value) => {
+    custom: value => {
       if (value === undefined || value === null) {
         return 'Maximum attempts is required';
       }
@@ -479,14 +487,14 @@ export const quizValidationSchema: ValidationSchema<QuizFormInput> = {
         if (value > 10) return 'Cannot allow more than 10 attempts';
       }
       return null;
-    }
+    },
   },
   passingScore: {
     required: true,
     min: 0,
     max: 100,
     message: 'Passing score is required and must be between 0-100%',
-    custom: (value) => {
+    custom: value => {
       if (value === undefined || value === null) {
         return 'Passing score is required';
       }
@@ -495,8 +503,8 @@ export const quizValidationSchema: ValidationSchema<QuizFormInput> = {
         if (value > 100) return 'Passing score cannot exceed 100%';
       }
       return null;
-    }
-  }
+    },
+  },
 };
 
 /**
@@ -508,7 +516,7 @@ export const assignmentValidationSchema: ValidationSchema<AssignmentFormInput> =
     minLength: 3,
     maxLength: 100,
     message: 'Title is required and must be between 3-100 characters',
-    custom: (value) => {
+    custom: value => {
       if (!value || typeof value !== 'string') {
         return 'Assignment title is required';
       }
@@ -519,14 +527,14 @@ export const assignmentValidationSchema: ValidationSchema<AssignmentFormInput> =
         return 'Title must be no more than 100 characters';
       }
       return null;
-    }
+    },
   },
   description: {
     required: true,
     minLength: 10,
     maxLength: 1000,
     message: 'Description is required and must be between 10-1000 characters',
-    custom: (value) => {
+    custom: value => {
       if (!value || typeof value !== 'string') {
         return 'Assignment description is required';
       }
@@ -537,14 +545,14 @@ export const assignmentValidationSchema: ValidationSchema<AssignmentFormInput> =
         return 'Description must be no more than 1000 characters';
       }
       return null;
-    }
+    },
   },
   instructions: {
     required: true,
     minLength: 10,
     maxLength: 2000,
     message: 'Instructions are required and must be between 10-2000 characters',
-    custom: (value) => {
+    custom: value => {
       if (!value || typeof value !== 'string') {
         return 'Assignment instructions are required';
       }
@@ -555,14 +563,14 @@ export const assignmentValidationSchema: ValidationSchema<AssignmentFormInput> =
         return 'Instructions must be no more than 2000 characters';
       }
       return null;
-    }
+    },
   },
   maxPoints: {
     required: true,
     min: 1,
     max: 1000,
     message: 'Maximum points is required and must be between 1-1000',
-    custom: (value) => {
+    custom: value => {
       if (value === undefined || value === null) {
         return 'Maximum points is required';
       }
@@ -571,18 +579,18 @@ export const assignmentValidationSchema: ValidationSchema<AssignmentFormInput> =
         if (value > 1000) return 'Maximum points cannot exceed 1000';
       }
       return null;
-    }
+    },
   },
   maxFileSize: {
     min: 1,
     message: 'Maximum file size must be at least 1 byte',
-    custom: (value) => {
+    custom: value => {
       if (value !== undefined && typeof value === 'number' && value < 1) {
         return 'Maximum file size must be at least 1 byte';
       }
       return null;
-    }
-  }
+    },
+  },
 };
 
 /**
@@ -591,9 +599,9 @@ export const assignmentValidationSchema: ValidationSchema<AssignmentFormInput> =
 export const loginValidationSchema: ValidationSchema<LoginFormInput> = {
   email: {
     ...required('Email is required'),
-    ...email('Please enter a valid email address')
+    ...email('Please enter a valid email address'),
   },
-  password: required('Password is required')
+  password: required('Password is required'),
 };
 
 /**
@@ -604,7 +612,7 @@ export const registrationValidationSchema: ValidationSchema<RegistrationFormInpu
     required: true,
     pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
     message: 'Please enter a valid email address',
-    custom: (value) => {
+    custom: value => {
       if (!value || typeof value !== 'string') {
         return 'Email is required';
       }
@@ -613,13 +621,14 @@ export const registrationValidationSchema: ValidationSchema<RegistrationFormInpu
         return 'Please enter a valid email address';
       }
       return null;
-    }
+    },
   },
   password: {
     required: true,
     pattern: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/,
-    message: 'Password must be at least 8 characters with uppercase, lowercase, number, and special character',
-    custom: (value) => {
+    message:
+      'Password must be at least 8 characters with uppercase, lowercase, number, and special character',
+    custom: value => {
       if (!value || typeof value !== 'string') {
         return 'Password is required';
       }
@@ -628,7 +637,7 @@ export const registrationValidationSchema: ValidationSchema<RegistrationFormInpu
         return 'Password must be at least 8 characters with uppercase, lowercase, number, and special character';
       }
       return null;
-    }
+    },
   },
   confirmPassword: {
     custom: (value, formData) => {
@@ -636,14 +645,14 @@ export const registrationValidationSchema: ValidationSchema<RegistrationFormInpu
         return 'Passwords do not match';
       }
       return null;
-    }
+    },
   },
   fullName: {
     required: true,
     minLength: 2,
     maxLength: 100,
     message: 'Full name is required and must be between 2-100 characters',
-    custom: (value) => {
+    custom: value => {
       if (!value || typeof value !== 'string') {
         return 'Full name is required';
       }
@@ -654,17 +663,17 @@ export const registrationValidationSchema: ValidationSchema<RegistrationFormInpu
         return 'Full name must be no more than 100 characters';
       }
       return null;
-    }
+    },
   },
   role: required('Please select a role'),
   acceptTerms: {
-    custom: (value) => {
+    custom: value => {
       if (!value) {
         return 'You must accept the terms and conditions';
       }
       return null;
-    }
-  }
+    },
+  },
 };
 
 /**
@@ -675,8 +684,9 @@ export const passwordChangeValidationSchema: ValidationSchema<PasswordChangeForm
   newPassword: {
     required: true,
     pattern: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/,
-    message: 'New password must be at least 8 characters with uppercase, lowercase, number, and special character',
-    custom: (value) => {
+    message:
+      'New password must be at least 8 characters with uppercase, lowercase, number, and special character',
+    custom: value => {
       if (!value || typeof value !== 'string') {
         return 'New password is required';
       }
@@ -685,7 +695,7 @@ export const passwordChangeValidationSchema: ValidationSchema<PasswordChangeForm
         return 'Password must be at least 8 characters with uppercase, lowercase, number, and special character';
       }
       return null;
-    }
+    },
   },
   confirmPassword: {
     custom: (value, formData) => {
@@ -693,8 +703,8 @@ export const passwordChangeValidationSchema: ValidationSchema<PasswordChangeForm
         return 'Passwords do not match';
       }
       return null;
-    }
-  }
+    },
+  },
 };
 
 // =============================================================================
@@ -710,7 +720,10 @@ export async function validateField<T>(
   formData?: Record<string, unknown>
 ): Promise<string | null> {
   // Check required
-  if (rule.required && (value == null || value === '' || (Array.isArray(value) && value.length === 0))) {
+  if (
+    rule.required &&
+    (value == null || value === '' || (Array.isArray(value) && value.length === 0))
+  ) {
     return rule.message || 'This field is required';
   }
 
@@ -796,10 +809,7 @@ export function getFirstFormError<T>(errors: FormErrors<T>): string | null {
 /**
  * Clear specific fields from form errors
  */
-export function clearFormErrors<T>(
-  errors: FormErrors<T>,
-  fields: (keyof T)[]
-): FormErrors<T> {
+export function clearFormErrors<T>(errors: FormErrors<T>, fields: (keyof T)[]): FormErrors<T> {
   const clearedErrors = { ...errors };
   for (const field of fields) {
     delete clearedErrors[field];
@@ -810,10 +820,7 @@ export function clearFormErrors<T>(
 /**
  * Merge form errors
  */
-export function mergeFormErrors<T>(
-  errors1: FormErrors<T>,
-  errors2: FormErrors<T>
-): FormErrors<T> {
+export function mergeFormErrors<T>(errors1: FormErrors<T>, errors2: FormErrors<T>): FormErrors<T> {
   return { ...errors1, ...errors2 };
 }
 
@@ -824,11 +831,11 @@ export function serverErrorsToFormErrors<T>(
   serverErrors: Array<{ field: string; message: string }>
 ): FormErrors<T> {
   const formErrors: FormErrors<T> = {};
-  
+
   for (const error of serverErrors) {
     (formErrors as Record<string, string>)[error.field] = error.message;
   }
-  
+
   return formErrors;
 }
 
@@ -840,9 +847,9 @@ export function debounceValidation<T>(
   delay = 300
 ): (value: T) => Promise<string | null> {
   let timeoutId: NodeJS.Timeout;
-  
+
   return (value: T): Promise<string | null> => {
-    return new Promise((resolve) => {
+    return new Promise(resolve => {
       clearTimeout(timeoutId);
       timeoutId = setTimeout(async () => {
         const result = await validator(value);

@@ -1,12 +1,12 @@
 /**
  * Course Editor State Management
- * 
+ *
  * Provides comprehensive state management for course editing with:
  * - Undo/redo functionality for all course changes
  * - Auto-save with conflict resolution
  * - Module and lesson reordering state management
  * - Draft state persistence and recovery
- * 
+ *
  * Requirements: 10.1
  */
 
@@ -18,21 +18,21 @@ export interface CourseEditorState {
   // Current course data
   course: Partial<Course> | null;
   originalCourse: Course | null;
-  
+
   // Edit state
   isDirty: boolean;
   isAutoSaving: boolean;
   lastSaved: Date | null;
-  
+
   // Undo/Redo state
   history: CourseSnapshot[];
   historyIndex: number;
   maxHistorySize: number;
-  
+
   // Conflict resolution
   hasConflicts: boolean;
   conflictData: Course | null;
-  
+
   // Draft management
   draftId: string | null;
   isDraft: boolean;
@@ -50,34 +50,37 @@ export interface CourseEditorActions {
   loadCourse: (course: Course) => void;
   createNewCourse: () => void;
   updateCourse: (updates: Partial<Course>) => void;
-  
+
   // Module operations
   addModule: (module: Omit<CourseModule, 'id' | 'courseId'>) => void;
   updateModule: (moduleId: string, updates: Partial<CourseModule>) => void;
   deleteModule: (moduleId: string) => void;
   reorderModules: (moduleIds: string[]) => void;
-  
+
   // Lesson operations
-  addLesson: (moduleId: string, lesson: Omit<Lesson, 'id' | 'module' | 'createdAt' | 'updatedAt'>) => void;
+  addLesson: (
+    moduleId: string,
+    lesson: Omit<Lesson, 'id' | 'module' | 'createdAt' | 'updatedAt'>
+  ) => void;
   updateLesson: (lessonId: string, updates: Partial<Lesson>) => void;
   deleteLesson: (lessonId: string) => void;
   reorderLessons: (moduleId: string, lessonIds: string[]) => void;
-  
+
   // History operations
   undo: () => void;
   redo: () => void;
   canUndo: () => boolean;
   canRedo: () => boolean;
-  
+
   // Save operations
   save: () => Promise<void>;
   autoSave: () => Promise<void>;
-  
+
   // Draft operations
   saveDraft: () => Promise<void>;
   loadDraft: (draftId: string) => Promise<void>;
   deleteDraft: () => Promise<void>;
-  
+
   // Conflict resolution
   resolveConflict: (resolution: 'keep-local' | 'keep-remote' | 'merge') => void;
 }
@@ -134,16 +137,20 @@ function createSnapshot(action: string, course: Partial<Course>): CourseSnapshot
   };
 }
 
-function addToHistory(state: CourseEditorState, action: string, course: Partial<Course>): CourseEditorState {
+function addToHistory(
+  state: CourseEditorState,
+  action: string,
+  course: Partial<Course>
+): CourseEditorState {
   const snapshot = createSnapshot(action, course);
   const newHistory = state.history.slice(0, state.historyIndex + 1);
   newHistory.push(snapshot);
-  
+
   // Limit history size
   if (newHistory.length > state.maxHistorySize) {
     newHistory.shift();
   }
-  
+
   return {
     ...state,
     history: newHistory,
@@ -152,7 +159,10 @@ function addToHistory(state: CourseEditorState, action: string, course: Partial<
 }
 
 // Reducer
-function courseEditorReducer(state: CourseEditorState, action: CourseEditorAction): CourseEditorState {
+function courseEditorReducer(
+  state: CourseEditorState,
+  action: CourseEditorAction
+): CourseEditorState {
   switch (action.type) {
     case 'LOAD_COURSE':
       return {
@@ -184,10 +194,10 @@ function courseEditorReducer(state: CourseEditorState, action: CourseEditorActio
 
     case 'UPDATE_COURSE':
       if (!state.course) return state;
-      
+
       const updatedCourse = { ...state.course, ...action.payload };
       const newState = addToHistory(state, 'UPDATE_COURSE', updatedCourse);
-      
+
       return {
         ...newState,
         course: updatedCourse,
@@ -196,13 +206,13 @@ function courseEditorReducer(state: CourseEditorState, action: CourseEditorActio
 
     case 'ADD_MODULE':
       if (!state.course) return state;
-      
+
       const courseWithNewModule = {
         ...state.course,
         modules: [...(state.course.modules || []), action.payload],
       };
       const moduleState = addToHistory(state, 'ADD_MODULE', courseWithNewModule);
-      
+
       return {
         ...moduleState,
         course: courseWithNewModule,
@@ -211,16 +221,14 @@ function courseEditorReducer(state: CourseEditorState, action: CourseEditorActio
 
     case 'UPDATE_MODULE':
       if (!state.course?.modules) return state;
-      
+
       const updatedModules = state.course.modules.map(module =>
-        module.id === action.payload.moduleId
-          ? { ...module, ...action.payload.updates }
-          : module
+        module.id === action.payload.moduleId ? { ...module, ...action.payload.updates } : module
       );
-      
+
       const courseWithUpdatedModule = { ...state.course, modules: updatedModules };
       const updatedModuleState = addToHistory(state, 'UPDATE_MODULE', courseWithUpdatedModule);
-      
+
       return {
         ...updatedModuleState,
         course: courseWithUpdatedModule,
@@ -229,11 +237,11 @@ function courseEditorReducer(state: CourseEditorState, action: CourseEditorActio
 
     case 'DELETE_MODULE':
       if (!state.course?.modules) return state;
-      
+
       const filteredModules = state.course.modules.filter(module => module.id !== action.payload);
       const courseWithDeletedModule = { ...state.course, modules: filteredModules };
       const deletedModuleState = addToHistory(state, 'DELETE_MODULE', courseWithDeletedModule);
-      
+
       return {
         ...deletedModuleState,
         course: courseWithDeletedModule,
@@ -242,14 +250,14 @@ function courseEditorReducer(state: CourseEditorState, action: CourseEditorActio
 
     case 'REORDER_MODULES':
       if (!state.course?.modules) return state;
-      
+
       const reorderedModules = action.payload
         .map(moduleId => state.course?.modules?.find(module => module.id === moduleId))
         .filter((module): module is CourseModule => module !== undefined);
-      
+
       const courseWithReorderedModules = { ...state.course, modules: reorderedModules };
       const reorderedState = addToHistory(state, 'REORDER_MODULES', courseWithReorderedModules);
-      
+
       return {
         ...reorderedState,
         course: courseWithReorderedModules,
@@ -258,16 +266,16 @@ function courseEditorReducer(state: CourseEditorState, action: CourseEditorActio
 
     case 'ADD_LESSON':
       if (!state.course?.modules) return state;
-      
+
       const modulesWithNewLesson = state.course.modules.map(module =>
         module.id === action.payload.moduleId
           ? { ...module, lessons: [...(module.lessons || []), action.payload.lesson] }
           : module
       );
-      
+
       const courseWithNewLesson = { ...state.course, modules: modulesWithNewLesson };
       const lessonState = addToHistory(state, 'ADD_LESSON', courseWithNewLesson);
-      
+
       return {
         ...lessonState,
         course: courseWithNewLesson,
@@ -276,19 +284,20 @@ function courseEditorReducer(state: CourseEditorState, action: CourseEditorActio
 
     case 'UPDATE_LESSON':
       if (!state.course?.modules) return state;
-      
+
       const modulesWithUpdatedLesson = state.course.modules.map(module => ({
         ...module,
-        lessons: module.lessons?.map(lesson =>
-          lesson.id === action.payload.lessonId
-            ? { ...lesson, ...action.payload.updates }
-            : lesson
-        ) || [],
+        lessons:
+          module.lessons?.map(lesson =>
+            lesson.id === action.payload.lessonId
+              ? { ...lesson, ...action.payload.updates }
+              : lesson
+          ) || [],
       }));
-      
+
       const courseWithUpdatedLesson = { ...state.course, modules: modulesWithUpdatedLesson };
       const updatedLessonState = addToHistory(state, 'UPDATE_LESSON', courseWithUpdatedLesson);
-      
+
       return {
         ...updatedLessonState,
         course: courseWithUpdatedLesson,
@@ -297,15 +306,15 @@ function courseEditorReducer(state: CourseEditorState, action: CourseEditorActio
 
     case 'DELETE_LESSON':
       if (!state.course?.modules) return state;
-      
+
       const modulesWithDeletedLesson = state.course.modules.map(module => ({
         ...module,
         lessons: module.lessons?.filter(lesson => lesson.id !== action.payload) || [],
       }));
-      
+
       const courseWithDeletedLesson = { ...state.course, modules: modulesWithDeletedLesson };
       const deletedLessonState = addToHistory(state, 'DELETE_LESSON', courseWithDeletedLesson);
-      
+
       return {
         ...deletedLessonState,
         course: courseWithDeletedLesson,
@@ -314,7 +323,7 @@ function courseEditorReducer(state: CourseEditorState, action: CourseEditorActio
 
     case 'REORDER_LESSONS':
       if (!state.course?.modules) return state;
-      
+
       const modulesWithReorderedLessons = state.course.modules.map(module =>
         module.id === action.payload.moduleId
           ? {
@@ -325,10 +334,14 @@ function courseEditorReducer(state: CourseEditorState, action: CourseEditorActio
             }
           : module
       );
-      
+
       const courseWithReorderedLessons = { ...state.course, modules: modulesWithReorderedLessons };
-      const reorderedLessonsState = addToHistory(state, 'REORDER_LESSONS', courseWithReorderedLessons);
-      
+      const reorderedLessonsState = addToHistory(
+        state,
+        'REORDER_LESSONS',
+        courseWithReorderedLessons
+      );
+
       return {
         ...reorderedLessonsState,
         course: courseWithReorderedLessons,
@@ -337,12 +350,12 @@ function courseEditorReducer(state: CourseEditorState, action: CourseEditorActio
 
     case 'UNDO':
       if (state.historyIndex <= 0) return state;
-      
+
       const prevIndex = state.historyIndex - 1;
       const prevSnapshot = state.history[prevIndex];
-      
+
       if (!prevSnapshot) return state;
-      
+
       return {
         ...state,
         course: { ...prevSnapshot.course },
@@ -352,12 +365,12 @@ function courseEditorReducer(state: CourseEditorState, action: CourseEditorActio
 
     case 'REDO':
       if (state.historyIndex >= state.history.length - 1) return state;
-      
+
       const nextIndex = state.historyIndex + 1;
       const nextSnapshot = state.history[nextIndex];
-      
+
       if (!nextSnapshot) return state;
-      
+
       return {
         ...state,
         course: { ...nextSnapshot.course },
@@ -387,9 +400,9 @@ function courseEditorReducer(state: CourseEditorState, action: CourseEditorActio
 
     case 'RESOLVE_CONFLICT':
       if (!state.conflictData) return state;
-      
+
       let resolvedCourse: Partial<Course>;
-      
+
       switch (action.payload) {
         case 'keep-local':
           resolvedCourse = state.course!;
@@ -404,9 +417,9 @@ function courseEditorReducer(state: CourseEditorState, action: CourseEditorActio
         default:
           return state;
       }
-      
+
       const resolvedState = addToHistory(state, 'RESOLVE_CONFLICT', resolvedCourse);
-      
+
       return {
         ...resolvedState,
         course: resolvedCourse,
@@ -445,20 +458,23 @@ export function useCourseEditor(): [CourseEditorState, CourseEditorActions] {
     if (!state.course || !state.isDirty || state.isAutoSaving) return;
 
     dispatch({ type: 'SET_AUTO_SAVING', payload: true });
-    
+
     try {
       // In a real implementation, this would call the GraphQL mutation
       await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
-      
+
       dispatch({ type: 'SET_LAST_SAVED', payload: new Date() });
-      
+
       // Save to localStorage as draft
       if (state.isDraft && state.course) {
         const draftKey = `course-draft-${state.draftId || 'new'}`;
-        localStorage.setItem(draftKey, JSON.stringify({
-          course: state.course,
-          timestamp: new Date().toISOString(),
-        }));
+        localStorage.setItem(
+          draftKey,
+          JSON.stringify({
+            course: state.course,
+            timestamp: new Date().toISOString(),
+          })
+        );
       }
     } catch (error) {
       console.error('Auto-save failed:', error);
@@ -496,17 +512,20 @@ export function useCourseEditor(): [CourseEditorState, CourseEditorActions] {
       dispatch({ type: 'UPDATE_COURSE', payload: updates });
     }, []),
 
-    addModule: useCallback((module: Omit<CourseModule, 'id' | 'course' | 'createdAt' | 'updatedAt'>) => {
-      const newModule: CourseModule = {
-        ...module,
-        id: generateId(),
-        course: state.course as Course,
-        lessons: [],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-      dispatch({ type: 'ADD_MODULE', payload: newModule });
-    }, [state.course]),
+    addModule: useCallback(
+      (module: Omit<CourseModule, 'id' | 'course' | 'createdAt' | 'updatedAt'>) => {
+        const newModule: CourseModule = {
+          ...module,
+          id: generateId(),
+          course: state.course as Course,
+          lessons: [],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        dispatch({ type: 'ADD_MODULE', payload: newModule });
+      },
+      [state.course]
+    ),
 
     updateModule: useCallback((moduleId: string, updates: Partial<CourseModule>) => {
       dispatch({ type: 'UPDATE_MODULE', payload: { moduleId, updates } });
@@ -520,19 +539,22 @@ export function useCourseEditor(): [CourseEditorState, CourseEditorActions] {
       dispatch({ type: 'REORDER_MODULES', payload: moduleIds });
     }, []),
 
-    addLesson: useCallback((moduleId: string, lesson: Omit<Lesson, 'id' | 'module' | 'createdAt' | 'updatedAt'>) => {
-      const targetModule = state.course?.modules?.find(m => m.id === moduleId);
-      if (!targetModule) return;
-      
-      const newLesson: Lesson = {
-        ...lesson,
-        id: generateId(),
-        module: targetModule,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-      dispatch({ type: 'ADD_LESSON', payload: { moduleId, lesson: newLesson } });
-    }, [state.course?.modules]),
+    addLesson: useCallback(
+      (moduleId: string, lesson: Omit<Lesson, 'id' | 'module' | 'createdAt' | 'updatedAt'>) => {
+        const targetModule = state.course?.modules?.find(m => m.id === moduleId);
+        if (!targetModule) return;
+
+        const newLesson: Lesson = {
+          ...lesson,
+          id: generateId(),
+          module: targetModule,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        dispatch({ type: 'ADD_LESSON', payload: { moduleId, lesson: newLesson } });
+      },
+      [state.course?.modules]
+    ),
 
     updateLesson: useCallback((lessonId: string, updates: Partial<Lesson>) => {
       dispatch({ type: 'UPDATE_LESSON', payload: { lessonId, updates } });
@@ -569,9 +591,9 @@ export function useCourseEditor(): [CourseEditorState, CourseEditorActions] {
         // In a real implementation, this would call the appropriate GraphQL mutation
         // (createCourse or updateCourse based on whether it's a new course)
         await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
-        
+
         dispatch({ type: 'SET_LAST_SAVED', payload: new Date() });
-        
+
         if (state.isDraft) {
           dispatch({ type: 'CLEAR_DRAFT' });
           // Clear draft from localStorage
@@ -591,14 +613,14 @@ export function useCourseEditor(): [CourseEditorState, CourseEditorActions] {
 
       const draftId = state.draftId || generateId();
       const draftKey = `course-draft-${draftId}`;
-      
+
       const draftData = {
         course: state.course,
         timestamp: new Date().toISOString(),
       };
-      
+
       localStorage.setItem(draftKey, JSON.stringify(draftData));
-      
+
       if (!state.draftId) {
         dispatch({ type: 'SET_DRAFT', payload: { draftId, isDraft: true } });
       }
@@ -607,7 +629,7 @@ export function useCourseEditor(): [CourseEditorState, CourseEditorActions] {
     loadDraft: useCallback(async (draftId: string) => {
       const draftKey = `course-draft-${draftId}`;
       const draftData = localStorage.getItem(draftKey);
-      
+
       if (draftData) {
         const { course } = JSON.parse(draftData);
         dispatch({ type: 'LOAD_COURSE', payload: course });
@@ -632,7 +654,7 @@ export function useCourseEditor(): [CourseEditorState, CourseEditorActions] {
   useEffect(() => {
     const autoSaveTimeout = autoSaveTimeoutRef.current;
     const conflictCheckInterval = conflictCheckIntervalRef.current;
-    
+
     return () => {
       if (autoSaveTimeout) {
         clearTimeout(autoSaveTimeout);
@@ -647,15 +669,19 @@ export function useCourseEditor(): [CourseEditorState, CourseEditorActions] {
 }
 
 // Utility functions for external use
-export function getCourseEditorDrafts(): Array<{ id: string; course: Partial<Course>; timestamp: string }> {
+export function getCourseEditorDrafts(): Array<{
+  id: string;
+  course: Partial<Course>;
+  timestamp: string;
+}> {
   const drafts: Array<{ id: string; course: Partial<Course>; timestamp: string }> = [];
-  
+
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
     if (key?.startsWith('course-draft-')) {
       const draftId = key.replace('course-draft-', '');
       const draftData = localStorage.getItem(key);
-      
+
       if (draftData) {
         try {
           const { course, timestamp } = JSON.parse(draftData);
@@ -666,19 +692,19 @@ export function getCourseEditorDrafts(): Array<{ id: string; course: Partial<Cou
       }
     }
   }
-  
+
   return drafts.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 }
 
 export function clearAllCourseEditorDrafts(): void {
   const keysToRemove: string[] = [];
-  
+
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
     if (key?.startsWith('course-draft-')) {
       keysToRemove.push(key);
     }
   }
-  
+
   keysToRemove.forEach(key => localStorage.removeItem(key));
 }

@@ -1,10 +1,10 @@
 /**
  * Performance Optimization Integration
- * 
+ *
  * Central integration point for all performance optimization utilities.
  * Provides a unified interface for setting up and managing performance
  * optimizations across the application.
- * 
+ *
  * Requirements: 11.1, 11.2, 11.3, 11.4, 11.5
  */
 
@@ -35,7 +35,7 @@ export interface PerformanceConfig {
     ttl?: number;
     enableBatching?: boolean;
   };
-  
+
   /** Enable field selection optimization */
   enableFieldSelection?: boolean;
   /** Field selection options */
@@ -45,7 +45,7 @@ export interface PerformanceConfig {
     alwaysInclude?: string[];
     alwaysExclude?: string[];
   };
-  
+
   /** Enable request batching */
   enableRequestBatching?: boolean;
   /** Request batching options */
@@ -54,7 +54,7 @@ export interface PerformanceConfig {
     batchTimeout?: number;
     enableIntelligentBatching?: boolean;
   };
-  
+
   /** Enable subscription management */
   enableSubscriptionManagement?: boolean;
   /** Subscription management options */
@@ -63,7 +63,7 @@ export interface PerformanceConfig {
     defaultCleanupTimeout?: number;
     enableAutoCleanup?: boolean;
   };
-  
+
   /** Enable intelligent memoization */
   enableMemoization?: boolean;
   /** Memoization options */
@@ -72,7 +72,7 @@ export interface PerformanceConfig {
     enableComponentMemo?: boolean;
     enableCacheAwareMemo?: boolean;
   };
-  
+
   /** Enable lazy loading */
   enableLazyLoading?: boolean;
   /** Lazy loading options */
@@ -81,7 +81,7 @@ export interface PerformanceConfig {
     enableBundleMonitoring?: boolean;
     retryAttempts?: number;
   };
-  
+
   /** Enable cache optimization */
   enableCacheOptimization?: boolean;
   /** Cache optimization options */
@@ -90,7 +90,7 @@ export interface PerformanceConfig {
     cleanupInterval?: number;
     enableWarming?: boolean;
   };
-  
+
   /** Enable performance monitoring */
   enableMonitoring?: boolean;
   /** Performance monitoring options */
@@ -265,7 +265,7 @@ export class PerformanceManager {
 
     // Simple memoization using React.memo
     const MemoizedComponent = React.memo(Component);
-    
+
     if (options.displayName) {
       MemoizedComponent.displayName = options.displayName;
     }
@@ -317,10 +317,10 @@ export class PerformanceManager {
     return (state: TState, ...args: TArgs): TResult => {
       const key = JSON.stringify({ state, args });
       const now = Date.now();
-      
+
       // Check cache
       const cached = cache.get(key);
-      if (cached && (now - cached.timestamp) < ttl) {
+      if (cached && now - cached.timestamp < ttl) {
         return cached.result;
       }
 
@@ -360,9 +360,10 @@ export class PerformanceManager {
    * Get comprehensive performance metrics
    */
   getMetrics(): PerformanceMetrics {
-    const deduplicationMetrics = this.deduplicationLink ? 
-      GraphQLDeduplicationUtils.GraphQLRequestDeduplicator.prototype.getMetrics?.() : null;
-    
+    const deduplicationMetrics = this.deduplicationLink
+      ? GraphQLDeduplicationUtils.GraphQLRequestDeduplicator.prototype.getMetrics?.()
+      : null;
+
     const monitoringReport = this.performanceMonitor?.generateReport();
     const cacheReport = this.cacheOptimizer?.getOptimizationReport();
     const subscriptionStats = this.subscriptionManager?.getManagerStats();
@@ -385,45 +386,52 @@ export class PerformanceManager {
         averageBatchSize: 0,
         networkSavings: 0,
       },
-      subscriptionManagement: subscriptionStats ? {
-        activeSubscriptions: subscriptionStats.activeSubscriptions,
-        cleanedUpSubscriptions: subscriptionStats.totalSubscriptions - subscriptionStats.activeSubscriptions,
-        memoryUsage: subscriptionStats.memoryUsage,
-      } : {
-        activeSubscriptions: 0,
-        cleanedUpSubscriptions: 0,
-        memoryUsage: 0,
-      },
+      subscriptionManagement: subscriptionStats
+        ? {
+            activeSubscriptions: subscriptionStats.activeSubscriptions,
+            cleanedUpSubscriptions:
+              subscriptionStats.totalSubscriptions - subscriptionStats.activeSubscriptions,
+            memoryUsage: subscriptionStats.memoryUsage,
+          }
+        : {
+            activeSubscriptions: 0,
+            cleanedUpSubscriptions: 0,
+            memoryUsage: 0,
+          },
       memoization: {
         selectorHitRate: 0.75,
-        componentMemoRate: 0.80,
+        componentMemoRate: 0.8,
         cacheInvalidations: 5,
       },
       lazyLoading: {
         bundlesLoaded: 12,
         averageLoadTime: 850,
-        cacheHitRate: 0.90,
+        cacheHitRate: 0.9,
       },
-      cacheOptimization: cacheReport ? {
-        cacheSize: 1024 * 1024, // 1MB
-        hitRate: cacheReport.performance.hitRate,
-        evictions: 3,
-        memoryUsage: 0.65,
-      } : {
-        cacheSize: 0,
-        hitRate: 0,
-        evictions: 0,
-        memoryUsage: 0,
-      },
-      monitoring: monitoringReport ? {
-        metricsCollected: monitoringReport.summary.totalMetrics,
-        alertsGenerated: monitoringReport.alerts.length,
-        performanceScore: monitoringReport.summary.performanceScore,
-      } : {
-        metricsCollected: 0,
-        alertsGenerated: 0,
-        performanceScore: 0,
-      },
+      cacheOptimization: cacheReport
+        ? {
+            cacheSize: 1024 * 1024, // 1MB
+            hitRate: cacheReport.performance.hitRate,
+            evictions: 3,
+            memoryUsage: 0.65,
+          }
+        : {
+            cacheSize: 0,
+            hitRate: 0,
+            evictions: 0,
+            memoryUsage: 0,
+          },
+      monitoring: monitoringReport
+        ? {
+            metricsCollected: monitoringReport.summary.totalMetrics,
+            alertsGenerated: monitoringReport.alerts.length,
+            performanceScore: monitoringReport.summary.performanceScore,
+          }
+        : {
+            metricsCollected: 0,
+            alertsGenerated: 0,
+            performanceScore: 0,
+          },
     };
   }
 
@@ -451,7 +459,9 @@ export class PerformanceManager {
 
     // Cache optimization recommendations
     if (metrics.cacheOptimization.memoryUsage > 0.9) {
-      recommendations.push('Cache memory usage is high, consider more aggressive eviction strategies');
+      recommendations.push(
+        'Cache memory usage is high, consider more aggressive eviction strategies'
+      );
     }
 
     // Subscription management recommendations
@@ -497,8 +507,8 @@ export class PerformanceManager {
 
     const overallScore = scores.reduce((sum, score) => sum + Math.max(0, score), 0) / scores.length;
 
-    const criticalIssues = recommendations.filter(rec => 
-      rec.includes('high') || rec.includes('critical') || rec.includes('urgent')
+    const criticalIssues = recommendations.filter(
+      rec => rec.includes('high') || rec.includes('critical') || rec.includes('urgent')
     ).length;
 
     const optimizationOpportunities = recommendations.length - criticalIssues;
@@ -538,20 +548,22 @@ export function usePerformanceMetrics(): {
   refresh: () => void;
 } {
   const [metrics, setMetrics] = React.useState<PerformanceMetrics>({} as PerformanceMetrics);
-  const [report, setReport] = React.useState({} as ReturnType<PerformanceManager['generateReport']>);
+  const [report, setReport] = React.useState(
+    {} as ReturnType<PerformanceManager['generateReport']>
+  );
 
   const refresh = React.useCallback(() => {
     const manager = PerformanceManager.getInstance();
     const newMetrics = manager.getMetrics();
     const newReport = manager.generateReport();
-    
+
     setMetrics(newMetrics);
     setReport(newReport);
   }, []);
 
   React.useEffect(() => {
     refresh();
-    
+
     // Refresh metrics every 30 seconds
     const interval = setInterval(refresh, 30000);
     return () => clearInterval(interval);
@@ -572,13 +584,13 @@ export function initializePerformanceOptimizations(
   config?: PerformanceConfig
 ): PerformanceManager {
   const manager = PerformanceManager.getInstance(config);
-  
+
   // Configure Apollo Client
   manager.configureApolloClient(client);
-  
+
   // Set up global error handling for performance issues
   if (config?.enableMonitoring) {
-    window.addEventListener('error', (event) => {
+    window.addEventListener('error', event => {
       if (event.error?.message?.includes('ChunkLoadError')) {
         console.warn('[Performance] Chunk load error detected, consider bundle optimization');
       }

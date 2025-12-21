@@ -1,9 +1,9 @@
 /**
  * Payments Module Hooks
- * 
+ *
  * Comprehensive React hooks for payment processing, subscription management,
  * and refund workflows with Stripe integration.
- * 
+ *
  * Features:
  * - Stripe checkout session creation
  * - Payment history and transaction details
@@ -11,7 +11,7 @@
  * - Refund processing and eligibility checking
  * - Payment method management
  * - Invoice generation and downloads
- * 
+ *
  * Requirements: 2.1
  */
 
@@ -412,7 +412,7 @@ export interface PaymentHistoryInput {
 
 /**
  * Hook for creating Stripe checkout sessions
- * 
+ *
  * @returns Object with createCheckoutSession function and state
  */
 export function useStripeCheckout() {
@@ -421,9 +421,9 @@ export function useStripeCheckout() {
     CREATE_CHECKOUT_SESSION,
     {
       errorPolicy: 'all',
-      onError: (error) => {
+      onError: error => {
         console.error('Checkout session creation failed:', error);
-      }
+      },
     }
   );
 
@@ -466,13 +466,11 @@ export function useStripeCheckout() {
 
 /**
  * Hook for fetching payment history with pagination
- * 
+ *
  * @param input - Pagination and filter options
  * @returns Query result with payment history
  */
-export function usePaymentHistory(
-  input: PaymentHistoryInput = { page: 1, limit: 20 }
-) {
+export function usePaymentHistory(input: PaymentHistoryInput = { page: 1, limit: 20 }) {
   const { user } = useAuth();
   const { data, loading, error, refetch, fetchMore } = useQuery(GET_PAYMENT_HISTORY, {
     variables: { input },
@@ -523,7 +521,7 @@ export function usePaymentHistory(
 
 /**
  * Hook for fetching a specific payment by ID
- * 
+ *
  * @param paymentId - Payment ID to fetch
  * @returns Query result with payment details
  */
@@ -549,7 +547,7 @@ export function usePayment(paymentId: string) {
 
 /**
  * Hook for fetching user subscriptions
- * 
+ *
  * @returns Query result with user subscriptions
  */
 export function useSubscriptionManagement() {
@@ -570,7 +568,8 @@ export function useSubscriptionManagement() {
             query: GET_USER_SUBSCRIPTIONS,
             data: {
               getUserSubscriptions: [
-                ...(existingData as unknown as { getUserSubscriptions: Subscription[] }).getUserSubscriptions,
+                ...(existingData as unknown as { getUserSubscriptions: Subscription[] })
+                  .getUserSubscriptions,
                 data.createSubscription,
               ],
             },
@@ -660,7 +659,7 @@ export function useSubscriptionManagement() {
 
 /**
  * Hook for fetching a specific subscription by ID
- * 
+ *
  * @param subscriptionId - Subscription ID to fetch
  * @returns Query result with subscription details
  */
@@ -686,20 +685,17 @@ export function useSubscription(subscriptionId: string) {
 
 /**
  * Hook for processing refunds
- * 
+ *
  * @returns Object with refund processing functions and state
  */
 export function useRefundProcessing() {
   const { user } = useAuth();
-  const [requestRefundMutation, { data, loading, error, reset }] = useMutation(
-    REQUEST_REFUND,
-    {
-      errorPolicy: 'all',
-      onError: (error) => {
-        console.error('Refund request failed:', error);
-      }
-    }
-  );
+  const [requestRefundMutation, { data, loading, error, reset }] = useMutation(REQUEST_REFUND, {
+    errorPolicy: 'all',
+    onError: error => {
+      console.error('Refund request failed:', error);
+    },
+  });
 
   const [getRefundEligibility] = useLazyQuery(GET_REFUND_ELIGIBILITY, {
     errorPolicy: 'all',
@@ -765,7 +761,7 @@ export function useRefundProcessing() {
 
 /**
  * Hook for fetching a specific refund by ID
- * 
+ *
  * @param refundId - Refund ID to fetch
  * @returns Query result with refund details
  */
@@ -793,7 +789,7 @@ export function useRefund(refundId: string) {
  * Hook for managing payment methods
  * Note: This would typically integrate with Stripe's Setup Intents API
  * For now, providing a placeholder structure
- * 
+ *
  * @returns Object with payment method management functions
  */
 export function usePaymentMethods() {
@@ -803,95 +799,106 @@ export function usePaymentMethods() {
   const [error, setError] = useState<Error | null>(null);
 
   // Placeholder implementation - would integrate with Stripe Elements
-  const addPaymentMethod = useCallback(async (paymentMethodData: unknown) => {
-    if (!user) {
-      throw new Error('Authentication required');
-    }
+  const addPaymentMethod = useCallback(
+    async (paymentMethodData: unknown) => {
+      if (!user) {
+        throw new Error('Authentication required');
+      }
 
-    setLoading(true);
-    setError(null);
+      setLoading(true);
+      setError(null);
 
-    try {
-      // This would typically call a backend endpoint to save the payment method
-      // For now, just simulate the operation
-      console.log('Adding payment method:', paymentMethodData);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Update local state
-      const newMethod = {
-        id: `pm_${Date.now()}`,
-        type: (paymentMethodData as { type: string }).type,
-        last4: (paymentMethodData as { last4: string }).last4,
-        brand: (paymentMethodData as { brand: string }).brand,
-        isDefault: paymentMethods.length === 0,
-      };
-      
-      setPaymentMethods(prev => [...prev, newMethod]);
-      return newMethod;
-    } catch (error) {
-      setError(error as Error);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  }, [user, paymentMethods.length]);
+      try {
+        // This would typically call a backend endpoint to save the payment method
+        // For now, just simulate the operation
+        console.log('Adding payment method:', paymentMethodData);
 
-  const removePaymentMethod = useCallback(async (paymentMethodId: string) => {
-    if (!user) {
-      throw new Error('Authentication required');
-    }
+        // Simulate API call
+        await new Promise(resolve => setTimeout(resolve, 1000));
 
-    setLoading(true);
-    setError(null);
+        // Update local state
+        const newMethod = {
+          id: `pm_${Date.now()}`,
+          type: (paymentMethodData as { type: string }).type,
+          last4: (paymentMethodData as { last4: string }).last4,
+          brand: (paymentMethodData as { brand: string }).brand,
+          isDefault: paymentMethods.length === 0,
+        };
 
-    try {
-      // This would typically call a backend endpoint to remove the payment method
-      console.log('Removing payment method:', paymentMethodId);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Update local state
-      setPaymentMethods(prev => prev.filter((method: { id: string }) => method.id !== paymentMethodId));
-    } catch (error) {
-      setError(error as Error);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  }, [user]);
+        setPaymentMethods(prev => [...prev, newMethod]);
+        return newMethod;
+      } catch (error) {
+        setError(error as Error);
+        throw error;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [user, paymentMethods.length]
+  );
 
-  const setDefaultPaymentMethod = useCallback(async (paymentMethodId: string) => {
-    if (!user) {
-      throw new Error('Authentication required');
-    }
+  const removePaymentMethod = useCallback(
+    async (paymentMethodId: string) => {
+      if (!user) {
+        throw new Error('Authentication required');
+      }
 
-    setLoading(true);
-    setError(null);
+      setLoading(true);
+      setError(null);
 
-    try {
-      // This would typically call a backend endpoint to set the default payment method
-      console.log('Setting default payment method:', paymentMethodId);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Update local state
-      setPaymentMethods(prev => 
-        prev.map((method: { id: string; isDefault: boolean }) => ({
-          ...method,
-          isDefault: method.id === paymentMethodId
-        }))
-      );
-    } catch (error) {
-      setError(error as Error);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  }, [user]);
+      try {
+        // This would typically call a backend endpoint to remove the payment method
+        console.log('Removing payment method:', paymentMethodId);
+
+        // Simulate API call
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        // Update local state
+        setPaymentMethods(prev =>
+          prev.filter((method: { id: string }) => method.id !== paymentMethodId)
+        );
+      } catch (error) {
+        setError(error as Error);
+        throw error;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [user]
+  );
+
+  const setDefaultPaymentMethod = useCallback(
+    async (paymentMethodId: string) => {
+      if (!user) {
+        throw new Error('Authentication required');
+      }
+
+      setLoading(true);
+      setError(null);
+
+      try {
+        // This would typically call a backend endpoint to set the default payment method
+        console.log('Setting default payment method:', paymentMethodId);
+
+        // Simulate API call
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        // Update local state
+        setPaymentMethods(prev =>
+          prev.map((method: { id: string; isDefault: boolean }) => ({
+            ...method,
+            isDefault: method.id === paymentMethodId,
+          }))
+        );
+      } catch (error) {
+        setError(error as Error);
+        throw error;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [user]
+  );
 
   return {
     paymentMethods,
@@ -911,7 +918,7 @@ export function usePaymentMethods() {
  * Hook for generating and downloading invoices
  * Note: This would typically integrate with backend invoice generation
  * For now, providing a placeholder structure
- * 
+ *
  * @returns Object with invoice functions
  */
 export function useInvoices() {
@@ -919,58 +926,64 @@ export function useInvoices() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
-  const generateInvoice = useCallback(async (paymentId: string) => {
-    if (!user) {
-      throw new Error('Authentication required');
-    }
+  const generateInvoice = useCallback(
+    async (paymentId: string) => {
+      if (!user) {
+        throw new Error('Authentication required');
+      }
 
-    setLoading(true);
-    setError(null);
+      setLoading(true);
+      setError(null);
 
-    try {
-      // This would typically call a backend endpoint to generate an invoice
-      console.log('Generating invoice for payment:', paymentId);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Return invoice data
-      return {
-        id: `inv_${Date.now()}`,
-        paymentId,
-        invoiceNumber: `INV-${Date.now()}`,
-        downloadUrl: `/api/invoices/inv_${Date.now()}/download`,
-        generatedAt: new Date().toISOString(),
-      };
-    } catch (error) {
-      setError(error as Error);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  }, [user]);
+      try {
+        // This would typically call a backend endpoint to generate an invoice
+        console.log('Generating invoice for payment:', paymentId);
 
-  const downloadInvoice = useCallback(async (invoiceId: string) => {
-    if (!user) {
-      throw new Error('Authentication required');
-    }
+        // Simulate API call
+        await new Promise(resolve => setTimeout(resolve, 2000));
 
-    try {
-      // This would typically download the invoice file
-      console.log('Downloading invoice:', invoiceId);
-      
-      // Simulate download
-      const link = document.createElement('a');
-      link.href = `/api/invoices/${invoiceId}/download`;
-      link.download = `invoice-${invoiceId}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    } catch (error) {
-      console.error('Error downloading invoice:', error);
-      throw error;
-    }
-  }, [user]);
+        // Return invoice data
+        return {
+          id: `inv_${Date.now()}`,
+          paymentId,
+          invoiceNumber: `INV-${Date.now()}`,
+          downloadUrl: `/api/invoices/inv_${Date.now()}/download`,
+          generatedAt: new Date().toISOString(),
+        };
+      } catch (error) {
+        setError(error as Error);
+        throw error;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [user]
+  );
+
+  const downloadInvoice = useCallback(
+    async (invoiceId: string) => {
+      if (!user) {
+        throw new Error('Authentication required');
+      }
+
+      try {
+        // This would typically download the invoice file
+        console.log('Downloading invoice:', invoiceId);
+
+        // Simulate download
+        const link = document.createElement('a');
+        link.href = `/api/invoices/${invoiceId}/download`;
+        link.download = `invoice-${invoiceId}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } catch (error) {
+        console.error('Error downloading invoice:', error);
+        throw error;
+      }
+    },
+    [user]
+  );
 
   return {
     loading,
@@ -986,7 +999,7 @@ export function useInvoices() {
 
 /**
  * Main payments hook that combines all payment-related functionality
- * 
+ *
  * @returns Object with all payment hooks and utilities
  */
 export function usePayments() {
@@ -1000,22 +1013,22 @@ export function usePayments() {
   return {
     // Checkout functionality
     checkout,
-    
+
     // Payment history
     paymentHistory,
-    
+
     // Subscription management
     subscriptions,
-    
+
     // Refund processing
     refunds,
-    
+
     // Payment methods
     paymentMethods,
-    
+
     // Invoices
     invoices,
-    
+
     // Utility functions
     utils: {
       formatCurrency: (amount: number, currency: string = 'USD') => {
@@ -1024,7 +1037,7 @@ export function usePayments() {
           currency: currency.toUpperCase(),
         }).format(amount / 100); // Assuming amounts are in cents
       },
-      
+
       formatPaymentStatus: (status: string) => {
         switch (status) {
           case 'PENDING':
@@ -1039,7 +1052,7 @@ export function usePayments() {
             return status;
         }
       },
-      
+
       formatSubscriptionStatus: (status: string) => {
         switch (status) {
           case 'ACTIVE':

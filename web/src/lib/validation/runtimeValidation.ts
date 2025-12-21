@@ -1,9 +1,9 @@
 /**
  * Runtime Type Validation
- * 
+ *
  * Provides runtime validation for GraphQL responses, type validation utilities using Zod,
  * type checking for critical operations, and development-time type validation warnings.
- * 
+ *
  * Requirements: 8.4 - Runtime type validation for GraphQL responses
  */
 
@@ -17,7 +17,7 @@ import type {
   Connection,
   VideoProcessingStatus,
   PresignedUploadUrl,
-  StreamingUrl
+  StreamingUrl,
 } from '@/types/entities';
 
 // =============================================================================
@@ -52,7 +52,12 @@ export const DifficultySchema = z.enum(['BEGINNER', 'INTERMEDIATE', 'ADVANCED'])
 /**
  * Question type schema
  */
-export const QuestionTypeSchema = z.enum(['MULTIPLE_CHOICE', 'TRUE_FALSE', 'SHORT_ANSWER', 'ESSAY']);
+export const QuestionTypeSchema = z.enum([
+  'MULTIPLE_CHOICE',
+  'TRUE_FALSE',
+  'SHORT_ANSWER',
+  'ESSAY',
+]);
 
 /**
  * Quiz attempt status schema
@@ -62,7 +67,12 @@ export const QuizAttemptStatusSchema = z.enum(['IN_PROGRESS', 'SUBMITTED', 'GRAD
 /**
  * Assignment submission status schema
  */
-export const AssignmentSubmissionStatusSchema = z.enum(['DRAFT', 'SUBMITTED', 'GRADED', 'RETURNED']);
+export const AssignmentSubmissionStatusSchema = z.enum([
+  'DRAFT',
+  'SUBMITTED',
+  'GRADED',
+  'RETURNED',
+]);
 
 /**
  * Base entity schema with common fields
@@ -70,7 +80,7 @@ export const AssignmentSubmissionStatusSchema = z.enum(['DRAFT', 'SUBMITTED', 'G
 export const BaseEntitySchema = z.object({
   id: z.string(),
   createdAt: z.string(),
-  updatedAt: z.string()
+  updatedAt: z.string(),
 });
 
 /**
@@ -81,7 +91,7 @@ export const UserProfileSchema = z.object({
   bio: z.string(),
   timezone: z.string(),
   language: z.string(),
-  avatarUrl: z.string()
+  avatarUrl: z.string(),
 });
 
 /**
@@ -92,7 +102,7 @@ export const NotificationPreferencesSchema = z.object({
   pushNotifications: z.boolean(),
   courseUpdates: z.boolean(),
   messageNotifications: z.boolean(),
-  assignmentReminders: z.boolean()
+  assignmentReminders: z.boolean(),
 });
 
 /**
@@ -103,19 +113,19 @@ export const UserSchema = BaseEntitySchema.extend({
   role: UserRoleSchema,
   emailVerified: z.boolean(),
   profile: UserProfileSchema,
-  notificationPreferences: NotificationPreferencesSchema
+  notificationPreferences: NotificationPreferencesSchema,
 });
 
 /**
  * Course module schema (forward reference)
  */
-export const CourseModuleSchema: z.ZodLazy<z.ZodType<unknown>> = z.lazy(() => 
+export const CourseModuleSchema: z.ZodLazy<z.ZodType<unknown>> = z.lazy(() =>
   BaseEntitySchema.extend({
     course: CourseSchema,
     title: z.string(),
     description: z.string(),
     orderIndex: z.number().int().min(0),
-    lessons: z.array(LessonSchema).optional()
+    lessons: z.array(LessonSchema).optional(),
   })
 );
 
@@ -124,13 +134,13 @@ export const CourseModuleSchema: z.ZodLazy<z.ZodType<unknown>> = z.lazy(() =>
  */
 export const CourseReviewSchema = BaseEntitySchema.extend({
   rating: z.number().min(1).max(5),
-  comment: z.string().optional()
+  comment: z.string().optional(),
 });
 
 /**
  * Course schema (forward reference to avoid circular dependency)
  */
-export const CourseSchema: z.ZodLazy<z.ZodType<unknown>> = z.lazy(() => 
+export const CourseSchema: z.ZodLazy<z.ZodType<unknown>> = z.lazy(() =>
   BaseEntitySchema.extend({
     instructor: UserSchema,
     title: z.string().min(1).max(100),
@@ -145,7 +155,7 @@ export const CourseSchema: z.ZodLazy<z.ZodType<unknown>> = z.lazy(() =>
     modules: z.array(CourseModuleSchema).optional(),
     enrollmentCount: z.number().int().min(0),
     averageRating: z.number().min(0).max(5).optional(),
-    reviews: z.array(CourseReviewSchema).optional()
+    reviews: z.array(CourseReviewSchema).optional(),
   })
 );
 
@@ -158,21 +168,23 @@ export const QuestionSchema = BaseEntitySchema.extend({
   options: z.array(z.string()).optional(),
   correctAnswer: z.string().optional(),
   points: z.number().min(0),
-  orderIndex: z.number().int().min(0)
+  orderIndex: z.number().int().min(0),
 });
 
 /**
  * Quiz schema
  */
-export const QuizSchema: z.ZodLazy<z.ZodTypeAny> = z.lazy(() => BaseEntitySchema.extend({
-  lesson: z.lazy(() => LessonSchema),
-  title: z.string().min(1).max(100),
-  description: z.string(),
-  timeLimit: z.number().int().min(1).optional(),
-  maxAttempts: z.number().int().min(1).max(10),
-  passingScore: z.number().min(0).max(100),
-  questions: z.array(QuestionSchema).optional()
-}));
+export const QuizSchema: z.ZodLazy<z.ZodTypeAny> = z.lazy(() =>
+  BaseEntitySchema.extend({
+    lesson: z.lazy(() => LessonSchema),
+    title: z.string().min(1).max(100),
+    description: z.string(),
+    timeLimit: z.number().int().min(1).optional(),
+    maxAttempts: z.number().int().min(1).max(10),
+    passingScore: z.number().min(0).max(100),
+    questions: z.array(QuestionSchema).optional(),
+  })
+);
 
 /**
  * Assignment schema
@@ -184,24 +196,26 @@ export const AssignmentSchema = BaseEntitySchema.extend({
   dueDate: z.string().optional(),
   maxPoints: z.number().min(1),
   allowedFileTypes: z.array(z.string()).optional(),
-  maxFileSize: z.number().int().min(1).optional()
+  maxFileSize: z.number().int().min(1).optional(),
 });
 
 /**
  * Lesson schema
  */
-export const LessonSchema: z.ZodLazy<z.ZodTypeAny> = z.lazy(() => BaseEntitySchema.extend({
-  title: z.string().min(1).max(100),
-  description: z.string().min(1),
-  type: LessonTypeSchema,
-  content: z.string(),
-  videoUrl: z.string(),
-  duration: z.number().int().min(1).optional(),
-  orderIndex: z.number().int().min(0),
-  quiz: QuizSchema.optional(),
-  assignment: AssignmentSchema.optional(),
-  module: CourseModuleSchema
-}));
+export const LessonSchema: z.ZodLazy<z.ZodTypeAny> = z.lazy(() =>
+  BaseEntitySchema.extend({
+    title: z.string().min(1).max(100),
+    description: z.string().min(1),
+    type: LessonTypeSchema,
+    content: z.string(),
+    videoUrl: z.string(),
+    duration: z.number().int().min(1).optional(),
+    orderIndex: z.number().int().min(0),
+    quiz: QuizSchema.optional(),
+    assignment: AssignmentSchema.optional(),
+    module: CourseModuleSchema,
+  })
+);
 
 /**
  * Lesson progress schema
@@ -211,31 +225,35 @@ export const LessonProgressSchema = BaseEntitySchema.extend({
   completedAt: z.string().optional(),
   timeSpent: z.number().int().min(0),
   isCompleted: z.boolean(),
-  lastAccessedAt: z.string()
+  lastAccessedAt: z.string(),
 });
 
 /**
  * Certificate schema
  */
-export const CertificateSchema: z.ZodLazy<z.ZodTypeAny> = z.lazy(() => BaseEntitySchema.extend({
-  enrollment: z.lazy(() => EnrollmentSchema),
-  issuedAt: z.string(),
-  certificateUrl: z.string()
-}));
+export const CertificateSchema: z.ZodLazy<z.ZodTypeAny> = z.lazy(() =>
+  BaseEntitySchema.extend({
+    enrollment: z.lazy(() => EnrollmentSchema),
+    issuedAt: z.string(),
+    certificateUrl: z.string(),
+  })
+);
 
 /**
  * Enrollment schema
  */
-export const EnrollmentSchema: z.ZodLazy<z.ZodTypeAny> = z.lazy(() => BaseEntitySchema.extend({
-  student: UserSchema,
-  course: CourseSchema,
-  enrolledAt: z.string(),
-  completedAt: z.string().optional(),
-  progressPercentage: z.number().min(0).max(100),
-  status: EnrollmentStatusSchema,
-  certificate: CertificateSchema.optional(),
-  lessonProgress: z.array(LessonProgressSchema).optional()
-}));
+export const EnrollmentSchema: z.ZodLazy<z.ZodTypeAny> = z.lazy(() =>
+  BaseEntitySchema.extend({
+    student: UserSchema,
+    course: CourseSchema,
+    enrolledAt: z.string(),
+    completedAt: z.string().optional(),
+    progressPercentage: z.number().min(0).max(100),
+    status: EnrollmentStatusSchema,
+    certificate: CertificateSchema.optional(),
+    lessonProgress: z.array(LessonProgressSchema).optional(),
+  })
+);
 
 /**
  * Message attachment schema
@@ -243,7 +261,7 @@ export const EnrollmentSchema: z.ZodLazy<z.ZodTypeAny> = z.lazy(() => BaseEntity
 export const MessageAttachmentSchema = BaseEntitySchema.extend({
   fileName: z.string(),
   fileSize: z.number().int().min(0),
-  fileUrl: z.string()
+  fileUrl: z.string(),
 });
 
 /**
@@ -251,31 +269,31 @@ export const MessageAttachmentSchema = BaseEntitySchema.extend({
  */
 export const MessageReadSchema = BaseEntitySchema.extend({
   user: UserSchema,
-  readAt: z.string()
+  readAt: z.string(),
 });
 
 /**
  * Message schema (forward reference for conversation)
  */
-export const MessageSchema: z.ZodLazy<z.ZodType<unknown>> = z.lazy(() => 
+export const MessageSchema: z.ZodLazy<z.ZodType<unknown>> = z.lazy(() =>
   BaseEntitySchema.extend({
     sender: UserSchema,
     content: z.string().min(1),
     attachments: z.array(MessageAttachmentSchema).optional(),
     readBy: z.array(MessageReadSchema).optional(),
     sentAt: z.string(),
-    conversation: ConversationSchema
+    conversation: ConversationSchema,
   })
 );
 
 /**
  * Conversation schema
  */
-export const ConversationSchema: z.ZodLazy<z.ZodType<unknown>> = z.lazy(() => 
+export const ConversationSchema: z.ZodLazy<z.ZodType<unknown>> = z.lazy(() =>
   BaseEntitySchema.extend({
     participants: z.array(UserSchema),
     lastMessage: MessageSchema.optional(),
-    unreadCount: z.number().int().min(0)
+    unreadCount: z.number().int().min(0),
   })
 );
 
@@ -286,25 +304,27 @@ export const PageInfoSchema = z.object({
   hasNextPage: z.boolean(),
   hasPreviousPage: z.boolean(),
   startCursor: z.string(),
-  endCursor: z.string()
+  endCursor: z.string(),
 });
 
 /**
  * Edge schema for GraphQL connections
  */
-export const EdgeSchema = <T>(nodeSchema: z.ZodType<T>) => z.object({
-  node: nodeSchema,
-  cursor: z.string()
-});
+export const EdgeSchema = <T>(nodeSchema: z.ZodType<T>) =>
+  z.object({
+    node: nodeSchema,
+    cursor: z.string(),
+  });
 
 /**
  * Connection schema for GraphQL connections
  */
-export const ConnectionSchema = <T>(nodeSchema: z.ZodType<T>) => z.object({
-  edges: z.array(EdgeSchema(nodeSchema)),
-  pageInfo: PageInfoSchema,
-  totalCount: z.number().int().min(0)
-});
+export const ConnectionSchema = <T>(nodeSchema: z.ZodType<T>) =>
+  z.object({
+    edges: z.array(EdgeSchema(nodeSchema)),
+    pageInfo: PageInfoSchema,
+    totalCount: z.number().int().min(0),
+  });
 
 /**
  * Video processing status schema
@@ -313,15 +333,17 @@ export const VideoProcessingStatusSchema = z.object({
   fileKey: z.string(),
   status: z.enum(['pending', 'processing', 'completed', 'failed']),
   progress: z.number().min(0).max(100),
-  outputFormats: z.array(z.object({
-    quality: z.string(),
-    url: z.string(),
-    fileSize: z.number().int().min(0)
-  })),
+  outputFormats: z.array(
+    z.object({
+      quality: z.string(),
+      url: z.string(),
+      fileSize: z.number().int().min(0),
+    })
+  ),
   thumbnailUrl: z.string(),
   duration: z.number().int().min(0),
   error: z.string(),
-  updatedAt: z.string()
+  updatedAt: z.string(),
 });
 
 /**
@@ -331,7 +353,7 @@ export const PresignedUploadUrlSchema = z.object({
   uploadUrl: z.string(),
   fileKey: z.string(),
   fields: z.record(z.string(), z.string()),
-  expiresAt: z.string()
+  expiresAt: z.string(),
 });
 
 /**
@@ -363,18 +385,20 @@ export function validateGraphQLResponse<T>(
       const errorMessage = `GraphQL response validation failed${operationName ? ` for ${operationName}` : ''}`;
       console.error(errorMessage, {
         errors: error.issues,
-        data
+        data,
       });
-      
+
       // In development, throw detailed error
       if (process.env.NODE_ENV === 'development') {
-        throw new Error(`${errorMessage}: ${error.issues.map((e) => `${e.path.join('.')}: ${e.message}`).join(', ')}`);
+        throw new Error(
+          `${errorMessage}: ${error.issues.map(e => `${e.path.join('.')}: ${e.message}`).join(', ')}`
+        );
       }
-      
+
       // In production, throw generic error
       throw new Error('Invalid response data received from server');
     }
-    
+
     throw error;
   }
 }
@@ -391,7 +415,10 @@ export function safeValidateGraphQLResponse<T>(
   try {
     return validateGraphQLResponse(data, schema, operationName);
   } catch (error) {
-    console.warn(`GraphQL response validation failed${operationName ? ` for ${operationName}` : ''}, using fallback`, error);
+    console.warn(
+      `GraphQL response validation failed${operationName ? ` for ${operationName}` : ''}, using fallback`,
+      error
+    );
     return fallback;
   }
 }
@@ -478,9 +505,9 @@ export function validateAuthenticationData(data: unknown): {
   const schema = z.object({
     user: UserSchema,
     accessToken: z.string().min(1),
-    refreshToken: z.string().min(1)
+    refreshToken: z.string().min(1),
   });
-  
+
   return validateGraphQLResponse(data, schema, 'Authentication');
 }
 
@@ -495,9 +522,9 @@ export function validateEnrollmentCreation(data: unknown): {
   const schema = z.object({
     enrollment: EnrollmentSchema,
     paymentRequired: z.boolean(),
-    paymentUrl: z.string().url().optional()
+    paymentUrl: z.string().url().optional(),
   });
-  
+
   return validateGraphQLResponse(data, schema, 'EnrollmentCreation') as unknown as {
     enrollment: Enrollment;
     paymentRequired: boolean;
@@ -514,9 +541,9 @@ export function validateFileUploadResponse(data: unknown): {
 } {
   const schema = z.object({
     presignedUrl: PresignedUploadUrlSchema,
-    fileKey: z.string()
+    fileKey: z.string(),
   });
-  
+
   return validateGraphQLResponse(data, schema, 'FileUpload');
 }
 
@@ -537,13 +564,15 @@ export function validateQuizSubmission(data: unknown): {
     score: z.number().min(0),
     maxScore: z.number().min(0),
     passed: z.boolean(),
-    answers: z.array(z.object({
-      questionId: z.string(),
-      isCorrect: z.boolean(),
-      points: z.number().min(0)
-    }))
+    answers: z.array(
+      z.object({
+        questionId: z.string(),
+        isCorrect: z.boolean(),
+        points: z.number().min(0),
+      })
+    ),
   });
-  
+
   return validateGraphQLResponse(data, schema, 'QuizSubmission');
 }
 
@@ -574,8 +603,8 @@ export function validateWithWarning<T>(
   } catch (error) {
     if (error instanceof z.ZodError) {
       const message = `Type validation failed for ${operationName}`;
-      const details = error.issues.map((e) => `${e.path.join('.')}: ${e.message}`).join(', ');
-      
+      const details = error.issues.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
+
       if (warnOnly) {
         devTypeWarning(`${message}: ${details}`, data);
         return null;
@@ -583,7 +612,7 @@ export function validateWithWarning<T>(
         throw new Error(`${message}: ${details}`);
       }
     }
-    
+
     throw error;
   }
 }
@@ -599,10 +628,7 @@ export function checkRequiredFields<T extends Record<string, unknown>>(
   if (process.env.NODE_ENV === 'development') {
     const missingFields = requiredFields.filter(field => obj[field] == null);
     if (missingFields.length > 0) {
-      devTypeWarning(
-        `${objectName} is missing required fields: ${missingFields.join(', ')}`,
-        obj
-      );
+      devTypeWarning(`${objectName} is missing required fields: ${missingFields.join(', ')}`, obj);
     }
   }
 }
@@ -637,7 +663,7 @@ export function createPartialSchema<T>(schema: z.ZodType<T>): z.ZodType<Partial<
   if (schema instanceof z.ZodObject) {
     return schema.partial() as z.ZodType<Partial<T>>;
   }
-  
+
   // For non-object schemas, return optional version
   return schema.optional() as z.ZodType<Partial<T>>;
 }
@@ -677,27 +703,23 @@ export function createUnionSchema<T extends readonly [z.ZodTypeAny, ...z.ZodType
  */
 export function createDiscriminatedUnionSchema<
   Discriminator extends string,
-  Options extends Record<string, z.ZodObject<z.ZodRawShape>>
->(
-  discriminator: Discriminator,
-  options: Options
-) {
-  const optionsList = Object.entries(options)
-    .map(([key, schema]) => {
-      return schema.extend({ [discriminator]: z.literal(key) });
-    });
-  
+  Options extends Record<string, z.ZodObject<z.ZodRawShape>>,
+>(discriminator: Discriminator, options: Options) {
+  const optionsList = Object.entries(options).map(([key, schema]) => {
+    return schema.extend({ [discriminator]: z.literal(key) });
+  });
+
   if (optionsList.length < 2) {
     throw new Error('Discriminated union requires at least 2 options');
   }
-  
+
   const firstOption = optionsList[0];
   const secondOption = optionsList[1];
-  
+
   if (!firstOption || !secondOption) {
     throw new Error('Invalid options provided');
   }
-  
+
   // Return a simple union of the first two options to avoid complex type issues
   return z.union([firstOption, secondOption]);
 }

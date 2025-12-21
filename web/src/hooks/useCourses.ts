@@ -1,6 +1,6 @@
 /**
  * Course Management Hooks
- * 
+ *
  * React hooks for course-related operations including course CRUD,
  * filtering, pagination, and educator course management.
  */
@@ -224,11 +224,11 @@ interface MutationResult<T, V = Record<string, unknown>> {
 
 /**
  * Hook for fetching courses with filtering and pagination
- * 
+ *
  * @param filter - Optional course filter criteria
  * @param pagination - Optional pagination parameters
  * @returns Query result with courses data, loading state, and pagination
- * 
+ *
  * @example
  * ```tsx
  * function CourseList() {
@@ -236,10 +236,10 @@ interface MutationResult<T, V = Record<string, unknown>> {
  *     filter: { category: 'programming', difficulty: 'BEGINNER' },
  *     pagination: { first: 10 }
  *   });
- *   
+ *
  *   if (loading) return <div>Loading courses...</div>;
  *   if (error) return <div>Error loading courses</div>;
- *   
+ *
  *   return (
  *     <div>
  *       {data?.edges.map(({ node: course }) => (
@@ -276,18 +276,18 @@ export function useCourses(
 
 /**
  * Hook for fetching a single course by ID
- * 
+ *
  * @param id - The course ID to fetch
  * @returns Query result with course data, loading state, and error handling
- * 
+ *
  * @example
  * ```tsx
  * function CourseDetail({ courseId }: { courseId: string }) {
  *   const { data: course, loading, error } = useCourse(courseId);
- *   
+ *
  *   if (loading) return <div>Loading course...</div>;
  *   if (error) return <div>Course not found</div>;
- *   
+ *
  *   return (
  *     <div>
  *       <h1>{course?.title}</h1>
@@ -315,19 +315,19 @@ export function useCourse(id: string): QueryResult<Course> {
 
 /**
  * Hook for fetching courses created by the current user (educator)
- * 
+ *
  * @param filter - Optional course filter criteria
  * @param pagination - Optional pagination parameters
  * @returns Query result with educator's courses
- * 
+ *
  * @example
  * ```tsx
  * function MyCoursesPage() {
  *   const { data, loading, error } = useMyCourses();
- *   
+ *
  *   if (loading) return <div>Loading your courses...</div>;
  *   if (error) return <div>Error loading courses</div>;
- *   
+ *
  *   return (
  *     <div>
  *       <h1>My Courses ({data?.totalCount})</h1>
@@ -343,11 +343,14 @@ export function useMyCourses(
   filter?: CourseFilter,
   pagination?: PaginationInput
 ): QueryResult<CourseConnection> {
-  const { data, loading, error, refetch, fetchMore } = useQuery<GetMyCoursesResponse>(GET_MY_COURSES, {
-    variables: { filter, pagination },
-    errorPolicy: 'all',
-    notifyOnNetworkStatusChange: true,
-  });
+  const { data, loading, error, refetch, fetchMore } = useQuery<GetMyCoursesResponse>(
+    GET_MY_COURSES,
+    {
+      variables: { filter, pagination },
+      errorPolicy: 'all',
+      notifyOnNetworkStatusChange: true,
+    }
+  );
 
   return {
     data: data?.myCourses,
@@ -360,14 +363,14 @@ export function useMyCourses(
 
 /**
  * Hook for creating a new course with optimistic updates
- * 
+ *
  * @returns Mutation function with loading state and error handling
- * 
+ *
  * @example
  * ```tsx
  * function CreateCourseForm() {
  *   const { mutate: createCourse, loading, error } = useCreateCourse();
- *   
+ *
  *   const handleSubmit = async (formData: CreateCourseInput) => {
  *     try {
  *       const newCourse = await createCourse({ input: formData });
@@ -376,42 +379,45 @@ export function useMyCourses(
  *       // Handle error
  *     }
  *   };
- *   
+ *
  *   return <form onSubmit={handleSubmit}>...</form>;
  * }
  * ```
  */
 export function useCreateCourse(): MutationResult<Course, { input: CreateCourseInput }> {
-  const [createCourseMutation, { loading, error, reset }] = useMutation<CreateCourseResponse>(CREATE_COURSE, {
-    errorPolicy: 'all',
-    // Update cache after successful creation
-    update: (cache: ApolloCache, { data }) => {
-      if (data?.createCourse) {
-        // Add to my courses list
-        cache.updateQuery<GetMyCoursesResponse>(
-          { query: GET_MY_COURSES, variables: {} },
-          (existingData: GetMyCoursesResponse | null) => {
-            if (!existingData?.myCourses) return existingData;
-            
-            return {
-              myCourses: {
-                ...existingData.myCourses,
-                edges: [
-                  {
-                    node: data.createCourse,
-                    cursor: data.createCourse.id,
-                    __typename: 'CourseEdge',
-                  },
-                  ...existingData.myCourses.edges,
-                ],
-                totalCount: existingData.myCourses.totalCount + 1,
-              },
-            };
-          }
-        );
-      }
-    },
-  });
+  const [createCourseMutation, { loading, error, reset }] = useMutation<CreateCourseResponse>(
+    CREATE_COURSE,
+    {
+      errorPolicy: 'all',
+      // Update cache after successful creation
+      update: (cache: ApolloCache, { data }) => {
+        if (data?.createCourse) {
+          // Add to my courses list
+          cache.updateQuery<GetMyCoursesResponse>(
+            { query: GET_MY_COURSES, variables: {} },
+            (existingData: GetMyCoursesResponse | null) => {
+              if (!existingData?.myCourses) return existingData;
+
+              return {
+                myCourses: {
+                  ...existingData.myCourses,
+                  edges: [
+                    {
+                      node: data.createCourse,
+                      cursor: data.createCourse.id,
+                      __typename: 'CourseEdge',
+                    },
+                    ...existingData.myCourses.edges,
+                  ],
+                  totalCount: existingData.myCourses.totalCount + 1,
+                },
+              };
+            }
+          );
+        }
+      },
+    }
+  );
 
   const mutate = async (variables: { input: CreateCourseInput }): Promise<Course> => {
     const result = await createCourseMutation({ variables });
@@ -431,14 +437,14 @@ export function useCreateCourse(): MutationResult<Course, { input: CreateCourseI
 
 /**
  * Hook for updating an existing course with optimistic updates
- * 
+ *
  * @returns Mutation function with loading state and error handling
- * 
+ *
  * @example
  * ```tsx
  * function EditCourseForm({ course }: { course: Course }) {
  *   const { mutate: updateCourse, loading, error } = useUpdateCourse();
- *   
+ *
  *   const handleSubmit = async (formData: UpdateCourseInput) => {
  *     try {
  *       await updateCourse({ id: course.id, input: formData });
@@ -447,34 +453,40 @@ export function useCreateCourse(): MutationResult<Course, { input: CreateCourseI
  *       // Handle error
  *     }
  *   };
- *   
+ *
  *   return <form onSubmit={handleSubmit}>...</form>;
  * }
  * ```
  */
-export function useUpdateCourse(): MutationResult<Course, { id: string; input: UpdateCourseInput }> {
-  const [updateCourseMutation, { loading, error, reset }] = useMutation<UpdateCourseResponse>(UPDATE_COURSE, {
-    errorPolicy: 'all',
-    // Update cache after successful mutation
-    update: (cache: ApolloCache, { data }) => {
-      if (data?.updateCourse) {
-        // Update course in cache
-        cache.updateQuery<GetCourseResponse>(
-          { query: GET_COURSE, variables: { id: data.updateCourse.id } },
-          (existingData: GetCourseResponse | null) => {
-            if (!existingData?.course) return existingData;
-            
-            return {
-              course: {
-                ...existingData.course,
-                ...data.updateCourse,
-              },
-            };
-          }
-        );
-      }
-    },
-  });
+export function useUpdateCourse(): MutationResult<
+  Course,
+  { id: string; input: UpdateCourseInput }
+> {
+  const [updateCourseMutation, { loading, error, reset }] = useMutation<UpdateCourseResponse>(
+    UPDATE_COURSE,
+    {
+      errorPolicy: 'all',
+      // Update cache after successful mutation
+      update: (cache: ApolloCache, { data }) => {
+        if (data?.updateCourse) {
+          // Update course in cache
+          cache.updateQuery<GetCourseResponse>(
+            { query: GET_COURSE, variables: { id: data.updateCourse.id } },
+            (existingData: GetCourseResponse | null) => {
+              if (!existingData?.course) return existingData;
+
+              return {
+                course: {
+                  ...existingData.course,
+                  ...data.updateCourse,
+                },
+              };
+            }
+          );
+        }
+      },
+    }
+  );
 
   const mutate = async (variables: { id: string; input: UpdateCourseInput }): Promise<Course> => {
     const result = await updateCourseMutation({ variables });
@@ -494,14 +506,14 @@ export function useUpdateCourse(): MutationResult<Course, { id: string; input: U
 
 /**
  * Hook for publishing a course (changing status to published)
- * 
+ *
  * @returns Mutation function with loading state and error handling
- * 
+ *
  * @example
  * ```tsx
  * function PublishCourseButton({ courseId }: { courseId: string }) {
  *   const { mutate: publishCourse, loading } = usePublishCourse();
- *   
+ *
  *   const handlePublish = async () => {
  *     try {
  *       await publishCourse({ id: courseId });
@@ -510,7 +522,7 @@ export function useUpdateCourse(): MutationResult<Course, { id: string; input: U
  *       // Handle error
  *     }
  *   };
- *   
+ *
  *   return (
  *     <button onClick={handlePublish} disabled={loading}>
  *       {loading ? 'Publishing...' : 'Publish Course'}
@@ -520,29 +532,32 @@ export function useUpdateCourse(): MutationResult<Course, { id: string; input: U
  * ```
  */
 export function usePublishCourse(): MutationResult<Course, { id: string }> {
-  const [publishCourseMutation, { loading, error, reset }] = useMutation<PublishCourseResponse>(PUBLISH_COURSE, {
-    errorPolicy: 'all',
-    // Update cache after successful mutation
-    update: (cache: ApolloCache, { data }) => {
-      if (data?.publishCourse) {
-        // Update course status in cache
-        cache.updateQuery<GetCourseResponse>(
-          { query: GET_COURSE, variables: { id: data.publishCourse.id } },
-          (existingData: GetCourseResponse | null) => {
-            if (!existingData?.course) return existingData;
-            
-            return {
-              course: {
-                ...existingData.course,
-                status: data.publishCourse.status,
-                updatedAt: data.publishCourse.updatedAt,
-              },
-            };
-          }
-        );
-      }
-    },
-  });
+  const [publishCourseMutation, { loading, error, reset }] = useMutation<PublishCourseResponse>(
+    PUBLISH_COURSE,
+    {
+      errorPolicy: 'all',
+      // Update cache after successful mutation
+      update: (cache: ApolloCache, { data }) => {
+        if (data?.publishCourse) {
+          // Update course status in cache
+          cache.updateQuery<GetCourseResponse>(
+            { query: GET_COURSE, variables: { id: data.publishCourse.id } },
+            (existingData: GetCourseResponse | null) => {
+              if (!existingData?.course) return existingData;
+
+              return {
+                course: {
+                  ...existingData.course,
+                  status: data.publishCourse.status,
+                  updatedAt: data.publishCourse.updatedAt,
+                },
+              };
+            }
+          );
+        }
+      },
+    }
+  );
 
   const mutate = async (variables: { id: string }): Promise<Course> => {
     const result = await publishCourseMutation({ variables });

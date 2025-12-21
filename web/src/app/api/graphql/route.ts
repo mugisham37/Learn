@@ -1,9 +1,9 @@
 /**
  * GraphQL Proxy API Route
- * 
+ *
  * Next.js API route that proxies GraphQL requests to the backend server.
  * Handles authentication, CORS, rate limiting, input validation, and comprehensive security.
- * 
+ *
  * Requirements: 8.2, 8.3, 12.1, 12.2, 12.3, 12.4, 12.5
  */
 
@@ -28,15 +28,15 @@ const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
 function getClientIP(request: NextRequest): string {
   const forwarded = request.headers.get('x-forwarded-for');
   const realIP = request.headers.get('x-real-ip');
-  
+
   if (forwarded) {
     return forwarded.split(',')[0]?.trim() || 'unknown';
   }
-  
+
   if (realIP) {
     return realIP;
   }
-  
+
   // Fallback to a default value since NextRequest doesn't have ip property
   return 'unknown';
 }
@@ -95,11 +95,7 @@ function validateGraphQLRequest(body: unknown): { valid: boolean; error?: string
   }
 
   // Check for potentially dangerous operations
-  const dangerousPatterns = [
-    /__schema/i,
-    /__type/i,
-    /introspection/i,
-  ];
+  const dangerousPatterns = [/__schema/i, /__type/i, /introspection/i];
 
   if (process.env.NODE_ENV === 'production') {
     for (const pattern of dangerousPatterns) {
@@ -118,7 +114,7 @@ function validateGraphQLRequest(body: unknown): { valid: boolean; error?: string
 function handleCORS(request: NextRequest) {
   const origin = request.headers.get('origin');
   const allowedOrigins = process.env.CORS_ORIGINS?.split(',') || [
-    process.env.CORS_ORIGIN || 'http://localhost:3000'
+    process.env.CORS_ORIGIN || 'http://localhost:3000',
   ];
 
   const isAllowedOrigin = allowedOrigins.includes(origin || '');
@@ -137,7 +133,7 @@ function handleCORS(request: NextRequest) {
  */
 export async function OPTIONS(request: NextRequest) {
   const corsHeaders = handleCORS(request);
-  
+
   return new NextResponse(null, {
     status: 200,
     headers: corsHeaders,
@@ -150,27 +146,29 @@ export async function OPTIONS(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const corsHeaders = handleCORS(request);
-    
+
     // Rate limiting
     const clientIP = getClientIP(request);
     const rateLimit = checkRateLimit(clientIP);
-    
+
     if (!rateLimit.allowed) {
       return NextResponse.json(
-        { 
-          errors: [{ 
-            message: 'Rate limit exceeded. Please try again later.',
-            extensions: { code: 'RATE_LIMITED' }
-          }] 
+        {
+          errors: [
+            {
+              message: 'Rate limit exceeded. Please try again later.',
+              extensions: { code: 'RATE_LIMITED' },
+            },
+          ],
         },
-        { 
+        {
           status: 429,
           headers: {
             ...corsHeaders,
             'X-RateLimit-Limit': RATE_LIMIT.maxRequests.toString(),
             'X-RateLimit-Remaining': rateLimit.remaining.toString(),
             'X-RateLimit-Reset': new Date(Date.now() + RATE_LIMIT.windowMs).toISOString(),
-          }
+          },
         }
       );
     }
@@ -181,13 +179,15 @@ export async function POST(request: NextRequest) {
       body = await request.json();
     } catch (error) {
       return NextResponse.json(
-        { 
-          errors: [{ 
-            message: 'Invalid JSON in request body',
-            extensions: { code: 'INVALID_JSON' }
-          }] 
+        {
+          errors: [
+            {
+              message: 'Invalid JSON in request body',
+              extensions: { code: 'INVALID_JSON' },
+            },
+          ],
         },
-        { 
+        {
           status: 400,
           headers: corsHeaders,
         }
@@ -201,13 +201,15 @@ export async function POST(request: NextRequest) {
         const csrfToken = request.headers.get(securityConfig.csrfProtection.tokenHeader);
         if (!csrfToken) {
           return NextResponse.json(
-            { 
-              errors: [{ 
-                message: 'CSRF token required for mutations',
-                extensions: { code: 'CSRF_TOKEN_REQUIRED' }
-              }] 
+            {
+              errors: [
+                {
+                  message: 'CSRF token required for mutations',
+                  extensions: { code: 'CSRF_TOKEN_REQUIRED' },
+                },
+              ],
             },
-            { 
+            {
               status: 403,
               headers: corsHeaders,
             }
@@ -217,13 +219,15 @@ export async function POST(request: NextRequest) {
         const isValidCSRF = await CSRFProtector.validateCSRFToken(csrfToken);
         if (!isValidCSRF) {
           return NextResponse.json(
-            { 
-              errors: [{ 
-                message: 'Invalid CSRF token',
-                extensions: { code: 'INVALID_CSRF_TOKEN' }
-              }] 
+            {
+              errors: [
+                {
+                  message: 'Invalid CSRF token',
+                  extensions: { code: 'INVALID_CSRF_TOKEN' },
+                },
+              ],
             },
-            { 
+            {
               status: 403,
               headers: corsHeaders,
             }
@@ -237,16 +241,18 @@ export async function POST(request: NextRequest) {
       const validationResult = inputValidator.validateGraphQLInput(body.variables);
       if (!validationResult.success) {
         return NextResponse.json(
-          { 
-            errors: [{ 
-              message: 'Input validation failed',
-              extensions: { 
-                code: 'INPUT_VALIDATION_ERROR',
-                validationErrors: validationResult.errors
-              }
-            }] 
+          {
+            errors: [
+              {
+                message: 'Input validation failed',
+                extensions: {
+                  code: 'INPUT_VALIDATION_ERROR',
+                  validationErrors: validationResult.errors,
+                },
+              },
+            ],
           },
-          { 
+          {
             status: 400,
             headers: corsHeaders,
           }
@@ -259,13 +265,15 @@ export async function POST(request: NextRequest) {
     const validation = validateGraphQLRequest(body);
     if (!validation.valid) {
       return NextResponse.json(
-        { 
-          errors: [{ 
-            message: validation.error,
-            extensions: { code: 'INVALID_REQUEST' }
-          }] 
+        {
+          errors: [
+            {
+              message: validation.error,
+              extensions: { code: 'INVALID_REQUEST' },
+            },
+          ],
         },
-        { 
+        {
           status: 400,
           headers: corsHeaders,
         }
@@ -274,7 +282,7 @@ export async function POST(request: NextRequest) {
 
     // Get authentication token
     let accessToken: string | undefined;
-    
+
     // Try to get token from cookies (production) or Authorization header
     if (process.env.NODE_ENV === 'production') {
       accessToken = request.cookies.get('access-token')?.value;
@@ -304,19 +312,23 @@ export async function POST(request: NextRequest) {
     });
 
     if (!backendResponse.ok) {
-      console.error(`Backend GraphQL request failed: ${backendResponse.status} ${backendResponse.statusText}`);
-      
+      console.error(
+        `Backend GraphQL request failed: ${backendResponse.status} ${backendResponse.statusText}`
+      );
+
       return NextResponse.json(
-        { 
-          errors: [{ 
-            message: 'Backend service unavailable',
-            extensions: { 
-              code: 'BACKEND_ERROR',
-              status: backendResponse.status 
-            }
-          }] 
+        {
+          errors: [
+            {
+              message: 'Backend service unavailable',
+              extensions: {
+                code: 'BACKEND_ERROR',
+                status: backendResponse.status,
+              },
+            },
+          ],
         },
-        { 
+        {
           status: 502,
           headers: corsHeaders,
         }
@@ -329,15 +341,17 @@ export async function POST(request: NextRequest) {
       backendData = await backendResponse.json();
     } catch (error) {
       console.error('Failed to parse backend response:', error);
-      
+
       return NextResponse.json(
-        { 
-          errors: [{ 
-            message: 'Invalid response from backend',
-            extensions: { code: 'BACKEND_PARSE_ERROR' }
-          }] 
+        {
+          errors: [
+            {
+              message: 'Invalid response from backend',
+              extensions: { code: 'BACKEND_PARSE_ERROR' },
+            },
+          ],
         },
-        { 
+        {
           status: 502,
           headers: corsHeaders,
         }
@@ -353,18 +367,19 @@ export async function POST(request: NextRequest) {
         'X-RateLimit-Remaining': rateLimit.remaining.toString(),
       },
     });
-
   } catch (error) {
     console.error('GraphQL proxy error:', error);
-    
+
     return NextResponse.json(
-      { 
-        errors: [{ 
-          message: 'Internal server error',
-          extensions: { code: 'INTERNAL_ERROR' }
-        }] 
+      {
+        errors: [
+          {
+            message: 'Internal server error',
+            extensions: { code: 'INTERNAL_ERROR' },
+          },
+        ],
       },
-      { 
+      {
         status: 500,
         headers: handleCORS(request),
       }
@@ -377,19 +392,21 @@ export async function POST(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
   const corsHeaders = handleCORS(request);
-  
+
   return NextResponse.json(
-    { 
-      errors: [{ 
-        message: 'GET method not allowed for GraphQL endpoint',
-        extensions: { code: 'METHOD_NOT_ALLOWED' }
-      }] 
+    {
+      errors: [
+        {
+          message: 'GET method not allowed for GraphQL endpoint',
+          extensions: { code: 'METHOD_NOT_ALLOWED' },
+        },
+      ],
     },
-    { 
+    {
       status: 405,
       headers: {
         ...corsHeaders,
-        'Allow': 'POST, OPTIONS',
+        Allow: 'POST, OPTIONS',
       },
     }
   );

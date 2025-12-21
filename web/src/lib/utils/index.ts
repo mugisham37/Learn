@@ -1,9 +1,9 @@
 /**
  * Utility Functions and Formatters
- * 
+ *
  * Comprehensive utility library providing data formatting, validation,
  * progress calculations, and performance optimization utilities.
- * 
+ *
  * This module serves as the central export point for all utility functions
  * used throughout the frontend foundation layer.
  */
@@ -21,26 +21,26 @@ export {
   isYesterday,
   startOfDay,
   endOfDay,
-  
+
   // Currency formatting
   formatCurrency,
   parseCurrency,
-  
+
   // Duration formatting
   formatDuration,
   parseDuration,
-  
+
   // Number formatting
   formatNumber,
   formatPercentage,
   formatFileSize,
-  
+
   // Types
   type DateFormatOptions,
   type CurrencyFormatOptions,
   type DurationFormatOptions,
   type NumberFormatOptions,
-  
+
   // Constants
   DEFAULT_LOCALE,
   DEFAULT_TIMEZONE,
@@ -60,19 +60,19 @@ export {
   hasFieldError,
   getFieldErrors,
   getFieldErrorMessage,
-  
+
   // Sanitization
   sanitizeHtml,
   sanitizeInput,
   escapeHtml,
-  
+
   // Types
   type ValidationResult,
   type ValidationError,
   type ValidationRule,
   type ValidationContext,
   type FormValidationOptions,
-  
+
   // Constants
   VALIDATION_CONSTRAINTS,
 } from './validators';
@@ -91,7 +91,7 @@ export {
   generateProgressVisualizationData,
   getNextLesson,
   estimateCompletionDate,
-  
+
   // Types
   type CourseProgress,
   type LessonProgress,
@@ -116,7 +116,7 @@ export {
   measurePerformance,
   measureAsyncPerformance,
   createBatchProcessor,
-  
+
   // Types
   type DebounceOptions,
   type ThrottleOptions,
@@ -132,7 +132,7 @@ export {
   memoize,
   memoizeAsync,
   clearMemoizationCaches,
-  
+
   // Types
   type MemoizeOptions,
 } from './performance';
@@ -161,9 +161,9 @@ export const generateId = (): string => {
  * Generates a UUID v4
  */
 export const generateUUID = (): string => {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = Math.random() * 16 | 0;
-    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
     return v.toString(16);
   });
 };
@@ -194,23 +194,24 @@ export const deepEqual = (a: unknown, b: unknown): boolean => {
   if (a === b) return true;
   if (a == null || b == null) return false;
   if (typeof a !== typeof b) return false;
-  
+
   if (typeof a === 'object') {
     if (Array.isArray(a) !== Array.isArray(b)) return false;
-    
+
     const keysA = Object.keys(a as Record<string, unknown>);
     const keysB = Object.keys(b as Record<string, unknown>);
-    
+
     if (keysA.length !== keysB.length) return false;
-    
+
     for (const key of keysA) {
       if (!keysB.includes(key)) return false;
-      if (!deepEqual((a as Record<string, unknown>)[key], (b as Record<string, unknown>)[key])) return false;
+      if (!deepEqual((a as Record<string, unknown>)[key], (b as Record<string, unknown>)[key]))
+        return false;
     }
-    
+
     return true;
   }
-  
+
   return false;
 };
 
@@ -226,9 +227,7 @@ export const capitalize = (str: string): string => {
  * Converts a string to title case
  */
 export const toTitleCase = (str: string): string => {
-  return str.replace(/\w\S*/g, (txt) => 
-    txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase()
-  );
+  return str.replace(/\w\S*/g, txt => txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase());
 };
 
 /**
@@ -246,7 +245,7 @@ export const toKebabCase = (str: string): string => {
  */
 export const toCamelCase = (str: string): string => {
   return str
-    .replace(/(?:^\w|[A-Z]|\b\w)/g, (word, index) => 
+    .replace(/(?:^\w|[A-Z]|\b\w)/g, (word, index) =>
       index === 0 ? word.toLowerCase() : word.toUpperCase()
     )
     .replace(/\s+/g, '');
@@ -276,18 +275,18 @@ export const removeUndefined = <T extends Record<string, unknown>>(obj: T): Part
 /**
  * Groups an array of objects by a key
  */
-export const groupBy = <T, K extends keyof T>(
-  array: T[],
-  key: K
-): Record<string, T[]> => {
-  return array.reduce((groups, item) => {
-    const group = String(item[key]);
-    if (!groups[group]) {
-      groups[group] = [];
-    }
-    groups[group]!.push(item);
-    return groups;
-  }, {} as Record<string, T[]>);
+export const groupBy = <T, K extends keyof T>(array: T[], key: K): Record<string, T[]> => {
+  return array.reduce(
+    (groups, item) => {
+      const group = String(item[key]);
+      if (!groups[group]) {
+        groups[group] = [];
+      }
+      groups[group]!.push(item);
+      return groups;
+    },
+    {} as Record<string, T[]>
+  );
 };
 
 /**
@@ -301,7 +300,7 @@ export const sortBy = <T, K extends keyof T>(
   return [...array].sort((a, b) => {
     const aVal = a[key];
     const bVal = b[key];
-    
+
     if (aVal < bVal) return direction === 'asc' ? -1 : 1;
     if (aVal > bVal) return direction === 'asc' ? 1 : -1;
     return 0;
@@ -372,22 +371,22 @@ export const retry = async <T>(
   baseDelay = 1000
 ): Promise<T> => {
   let lastError: Error;
-  
+
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       return await fn();
     } catch (error) {
       lastError = error as Error;
-      
+
       if (attempt === maxAttempts) {
         throw lastError;
       }
-      
+
       const delay = baseDelay * Math.pow(2, attempt - 1);
       await sleep(delay);
     }
   }
-  
+
   throw lastError!;
 };
 

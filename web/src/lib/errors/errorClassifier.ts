@@ -1,6 +1,6 @@
 /**
  * Error Classification System
- * 
+ *
  * Comprehensive error classification logic that categorizes errors by type,
  * severity, and recovery strategy. Provides consistent error handling
  * across the entire frontend foundation layer.
@@ -10,21 +10,21 @@
 function generateId(): string {
   return `${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
 }
-import type { 
-  ClassifiedError, 
-  ErrorType, 
-  ErrorCategory, 
+import type {
+  ClassifiedError,
+  ErrorType,
+  ErrorCategory,
   ErrorSeverity,
   ErrorContext,
   NetworkErrorDetails,
-  GraphQLErrorExtensions
+  GraphQLErrorExtensions,
 } from './errorTypes';
-import { 
-  getBackendErrorConfig, 
-  getBackendFieldError, 
+import {
+  getBackendErrorConfig,
+  getBackendFieldError,
   getBackendContextualMessage,
   isBackendError,
-  BACKEND_ERROR_MAPPING 
+  BACKEND_ERROR_MAPPING,
 } from './backendErrorMapping';
 
 /**
@@ -33,9 +33,9 @@ import {
  */
 const GRAPHQL_ERROR_MAPPING: Record<string, ErrorType> = {
   // Legacy fallbacks for non-backend errors
-  'GRAPHQL_VALIDATION_FAILED': 'VALIDATION_ERROR',
-  'NETWORK_ERROR': 'NETWORK_ERROR',
-  'CACHE_ERROR': 'CACHE_ERROR',
+  GRAPHQL_VALIDATION_FAILED: 'VALIDATION_ERROR',
+  NETWORK_ERROR: 'NETWORK_ERROR',
+  CACHE_ERROR: 'CACHE_ERROR',
   // Backend errors are handled by BACKEND_ERROR_MAPPING
   ...Object.fromEntries(
     Object.entries(BACKEND_ERROR_MAPPING).map(([code, config]) => [code, config.type])
@@ -64,28 +64,28 @@ const HTTP_STATUS_MAPPING: Record<number, ErrorType> = {
  * Error type to category mapping
  */
 const TYPE_TO_CATEGORY: Record<ErrorType, ErrorCategory> = {
-  'AUTHENTICATION_ERROR': 'authentication',
-  'AUTHORIZATION_ERROR': 'authorization',
-  'VALIDATION_ERROR': 'user_input',
-  'NETWORK_ERROR': 'network',
-  'UPLOAD_ERROR': 'client',
-  'SUBSCRIPTION_ERROR': 'network',
-  'CACHE_ERROR': 'client',
-  'UNKNOWN_ERROR': 'system',
+  AUTHENTICATION_ERROR: 'authentication',
+  AUTHORIZATION_ERROR: 'authorization',
+  VALIDATION_ERROR: 'user_input',
+  NETWORK_ERROR: 'network',
+  UPLOAD_ERROR: 'client',
+  SUBSCRIPTION_ERROR: 'network',
+  CACHE_ERROR: 'client',
+  UNKNOWN_ERROR: 'system',
 };
 
 /**
  * Error type to severity mapping
  */
 const TYPE_TO_SEVERITY: Record<ErrorType, ErrorSeverity> = {
-  'AUTHENTICATION_ERROR': 'high',
-  'AUTHORIZATION_ERROR': 'medium',
-  'VALIDATION_ERROR': 'low',
-  'NETWORK_ERROR': 'medium',
-  'UPLOAD_ERROR': 'medium',
-  'SUBSCRIPTION_ERROR': 'low',
-  'CACHE_ERROR': 'medium',
-  'UNKNOWN_ERROR': 'high',
+  AUTHENTICATION_ERROR: 'high',
+  AUTHORIZATION_ERROR: 'medium',
+  VALIDATION_ERROR: 'low',
+  NETWORK_ERROR: 'medium',
+  UPLOAD_ERROR: 'medium',
+  SUBSCRIPTION_ERROR: 'low',
+  CACHE_ERROR: 'medium',
+  UNKNOWN_ERROR: 'high',
 };
 
 /**
@@ -115,11 +115,11 @@ export class ErrorClassifier {
     context?: Partial<ErrorContext>
   ): ClassifiedError {
     const code = error.extensions?.code || 'UNKNOWN_ERROR';
-    
+
     // Use backend error mapping if available
     if (isBackendError(code)) {
       const backendConfig = getBackendErrorConfig(code);
-      
+
       // Get contextual message if context is provided
       let userMessage = backendConfig.userMessage || error.message;
       if (context?.operation) {
@@ -128,7 +128,7 @@ export class ErrorClassifier {
           userMessage = contextualMessage;
         }
       }
-      
+
       // Get field-specific message if field is provided
       if (error.extensions?.field) {
         const fieldMessage = getBackendFieldError(error.extensions.field, code);
@@ -136,7 +136,7 @@ export class ErrorClassifier {
           userMessage = fieldMessage;
         }
       }
-      
+
       return {
         id: generateId(),
         type: backendConfig.type,
@@ -149,25 +149,27 @@ export class ErrorClassifier {
         retryable: backendConfig.retryable,
         retryDelay: this.getRetryDelay(backendConfig.type),
         maxRetries: this.getMaxRetries(backendConfig.type),
-        context: context ? {
-          ...context,
-          metadata: {
-            path: error.path,
-            locations: error.locations,
-            extensions: error.extensions,
-            backendError: true,
-          },
-        } : undefined,
+        context: context
+          ? {
+              ...context,
+              metadata: {
+                path: error.path,
+                locations: error.locations,
+                extensions: error.extensions,
+                backendError: true,
+              },
+            }
+          : undefined,
         timestamp: new Date(),
         stack: undefined,
       };
     }
-    
+
     // Fallback to legacy mapping for non-backend errors
     const type = GRAPHQL_ERROR_MAPPING[code] || 'UNKNOWN_ERROR';
     const category = TYPE_TO_CATEGORY[type];
     const severity = TYPE_TO_SEVERITY[type];
-    
+
     return {
       id: generateId(),
       type,
@@ -180,15 +182,17 @@ export class ErrorClassifier {
       retryable: RETRYABLE_ERRORS.has(type),
       retryDelay: this.getRetryDelay(type),
       maxRetries: this.getMaxRetries(type),
-      context: context ? {
-        ...context,
-        metadata: {
-          path: error.path,
-          locations: error.locations,
-          extensions: error.extensions,
-          backendError: false,
-        },
-      } : undefined,
+      context: context
+        ? {
+            ...context,
+            metadata: {
+              path: error.path,
+              locations: error.locations,
+              extensions: error.extensions,
+              backendError: false,
+            },
+          }
+        : undefined,
       timestamp: new Date(),
       stack: undefined,
     };
@@ -206,7 +210,7 @@ export class ErrorClassifier {
     const type = HTTP_STATUS_MAPPING[statusCode] || 'NETWORK_ERROR';
     const category = TYPE_TO_CATEGORY[type];
     const severity = this.getNetworkErrorSeverity(statusCode);
-    
+
     return {
       id: generateId(),
       type,
@@ -219,16 +223,18 @@ export class ErrorClassifier {
       retryable: this.isNetworkErrorRetryable(statusCode, type),
       retryDelay: this.getRetryDelay(type),
       maxRetries: this.getMaxRetries(type),
-      context: context ? {
-        ...context,
-        metadata: {
-          statusCode,
-          headers: details?.headers,
-          responseBody: details?.responseBody,
-          timeout: details?.timeout,
-          connectionType: details?.connectionType,
-        },
-      } : undefined,
+      context: context
+        ? {
+            ...context,
+            metadata: {
+              statusCode,
+              headers: details?.headers,
+              responseBody: details?.responseBody,
+              timeout: details?.timeout,
+              connectionType: details?.connectionType,
+            },
+          }
+        : undefined,
       timestamp: new Date(),
       stack: error.stack || undefined,
     };
@@ -237,13 +243,10 @@ export class ErrorClassifier {
   /**
    * Classifies a JavaScript runtime error
    */
-  classifyRuntimeError(
-    error: Error,
-    context?: Partial<ErrorContext>
-  ): ClassifiedError {
+  classifyRuntimeError(error: Error, context?: Partial<ErrorContext>): ClassifiedError {
     // Determine error type based on error name and message
     let type: ErrorType = 'UNKNOWN_ERROR';
-    
+
     if (error.name === 'TypeError' || error.name === 'ReferenceError') {
       type = 'UNKNOWN_ERROR';
     } else if (error.message.includes('network') || error.message.includes('fetch')) {
@@ -258,7 +261,7 @@ export class ErrorClassifier {
 
     const category = TYPE_TO_CATEGORY[type];
     const severity = TYPE_TO_SEVERITY[type];
-    
+
     return {
       id: generateId(),
       type,
@@ -292,7 +295,7 @@ export class ErrorClassifier {
     const type: ErrorType = 'UPLOAD_ERROR';
     const category = TYPE_TO_CATEGORY[type];
     const severity = this.getUploadErrorSeverity(error.code);
-    
+
     return {
       id: generateId(),
       type,
@@ -329,7 +332,7 @@ export class ErrorClassifier {
     const type: ErrorType = 'SUBSCRIPTION_ERROR';
     const category = TYPE_TO_CATEGORY[type];
     const severity = TYPE_TO_SEVERITY[type];
-    
+
     return {
       id: generateId(),
       type,
@@ -357,14 +360,14 @@ export class ErrorClassifier {
     }
 
     const messages: Record<ErrorType, string> = {
-      'AUTHENTICATION_ERROR': 'Please log in to continue.',
-      'AUTHORIZATION_ERROR': 'You don\'t have permission to perform this action.',
-      'VALIDATION_ERROR': 'Please check your input and try again.',
-      'NETWORK_ERROR': 'Connection problem. Please check your internet connection.',
-      'UPLOAD_ERROR': 'File upload failed. Please try again.',
-      'SUBSCRIPTION_ERROR': 'Real-time connection lost. Reconnecting...',
-      'CACHE_ERROR': 'Data synchronization issue. Please refresh the page.',
-      'UNKNOWN_ERROR': 'Something went wrong. Please try again.',
+      AUTHENTICATION_ERROR: 'Please log in to continue.',
+      AUTHORIZATION_ERROR: "You don't have permission to perform this action.",
+      VALIDATION_ERROR: 'Please check your input and try again.',
+      NETWORK_ERROR: 'Connection problem. Please check your internet connection.',
+      UPLOAD_ERROR: 'File upload failed. Please try again.',
+      SUBSCRIPTION_ERROR: 'Real-time connection lost. Reconnecting...',
+      CACHE_ERROR: 'Data synchronization issue. Please refresh the page.',
+      UNKNOWN_ERROR: 'Something went wrong. Please try again.',
     };
 
     return messages[type];
@@ -381,7 +384,7 @@ export class ErrorClassifier {
     } else if (statusCode === 408) {
       return 'Request timed out. Please check your connection and try again.';
     }
-    
+
     return this.getUserMessage(type);
   }
 
@@ -390,12 +393,12 @@ export class ErrorClassifier {
    */
   private getUploadErrorMessage(code: string): string {
     const messages: Record<string, string> = {
-      'FILE_TOO_LARGE': 'File is too large. Please choose a smaller file.',
-      'INVALID_FILE_TYPE': 'File type not supported. Please choose a different file.',
-      'UPLOAD_TIMEOUT': 'Upload timed out. Please try again.',
-      'NETWORK_ERROR': 'Upload failed due to connection issues. Please try again.',
-      'SERVER_ERROR': 'Upload failed due to server error. Please try again.',
-      'VALIDATION_ERROR': 'File validation failed. Please check the file and try again.',
+      FILE_TOO_LARGE: 'File is too large. Please choose a smaller file.',
+      INVALID_FILE_TYPE: 'File type not supported. Please choose a different file.',
+      UPLOAD_TIMEOUT: 'Upload timed out. Please try again.',
+      NETWORK_ERROR: 'Upload failed due to connection issues. Please try again.',
+      SERVER_ERROR: 'Upload failed due to server error. Please try again.',
+      VALIDATION_ERROR: 'File validation failed. Please check the file and try again.',
     };
 
     return messages[code] || 'File upload failed. Please try again.';
@@ -406,14 +409,14 @@ export class ErrorClassifier {
    */
   private getRetryDelay(type: ErrorType): number {
     const delays: Record<ErrorType, number> = {
-      'AUTHENTICATION_ERROR': 0, // No retry
-      'AUTHORIZATION_ERROR': 0, // No retry
-      'VALIDATION_ERROR': 0, // No retry
-      'NETWORK_ERROR': 1000, // 1 second
-      'UPLOAD_ERROR': 2000, // 2 seconds
-      'SUBSCRIPTION_ERROR': 1000, // 1 second
-      'CACHE_ERROR': 500, // 0.5 seconds
-      'UNKNOWN_ERROR': 2000, // 2 seconds
+      AUTHENTICATION_ERROR: 0, // No retry
+      AUTHORIZATION_ERROR: 0, // No retry
+      VALIDATION_ERROR: 0, // No retry
+      NETWORK_ERROR: 1000, // 1 second
+      UPLOAD_ERROR: 2000, // 2 seconds
+      SUBSCRIPTION_ERROR: 1000, // 1 second
+      CACHE_ERROR: 500, // 0.5 seconds
+      UNKNOWN_ERROR: 2000, // 2 seconds
     };
 
     return delays[type];
@@ -424,14 +427,14 @@ export class ErrorClassifier {
    */
   private getMaxRetries(type: ErrorType): number {
     const maxRetries: Record<ErrorType, number> = {
-      'AUTHENTICATION_ERROR': 0,
-      'AUTHORIZATION_ERROR': 0,
-      'VALIDATION_ERROR': 0,
-      'NETWORK_ERROR': 3,
-      'UPLOAD_ERROR': 3,
-      'SUBSCRIPTION_ERROR': 5,
-      'CACHE_ERROR': 2,
-      'UNKNOWN_ERROR': 2,
+      AUTHENTICATION_ERROR: 0,
+      AUTHORIZATION_ERROR: 0,
+      VALIDATION_ERROR: 0,
+      NETWORK_ERROR: 3,
+      UPLOAD_ERROR: 3,
+      SUBSCRIPTION_ERROR: 5,
+      CACHE_ERROR: 2,
+      UNKNOWN_ERROR: 2,
     };
 
     return maxRetries[type];
@@ -457,7 +460,7 @@ export class ErrorClassifier {
   private getUploadErrorSeverity(code: string): ErrorSeverity {
     const highSeverity = ['SERVER_ERROR', 'NETWORK_ERROR'];
     const lowSeverity = ['FILE_TOO_LARGE', 'INVALID_FILE_TYPE', 'VALIDATION_ERROR'];
-    
+
     if (highSeverity.includes(code)) {
       return 'high';
     } else if (lowSeverity.includes(code)) {
@@ -474,7 +477,7 @@ export class ErrorClassifier {
     if (statusCode >= 400 && statusCode < 500) {
       return statusCode === 408 || statusCode === 429; // Timeout or rate limit
     }
-    
+
     // Retry server errors (5xx) and network errors
     return statusCode >= 500 || type === 'NETWORK_ERROR';
   }

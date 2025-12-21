@@ -1,6 +1,6 @@
 /**
  * Authentication System
- * 
+ *
  * JWT token management, role-based access control, authentication state,
  * email verification, and password reset functionality.
  * Provides a complete authentication infrastructure for the frontend application.
@@ -14,23 +14,23 @@ export type { TokenStorage } from './tokenStorage';
 export { AuthProvider, useAuthContext } from './authProvider';
 
 // Authentication components
-export { 
-  AuthGuard, 
-  ProtectedRoute, 
+export {
+  AuthGuard,
+  ProtectedRoute,
   PermissionGuard,
   RoleGuard,
   EmailVerificationForm,
   EmailVerificationHandler,
   PasswordResetRequestForm,
-  PasswordResetConfirmForm
+  PasswordResetConfirmForm,
 } from './components';
 
 // Role-based access control
-export { 
-  createRoleGuard, 
-  RoleGuard as RoleGuardClass, 
-  PermissionUtils, 
-  RouteGuards 
+export {
+  createRoleGuard,
+  RoleGuard as RoleGuardClass,
+  PermissionUtils,
+  RouteGuards,
 } from './authGuards';
 export type { UserRole, Permission, CourseContext } from './authGuards';
 

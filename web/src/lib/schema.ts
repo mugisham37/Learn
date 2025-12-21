@@ -1,6 +1,6 @@
 /**
  * Schema Integration Module
- * 
+ *
  * Provides schema validation, health monitoring, and statistics
  * for GraphQL schema integration with the frontend.
  */
@@ -119,7 +119,7 @@ export class SchemaIntegration {
    */
   async checkSchemaHealth(): Promise<SchemaHealthStatus> {
     const startTime = Date.now();
-    
+
     try {
       // In a real implementation, this would perform health checks
       const healthStatus: SchemaHealthStatus = {
@@ -263,7 +263,9 @@ export const schemaIntegration = new SchemaIntegration();
 /**
  * Check schema compatibility
  */
-export async function checkSchemaCompatibility(schema?: DocumentNode): Promise<SchemaValidationResult> {
+export async function checkSchemaCompatibility(
+  schema?: DocumentNode
+): Promise<SchemaValidationResult> {
   return await schemaIntegration.validateSchema(schema);
 }
 
@@ -334,7 +336,7 @@ export function useSchemaHealth() {
 
   useEffect(() => {
     checkHealth();
-    
+
     // Check health every 30 seconds
     const interval = setInterval(checkHealth, 30000);
     return () => clearInterval(interval);
@@ -371,7 +373,7 @@ export function useSchemaStats() {
 
   useEffect(() => {
     fetchStats();
-    
+
     // Fetch stats every 5 minutes
     const interval = setInterval(fetchStats, 300000);
     return () => clearInterval(interval);

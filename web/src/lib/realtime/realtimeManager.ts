@@ -1,6 +1,6 @@
 /**
  * Real-time Manager
- * 
+ *
  * Centralized manager for all real-time communication including GraphQL subscriptions
  * and Socket.io events. Provides unified interface for real-time features with
  * automatic connection management, authentication, and cache integration.
@@ -9,10 +9,10 @@
 import { useEffect, useCallback, useRef } from 'react';
 import { useApolloClient } from '@apollo/client';
 import { useAuth } from '../auth/authHooks';
-import socketClient, { 
-  SOCKET_EVENTS, 
+import socketClient, {
+  SOCKET_EVENTS,
   SocketEventHandler,
-  getConnectionStatus as getSocketStatus 
+  getConnectionStatus as getSocketStatus,
 } from './socketClient';
 import { useSubscriptionContext } from '../subscriptions/SubscriptionProvider';
 
@@ -42,10 +42,10 @@ export function useRealtimeManager() {
     if (isAuthenticated && user) {
       // Connect Socket.io client
       socketClient.connectSocket();
-      
+
       // Join user-specific room
       socketClient.joinRoom(`user:${user.id}`);
-      
+
       // Join role-specific room if applicable
       if (user.role) {
         socketClient.joinRoom(`role:${user.role}`);
@@ -60,12 +60,12 @@ export function useRealtimeManager() {
     if (user) {
       // Leave user-specific rooms
       socketClient.leaveRoom(`user:${user.id}`);
-      
+
       if (user.role) {
         socketClient.leaveRoom(`role:${user.role}`);
       }
     }
-    
+
     // Disconnect Socket.io
     socketClient.disconnectSocket();
   }, [user]);
@@ -73,146 +73,158 @@ export function useRealtimeManager() {
   /**
    * Subscribe to real-time event
    */
-  const subscribeToEvent = useCallback((
-    eventName: string,
-    handler: SocketEventHandler
-  ): (() => void) => {
-    // Add handler to local registry
-    if (!eventHandlersRef.current.has(eventName)) {
-      eventHandlersRef.current.set(eventName, new Set());
-    }
-    eventHandlersRef.current.get(eventName)!.add(handler);
-
-    // Subscribe to Socket.io event
-    const unsubscribeSocket = socketClient.subscribeToEvent(eventName, handler);
-
-    // Return combined unsubscribe function
-    return () => {
-      // Remove from local registry
-      const handlers = eventHandlersRef.current.get(eventName);
-      if (handlers) {
-        handlers.delete(handler);
-        if (handlers.size === 0) {
-          eventHandlersRef.current.delete(eventName);
-        }
+  const subscribeToEvent = useCallback(
+    (eventName: string, handler: SocketEventHandler): (() => void) => {
+      // Add handler to local registry
+      if (!eventHandlersRef.current.has(eventName)) {
+        eventHandlersRef.current.set(eventName, new Set());
       }
-      
-      // Unsubscribe from Socket.io
-      unsubscribeSocket();
-    };
-  }, []);
+      eventHandlersRef.current.get(eventName)!.add(handler);
+
+      // Subscribe to Socket.io event
+      const unsubscribeSocket = socketClient.subscribeToEvent(eventName, handler);
+
+      // Return combined unsubscribe function
+      return () => {
+        // Remove from local registry
+        const handlers = eventHandlersRef.current.get(eventName);
+        if (handlers) {
+          handlers.delete(handler);
+          if (handlers.size === 0) {
+            eventHandlersRef.current.delete(eventName);
+          }
+        }
+
+        // Unsubscribe from Socket.io
+        unsubscribeSocket();
+      };
+    },
+    []
+  );
 
   /**
    * Handle notification events with cache updates
    */
-  const handleNotificationEvent = useCallback((data: unknown) => {
-    try {
-      // Update Apollo cache with new notification
-      apolloClient.cache.modify({
-        fields: {
-          notifications(existingNotifications = []) {
-            // Add new notification to the beginning of the list
-            return [data, ...existingNotifications];
+  const handleNotificationEvent = useCallback(
+    (data: unknown) => {
+      try {
+        // Update Apollo cache with new notification
+        apolloClient.cache.modify({
+          fields: {
+            notifications(existingNotifications = []) {
+              // Add new notification to the beginning of the list
+              return [data, ...existingNotifications];
+            },
+            unreadNotificationCount(existingCount = 0) {
+              return existingCount + 1;
+            },
           },
-          unreadNotificationCount(existingCount = 0) {
-            return existingCount + 1;
-          },
-        },
-      });
-    } catch (error) {
-      console.error('Failed to update notification cache:', error);
-    }
-  }, [apolloClient.cache]);
+        });
+      } catch (error) {
+        console.error('Failed to update notification cache:', error);
+      }
+    },
+    [apolloClient.cache]
+  );
 
   /**
    * Handle message events with cache updates
    */
-  const handleMessageEvent = useCallback((data: unknown) => {
-    try {
-      // Update Apollo cache with new message
-      apolloClient.cache.modify({
-        fields: {
-          conversations(existingConversations = []) {
-            // Update the specific conversation with new message
-            return existingConversations.map((conversation: any) => {
-              if (conversation.id === (data as any)?.conversationId) {
-                return {
-                  ...conversation,
-                  lastMessage: data,
-                  updatedAt: new Date().toISOString(),
-                };
-              }
-              return conversation;
-            });
+  const handleMessageEvent = useCallback(
+    (data: unknown) => {
+      try {
+        // Update Apollo cache with new message
+        apolloClient.cache.modify({
+          fields: {
+            conversations(existingConversations = []) {
+              // Update the specific conversation with new message
+              return existingConversations.map((conversation: any) => {
+                if (conversation.id === (data as any)?.conversationId) {
+                  return {
+                    ...conversation,
+                    lastMessage: data,
+                    updatedAt: new Date().toISOString(),
+                  };
+                }
+                return conversation;
+              });
+            },
           },
-        },
-      });
-    } catch (error) {
-      console.error('Failed to update message cache:', error);
-    }
-  }, [apolloClient.cache]);
+        });
+      } catch (error) {
+        console.error('Failed to update message cache:', error);
+      }
+    },
+    [apolloClient.cache]
+  );
 
   /**
    * Handle progress events with cache updates
    */
-  const handleProgressEvent = useCallback((data: unknown) => {
-    try {
-      // Update Apollo cache with progress data
-      apolloClient.cache.modify({
-        fields: {
-          enrollments(existingEnrollments = []) {
-            return existingEnrollments.map((enrollment: any) => {
-              if (enrollment.id === (data as any)?.enrollmentId) {
-                return {
-                  ...enrollment,
-                  progress: (data as any)?.progress || enrollment.progress,
-                  updatedAt: new Date().toISOString(),
-                };
-              }
-              return enrollment;
-            });
+  const handleProgressEvent = useCallback(
+    (data: unknown) => {
+      try {
+        // Update Apollo cache with progress data
+        apolloClient.cache.modify({
+          fields: {
+            enrollments(existingEnrollments = []) {
+              return existingEnrollments.map((enrollment: any) => {
+                if (enrollment.id === (data as any)?.enrollmentId) {
+                  return {
+                    ...enrollment,
+                    progress: (data as any)?.progress || enrollment.progress,
+                    updatedAt: new Date().toISOString(),
+                  };
+                }
+                return enrollment;
+              });
+            },
           },
-        },
-      });
-    } catch (error) {
-      console.error('Failed to update progress cache:', error);
-    }
-  }, [apolloClient.cache]);
+        });
+      } catch (error) {
+        console.error('Failed to update progress cache:', error);
+      }
+    },
+    [apolloClient.cache]
+  );
 
   /**
    * Handle presence events with cache updates
    */
-  const handlePresenceEvent = useCallback((data: unknown) => {
-    try {
-      // Update Apollo cache with presence data
-      apolloClient.cache.modify({
-        fields: {
-          coursePresence(existingPresence = []) {
-            const presenceData = data as any;
-            return existingPresence.map((presence: any) => {
-              if (presence.userId === presenceData?.userId) {
-                return {
-                  ...presence,
-                  status: presenceData.status,
-                  lastSeen: presenceData.lastSeen || new Date().toISOString(),
-                };
-              }
-              return presence;
-            });
+  const handlePresenceEvent = useCallback(
+    (data: unknown) => {
+      try {
+        // Update Apollo cache with presence data
+        apolloClient.cache.modify({
+          fields: {
+            coursePresence(existingPresence = []) {
+              const presenceData = data as any;
+              return existingPresence.map((presence: any) => {
+                if (presence.userId === presenceData?.userId) {
+                  return {
+                    ...presence,
+                    status: presenceData.status,
+                    lastSeen: presenceData.lastSeen || new Date().toISOString(),
+                  };
+                }
+                return presence;
+              });
+            },
           },
-        },
-      });
-    } catch (error) {
-      console.error('Failed to update presence cache:', error);
-    }
-  }, [apolloClient.cache]);
+        });
+      } catch (error) {
+        console.error('Failed to update presence cache:', error);
+      }
+    },
+    [apolloClient.cache]
+  );
 
   /**
    * Get connection status for both GraphQL and Socket.io
    */
   const getConnectionStatus = useCallback(() => {
     const socketStatus = getSocketStatus();
-    
+
     return {
       graphql: {
         connected: graphqlConnected,
@@ -293,9 +305,7 @@ export function useRealtimeManager() {
     );
 
     // Subscribe to message events
-    unsubscribers.push(
-      subscribeToEvent(SOCKET_EVENTS.MESSAGE_RECEIVED, handleMessageEvent)
-    );
+    unsubscribers.push(subscribeToEvent(SOCKET_EVENTS.MESSAGE_RECEIVED, handleMessageEvent));
 
     // Subscribe to progress events
     unsubscribers.push(
@@ -305,9 +315,7 @@ export function useRealtimeManager() {
     );
 
     // Subscribe to presence events
-    unsubscribers.push(
-      subscribeToEvent(SOCKET_EVENTS.USER_PRESENCE, handlePresenceEvent)
-    );
+    unsubscribers.push(subscribeToEvent(SOCKET_EVENTS.USER_PRESENCE, handlePresenceEvent));
 
     return () => {
       unsubscribers.forEach(unsubscribe => unsubscribe());
@@ -323,17 +331,17 @@ export function useRealtimeManager() {
   return {
     // Connection management
     getConnectionStatus,
-    
+
     // Room management
     joinCourse,
     leaveCourse,
     joinConversation,
     leaveConversation,
-    
+
     // Presence and activity
     updatePresence,
     sendTypingIndicator,
-    
+
     // Event subscription
     subscribeToEvent,
   };
@@ -344,7 +352,7 @@ export function useRealtimeManager() {
  */
 export function useRealtimeProvider() {
   const realtimeManager = useRealtimeManager();
-  
+
   return realtimeManager;
 }
 

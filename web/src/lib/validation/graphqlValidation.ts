@@ -1,9 +1,9 @@
 /**
  * GraphQL Response Validation
- * 
+ *
  * Provides validation utilities specifically for GraphQL responses,
  * including Apollo Client integration and error handling.
- * 
+ *
  * Requirements: 8.4 - Runtime validation for GraphQL responses
  */
 
@@ -18,7 +18,7 @@ import {
   EnrollmentSchema,
   LessonSchema,
   MessageSchema,
-  ConnectionSchema
+  ConnectionSchema,
 } from './runtimeValidation';
 
 // =============================================================================
@@ -72,27 +72,31 @@ export function validateQueryResult<T>(
       data: fallback as T,
       loading: result.loading,
       error: result.error,
-      networkStatus: result.networkStatus
+      networkStatus: result.networkStatus,
     };
   }
 
   if (!result.data) {
     if (strict && !warnOnly) {
-      throw new Error(`No data received from GraphQL query${operationName ? ` ${operationName}` : ''}`);
+      throw new Error(
+        `No data received from GraphQL query${operationName ? ` ${operationName}` : ''}`
+      );
     }
-    
-    devTypeWarning(`No data received from GraphQL query${operationName ? ` ${operationName}` : ''}`);
-    
+
+    devTypeWarning(
+      `No data received from GraphQL query${operationName ? ` ${operationName}` : ''}`
+    );
+
     return {
       data: fallback as T,
       loading: result.loading,
       error: result.error,
-      networkStatus: result.networkStatus
+      networkStatus: result.networkStatus,
     };
   }
 
   let validatedData: T;
-  
+
   if (warnOnly || fallback !== undefined) {
     validatedData = safeValidateGraphQLResponse(result.data, schema, fallback as T, operationName);
   } else {
@@ -103,7 +107,7 @@ export function validateQueryResult<T>(
     data: validatedData,
     loading: result.loading,
     error: result.error || undefined,
-    networkStatus: result.networkStatus
+    networkStatus: result.networkStatus,
   };
 }
 
@@ -120,25 +124,29 @@ export function validateMutationResult<T>(
   if (result.errors && result.errors.length > 0) {
     return {
       data: fallback as T,
-      errors: result.errors
+      errors: result.errors,
     };
   }
 
   if (!result.data) {
     if (strict && !warnOnly) {
-      throw new Error(`No data received from GraphQL mutation${operationName ? ` ${operationName}` : ''}`);
+      throw new Error(
+        `No data received from GraphQL mutation${operationName ? ` ${operationName}` : ''}`
+      );
     }
-    
-    devTypeWarning(`No data received from GraphQL mutation${operationName ? ` ${operationName}` : ''}`);
-    
+
+    devTypeWarning(
+      `No data received from GraphQL mutation${operationName ? ` ${operationName}` : ''}`
+    );
+
     return {
       data: fallback as T,
-      errors: result.errors
+      errors: result.errors,
     };
   }
 
   let validatedData: T;
-  
+
   if (warnOnly || fallback !== undefined) {
     validatedData = safeValidateGraphQLResponse(result.data, schema, fallback as T, operationName);
   } else {
@@ -147,7 +155,7 @@ export function validateMutationResult<T>(
 
   return {
     data: validatedData,
-    errors: result.errors || undefined
+    errors: result.errors || undefined,
   };
 }
 
@@ -163,12 +171,12 @@ export function validateUserQuery(
   options: ValidationOptions = {}
 ): ValidatedQueryResult<{ user: unknown }> {
   const schema = z.object({
-    user: UserSchema
+    user: UserSchema,
   });
-  
+
   return validateQueryResult(result, schema, {
     ...options,
-    operationName: options.operationName || 'GetUser'
+    operationName: options.operationName || 'GetUser',
   });
 }
 
@@ -180,12 +188,12 @@ export function validateCurrentUserQuery(
   options: ValidationOptions = {}
 ): ValidatedQueryResult<{ currentUser: unknown }> {
   const schema = z.object({
-    currentUser: UserSchema.nullable()
+    currentUser: UserSchema.nullable(),
   });
-  
+
   return validateQueryResult(result, schema, {
     ...options,
-    operationName: options.operationName || 'GetCurrentUser'
+    operationName: options.operationName || 'GetCurrentUser',
   });
 }
 
@@ -197,12 +205,12 @@ export function validateCoursesQuery(
   options: ValidationOptions = {}
 ): ValidatedQueryResult<{ courses: unknown }> {
   const schema = z.object({
-    courses: ConnectionSchema(CourseSchema)
+    courses: ConnectionSchema(CourseSchema),
   });
-  
+
   return validateQueryResult(result, schema, {
     ...options,
-    operationName: options.operationName || 'GetCourses'
+    operationName: options.operationName || 'GetCourses',
   });
 }
 
@@ -214,12 +222,12 @@ export function validateCourseQuery(
   options: ValidationOptions = {}
 ): ValidatedQueryResult<{ course: unknown }> {
   const schema = z.object({
-    course: CourseSchema
+    course: CourseSchema,
   });
-  
+
   return validateQueryResult(result, schema, {
     ...options,
-    operationName: options.operationName || 'GetCourse'
+    operationName: options.operationName || 'GetCourse',
   });
 }
 
@@ -231,12 +239,12 @@ export function validateEnrollmentsQuery(
   options: ValidationOptions = {}
 ): ValidatedQueryResult<{ enrollments: unknown }> {
   const schema = z.object({
-    enrollments: ConnectionSchema(EnrollmentSchema)
+    enrollments: ConnectionSchema(EnrollmentSchema),
   });
-  
+
   return validateQueryResult(result, schema, {
     ...options,
-    operationName: options.operationName || 'GetEnrollments'
+    operationName: options.operationName || 'GetEnrollments',
   });
 }
 
@@ -248,12 +256,12 @@ export function validateLessonsQuery(
   options: ValidationOptions = {}
 ): ValidatedQueryResult<{ lessons: unknown }> {
   const schema = z.object({
-    lessons: z.array(LessonSchema)
+    lessons: z.array(LessonSchema),
   });
-  
+
   return validateQueryResult(result, schema, {
     ...options,
-    operationName: options.operationName || 'GetLessons'
+    operationName: options.operationName || 'GetLessons',
   });
 }
 
@@ -265,12 +273,12 @@ export function validateMessagesQuery(
   options: ValidationOptions = {}
 ): ValidatedQueryResult<{ messages: unknown }> {
   const schema = z.object({
-    messages: ConnectionSchema(MessageSchema)
+    messages: ConnectionSchema(MessageSchema),
   });
-  
+
   return validateQueryResult(result, schema, {
     ...options,
-    operationName: options.operationName || 'GetMessages'
+    operationName: options.operationName || 'GetMessages',
   });
 }
 
@@ -289,13 +297,13 @@ export function validateLoginMutation(
     login: z.object({
       user: UserSchema,
       accessToken: z.string(),
-      refreshToken: z.string()
-    })
+      refreshToken: z.string(),
+    }),
   });
-  
+
   return validateMutationResult(result, schema, {
     ...options,
-    operationName: options.operationName || 'Login'
+    operationName: options.operationName || 'Login',
   });
 }
 
@@ -307,12 +315,12 @@ export function validateCreateCourseMutation(
   options: ValidationOptions = {}
 ): ValidatedMutationResult<{ createCourse: unknown }> {
   const schema = z.object({
-    createCourse: CourseSchema
+    createCourse: CourseSchema,
   });
-  
+
   return validateMutationResult(result, schema, {
     ...options,
-    operationName: options.operationName || 'CreateCourse'
+    operationName: options.operationName || 'CreateCourse',
   });
 }
 
@@ -324,12 +332,12 @@ export function validateUpdateCourseMutation(
   options: ValidationOptions = {}
 ): ValidatedMutationResult<{ updateCourse: unknown }> {
   const schema = z.object({
-    updateCourse: CourseSchema
+    updateCourse: CourseSchema,
   });
-  
+
   return validateMutationResult(result, schema, {
     ...options,
-    operationName: options.operationName || 'UpdateCourse'
+    operationName: options.operationName || 'UpdateCourse',
   });
 }
 
@@ -341,12 +349,12 @@ export function validateEnrollInCourseMutation(
   options: ValidationOptions = {}
 ): ValidatedMutationResult<{ enrollInCourse: unknown }> {
   const schema = z.object({
-    enrollInCourse: EnrollmentSchema
+    enrollInCourse: EnrollmentSchema,
   });
-  
+
   return validateMutationResult(result, schema, {
     ...options,
-    operationName: options.operationName || 'EnrollInCourse'
+    operationName: options.operationName || 'EnrollInCourse',
   });
 }
 
@@ -358,12 +366,12 @@ export function validateSendMessageMutation(
   options: ValidationOptions = {}
 ): ValidatedMutationResult<{ sendMessage: unknown }> {
   const schema = z.object({
-    sendMessage: MessageSchema
+    sendMessage: MessageSchema,
   });
-  
+
   return validateMutationResult(result, schema, {
     ...options,
-    operationName: options.operationName || 'SendMessage'
+    operationName: options.operationName || 'SendMessage',
   });
 }
 
@@ -382,7 +390,9 @@ export function validateSubscriptionResult<T>(
   const { warnOnly = true, operationName, fallback = null } = options;
 
   if (!data) {
-    devTypeWarning(`No data received from GraphQL subscription${operationName ? ` ${operationName}` : ''}`);
+    devTypeWarning(
+      `No data received from GraphQL subscription${operationName ? ` ${operationName}` : ''}`
+    );
     return fallback as T | null;
   }
 
@@ -401,14 +411,14 @@ export function validateMessageUpdatesSubscription(
   options: ValidationOptions = {}
 ): unknown | null {
   const schema = z.object({
-    messageUpdates: MessageSchema
+    messageUpdates: MessageSchema,
   });
-  
+
   const result = validateSubscriptionResult(data, schema, {
     ...options,
-    operationName: options.operationName || 'MessageUpdates'
+    operationName: options.operationName || 'MessageUpdates',
   });
-  
+
   return result ? (result as { messageUpdates: unknown }).messageUpdates : null;
 }
 
@@ -422,16 +432,19 @@ export function validateProgressUpdatesSubscription(
   const schema = z.object({
     progressUpdates: z.object({
       enrollmentId: z.string(),
-      progressPercentage: z.number().min(0).max(100)
-    })
+      progressPercentage: z.number().min(0).max(100),
+    }),
   });
-  
+
   const result = validateSubscriptionResult(data, schema, {
     ...options,
-    operationName: options.operationName || 'ProgressUpdates'
+    operationName: options.operationName || 'ProgressUpdates',
   });
-  
-  return result ? (result as { progressUpdates: { enrollmentId: string; progressPercentage: number } }).progressUpdates : null;
+
+  return result
+    ? (result as { progressUpdates: { enrollmentId: string; progressPercentage: number } })
+        .progressUpdates
+    : null;
 }
 
 // =============================================================================
@@ -441,9 +454,13 @@ export function validateProgressUpdatesSubscription(
 /**
  * Extract validation errors from Apollo error
  */
-export function extractValidationErrors(error: Error & { graphQLErrors?: Array<{ extensions?: { code?: string; fieldErrors?: Record<string, string> } }> }): Record<string, string> {
+export function extractValidationErrors(
+  error: Error & {
+    graphQLErrors?: Array<{ extensions?: { code?: string; fieldErrors?: Record<string, string> } }>;
+  }
+): Record<string, string> {
   const validationErrors: Record<string, string> = {};
-  
+
   if (error.graphQLErrors) {
     for (const graphQLError of error.graphQLErrors) {
       if (graphQLError.extensions?.code === 'VALIDATION_ERROR') {
@@ -454,70 +471,72 @@ export function extractValidationErrors(error: Error & { graphQLErrors?: Array<{
       }
     }
   }
-  
+
   return validationErrors;
 }
 
 /**
  * Check if Apollo error is a validation error
  */
-export function isValidationError(error: Error & { graphQLErrors?: Array<{ extensions?: { code?: string } }> }): boolean {
-  return error.graphQLErrors?.some(
-    err => err.extensions?.code === 'VALIDATION_ERROR'
-  ) || false;
+export function isValidationError(
+  error: Error & { graphQLErrors?: Array<{ extensions?: { code?: string } }> }
+): boolean {
+  return error.graphQLErrors?.some(err => err.extensions?.code === 'VALIDATION_ERROR') || false;
 }
 
 /**
  * Check if Apollo error is an authentication error
  */
-export function isAuthenticationError(error: Error & { graphQLErrors?: Array<{ extensions?: { code?: string } }> }): boolean {
-  return error.graphQLErrors?.some(
-    err => err.extensions?.code === 'UNAUTHENTICATED'
-  ) || false;
+export function isAuthenticationError(
+  error: Error & { graphQLErrors?: Array<{ extensions?: { code?: string } }> }
+): boolean {
+  return error.graphQLErrors?.some(err => err.extensions?.code === 'UNAUTHENTICATED') || false;
 }
 
 /**
  * Check if Apollo error is an authorization error
  */
-export function isAuthorizationError(error: Error & { graphQLErrors?: Array<{ extensions?: { code?: string } }> }): boolean {
-  return error.graphQLErrors?.some(
-    err => err.extensions?.code === 'FORBIDDEN'
-  ) || false;
+export function isAuthorizationError(
+  error: Error & { graphQLErrors?: Array<{ extensions?: { code?: string } }> }
+): boolean {
+  return error.graphQLErrors?.some(err => err.extensions?.code === 'FORBIDDEN') || false;
 }
 
 /**
  * Get user-friendly error message from Apollo error
  */
-export function getUserFriendlyErrorMessage(error: Error & { 
-  networkError?: Error; 
-  graphQLErrors?: Array<{ 
-    message: string; 
-    extensions?: { 
-      code?: string; 
-      fieldErrors?: Record<string, string> 
-    } 
-  }> 
-}): string {
+export function getUserFriendlyErrorMessage(
+  error: Error & {
+    networkError?: Error;
+    graphQLErrors?: Array<{
+      message: string;
+      extensions?: {
+        code?: string;
+        fieldErrors?: Record<string, string>;
+      };
+    }>;
+  }
+): string {
   if (isValidationError(error)) {
     return 'Please check your input and try again.';
   }
-  
+
   if (isAuthenticationError(error)) {
     return 'Please log in to continue.';
   }
-  
+
   if (isAuthorizationError(error)) {
     return 'You do not have permission to perform this action.';
   }
-  
+
   if (error.networkError) {
     return 'Network error. Please check your connection and try again.';
   }
-  
+
   if (error.graphQLErrors && error.graphQLErrors.length > 0) {
     return error.graphQLErrors[0]?.message || 'GraphQL error occurred';
   }
-  
+
   return 'An unexpected error occurred. Please try again.';
 }
 
@@ -536,19 +555,19 @@ export function logGraphQLOperation(
 ): void {
   if (process.env.NODE_ENV === 'development') {
     console.group(`[GraphQL] ${operationName}`);
-    
+
     if (variables) {
       console.log('Variables:', variables);
     }
-    
+
     if (result) {
       console.log('Result:', result);
     }
-    
+
     if (error) {
       console.error('Error:', error);
     }
-    
+
     console.groupEnd();
   }
 }
@@ -561,9 +580,11 @@ export function validateOperationName(operationName: string): void {
     if (!operationName || typeof operationName !== 'string') {
       devTypeWarning('GraphQL operation name should be a non-empty string');
     }
-    
+
     if (!/^[A-Z][a-zA-Z0-9]*$/.test(operationName)) {
-      devTypeWarning(`GraphQL operation name "${operationName}" should start with uppercase and contain only alphanumeric characters`);
+      devTypeWarning(
+        `GraphQL operation name "${operationName}" should start with uppercase and contain only alphanumeric characters`
+      );
     }
   }
 }
@@ -576,10 +597,8 @@ export function checkUnusedVariables(
   usedVariables: string[]
 ): void {
   if (process.env.NODE_ENV === 'development') {
-    const unusedVariables = Object.keys(variables).filter(
-      key => !usedVariables.includes(key)
-    );
-    
+    const unusedVariables = Object.keys(variables).filter(key => !usedVariables.includes(key));
+
     if (unusedVariables.length > 0) {
       devTypeWarning(`Unused GraphQL variables: ${unusedVariables.join(', ')}`);
     }

@@ -1,6 +1,6 @@
 /**
  * Data Fetching Hooks
- * 
+ *
  * Domain-specific React hooks for all backend modules.
  * Provides consistent API patterns with loading states, optimistic updates,
  * and proper cleanup and error handling.

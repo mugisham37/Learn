@@ -1,9 +1,9 @@
 /**
  * Server-side Data Fetching Utilities
- * 
+ *
  * Provides utilities for fetching data on the server-side with proper
  * authentication, caching, and error handling for Next.js pages.
- * 
+ *
  * Requirements: 8.3, 8.5
  */
 
@@ -46,11 +46,11 @@ export const serverAuth = {
   async getCurrentUser() {
     const token = await this.requireAuth();
     const result = await serverGraphQL.fetchCurrentUser(token);
-    
+
     if (result.errors || !result.data?.me) {
       redirect('/login');
     }
-    
+
     return result.data.me;
   },
 
@@ -59,11 +59,11 @@ export const serverAuth = {
    */
   async requireRole(requiredRoles: string[]) {
     const user = await this.getCurrentUser();
-    
+
     if (!requiredRoles.includes(user.role)) {
       redirect('/unauthorized');
     }
-    
+
     return user;
   },
 };
@@ -75,16 +75,18 @@ export const serverData = {
   /**
    * Fetch courses with caching
    */
-  async fetchCourses(params: {
-    category?: string;
-    difficulty?: string;
-    page?: number;
-    limit?: number;
-    featured?: boolean;
-  } = {}) {
+  async fetchCourses(
+    params: {
+      category?: string;
+      difficulty?: string;
+      page?: number;
+      limit?: number;
+      featured?: boolean;
+    } = {}
+  ) {
     // Generate cache key for potential future use
     nextCache.keys.courseList(params);
-    
+
     const result = await serverGraphQL.fetchCourses({
       first: params.limit || 12,
       ...(params.page && { after: btoa(`cursor:${(params.page - 1) * (params.limit || 12)}`) }),
@@ -108,30 +110,32 @@ export const serverData = {
    */
   async fetchCourse(slug: string, requireAuth: boolean = false) {
     const token = requireAuth ? await serverAuth.requireAuth() : await serverAuth.getAccessToken();
-    
+
     const result = await serverGraphQL.fetchCourseBySlug(slug, token || undefined);
-    
+
     if (result.errors || !result.data?.courseBySlug) {
       return null;
     }
-    
+
     return result.data.courseBySlug;
   },
 
   /**
    * Fetch user enrollments with caching
    */
-  async fetchUserEnrollments(params: {
-    status?: string;
-    page?: number;
-    limit?: number;
-  } = {}) {
+  async fetchUserEnrollments(
+    params: {
+      status?: string;
+      page?: number;
+      limit?: number;
+    } = {}
+  ) {
     const token = await serverAuth.requireAuth();
     const user = await serverAuth.getCurrentUser();
-    
+
     // Generate cache key for potential future use
     nextCache.keys.userEnrollments(user.id, params);
-    
+
     const result = await serverGraphQL.fetchUserEnrollments(token, {
       first: params.limit || 10,
       ...(params.page && { after: btoa(`cursor:${(params.page - 1) * (params.limit || 10)}`) }),
@@ -141,7 +145,8 @@ export const serverData = {
     });
 
     return {
-      enrollments: result.data?.myEnrollments?.edges?.map((edge: { node: unknown }) => edge.node) || [],
+      enrollments:
+        result.data?.myEnrollments?.edges?.map((edge: { node: unknown }) => edge.node) || [],
       pageInfo: result.data?.myEnrollments?.pageInfo || {},
       totalCount: result.data?.myEnrollments?.totalCount || 0,
       errors: result.errors,
@@ -153,7 +158,7 @@ export const serverData = {
    */
   async fetchDashboardData() {
     const user = await serverAuth.getCurrentUser();
-    
+
     // Fetch multiple data sources in parallel
     const [enrollmentsResult, coursesResult] = await Promise.all([
       this.fetchUserEnrollments({ limit: 5 }),
@@ -166,7 +171,9 @@ export const serverData = {
       featuredCourses: coursesResult.courses,
       stats: {
         totalEnrollments: enrollmentsResult.totalCount,
-        completedCourses: enrollmentsResult.enrollments.filter((e: { status: string }) => e.status === 'COMPLETED').length,
+        completedCourses: enrollmentsResult.enrollments.filter(
+          (e: { status: string }) => e.status === 'COMPLETED'
+        ).length,
       },
     };
   },
@@ -176,7 +183,7 @@ export const serverData = {
    */
   async fetchEducatorData() {
     const user = await serverAuth.requireRole(['EDUCATOR', 'ADMIN']);
-    
+
     // This would fetch educator-specific data
     // For now, return basic structure
     return {
@@ -191,7 +198,7 @@ export const serverData = {
    */
   async fetchAdminData() {
     const user = await serverAuth.requireRole(['ADMIN']);
-    
+
     // This would fetch admin-specific data
     // For now, return basic structure
     return {
@@ -224,11 +231,7 @@ export const pageData = {
   /**
    * Courses page data
    */
-  async coursesPage(searchParams: {
-    category?: string;
-    difficulty?: string;
-    page?: string;
-  }) {
+  async coursesPage(searchParams: { category?: string; difficulty?: string; page?: string }) {
     const page = parseInt(searchParams.page || '1');
     const limit = 12;
 
@@ -257,7 +260,7 @@ export const pageData = {
    */
   async courseDetailPage(slug: string) {
     const course = await serverData.fetchCourse(slug, false);
-    
+
     if (!course) {
       return null;
     }
@@ -265,7 +268,7 @@ export const pageData = {
     // Check if user is enrolled (if authenticated)
     const token = await serverAuth.getAccessToken();
     const enrollment = null;
-    
+
     if (token) {
       // Would fetch enrollment status
       // enrollment = await fetchEnrollmentStatus(course.id, token);
@@ -288,12 +291,9 @@ export const pageData = {
   /**
    * Learning page data
    */
-  async learningPage(searchParams: {
-    status?: string;
-    page?: string;
-  }) {
+  async learningPage(searchParams: { status?: string; page?: string }) {
     const page = parseInt(searchParams.page || '1');
-    
+
     const result = await serverData.fetchUserEnrollments({
       ...(searchParams.status && { status: searchParams.status }),
       page,
@@ -316,7 +316,7 @@ export const pageData = {
    */
   async profilePage() {
     const user = await serverAuth.getCurrentUser();
-    
+
     return {
       user,
     };

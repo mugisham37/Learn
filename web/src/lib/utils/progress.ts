@@ -1,9 +1,9 @@
 /**
  * Progress Calculation Utilities
- * 
+ *
  * Utilities for calculating course progress, lesson completion tracking,
  * enrollment statistics, and progress visualization data generation.
- * 
+ *
  * Requirements: 9.5
  */
 
@@ -135,94 +135,89 @@ export interface Enrollment {
 /**
  * Calculates overall course progress for a student
  */
-export const calculateCourseProgress = memoize((
-  course: Course,
-  enrollment: Enrollment
-): CourseProgress => {
-  const allLessons = course.modules.flatMap(module => module.lessons);
-  const totalLessons = allLessons.length;
-  
-  const completedLessons = enrollment.lessonProgress.filter(
-    progress => progress.isCompleted
-  ).length;
+export const calculateCourseProgress = memoize(
+  (course: Course, enrollment: Enrollment): CourseProgress => {
+    const allLessons = course.modules.flatMap(module => module.lessons);
+    const totalLessons = allLessons.length;
 
-  const totalDuration = course.totalDuration || allLessons.reduce(
-    (sum, lesson) => sum + (lesson.duration || 0), 0
-  );
+    const completedLessons = enrollment.lessonProgress.filter(
+      progress => progress.isCompleted
+    ).length;
 
-  const completedDuration = enrollment.lessonProgress
-    .filter(progress => progress.isCompleted)
-    .reduce((sum, progress) => {
-      const lesson = allLessons.find(l => l.id === progress.lessonId);
-      return sum + (lesson?.duration || 0);
-    }, 0);
+    const totalDuration =
+      course.totalDuration || allLessons.reduce((sum, lesson) => sum + (lesson.duration || 0), 0);
 
-  const progressPercentage = totalLessons > 0 ? (completedLessons / totalLessons) * 100 : 0;
+    const completedDuration = enrollment.lessonProgress
+      .filter(progress => progress.isCompleted)
+      .reduce((sum, progress) => {
+        const lesson = allLessons.find(l => l.id === progress.lessonId);
+        return sum + (lesson?.duration || 0);
+      }, 0);
 
-  // Estimate time remaining based on average completion time
-  const averageTimePerLesson = completedLessons > 0 
-    ? completedDuration / completedLessons 
-    : totalDuration / totalLessons;
-  
-  const remainingLessons = totalLessons - completedLessons;
-  const estimatedTimeRemaining = remainingLessons * averageTimePerLesson;
+    const progressPercentage = totalLessons > 0 ? (completedLessons / totalLessons) * 100 : 0;
 
-  const isCompleted = completedLessons === totalLessons;
-  const certificateEarned = isCompleted && progressPercentage >= 100;
+    // Estimate time remaining based on average completion time
+    const averageTimePerLesson =
+      completedLessons > 0 ? completedDuration / completedLessons : totalDuration / totalLessons;
 
-  return {
-    courseId: course.id,
-    totalLessons,
-    completedLessons,
-    totalDuration,
-    completedDuration,
-    progressPercentage: Math.round(progressPercentage * 100) / 100, // Round to 2 decimal places
-    estimatedTimeRemaining,
-    lastActivityDate: enrollment.lastAccessDate,
-    ...(enrollment.completedAt && { completionDate: enrollment.completedAt }),
-    certificateEarned,
-  };
-});
+    const remainingLessons = totalLessons - completedLessons;
+    const estimatedTimeRemaining = remainingLessons * averageTimePerLesson;
+
+    const isCompleted = completedLessons === totalLessons;
+    const certificateEarned = isCompleted && progressPercentage >= 100;
+
+    return {
+      courseId: course.id,
+      totalLessons,
+      completedLessons,
+      totalDuration,
+      completedDuration,
+      progressPercentage: Math.round(progressPercentage * 100) / 100, // Round to 2 decimal places
+      estimatedTimeRemaining,
+      lastActivityDate: enrollment.lastAccessDate,
+      ...(enrollment.completedAt && { completionDate: enrollment.completedAt }),
+      certificateEarned,
+    };
+  }
+);
 
 /**
  * Calculates progress for a specific module
  */
-export const calculateModuleProgress = memoize((
-  module: Module,
-  lessonProgressList: LessonProgress[]
-): ModuleProgress => {
-  const moduleLessons = module.lessons;
-  const totalLessons = moduleLessons.length;
+export const calculateModuleProgress = memoize(
+  (module: Module, lessonProgressList: LessonProgress[]): ModuleProgress => {
+    const moduleLessons = module.lessons;
+    const totalLessons = moduleLessons.length;
 
-  const moduleLessonProgress = lessonProgressList.filter(
-    progress => moduleLessons.some(lesson => lesson.id === progress.lessonId)
-  );
+    const moduleLessonProgress = lessonProgressList.filter(progress =>
+      moduleLessons.some(lesson => lesson.id === progress.lessonId)
+    );
 
-  const completedLessons = moduleLessonProgress.filter(
-    progress => progress.isCompleted
-  ).length;
+    const completedLessons = moduleLessonProgress.filter(progress => progress.isCompleted).length;
 
-  const progressPercentage = totalLessons > 0 ? (completedLessons / totalLessons) * 100 : 0;
-  const isCompleted = completedLessons === totalLessons;
+    const progressPercentage = totalLessons > 0 ? (completedLessons / totalLessons) * 100 : 0;
+    const isCompleted = completedLessons === totalLessons;
 
-  // Find completion date (when last lesson was completed)
-  const completionDate = isCompleted 
-    ? moduleLessonProgress
-        .filter(p => p.isCompleted && p.completionDate)
-        .sort((a, b) => (b.completionDate!.getTime() - a.completionDate!.getTime()))[0]?.completionDate
-    : undefined;
+    // Find completion date (when last lesson was completed)
+    const completionDate = isCompleted
+      ? moduleLessonProgress
+          .filter(p => p.isCompleted && p.completionDate)
+          .sort((a, b) => b.completionDate!.getTime() - a.completionDate!.getTime())[0]
+          ?.completionDate
+      : undefined;
 
-  return {
-    moduleId: module.id,
-    courseId: '', // Will be set by caller
-    totalLessons,
-    completedLessons,
-    progressPercentage: Math.round(progressPercentage * 100) / 100,
-    lessons: moduleLessonProgress,
-    isCompleted,
-    ...(completionDate && { completionDate }),
-  };
-});
+    return {
+      moduleId: module.id,
+      courseId: '', // Will be set by caller
+      totalLessons,
+      completedLessons,
+      progressPercentage: Math.round(progressPercentage * 100) / 100,
+      lessons: moduleLessonProgress,
+      isCompleted,
+      ...(completionDate && { completionDate }),
+    };
+  }
+);
 
 /**
  * Calculates lesson completion percentage for video lessons
@@ -233,15 +228,15 @@ export const calculateLessonCompletionPercentage = (
   completionThreshold: number = 0.8 // 80% watched = completed
 ): number => {
   if (videoDuration <= 0) return 0;
-  
+
   const percentage = Math.min((watchTime / videoDuration) * 100, 100);
-  
+
   // Apply completion threshold logic
   const watchRatio = watchTime / videoDuration;
   if (watchRatio >= completionThreshold) {
     return 100; // Consider it fully completed if threshold is met
   }
-  
+
   return Math.round(percentage * 100) / 100;
 };
 
@@ -256,18 +251,18 @@ export const isLessonCompleted = (
   switch (lesson.type) {
     case 'video':
       if (!progress.watchTime || !progress.videoDuration) return false;
-      return progress.watchTime >= (progress.videoDuration * completionThreshold);
-    
+      return progress.watchTime >= progress.videoDuration * completionThreshold;
+
     case 'text':
       // Text lessons are completed when accessed for minimum time
       const minimumReadTime = (lesson.duration || 60000) * 0.5; // 50% of estimated read time
       return progress.timeSpent >= minimumReadTime;
-    
+
     case 'quiz':
     case 'assignment':
       // These are completed when explicitly marked as completed
       return progress.isCompleted;
-    
+
     default:
       return progress.isCompleted;
   }
@@ -280,74 +275,80 @@ export const isLessonCompleted = (
 /**
  * Calculates comprehensive enrollment statistics for a course
  */
-export const calculateEnrollmentStatistics = memoize((
-  enrollments: Enrollment[],
-  course: Course
-): EnrollmentStatistics => {
-  const totalEnrollments = enrollments.length;
-  const completedEnrollments = enrollments.filter(e => e.completedAt).length;
-  const activeEnrollments = enrollments.filter(e => !e.completedAt).length;
+export const calculateEnrollmentStatistics = memoize(
+  (enrollments: Enrollment[], course: Course): EnrollmentStatistics => {
+    const totalEnrollments = enrollments.length;
+    const completedEnrollments = enrollments.filter(e => e.completedAt).length;
+    const activeEnrollments = enrollments.filter(e => !e.completedAt).length;
 
-  // Calculate completion rate
-  const completionRate = totalEnrollments > 0 ? (completedEnrollments / totalEnrollments) * 100 : 0;
+    // Calculate completion rate
+    const completionRate =
+      totalEnrollments > 0 ? (completedEnrollments / totalEnrollments) * 100 : 0;
 
-  // Calculate average completion time
-  const completedEnrollmentsWithTime = enrollments.filter(e => e.completedAt && e.enrolledAt);
-  const averageCompletionTime = completedEnrollmentsWithTime.length > 0
-    ? completedEnrollmentsWithTime.reduce((sum, e) => {
-        return sum + (e.completedAt!.getTime() - e.enrolledAt.getTime());
-      }, 0) / completedEnrollmentsWithTime.length
-    : 0;
+    // Calculate average completion time
+    const completedEnrollmentsWithTime = enrollments.filter(e => e.completedAt && e.enrolledAt);
+    const averageCompletionTime =
+      completedEnrollmentsWithTime.length > 0
+        ? completedEnrollmentsWithTime.reduce((sum, e) => {
+            return sum + (e.completedAt!.getTime() - e.enrolledAt.getTime());
+          }, 0) / completedEnrollmentsWithTime.length
+        : 0;
 
-  // Calculate average progress percentage
-  const averageProgressPercentage = totalEnrollments > 0
-    ? enrollments.reduce((sum, e) => sum + e.progressPercentage, 0) / totalEnrollments
-    : 0;
+    // Calculate average progress percentage
+    const averageProgressPercentage =
+      totalEnrollments > 0
+        ? enrollments.reduce((sum, e) => sum + e.progressPercentage, 0) / totalEnrollments
+        : 0;
 
-  // Calculate dropoff points
-  const allLessons = course.modules.flatMap(module => module.lessons);
-  const dropoffPoints = allLessons.map(lesson => {
-    const studentsWhoReachedLesson = enrollments.filter(enrollment => {
-      const lessonProgress = enrollment.lessonProgress.find(p => p.lessonId === lesson.id);
-      return lessonProgress && lessonProgress.lastAccessDate;
-    }).length;
+    // Calculate dropoff points
+    const allLessons = course.modules.flatMap(module => module.lessons);
+    const dropoffPoints = allLessons
+      .map(lesson => {
+        const studentsWhoReachedLesson = enrollments.filter(enrollment => {
+          const lessonProgress = enrollment.lessonProgress.find(p => p.lessonId === lesson.id);
+          return lessonProgress && lessonProgress.lastAccessDate;
+        }).length;
 
-    const studentsWhoCompletedLesson = enrollments.filter(enrollment => {
-      const lessonProgress = enrollment.lessonProgress.find(p => p.lessonId === lesson.id);
-      return lessonProgress && lessonProgress.isCompleted;
-    }).length;
+        const studentsWhoCompletedLesson = enrollments.filter(enrollment => {
+          const lessonProgress = enrollment.lessonProgress.find(p => p.lessonId === lesson.id);
+          return lessonProgress && lessonProgress.isCompleted;
+        }).length;
 
-    const dropoffRate = studentsWhoReachedLesson > 0 
-      ? ((studentsWhoReachedLesson - studentsWhoCompletedLesson) / studentsWhoReachedLesson) * 100
-      : 0;
+        const dropoffRate =
+          studentsWhoReachedLesson > 0
+            ? ((studentsWhoReachedLesson - studentsWhoCompletedLesson) / studentsWhoReachedLesson) *
+              100
+            : 0;
+
+        return {
+          lessonId: lesson.id,
+          lessonTitle: lesson.title,
+          dropoffRate: Math.round(dropoffRate * 100) / 100,
+        };
+      })
+      .sort((a, b) => b.dropoffRate - a.dropoffRate);
+
+    // Calculate engagement metrics
+    const engagementMetrics = calculateEngagementMetrics(enrollments);
 
     return {
-      lessonId: lesson.id,
-      lessonTitle: lesson.title,
-      dropoffRate: Math.round(dropoffRate * 100) / 100,
+      totalEnrollments,
+      activeEnrollments,
+      completedEnrollments,
+      averageCompletionTime,
+      averageProgressPercentage: Math.round(averageProgressPercentage * 100) / 100,
+      completionRate: Math.round(completionRate * 100) / 100,
+      dropoffPoints,
+      engagementMetrics,
     };
-  }).sort((a, b) => b.dropoffRate - a.dropoffRate);
-
-  // Calculate engagement metrics
-  const engagementMetrics = calculateEngagementMetrics(enrollments);
-
-  return {
-    totalEnrollments,
-    activeEnrollments,
-    completedEnrollments,
-    averageCompletionTime,
-    averageProgressPercentage: Math.round(averageProgressPercentage * 100) / 100,
-    completionRate: Math.round(completionRate * 100) / 100,
-    dropoffPoints,
-    engagementMetrics,
-  };
-});
+  }
+);
 
 /**
  * Calculates engagement metrics from enrollment data
  */
 const calculateEngagementMetrics = (enrollments: Enrollment[]) => {
-  const allSessions = enrollments.flatMap(enrollment => 
+  const allSessions = enrollments.flatMap(enrollment =>
     enrollment.lessonProgress.map(progress => ({
       date: progress.lastAccessDate,
       duration: progress.timeSpent,
@@ -355,9 +356,10 @@ const calculateEngagementMetrics = (enrollments: Enrollment[]) => {
   );
 
   // Calculate average session duration
-  const averageSessionDuration = allSessions.length > 0
-    ? allSessions.reduce((sum, session) => sum + session.duration, 0) / allSessions.length
-    : 0;
+  const averageSessionDuration =
+    allSessions.length > 0
+      ? allSessions.reduce((sum, session) => sum + session.duration, 0) / allSessions.length
+      : 0;
 
   // Calculate sessions per week (simplified)
   const averageSessionsPerWeek = allSessions.length > 0 ? allSessions.length / 4 : 0; // Assuming 4 weeks of data
@@ -393,40 +395,35 @@ const calculateEngagementMetrics = (enrollments: Enrollment[]) => {
 /**
  * Generates data for progress visualization charts
  */
-export const generateProgressVisualizationData = memoize((
-  enrollment: Enrollment,
-  dateRange: { start: Date; end: Date }
-): ProgressVisualizationData => {
-  const { start, end } = dateRange;
-  
-  // Generate daily progress data
-  const dailyProgress = generateDailyProgressData(enrollment, start, end);
-  
-  // Generate weekly progress data
-  const weeklyProgress = generateWeeklyProgressData(dailyProgress);
-  
-  // Generate monthly progress data
-  const monthlyProgress = generateMonthlyProgressData(dailyProgress);
-  
-  // Calculate streak data
-  const streakData = calculateStreakData(dailyProgress);
+export const generateProgressVisualizationData = memoize(
+  (enrollment: Enrollment, dateRange: { start: Date; end: Date }): ProgressVisualizationData => {
+    const { start, end } = dateRange;
 
-  return {
-    dailyProgress,
-    weeklyProgress,
-    monthlyProgress,
-    streakData,
-  };
-});
+    // Generate daily progress data
+    const dailyProgress = generateDailyProgressData(enrollment, start, end);
+
+    // Generate weekly progress data
+    const weeklyProgress = generateWeeklyProgressData(dailyProgress);
+
+    // Generate monthly progress data
+    const monthlyProgress = generateMonthlyProgressData(dailyProgress);
+
+    // Calculate streak data
+    const streakData = calculateStreakData(dailyProgress);
+
+    return {
+      dailyProgress,
+      weeklyProgress,
+      monthlyProgress,
+      streakData,
+    };
+  }
+);
 
 /**
  * Generates daily progress data
  */
-const generateDailyProgressData = (
-  enrollment: Enrollment,
-  start: Date,
-  end: Date
-) => {
+const generateDailyProgressData = (enrollment: Enrollment, start: Date, end: Date) => {
   const dailyData: Array<{
     date: string;
     lessonsCompleted: number;
@@ -435,15 +432,15 @@ const generateDailyProgressData = (
   }> = [];
 
   const currentDate = new Date(start);
-  
+
   while (currentDate <= end) {
     const dateStr = currentDate.toISOString().split('T')[0];
-    
+
     if (!dateStr) {
       currentDate.setDate(currentDate.getDate() + 1);
       continue;
     }
-    
+
     // Find lessons completed on this date
     const lessonsCompletedToday = enrollment.lessonProgress.filter(progress => {
       if (!progress.completionDate) return false;
@@ -453,7 +450,7 @@ const generateDailyProgressData = (
 
     const lessonsCompleted = lessonsCompletedToday.length;
     const timeSpent = lessonsCompletedToday.reduce((sum, progress) => sum + progress.timeSpent, 0);
-    
+
     // Calculate progress gained (simplified as lessons completed / total lessons * 100)
     const progressGained = lessonsCompleted; // This would need total lesson count for accurate percentage
 
@@ -473,29 +470,31 @@ const generateDailyProgressData = (
 /**
  * Generates weekly progress data from daily data
  */
-const generateWeeklyProgressData = (dailyData: Array<{
-  date: string;
-  lessonsCompleted: number;
-  timeSpent: number;
-  progressGained: number;
-}>) => {
+const generateWeeklyProgressData = (
+  dailyData: Array<{
+    date: string;
+    lessonsCompleted: number;
+    timeSpent: number;
+    progressGained: number;
+  }>
+) => {
   const weeklyData: Array<{
     week: string;
     lessonsCompleted: number;
     timeSpent: number;
     progressGained: number;
   }> = [];
-  
+
   for (let i = 0; i < dailyData.length; i += 7) {
     const weekData = dailyData.slice(i, i + 7);
     if (weekData.length === 0) continue;
-    
+
     const firstDay = weekData[0];
     if (!firstDay) continue;
-    
+
     const weekStart = new Date(firstDay.date);
     const weekStr = `${weekStart.getFullYear()}-W${Math.ceil((weekStart.getTime() - new Date(weekStart.getFullYear(), 0, 1).getTime()) / (7 * 24 * 60 * 60 * 1000))}`;
-    
+
     const lessonsCompleted = weekData.reduce((sum, day) => sum + day.lessonsCompleted, 0);
     const timeSpent = weekData.reduce((sum, day) => sum + day.timeSpent, 0);
     const progressGained = weekData.reduce((sum, day) => sum + day.progressGained, 0);
@@ -514,23 +513,28 @@ const generateWeeklyProgressData = (dailyData: Array<{
 /**
  * Generates monthly progress data from daily data
  */
-const generateMonthlyProgressData = (dailyData: Array<{
-  date: string;
-  lessonsCompleted: number;
-  timeSpent: number;
-  progressGained: number;
-}>) => {
-  const monthlyMap = new Map<string, {
-    month: string;
+const generateMonthlyProgressData = (
+  dailyData: Array<{
+    date: string;
     lessonsCompleted: number;
     timeSpent: number;
     progressGained: number;
-  }>();
+  }>
+) => {
+  const monthlyMap = new Map<
+    string,
+    {
+      month: string;
+      lessonsCompleted: number;
+      timeSpent: number;
+      progressGained: number;
+    }
+  >();
 
   dailyData.forEach(day => {
     const date = new Date(day.date);
     const monthStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-    
+
     if (!monthlyMap.has(monthStr)) {
       monthlyMap.set(monthStr, {
         month: monthStr,
@@ -552,12 +556,14 @@ const generateMonthlyProgressData = (dailyData: Array<{
 /**
  * Calculates streak data from daily progress
  */
-const calculateStreakData = (dailyData: Array<{
-  date: string;
-  lessonsCompleted: number;
-  timeSpent: number;
-  progressGained: number;
-}>) => {
+const calculateStreakData = (
+  dailyData: Array<{
+    date: string;
+    lessonsCompleted: number;
+    timeSpent: number;
+    progressGained: number;
+  }>
+) => {
   let currentStreak = 0;
   let longestStreak = 0;
   let tempStreak = 0;
@@ -566,9 +572,9 @@ const calculateStreakData = (dailyData: Array<{
   // Calculate streaks (days with any progress)
   for (let i = dailyData.length - 1; i >= 0; i--) {
     const day = dailyData[i];
-    
+
     if (!day) continue;
-    
+
     if (day.lessonsCompleted > 0 || day.timeSpent > 0) {
       tempStreak++;
       if (i === dailyData.length - 1 || currentStreak === 0) {
@@ -604,20 +610,17 @@ const calculateStreakData = (dailyData: Array<{
 /**
  * Calculates the next lesson a student should take
  */
-export const getNextLesson = (
-  course: Course,
-  enrollment: Enrollment
-): Lesson | null => {
+export const getNextLesson = (course: Course, enrollment: Enrollment): Lesson | null => {
   for (const courseModule of course.modules.sort((a, b) => a.order - b.order)) {
     for (const lesson of courseModule.lessons.sort((a, b) => a.order - b.order)) {
       const progress = enrollment.lessonProgress.find(p => p.lessonId === lesson.id);
-      
+
       if (!progress || !progress.isCompleted) {
         return lesson;
       }
     }
   }
-  
+
   return null; // All lessons completed
 };
 

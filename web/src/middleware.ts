@@ -1,9 +1,9 @@
 /**
  * Next.js Middleware for Authentication and Route Protection
- * 
+ *
  * Handles JWT token validation, automatic refresh, route protection,
  * and comprehensive security middleware integration.
- * 
+ *
  * Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 12.1, 12.2, 12.3, 12.4, 12.5
  */
 
@@ -12,13 +12,7 @@ import { config as appConfig } from '@/lib/config';
 import { securityMiddleware } from '@/lib/security/securityMiddleware';
 
 // Routes that require authentication
-const PROTECTED_ROUTES = [
-  '/dashboard',
-  '/courses',
-  '/profile',
-  '/settings',
-  '/admin',
-];
+const PROTECTED_ROUTES = ['/dashboard', '/courses', '/profile', '/settings', '/admin'];
 
 // Routes that require specific roles
 const ROLE_PROTECTED_ROUTES = {
@@ -35,10 +29,10 @@ function parseJWT(token: string): Record<string, unknown> | null {
   try {
     const parts = token.split('.');
     if (parts.length !== 3) return null;
-    
+
     const payload = parts[1];
     if (!payload) return null;
-    
+
     return JSON.parse(atob(payload));
   } catch {
     return null;
@@ -51,12 +45,12 @@ function parseJWT(token: string): Record<string, unknown> | null {
 function isTokenExpired(token: string): boolean {
   const payload = parseJWT(token);
   if (!payload || !payload.exp || typeof payload.exp !== 'number') return true;
-  
+
   const currentTime = Math.floor(Date.now() / 1000);
   const expirationTime = payload.exp;
-  
+
   // Consider token expired if it expires within 5 minutes
-  return expirationTime <= currentTime + (5 * 60);
+  return expirationTime <= currentTime + 5 * 60;
 }
 
 /**
@@ -109,13 +103,13 @@ function hasRequiredRole(userRole: string, requiredRoles: string[]): boolean {
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  
+
   // Apply security middleware first
   const securityResponse = await securityMiddleware(request);
   if (securityResponse && securityResponse.status !== 200) {
     return securityResponse;
   }
-  
+
   // Skip middleware for API routes, static files, and Next.js internals
   if (
     pathname.startsWith('/api/') ||
@@ -144,7 +138,7 @@ export async function middleware(request: NextRequest) {
     const newAccessToken = await refreshAccessToken(refreshToken);
     if (newAccessToken) {
       accessToken = newAccessToken;
-      
+
       // Set new access token in response
       const response = NextResponse.next();
       response.cookies.set('access-token', newAccessToken, {
@@ -154,7 +148,7 @@ export async function middleware(request: NextRequest) {
         maxAge: 15 * 60, // 15 minutes
         path: '/',
       });
-      
+
       // Continue with the new token
       return response;
     }
@@ -165,7 +159,7 @@ export async function middleware(request: NextRequest) {
     const newAccessToken = await refreshAccessToken(refreshToken);
     if (newAccessToken) {
       accessToken = newAccessToken;
-      
+
       // Set new access token in response
       const response = NextResponse.next();
       response.cookies.set('access-token', newAccessToken, {
@@ -175,7 +169,7 @@ export async function middleware(request: NextRequest) {
         maxAge: 15 * 60, // 15 minutes
         path: '/',
       });
-      
+
       // Continue with the new token
       return response;
     } else {
@@ -209,14 +203,14 @@ export async function middleware(request: NextRequest) {
   // If user is authenticated and trying to access auth pages, redirect to dashboard
   if (accessToken && ['/login', '/register'].includes(pathname)) {
     const response = NextResponse.redirect(new URL('/dashboard', request.url));
-    
+
     // Apply security headers from security middleware
     if (securityResponse) {
       securityResponse.headers.forEach((value, key) => {
         response.headers.set(key, value);
       });
     }
-    
+
     return response;
   }
 
@@ -227,7 +221,7 @@ export async function middleware(request: NextRequest) {
       response.headers.set(key, value);
     });
   }
-  
+
   return response;
 }
 

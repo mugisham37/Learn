@@ -1,6 +1,6 @@
 /**
  * Main Error Handler
- * 
+ *
  * Central error handling system that coordinates error classification,
  * message mapping, recovery strategies, and tracking integration.
  */
@@ -9,12 +9,12 @@ import { errorClassifier } from './errorClassifier';
 import { errorMessageMapper, type SupportedLocale } from './errorMessages';
 import { errorRecoveryManager } from './errorRecovery';
 import { errorTrackingManager } from './errorTracking';
-import type { 
-  ClassifiedError, 
+import type {
+  ClassifiedError,
   ErrorContext,
   ErrorHandlerResult,
   GraphQLErrorExtensions,
-  NetworkErrorDetails
+  NetworkErrorDetails,
 } from './errorTypes';
 
 /**
@@ -23,16 +23,16 @@ import type {
 interface ErrorHandlerConfig {
   /** Whether to enable error tracking */
   enableTracking?: boolean;
-  
+
   /** Whether to enable error recovery */
   enableRecovery?: boolean;
-  
+
   /** Whether to show user notifications */
   showNotifications?: boolean;
-  
+
   /** Default locale for error messages */
   locale?: string;
-  
+
   /** Custom error handlers */
   customHandlers?: Record<string, (error: ClassifiedError) => Promise<ErrorHandlerResult>>;
 }
@@ -73,7 +73,7 @@ export class ErrorHandler {
   ): Promise<ErrorHandlerResult> {
     // Classify the error
     const classifiedError = errorClassifier.classifyGraphQLError(error, context);
-    
+
     return this.handleClassifiedError(classifiedError, originalOperation);
   }
 
@@ -88,7 +88,7 @@ export class ErrorHandler {
   ): Promise<ErrorHandlerResult> {
     // Classify the error
     const classifiedError = errorClassifier.classifyNetworkError(error, details, context);
-    
+
     return this.handleClassifiedError(classifiedError, originalOperation);
   }
 
@@ -102,7 +102,7 @@ export class ErrorHandler {
   ): Promise<ErrorHandlerResult> {
     // Classify the error
     const classifiedError = errorClassifier.classifyRuntimeError(error, context);
-    
+
     return this.handleClassifiedError(classifiedError, originalOperation);
   }
 
@@ -121,7 +121,7 @@ export class ErrorHandler {
   ): Promise<ErrorHandlerResult> {
     // Classify the error
     const classifiedError = errorClassifier.classifyUploadError(error, context);
-    
+
     return this.handleClassifiedError(classifiedError, originalOperation);
   }
 
@@ -139,7 +139,7 @@ export class ErrorHandler {
   ): Promise<ErrorHandlerResult> {
     // Classify the error
     const classifiedError = errorClassifier.classifySubscriptionError(error, context);
-    
+
     return this.handleClassifiedError(classifiedError, originalOperation);
   }
 
@@ -233,16 +233,18 @@ export class ErrorHandler {
     }
 
     // Emit custom event for UI to handle
-    window.dispatchEvent(new CustomEvent('error:notification', {
-      detail: {
-        type: error.type,
-        severity: error.severity,
-        message: result.userMessage,
-        retryable: error.retryable && result.shouldRetry,
-        retryDelay: result.retryDelay,
-        actions: result.actions,
-      },
-    }));
+    window.dispatchEvent(
+      new CustomEvent('error:notification', {
+        detail: {
+          type: error.type,
+          severity: error.severity,
+          message: result.userMessage,
+          retryable: error.retryable && result.shouldRetry,
+          retryDelay: result.retryDelay,
+          actions: result.actions,
+        },
+      })
+    );
   }
 
   /**
@@ -254,7 +256,9 @@ export class ErrorHandler {
     }
 
     // Use Next.js router if available, otherwise fallback to window.location
-    const windowWithNext = window as Window & { next?: { router?: { push: (url: string) => void } } };
+    const windowWithNext = window as Window & {
+      next?: { router?: { push: (url: string) => void } };
+    };
     if (windowWithNext.next?.router) {
       windowWithNext.next.router.push(redirectTo);
     } else {
@@ -336,10 +340,7 @@ export const errorHandlerUtils = {
   /**
    * Creates an error handler for GraphQL operations
    */
-  createGraphQLErrorHandler: (
-    errorHandler: ErrorHandler,
-    operationName: string
-  ) => {
+  createGraphQLErrorHandler: (errorHandler: ErrorHandler, operationName: string) => {
     return async (error: GraphQLError, variables?: Record<string, unknown>) => {
       const context: Partial<ErrorContext> = {
         operation: operationName,
@@ -364,11 +365,7 @@ export const errorHandlerUtils = {
   /**
    * Creates an error handler for upload operations
    */
-  createUploadErrorHandler: (
-    errorHandler: ErrorHandler,
-    uploadId: string,
-    fileName?: string
-  ) => {
+  createUploadErrorHandler: (errorHandler: ErrorHandler, uploadId: string, fileName?: string) => {
     return async (error: UploadError) => {
       const context: Partial<ErrorContext> = {
         operation: 'file_upload',
@@ -377,12 +374,15 @@ export const errorHandlerUtils = {
       };
 
       if (error.code && error.message) {
-        return errorHandler.handleUploadError({
-          code: error.code,
-          message: error.message,
-          uploadId,
-          ...(fileName && { fileName }),
-        }, context);
+        return errorHandler.handleUploadError(
+          {
+            code: error.code,
+            message: error.message,
+            uploadId,
+            ...(fileName && { fileName }),
+          },
+          context
+        );
       } else {
         return errorHandler.handleRuntimeError(error, context);
       }
@@ -392,10 +392,7 @@ export const errorHandlerUtils = {
   /**
    * Creates an error handler for subscription operations
    */
-  createSubscriptionErrorHandler: (
-    errorHandler: ErrorHandler,
-    subscriptionName: string
-  ) => {
+  createSubscriptionErrorHandler: (errorHandler: ErrorHandler, subscriptionName: string) => {
     return async (error: SubscriptionError) => {
       const context: Partial<ErrorContext> = {
         operation: subscriptionName,

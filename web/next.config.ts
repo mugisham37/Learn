@@ -1,4 +1,4 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
   // Environment configuration
@@ -77,7 +77,7 @@ const nextConfig: NextConfig = {
     if (dev) {
       // Add bundle analyzer plugin for development
       const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
-      
+
       if (process.env.ANALYZE === 'true') {
         config.plugins.push(
           new BundleAnalyzerPlugin({
@@ -135,15 +135,20 @@ const nextConfig: NextConfig = {
         // Content Security Policy
         {
           key: 'Content-Security-Policy',
-          value: process.env.NODE_ENV === 'production' 
-            ? "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' https:; connect-src 'self' wss: https:; media-src 'self' https:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests;"
-            : "default-src 'self' 'unsafe-inline' 'unsafe-eval'; img-src 'self' data: https:; connect-src 'self' wss: https: ws://localhost:*; media-src 'self' https:;",
+          value:
+            process.env.NODE_ENV === 'production'
+              ? "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' https:; connect-src 'self' wss: https:; media-src 'self' https:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests;"
+              : "default-src 'self' 'unsafe-inline' 'unsafe-eval'; img-src 'self' data: https:; connect-src 'self' wss: https: ws://localhost:*; media-src 'self' https:;",
         },
         // HSTS (only in production)
-        ...(process.env.NODE_ENV === 'production' ? [{
-          key: 'Strict-Transport-Security',
-          value: 'max-age=31536000; includeSubDomains; preload',
-        }] : []),
+        ...(process.env.NODE_ENV === 'production'
+          ? [
+              {
+                key: 'Strict-Transport-Security',
+                value: 'max-age=31536000; includeSubDomains; preload',
+              },
+            ]
+          : []),
       ],
     });
 
@@ -153,7 +158,11 @@ const nextConfig: NextConfig = {
       headers: [
         {
           key: 'Access-Control-Allow-Origin',
-          value: process.env.CORS_ORIGIN || (process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : 'https://yourdomain.com'),
+          value:
+            process.env.CORS_ORIGIN ||
+            (process.env.NODE_ENV === 'development'
+              ? 'http://localhost:3000'
+              : 'https://yourdomain.com'),
         },
         {
           key: 'Access-Control-Allow-Methods',
@@ -161,7 +170,8 @@ const nextConfig: NextConfig = {
         },
         {
           key: 'Access-Control-Allow-Headers',
-          value: 'Content-Type, Authorization, X-Requested-With, X-CSRF-Token, Accept, Accept-Version, Content-Length, Content-MD5, Date, X-Api-Version',
+          value:
+            'Content-Type, Authorization, X-Requested-With, X-CSRF-Token, Accept, Accept-Version, Content-Length, Content-MD5, Date, X-Api-Version',
         },
         {
           key: 'Access-Control-Allow-Credentials',
@@ -239,7 +249,9 @@ const nextConfig: NextConfig = {
     domains: [
       'localhost',
       // Add your CDN domains here
-      ...(process.env.NEXT_PUBLIC_CLOUDFRONT_DOMAIN ? [process.env.NEXT_PUBLIC_CLOUDFRONT_DOMAIN] : []),
+      ...(process.env.NEXT_PUBLIC_CLOUDFRONT_DOMAIN
+        ? [process.env.NEXT_PUBLIC_CLOUDFRONT_DOMAIN]
+        : []),
     ],
     formats: ['image/webp', 'image/avif'],
   },

@@ -1,9 +1,9 @@
 /**
  * Advanced Memoization Utilities
- * 
+ *
  * React component memoization helpers, selector memoization for state management,
  * and cache-aware memoization with invalidation capabilities.
- * 
+ *
  * Requirements: 12.2
  */
 
@@ -61,12 +61,12 @@ export function createMemoizedSelector<TState, TArgs extends unknown[], TResult>
   selector: (state: TState, ...args: TArgs) => TResult,
   options: SelectorMemoOptions = {}
 ): (state: TState, ...args: TArgs) => TResult {
-  const {
-    maxSize = 10,
-    equalityFn = Object.is,
-  } = options;
+  const { maxSize = 10, equalityFn = Object.is } = options;
 
-  const cache = new Map<string, { result: TResult; inputs: [TState, ...TArgs]; timestamp: number }>();
+  const cache = new Map<
+    string,
+    { result: TResult; inputs: [TState, ...TArgs]; timestamp: number }
+  >();
   const metrics: MemoizationMetrics = {
     hits: 0,
     misses: 0,
@@ -77,7 +77,10 @@ export function createMemoizedSelector<TState, TArgs extends unknown[], TResult>
 
   function generateKey(state: TState, args: TArgs): string {
     // Simple key generation - in practice, you might want something more sophisticated
-    return JSON.stringify({ state: typeof state === 'object' ? Object.keys(state || {}) : state, args });
+    return JSON.stringify({
+      state: typeof state === 'object' ? Object.keys(state || {}) : state,
+      args,
+    });
   }
 
   function updateMetrics(): void {
@@ -92,7 +95,7 @@ export function createMemoizedSelector<TState, TArgs extends unknown[], TResult>
     // Check if we have a cached result with matching inputs
     if (cached) {
       const [cachedState, ...cachedArgs] = cached.inputs;
-      
+
       if (
         equalityFn(state, cachedState) &&
         args.length === cachedArgs.length &&
@@ -136,7 +139,9 @@ export function createMemoizedSelector<TState, TArgs extends unknown[], TResult>
     updateMetrics();
   };
 
-  (memoizedSelector as unknown as { getMetrics: () => MemoizationMetrics }).getMetrics = () => ({ ...metrics });
+  (memoizedSelector as unknown as { getMetrics: () => MemoizationMetrics }).getMetrics = () => ({
+    ...metrics,
+  });
 
   return memoizedSelector;
 }
@@ -188,8 +193,11 @@ export function memoizeComponent<TProps extends object>(
       if (prevKeys.length !== nextKeys.length) {
         isEqual = false;
       } else {
-        isEqual = prevKeys.every(key => 
-          Object.is((prevProps as Record<string, unknown>)[key], (nextProps as Record<string, unknown>)[key])
+        isEqual = prevKeys.every(key =>
+          Object.is(
+            (prevProps as Record<string, unknown>)[key],
+            (nextProps as Record<string, unknown>)[key]
+          )
         );
       }
     }
@@ -200,10 +208,14 @@ export function memoizeComponent<TProps extends object>(
         console.log(`[Memo] ${componentName}: Props equal, skipping render`);
       } else {
         console.log(`[Memo] ${componentName}: Props changed, re-rendering`);
-        
+
         // Log changed props
-        const changedProps = Object.keys(nextProps).filter(key =>
-          !Object.is((prevProps as Record<string, unknown>)[key], (nextProps as Record<string, unknown>)[key])
+        const changedProps = Object.keys(nextProps).filter(
+          key =>
+            !Object.is(
+              (prevProps as Record<string, unknown>)[key],
+              (nextProps as Record<string, unknown>)[key]
+            )
         );
         if (changedProps.length > 0) {
           console.log(`[Memo] ${componentName}: Changed props:`, changedProps);
@@ -235,9 +247,10 @@ export function useStableMemo<T>(
 
   return useMemo(() => {
     if (debug) {
-      const depsChanged = !previousDeps.current || 
+      const depsChanged =
+        !previousDeps.current ||
         deps.some((dep, index) => !Object.is(dep, previousDeps.current![index]));
-      
+
       if (depsChanged) {
         console.log(`[${name}] Dependencies changed, recomputing`);
       } else {
@@ -293,13 +306,16 @@ export function createCacheAwareMemo<TArgs extends unknown[], TResult>(
     const originalEvict = cache.evict.bind(cache);
     cache.evict = (options: unknown) => {
       const result = originalEvict(options);
-      
+
       // Check if we should invalidate
-      const shouldInvalidateResult = shouldInvalidate 
+      const shouldInvalidateResult = shouldInvalidate
         ? shouldInvalidate(options)
-        : watchKeys.length === 0 || (options && typeof options === 'object' && 'id' in options && 
-          typeof (options as { id?: string }).id === 'string' && 
-          watchKeys.some(key => (options as { id: string }).id.includes(key)));
+        : watchKeys.length === 0 ||
+          (options &&
+            typeof options === 'object' &&
+            'id' in options &&
+            typeof (options as { id?: string }).id === 'string' &&
+            watchKeys.some(key => (options as { id: string }).id.includes(key)));
 
       if (shouldInvalidateResult) {
         cachedResult = undefined;
@@ -352,11 +368,14 @@ export function useCacheAwareMemo<T>(
     const originalEvict = cache.evict.bind(cache);
     cache.evict = (options: unknown) => {
       const result = originalEvict(options);
-      
-      const shouldInvalidate = watchKeys.length === 0 || 
-        (options && typeof options === 'object' && 'id' in options && 
-         typeof (options as { id?: string }).id === 'string' && 
-         watchKeys.some(key => (options as { id: string }).id.includes(key)));
+
+      const shouldInvalidate =
+        watchKeys.length === 0 ||
+        (options &&
+          typeof options === 'object' &&
+          'id' in options &&
+          typeof (options as { id?: string }).id === 'string' &&
+          watchKeys.some(key => (options as { id: string }).id.includes(key)));
 
       if (shouldInvalidate) {
         setCacheVersion(prev => prev + 1);
@@ -414,7 +433,7 @@ export class MemoizationMonitor {
     };
   } {
     const selectorsReport = Object.fromEntries(this.selectors.entries());
-    
+
     const componentsReport = Object.fromEntries(
       Array.from(this.components.entries()).map(([name, data]) => [
         name,
@@ -425,11 +444,15 @@ export class MemoizationMonitor {
       ])
     );
 
-    const averageHitRate = Array.from(this.selectors.values())
-      .reduce((sum, metrics) => sum + metrics.hitRate, 0) / this.selectors.size || 0;
+    const averageHitRate =
+      Array.from(this.selectors.values()).reduce((sum, metrics) => sum + metrics.hitRate, 0) /
+        this.selectors.size || 0;
 
-    const averageMemoRate = Array.from(this.components.values())
-      .reduce((sum, data) => sum + (data.memoHits / (data.renders + data.memoHits) || 0), 0) / this.components.size || 0;
+    const averageMemoRate =
+      Array.from(this.components.values()).reduce(
+        (sum, data) => sum + (data.memoHits / (data.renders + data.memoHits) || 0),
+        0
+      ) / this.components.size || 0;
 
     return {
       selectors: selectorsReport,

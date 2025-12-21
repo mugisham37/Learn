@@ -1,6 +1,6 @@
 /**
  * Authentication Link
- * 
+ *
  * Apollo Link that automatically injects JWT tokens into GraphQL requests
  * and handles token refresh on authentication errors with backend integration.
  */
@@ -48,11 +48,11 @@ export function createAuthLink() {
  * Creates an error link that handles authentication errors with backend integration
  */
 export function createAuthErrorLink() {
-  return onError((errorContext) => {
+  return onError(errorContext => {
     // Type assertion to work around Apollo Client v4 type issues
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { graphQLErrors, networkError, operation, forward } = errorContext as any;
-    
+
     // Handle GraphQL authentication errors
     if (graphQLErrors) {
       for (const error of graphQLErrors) {
@@ -61,8 +61,9 @@ export function createAuthErrorLink() {
           // In development, try to refresh token and retry the operation
           if (process.env.NODE_ENV !== 'production') {
             return new Observable(observer => {
-              tokenManager.refreshAccessToken()
-                .then((newToken) => {
+              tokenManager
+                .refreshAccessToken()
+                .then(newToken => {
                   // Update the operation context with new token
                   operation.setContext(({ headers = {} }) => ({
                     headers: {
@@ -70,20 +71,20 @@ export function createAuthErrorLink() {
                       authorization: `Bearer ${newToken}`,
                     },
                   }));
-                  
+
                   // Retry the operation with new token
                   const subscription = forward(operation).subscribe(observer);
                   return subscription;
                 })
-                .catch((refreshError) => {
+                .catch(refreshError => {
                   // Refresh failed, clear tokens and redirect to login
                   tokenManager.clearTokens();
-                  
+
                   // Emit authentication error event for app-level handling
                   if (typeof window !== 'undefined') {
                     window.dispatchEvent(new CustomEvent('auth:token-expired'));
                   }
-                  
+
                   observer.error(refreshError);
                 });
             });
@@ -103,26 +104,27 @@ export function createAuthErrorLink() {
       // In development, try to refresh token
       if (process.env.NODE_ENV !== 'production') {
         return new Observable(observer => {
-          tokenManager.refreshAccessToken()
-            .then((newToken) => {
+          tokenManager
+            .refreshAccessToken()
+            .then(newToken => {
               operation.setContext(({ headers = {} }) => ({
                 headers: {
                   ...headers,
                   authorization: `Bearer ${newToken}`,
                 },
               }));
-              
+
               // Retry the operation with new token
               const subscription = forward(operation).subscribe(observer);
               return subscription;
             })
-            .catch((refreshError) => {
+            .catch(refreshError => {
               tokenManager.clearTokens();
-              
+
               if (typeof window !== 'undefined') {
                 window.dispatchEvent(new CustomEvent('auth:token-expired'));
               }
-              
+
               observer.error(refreshError);
             });
         });

@@ -1,9 +1,9 @@
 /**
  * Performance Optimization Utilities
- * 
+ *
  * Utilities for memoization, debouncing, throttling, and performance monitoring
  * to optimize expensive operations and improve user experience.
- * 
+ *
  * Requirements: 12.2
  */
 
@@ -46,11 +46,7 @@ export function memoize<TArgs extends unknown[], TReturn>(
   fn: (...args: TArgs) => TReturn,
   options: MemoizeOptions = {}
 ): (...args: TArgs) => TReturn {
-  const {
-    maxSize = 100,
-    ttl,
-    keyGenerator = (...args) => JSON.stringify(args)
-  } = options;
+  const { maxSize = 100, ttl, keyGenerator = (...args) => JSON.stringify(args) } = options;
 
   const cache = new Map<string, { value: TReturn; timestamp: number }>();
 
@@ -61,7 +57,7 @@ export function memoize<TArgs extends unknown[], TReturn>(
     // Check if cached value exists and is still valid
     const cached = cache.get(key);
     if (cached) {
-      if (!ttl || (now - cached.timestamp) < ttl) {
+      if (!ttl || now - cached.timestamp < ttl) {
         return cached.value;
       } else {
         cache.delete(key);
@@ -94,11 +90,7 @@ export function memoizeAsync<TArgs extends unknown[], TReturn>(
   fn: (...args: TArgs) => Promise<TReturn>,
   options: MemoizeOptions = {}
 ): (...args: TArgs) => Promise<TReturn> {
-  const {
-    maxSize = 100,
-    ttl,
-    keyGenerator = (...args) => JSON.stringify(args)
-  } = options;
+  const { maxSize = 100, ttl, keyGenerator = (...args) => JSON.stringify(args) } = options;
 
   const cache = new Map<string, { promise: Promise<TReturn>; timestamp: number }>();
 
@@ -109,7 +101,7 @@ export function memoizeAsync<TArgs extends unknown[], TReturn>(
     // Check if cached promise exists and is still valid
     const cached = cache.get(key);
     if (cached) {
-      if (!ttl || (now - cached.timestamp) < ttl) {
+      if (!ttl || now - cached.timestamp < ttl) {
         return cached.promise;
       } else {
         cache.delete(key);
@@ -337,12 +329,14 @@ export function measurePerformance<TArgs extends unknown[], TReturn>(
 ): (...args: TArgs) => TReturn {
   return (...args: TArgs): TReturn => {
     const startTime = performance.now();
-    const startMemory = (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory?.usedJSHeapSize;
+    const startMemory = (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory
+      ?.usedJSHeapSize;
 
     const result = fn(...args);
 
     const endTime = performance.now();
-    const endMemory = (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory?.usedJSHeapSize;
+    const endMemory = (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory
+      ?.usedJSHeapSize;
 
     const metrics: PerformanceMetrics = {
       executionTime: endTime - startTime,
@@ -369,12 +363,14 @@ export function measureAsyncPerformance<TArgs extends unknown[], TReturn>(
 ): (...args: TArgs) => Promise<TReturn> {
   return async (...args: TArgs): Promise<TReturn> => {
     const startTime = performance.now();
-    const startMemory = (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory?.usedJSHeapSize;
+    const startMemory = (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory
+      ?.usedJSHeapSize;
 
     const result = await fn(...args);
 
     const endTime = performance.now();
-    const endMemory = (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory?.usedJSHeapSize;
+    const endMemory = (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory
+      ?.usedJSHeapSize;
 
     const metrics: PerformanceMetrics = {
       executionTime: endTime - startTime,
@@ -409,7 +405,11 @@ export function createBatchProcessor<TItem, TResult>(
 ): (item: TItem) => Promise<TResult> {
   const { batchSize = 10, delay = 100, maxWait = 1000 } = options;
 
-  let batch: Array<{ item: TItem; resolve: (result: TResult) => void; reject: (error: Error) => void }> = [];
+  let batch: Array<{
+    item: TItem;
+    resolve: (result: TResult) => void;
+    reject: (error: Error) => void;
+  }> = [];
   let timeoutId: NodeJS.Timeout | null = null;
   let maxWaitTimeoutId: NodeJS.Timeout | null = null;
 

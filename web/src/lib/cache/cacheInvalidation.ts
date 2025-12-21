@@ -1,6 +1,6 @@
 /**
  * Cache Invalidation Utilities
- * 
+ *
  * Utilities for invalidating Apollo Client cache entries.
  * Provides strategies for cache invalidation and cleanup.
  */
@@ -15,11 +15,7 @@ export type { CacheInvalidationConfig } from './types';
 /**
  * Invalidate a specific entity in the cache
  */
-export function invalidateEntity(
-  cache: InMemoryCache,
-  typename: string,
-  id: string
-): void {
+export function invalidateEntity(cache: InMemoryCache, typename: string, id: string): void {
   try {
     const entityId = cache.identify({ __typename: typename, id });
     if (entityId) {
@@ -43,11 +39,11 @@ export function invalidateQueries(
         id: 'ROOT_QUERY',
         fieldName: getQueryFieldName(query),
       };
-      
+
       if (variables) {
         evictOptions.args = variables;
       }
-      
+
       cache.evict(evictOptions);
     });
   } catch (error) {
@@ -58,10 +54,7 @@ export function invalidateQueries(
 /**
  * Invalidate cache entries by field name
  */
-export function invalidateByFieldName(
-  cache: InMemoryCache,
-  fieldNames: string[]
-): void {
+export function invalidateByFieldName(cache: InMemoryCache, fieldNames: string[]): void {
   try {
     fieldNames.forEach(fieldName => {
       cache.evict({
@@ -88,10 +81,7 @@ export function invalidateAll(cache: InMemoryCache): void {
 /**
  * Invalidate cache based on configuration
  */
-export function invalidateCache(
-  cache: InMemoryCache,
-  config: CacheInvalidationConfig
-): void {
+export function invalidateCache(cache: InMemoryCache, config: CacheInvalidationConfig): void {
   try {
     // Invalidate specific entity
     if (config.typename && config.id) {
@@ -164,13 +154,9 @@ export const commonInvalidations = {
    */
   courseEnrolled: (cache: InMemoryCache, courseId: string, userId: string) => {
     invalidateCache(cache, {
-      fieldNames: [
-        'myEnrollments',
-        'courseEnrollments',
-        'enrollmentProgress',
-      ],
+      fieldNames: ['myEnrollments', 'courseEnrollments', 'enrollmentProgress'],
     });
-    
+
     // Also invalidate the specific course to update enrollment count
     invalidateEntity(cache, 'Course', courseId);
     // Also invalidate user data
@@ -195,7 +181,7 @@ export const commonInvalidations = {
     invalidateCache(cache, {
       fieldNames: ['conversations', 'conversationMessages'],
     });
-    
+
     // Also invalidate the specific conversation
     invalidateEntity(cache, 'Conversation', conversationId);
   },
@@ -205,13 +191,9 @@ export const commonInvalidations = {
    */
   assignmentSubmitted: (cache: InMemoryCache, assignmentId: string, studentId: string) => {
     invalidateCache(cache, {
-      fieldNames: [
-        'assignmentSubmissions',
-        'studentSubmissions',
-        'assignmentProgress',
-      ],
+      fieldNames: ['assignmentSubmissions', 'studentSubmissions', 'assignmentProgress'],
     });
-    
+
     // Also invalidate specific entities
     invalidateEntity(cache, 'Assignment', assignmentId);
     invalidateEntity(cache, 'User', studentId);
@@ -222,13 +204,9 @@ export const commonInvalidations = {
    */
   paymentCompleted: (cache: InMemoryCache, courseId: string, userId: string) => {
     invalidateCache(cache, {
-      fieldNames: [
-        'myEnrollments',
-        'courseEnrollments',
-        'paymentHistory',
-      ],
+      fieldNames: ['myEnrollments', 'courseEnrollments', 'paymentHistory'],
     });
-    
+
     // Update course enrollment count
     invalidateEntity(cache, 'Course', courseId);
     // Update user payment history
@@ -254,11 +232,7 @@ export const commonInvalidations = {
     invalidateCache(cache, {
       typename: 'Course',
       id: courseId,
-      fieldNames: [
-        'courseModules',
-        'courseLessons',
-        'courseContent',
-      ],
+      fieldNames: ['courseModules', 'courseLessons', 'courseContent'],
     });
   },
 };

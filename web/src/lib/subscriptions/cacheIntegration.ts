@@ -1,6 +1,6 @@
 /**
  * Subscription Cache Integration
- * 
+ *
  * Utilities for integrating subscription data with Apollo Client cache.
  * Provides cache update functions, invalidation strategies, and conflict resolution
  * for real-time data synchronization.
@@ -47,10 +47,7 @@ export class SubscriptionCacheManager {
   /**
    * Update cache with subscription data using specified strategy
    */
-  updateCacheFromSubscription<T>(
-    data: T,
-    config: SubscriptionCacheConfig
-  ): void {
+  updateCacheFromSubscription<T>(data: T, config: SubscriptionCacheConfig): void {
     try {
       this.cache.modify({
         fields: {
@@ -76,19 +73,19 @@ export class SubscriptionCacheManager {
     switch (config.strategy) {
       case 'merge':
         return this.mergeData(existingData, newData, config);
-      
+
       case 'replace':
         return Array.isArray(newData) ? newData : [newData];
-      
+
       case 'append':
         return [...existingData, newData];
-      
+
       case 'prepend':
         return [newData, ...existingData];
-      
+
       case 'remove':
         return this.removeData(existingData, newData, config);
-      
+
       default:
         return existingData;
     }
@@ -104,12 +101,12 @@ export class SubscriptionCacheManager {
   ): unknown[] {
     const idField = config.idField || 'id';
     const newItem = newData as Record<string, unknown>;
-    
+
     if (!newItem[idField]) {
       return [...existingData, newItem];
     }
 
-    const existingIndex = existingData.findIndex((item) => {
+    const existingIndex = existingData.findIndex(item => {
       const existingItem = item as Record<string, unknown>;
       return existingItem[idField] === newItem[idField];
     });
@@ -123,7 +120,7 @@ export class SubscriptionCacheManager {
     } else {
       // Add new item
       const updatedData = [...existingData, newItem];
-      
+
       // Apply sorting if specified
       if (config.sortField) {
         updatedData.sort((a, b) => {
@@ -131,7 +128,7 @@ export class SubscriptionCacheManager {
           const bItem = b as Record<string, unknown>;
           const aValue = aItem[config.sortField!];
           const bValue = bItem[config.sortField!];
-          
+
           if (typeof aValue === 'string' && typeof bValue === 'string') {
             return aValue.localeCompare(bValue);
           }
@@ -141,12 +138,12 @@ export class SubscriptionCacheManager {
           return 0;
         });
       }
-      
+
       // Apply max items limit
       if (config.maxItems && updatedData.length > config.maxItems) {
         return updatedData.slice(0, config.maxItems);
       }
-      
+
       return updatedData;
     }
   }
@@ -161,12 +158,12 @@ export class SubscriptionCacheManager {
   ): unknown[] {
     const idField = config.idField || 'id';
     const itemToRemove = dataToRemove as Record<string, unknown>;
-    
+
     if (!itemToRemove[idField]) {
       return existingData;
     }
 
-    return existingData.filter((item) => {
+    return existingData.filter(item => {
       const existingItem = item as Record<string, unknown>;
       return existingItem[idField] !== itemToRemove[idField];
     });
@@ -226,13 +223,13 @@ export class SubscriptionCacheManager {
     switch (conflictResolutionStrategy) {
       case 'latest-wins':
         return incomingData;
-      
+
       case 'merge':
         return { ...existingData, ...incomingData };
-      
+
       case 'custom':
         return customResolver ? customResolver(existingData, incomingData) : incomingData;
-      
+
       default:
         return incomingData;
     }
@@ -250,13 +247,13 @@ export const SUBSCRIPTION_CACHE_CONFIGS = {
     sortField: 'createdAt',
     maxItems: 100,
   },
-  
+
   progress: {
     strategy: 'merge' as CacheUpdateStrategy,
     fieldName: 'enrollmentProgress',
     idField: 'enrollmentId',
   },
-  
+
   notifications: {
     strategy: 'prepend' as CacheUpdateStrategy,
     fieldName: 'notifications',
@@ -264,7 +261,7 @@ export const SUBSCRIPTION_CACHE_CONFIGS = {
     sortField: 'createdAt',
     maxItems: 50,
   },
-  
+
   presence: {
     strategy: 'merge' as CacheUpdateStrategy,
     fieldName: 'coursePresence',
@@ -279,15 +276,15 @@ export const CACHE_INVALIDATION_CONFIGS = {
   messageUpdate: {
     fieldPaths: ['conversations', 'unreadMessageCount'],
   },
-  
+
   progressUpdate: {
     fieldPaths: ['enrollments', 'courseProgress', 'userProgress'],
   },
-  
+
   notificationUpdate: {
     fieldPaths: ['notifications', 'unreadNotificationCount'],
   },
-  
+
   presenceUpdate: {
     fieldPaths: ['coursePresence', 'onlineUsers'],
   },

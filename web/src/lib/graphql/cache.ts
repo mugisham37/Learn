@@ -1,6 +1,6 @@
 /**
  * Apollo Cache Configuration
- * 
+ *
  * Production-ready cache configuration with comprehensive type policies for all backend modules.
  * Implements cache normalization, field policies, and merge functions for:
  * - Users Module (authentication, profiles, permissions)
@@ -20,7 +20,7 @@ import { cacheConfig } from '../config';
 
 /**
  * Comprehensive type policies for all backend modules
- * 
+ *
  * These policies define how Apollo Client normalizes and stores data:
  * - Key fields: How to identify unique entities
  * - Field policies: How to merge and read specific fields
@@ -48,7 +48,7 @@ const typePolicies: Record<string, TypePolicy> = {
         keyArgs: ['userId'],
         merge: true,
       },
-      
+
       // Courses Module Queries
       courses: {
         keyArgs: ['filter', 'category', 'difficulty', 'status'],
@@ -74,7 +74,9 @@ const typePolicies: Record<string, TypePolicy> = {
           // Merge modules by ID, preserving order
           const merged = [...existing];
           incoming.forEach((incomingModule: { id: string }) => {
-            const existingIndex = merged.findIndex((m: { id: string }) => m.id === incomingModule.id);
+            const existingIndex = merged.findIndex(
+              (m: { id: string }) => m.id === incomingModule.id
+            );
             if (existingIndex >= 0) {
               merged[existingIndex] = { ...merged[existingIndex], ...incomingModule };
             } else {
@@ -84,7 +86,7 @@ const typePolicies: Record<string, TypePolicy> = {
           return merged;
         },
       },
-      
+
       // Enrollments Module Queries
       enrollments: {
         keyArgs: ['filter', 'status'],
@@ -108,7 +110,7 @@ const typePolicies: Record<string, TypePolicy> = {
         keyArgs: ['enrollmentId'],
         merge: true, // Always use latest progress data
       },
-      
+
       // Assessments Module Queries
       quizzes: {
         keyArgs: ['courseId', 'moduleId'],
@@ -137,7 +139,7 @@ const typePolicies: Record<string, TypePolicy> = {
           return incoming;
         },
       },
-      
+
       // Content Module Queries
       courseContent: {
         keyArgs: ['courseId'],
@@ -154,7 +156,7 @@ const typePolicies: Record<string, TypePolicy> = {
           return incoming;
         },
       },
-      
+
       // Payments Module Queries
       paymentHistory: {
         keyArgs: ['userId'],
@@ -171,7 +173,7 @@ const typePolicies: Record<string, TypePolicy> = {
           return incoming; // Subscription data should be replaced
         },
       },
-      
+
       // Notifications Module Queries
       notifications: {
         keyArgs: ['filter', 'type'],
@@ -187,7 +189,7 @@ const typePolicies: Record<string, TypePolicy> = {
           return incoming; // Unread notifications should be replaced
         },
       },
-      
+
       // Communication Module Queries
       conversations: {
         keyArgs: ['filter'],
@@ -232,7 +234,7 @@ const typePolicies: Record<string, TypePolicy> = {
           return incoming;
         },
       },
-      
+
       // Analytics Module Queries
       courseAnalytics: {
         keyArgs: ['courseId'],
@@ -266,7 +268,7 @@ const typePolicies: Record<string, TypePolicy> = {
         keyArgs: ['limit'],
         merge: false, // Top performers should be replaced
       },
-      
+
       // Search Module Queries
       searchResults: {
         keyArgs: ['query', 'filters'],
@@ -285,7 +287,7 @@ const typePolicies: Record<string, TypePolicy> = {
       },
     },
   },
-  
+
   // Users Module Type Policies
   User: {
     keyFields: ['id'],
@@ -332,16 +334,18 @@ const typePolicies: Record<string, TypePolicy> = {
         merge(existing = [], incoming) {
           // Merge modules by ID, preserving order
           const merged = [...existing];
-          
+
           incoming.forEach((incomingModule: { id: string }) => {
-            const existingIndex = merged.findIndex((m: { id: string }) => m.id === incomingModule.id);
+            const existingIndex = merged.findIndex(
+              (m: { id: string }) => m.id === incomingModule.id
+            );
             if (existingIndex >= 0) {
               merged[existingIndex] = { ...merged[existingIndex], ...incomingModule };
             } else {
               merged.push(incomingModule);
             }
           });
-          
+
           return merged;
         },
       },
@@ -376,32 +380,36 @@ const typePolicies: Record<string, TypePolicy> = {
         merge(existing = [], incoming) {
           // Similar merge logic for lessons
           const merged = [...existing];
-          
+
           incoming.forEach((incomingLesson: { id: string }) => {
-            const existingIndex = merged.findIndex((l: { id: string }) => l.id === incomingLesson.id);
+            const existingIndex = merged.findIndex(
+              (l: { id: string }) => l.id === incomingLesson.id
+            );
             if (existingIndex >= 0) {
               merged[existingIndex] = { ...merged[existingIndex], ...incomingLesson };
             } else {
               merged.push(incomingLesson);
             }
           });
-          
+
           return merged;
         },
       },
       assessments: {
         merge(existing = [], incoming) {
           const merged = [...existing];
-          
+
           incoming.forEach((incomingAssessment: { id: string }) => {
-            const existingIndex = merged.findIndex((a: { id: string }) => a.id === incomingAssessment.id);
+            const existingIndex = merged.findIndex(
+              (a: { id: string }) => a.id === incomingAssessment.id
+            );
             if (existingIndex >= 0) {
               merged[existingIndex] = { ...merged[existingIndex], ...incomingAssessment };
             } else {
               merged.push(incomingAssessment);
             }
           });
-          
+
           return merged;
         },
       },
@@ -436,16 +444,18 @@ const typePolicies: Record<string, TypePolicy> = {
         merge(existing = [], incoming) {
           // Merge lesson progress by lesson ID
           const merged = [...existing];
-          
+
           incoming.forEach((incomingProgress: { lessonId: string }) => {
-            const existingIndex = merged.findIndex((p: { lessonId: string }) => p.lessonId === incomingProgress.lessonId);
+            const existingIndex = merged.findIndex(
+              (p: { lessonId: string }) => p.lessonId === incomingProgress.lessonId
+            );
             if (existingIndex >= 0) {
               merged[existingIndex] = { ...merged[existingIndex], ...incomingProgress };
             } else {
               merged.push(incomingProgress);
             }
           });
-          
+
           return merged;
         },
       },
@@ -504,16 +514,18 @@ const typePolicies: Record<string, TypePolicy> = {
         merge(existing = [], incoming) {
           // Merge submissions by student ID
           const merged = [...existing];
-          
+
           incoming.forEach((incomingSub: { studentId: string }) => {
-            const existingIndex = merged.findIndex((s: { studentId: string }) => s.studentId === incomingSub.studentId);
+            const existingIndex = merged.findIndex(
+              (s: { studentId: string }) => s.studentId === incomingSub.studentId
+            );
             if (existingIndex >= 0) {
               merged[existingIndex] = { ...merged[existingIndex], ...incomingSub };
             } else {
               merged.push(incomingSub);
             }
           });
-          
+
           return merged;
         },
       },
@@ -714,16 +726,18 @@ const typePolicies: Record<string, TypePolicy> = {
         merge(existing = [], incoming) {
           // Merge read receipts by user ID
           const merged = [...existing];
-          
+
           incoming.forEach((incomingRead: { userId: string }) => {
-            const existingIndex = merged.findIndex((r: { userId: string }) => r.userId === incomingRead.userId);
+            const existingIndex = merged.findIndex(
+              (r: { userId: string }) => r.userId === incomingRead.userId
+            );
             if (existingIndex >= 0) {
               merged[existingIndex] = { ...merged[existingIndex], ...incomingRead };
             } else {
               merged.push(incomingRead);
             }
           });
-          
+
           return merged;
         },
       },
@@ -891,7 +905,7 @@ const typePolicies: Record<string, TypePolicy> = {
 
 /**
  * Creates and configures the Apollo InMemoryCache with comprehensive backend integration
- * 
+ *
  * Features:
  * - Normalized storage by entity ID for all 10 backend modules
  * - Intelligent field merging for arrays and objects
@@ -904,34 +918,52 @@ const typePolicies: Record<string, TypePolicy> = {
 export function createCacheConfig(): InMemoryCache {
   return new InMemoryCache({
     typePolicies,
-    
+
     // Cache configuration
     resultCaching: true, // Enable result caching for performance
-    
+
     // Add cache size management
     possibleTypes: {
       // Define possible types for union/interface types
       // This will be populated from the GraphQL schema introspection
       Node: [
-        'User', 'Course', 'CourseModule', 'Lesson', 'Enrollment', 'LessonProgress',
-        'Quiz', 'Assignment', 'QuizAttempt', 'AssignmentSubmission',
-        'MediaAsset', 'VideoProcessingJob',
-        'Payment', 'Subscription', 'Invoice',
-        'Notification', 'NotificationPreferences',
-        'Conversation', 'Message', 'DiscussionThread', 'DiscussionReply',
-        'CourseAnalytics', 'StudentAnalytics', 'DashboardMetrics',
-        'SearchResult', 'SearchFacet'
+        'User',
+        'Course',
+        'CourseModule',
+        'Lesson',
+        'Enrollment',
+        'LessonProgress',
+        'Quiz',
+        'Assignment',
+        'QuizAttempt',
+        'AssignmentSubmission',
+        'MediaAsset',
+        'VideoProcessingJob',
+        'Payment',
+        'Subscription',
+        'Invoice',
+        'Notification',
+        'NotificationPreferences',
+        'Conversation',
+        'Message',
+        'DiscussionThread',
+        'DiscussionReply',
+        'CourseAnalytics',
+        'StudentAnalytics',
+        'DashboardMetrics',
+        'SearchResult',
+        'SearchFacet',
       ],
       Content: ['VideoContent', 'DocumentContent', 'ImageContent', 'AudioContent'],
       Assessment: ['Quiz', 'Assignment', 'Survey'],
       NotificationChannel: ['EmailChannel', 'PushChannel', 'InAppChannel'],
     },
-    
+
     // Data ID from object function for custom entity identification
-    dataIdFromObject: (object: { 
-      __typename?: string; 
-      id?: string; 
-      enrollmentId?: string; 
+    dataIdFromObject: (object: {
+      __typename?: string;
+      id?: string;
+      enrollmentId?: string;
       lessonId?: string;
       userId?: string;
       courseId?: string;
@@ -943,41 +975,41 @@ export function createCacheConfig(): InMemoryCache {
       if (object.__typename && object.id) {
         return `${object.__typename}:${object.id}`;
       }
-      
+
       // Custom handling for specific types
       switch (object.__typename) {
         case 'LessonProgress':
           // Use composite key for lesson progress
           return `LessonProgress:${object.enrollmentId}:${object.lessonId}`;
-        
+
         case 'NotificationPreferences':
           // Use user ID as key for notification preferences
           return `NotificationPreferences:${object.userId}`;
-        
+
         case 'CourseAnalytics':
           // Use course ID for analytics
           return `CourseAnalytics:${object.courseId}`;
-        
+
         case 'StudentAnalytics':
           // Use user ID for student analytics
           return `StudentAnalytics:${object.userId}`;
-        
+
         case 'DashboardMetrics':
           // Use user ID and role for dashboard metrics
           return `DashboardMetrics:${object.userId}:${(object as { role?: string }).role || 'unknown'}`;
-        
+
         case 'ConversationParticipant':
           // Use composite key for conversation participants
           return `ConversationParticipant:${object.conversationId}:${object.userId}`;
-        
+
         case 'MessageReadReceipt':
           // Use composite key for read receipts
           return `MessageReadReceipt:${object.conversationId}:${object.userId}`;
-        
+
         case 'ThreadParticipant':
           // Use composite key for thread participants
           return `ThreadParticipant:${object.threadId}:${object.userId}`;
-        
+
         default:
           return false; // Let Apollo handle it
       }
@@ -1002,7 +1034,7 @@ export const cacheHelpers = {
         }
       `,
     });
-    
+
     if (existing) {
       cache.writeFragment({
         id: entityId,
@@ -1039,8 +1071,8 @@ export const cacheHelpers = {
    * Batch update multiple entities of the same type
    */
   batchUpdateEntities: <T>(
-    cache: InMemoryCache, 
-    typename: string, 
+    cache: InMemoryCache,
+    typename: string,
     updates: Array<{ id: string; data: Partial<T> }>
   ) => {
     updates.forEach(({ id, data }) => {
@@ -1053,10 +1085,8 @@ export const cacheHelpers = {
    */
   getCacheStats: (cache: InMemoryCache) => {
     const data = cache.extract();
-    const entities = Object.keys(data).filter(key => 
-      key !== 'ROOT_QUERY' && 
-      key !== 'ROOT_MUTATION' && 
-      key !== 'ROOT_SUBSCRIPTION'
+    const entities = Object.keys(data).filter(
+      key => key !== 'ROOT_QUERY' && key !== 'ROOT_MUTATION' && key !== 'ROOT_SUBSCRIPTION'
     ).length;
     const queries = data.ROOT_QUERY ? Object.keys(data.ROOT_QUERY).length : 0;
     const subscriptions = data.ROOT_SUBSCRIPTION ? Object.keys(data.ROOT_SUBSCRIPTION).length : 0;
@@ -1075,24 +1105,24 @@ export const cacheHelpers = {
    */
   clearCacheSelectively: (cache: InMemoryCache, preserveTypes: string[] = []) => {
     const data = cache.extract();
-    
+
     // Clear all data
     cache.reset();
-    
+
     // Restore preserved types
     if (preserveTypes.length > 0) {
       const preservedData: Record<string, unknown> = {};
-      
+
       Object.keys(data).forEach(key => {
-        const shouldPreserve = preserveTypes.some(type => 
-          key.startsWith(`${type}:`) || key === 'ROOT_QUERY' || key === 'ROOT_SUBSCRIPTION'
+        const shouldPreserve = preserveTypes.some(
+          type => key.startsWith(`${type}:`) || key === 'ROOT_QUERY' || key === 'ROOT_SUBSCRIPTION'
         );
-        
+
         if (shouldPreserve) {
           preservedData[key] = data[key];
         }
       });
-      
+
       cache.restore(preservedData);
     }
   },
@@ -1113,7 +1143,7 @@ export const cachePersistence = {
         timestamp: Date.now(),
         version: '1.0.0',
       });
-      
+
       localStorage.setItem(key, serialized);
       return true;
     } catch (error) {
@@ -1129,23 +1159,23 @@ export const cachePersistence = {
     try {
       const stored = localStorage.getItem(key);
       if (!stored) return false;
-      
+
       const parsed = JSON.parse(stored);
       const { data, timestamp, version } = parsed;
-      
+
       // Check if cache is not too old (24 hours)
       const maxAge = 24 * 60 * 60 * 1000;
       if (Date.now() - timestamp > maxAge) {
         localStorage.removeItem(key);
         return false;
       }
-      
+
       // Check version compatibility
       if (version !== '1.0.0') {
         localStorage.removeItem(key);
         return false;
       }
-      
+
       cache.restore(data);
       return true;
     } catch (error) {
@@ -1175,7 +1205,7 @@ export const cachePersistence = {
     try {
       const stored = localStorage.getItem(key);
       if (!stored) return null;
-      
+
       const parsed = JSON.parse(stored);
       return {
         size: stored.length,
@@ -1200,7 +1230,7 @@ export const backendCacheInvalidation = {
   userProfileUpdated: (cache: InMemoryCache, userId: string) => {
     cacheHelpers.evictEntity(cache, 'User', userId);
     cacheHelpers.evictEntity(cache, 'UserProfile', userId);
-    
+
     // Invalidate related queries
     cache.evict({ id: 'ROOT_QUERY', fieldName: 'currentUser' });
     cache.evict({ id: 'ROOT_QUERY', fieldName: 'userProfile', args: { userId } });
@@ -1214,12 +1244,12 @@ export const backendCacheInvalidation = {
     cacheHelpers.updateEntity(cache, 'Course', courseId, {
       enrollmentCount: (existing: number) => existing + 1,
     });
-    
+
     // Invalidate enrollment-related queries
     cache.evict({ id: 'ROOT_QUERY', fieldName: 'myEnrollments' });
     cache.evict({ id: 'ROOT_QUERY', fieldName: 'courseEnrollments', args: { courseId } });
     cache.evict({ id: 'ROOT_QUERY', fieldName: 'enrollmentProgress' });
-    
+
     // Invalidate user dashboard data
     cache.evict({ id: 'ROOT_QUERY', fieldName: 'dashboardData', args: { userId } });
   },
@@ -1232,7 +1262,7 @@ export const backendCacheInvalidation = {
       status: 'PUBLISHED',
       publishedAt: new Date().toISOString(),
     });
-    
+
     // Invalidate course listing queries
     cache.evict({ id: 'ROOT_QUERY', fieldName: 'courses' });
     cache.evict({ id: 'ROOT_QUERY', fieldName: 'myCourses' });
@@ -1248,7 +1278,7 @@ export const backendCacheInvalidation = {
       lastMessageId: messageId,
       lastMessageAt: new Date().toISOString(),
     });
-    
+
     // Invalidate conversation queries
     cache.evict({ id: 'ROOT_QUERY', fieldName: 'conversations' });
     cache.evict({ id: 'ROOT_QUERY', fieldName: 'conversationMessages', args: { conversationId } });
@@ -1262,7 +1292,7 @@ export const backendCacheInvalidation = {
     cache.evict({ id: 'ROOT_QUERY', fieldName: 'assignmentSubmissions', args: { assignmentId } });
     cache.evict({ id: 'ROOT_QUERY', fieldName: 'studentSubmissions', args: { studentId } });
     cache.evict({ id: 'ROOT_QUERY', fieldName: 'assignmentProgress' });
-    
+
     // Update assignment submission count
     cacheHelpers.updateEntity(cache, 'Assignment', assignmentId, {
       submissionCount: (existing: number) => existing + 1,
@@ -1278,12 +1308,12 @@ export const backendCacheInvalidation = {
       status: 'COMPLETED',
       completedAt: new Date().toISOString(),
     });
-    
+
     // Invalidate payment and enrollment queries
     cache.evict({ id: 'ROOT_QUERY', fieldName: 'paymentHistory', args: { userId } });
     cache.evict({ id: 'ROOT_QUERY', fieldName: 'myEnrollments' });
     cache.evict({ id: 'ROOT_QUERY', fieldName: 'courseEnrollments', args: { courseId } });
-    
+
     // Update course enrollment count
     cacheHelpers.updateEntity(cache, 'Course', courseId, {
       enrollmentCount: (existing: number) => existing + 1,
@@ -1298,7 +1328,7 @@ export const backendCacheInvalidation = {
       isRead: true,
       readAt: new Date().toISOString(),
     });
-    
+
     // Invalidate notification queries
     cache.evict({ id: 'ROOT_QUERY', fieldName: 'notifications', args: { userId } });
     cache.evict({ id: 'ROOT_QUERY', fieldName: 'unreadNotifications', args: { userId } });
@@ -1312,15 +1342,14 @@ export const backendCacheInvalidation = {
       processingStatus: 'COMPLETED',
       processedAt: new Date().toISOString(),
     });
-    
+
     cacheHelpers.updateEntity(cache, 'VideoProcessingJob', jobId, {
       status: 'COMPLETED',
       completedAt: new Date().toISOString(),
     });
-    
+
     // Invalidate content queries
     cache.evict({ id: 'ROOT_QUERY', fieldName: 'mediaAssets' });
     cache.evict({ id: 'ROOT_QUERY', fieldName: 'processingJobs' });
   },
 };
-

@@ -1,13 +1,13 @@
 /**
  * Notification Center Example Component
- * 
+ *
  * Demonstrates comprehensive usage of the notification hooks including:
  * - Real-time notification management
  * - Notification preferences
  * - Multi-channel support
  * - Analytics and reporting
  * - Scheduling and batching
- * 
+ *
  * This is an example implementation showing best practices for
  * integrating the notification system into a React application.
  */
@@ -58,13 +58,16 @@ export function NotificationCenter({ userId, className }: NotificationCenterProp
     markingAllAsRead,
   } = notificationManagement;
 
-  const handleMarkAsRead = useCallback(async (notificationId: string) => {
-    try {
-      await markAsRead(notificationId);
-    } catch (error) {
-      console.error('Failed to mark notification as read:', error);
-    }
-  }, [markAsRead]);
+  const handleMarkAsRead = useCallback(
+    async (notificationId: string) => {
+      try {
+        await markAsRead(notificationId);
+      } catch (error) {
+        console.error('Failed to mark notification as read:', error);
+      }
+    },
+    [markAsRead]
+  );
 
   const handleMarkAllAsRead = useCallback(async () => {
     try {
@@ -89,10 +92,7 @@ export function NotificationCenter({ userId, className }: NotificationCenterProp
         markingAllAsRead={markingAllAsRead}
       />
 
-      <NotificationFilters
-        filter={filter}
-        onFilterChange={handleFilterChange}
-      />
+      <NotificationFilters filter={filter} onFilterChange={handleFilterChange} />
 
       <NotificationList
         notifications={notifications}
@@ -104,16 +104,10 @@ export function NotificationCenter({ userId, className }: NotificationCenterProp
       />
 
       {showPreferences && (
-        <NotificationPreferencesModal
-          onClose={() => setShowPreferences(false)}
-        />
+        <NotificationPreferencesModal onClose={() => setShowPreferences(false)} />
       )}
 
-      {showAnalytics && (
-        <NotificationAnalyticsModal
-          onClose={() => setShowAnalytics(false)}
-        />
-      )}
+      {showAnalytics && <NotificationAnalyticsModal onClose={() => setShowAnalytics(false)} />}
     </div>
   );
 }
@@ -140,35 +134,29 @@ function NotificationHeader({
   markingAllAsRead,
 }: NotificationHeaderProps) {
   return (
-    <div className="notification-header">
-      <div className="header-title">
+    <div className='notification-header'>
+      <div className='header-title'>
         <h2>Notifications</h2>
-        <div className="notification-counts">
-          <span className="unread-count">{unreadCount} unread</span>
-          <span className="total-count">of {totalCount} total</span>
+        <div className='notification-counts'>
+          <span className='unread-count'>{unreadCount} unread</span>
+          <span className='total-count'>of {totalCount} total</span>
         </div>
       </div>
 
-      <div className="header-actions">
+      <div className='header-actions'>
         <button
           onClick={onMarkAllAsRead}
           disabled={markingAllAsRead || unreadCount === 0}
-          className="mark-all-read-btn"
+          className='mark-all-read-btn'
         >
           {markingAllAsRead ? 'Marking...' : 'Mark All Read'}
         </button>
 
-        <button
-          onClick={onShowPreferences}
-          className="preferences-btn"
-        >
+        <button onClick={onShowPreferences} className='preferences-btn'>
           Preferences
         </button>
 
-        <button
-          onClick={onShowAnalytics}
-          className="analytics-btn"
-        >
+        <button onClick={onShowAnalytics} className='analytics-btn'>
           Analytics
         </button>
       </div>
@@ -202,17 +190,19 @@ function NotificationFilters({ filter, onFilterChange }: NotificationFiltersProp
   const priorities: Priority[] = ['NORMAL', 'HIGH', 'URGENT'];
 
   return (
-    <div className="notification-filters">
-      <div className="filter-group">
+    <div className='notification-filters'>
+      <div className='filter-group'>
         <label>Type:</label>
         <select
           value={filter.notificationType || ''}
-          onChange={(e) => onFilterChange({
-            ...filter,
-            notificationType: e.target.value as NotificationType || undefined,
-          })}
+          onChange={e =>
+            onFilterChange({
+              ...filter,
+              notificationType: (e.target.value as NotificationType) || undefined,
+            })
+          }
         >
-          <option value="">All Types</option>
+          <option value=''>All Types</option>
           {notificationTypes.map(type => (
             <option key={type} value={type}>
               {type.replace(/_/g, ' ').toLowerCase()}
@@ -221,16 +211,18 @@ function NotificationFilters({ filter, onFilterChange }: NotificationFiltersProp
         </select>
       </div>
 
-      <div className="filter-group">
+      <div className='filter-group'>
         <label>Priority:</label>
         <select
           value={filter.priority || ''}
-          onChange={(e) => onFilterChange({
-            ...filter,
-            priority: e.target.value as Priority || undefined,
-          })}
+          onChange={e =>
+            onFilterChange({
+              ...filter,
+              priority: (e.target.value as Priority) || undefined,
+            })
+          }
         >
-          <option value="">All Priorities</option>
+          <option value=''>All Priorities</option>
           {priorities.map(priority => (
             <option key={priority} value={priority}>
               {priority.toLowerCase()}
@@ -239,11 +231,11 @@ function NotificationFilters({ filter, onFilterChange }: NotificationFiltersProp
         </select>
       </div>
 
-      <div className="filter-group">
+      <div className='filter-group'>
         <label>Status:</label>
         <select
           value={filter.isRead === undefined ? '' : String(filter.isRead)}
-          onChange={(e) => {
+          onChange={e => {
             const value = e.target.value;
             const newFilter: NotificationFilter = {
               ...filter,
@@ -256,9 +248,9 @@ function NotificationFilters({ filter, onFilterChange }: NotificationFiltersProp
             onFilterChange(newFilter);
           }}
         >
-          <option value="">All</option>
-          <option value="false">Unread</option>
-          <option value="true">Read</option>
+          <option value=''>All</option>
+          <option value='false'>Unread</option>
+          <option value='true'>Read</option>
         </select>
       </div>
     </div>
@@ -287,15 +279,15 @@ function NotificationList({
   markingAsRead,
 }: NotificationListProps) {
   if (loading && notifications.length === 0) {
-    return <div className="loading">Loading notifications...</div>;
+    return <div className='loading'>Loading notifications...</div>;
   }
 
   if (notifications.length === 0) {
-    return <div className="empty-state">No notifications found</div>;
+    return <div className='empty-state'>No notifications found</div>;
   }
 
   return (
-    <div className="notification-list">
+    <div className='notification-list'>
       {notifications.map(notification => (
         <NotificationItem
           key={notification.id}
@@ -306,11 +298,7 @@ function NotificationList({
       ))}
 
       {hasNextPage && (
-        <button
-          onClick={onLoadMore}
-          disabled={loading}
-          className="load-more-btn"
-        >
+        <button onClick={onLoadMore} disabled={loading} className='load-more-btn'>
           {loading ? 'Loading...' : 'Load More'}
         </button>
       )}
@@ -333,7 +321,7 @@ function NotificationItem({ notification, onMarkAsRead, markingAsRead }: Notific
     if (!notification.isRead) {
       onMarkAsRead(notification.id);
     }
-    
+
     // Navigate to action URL if available
     if (notification.actionUrl) {
       window.location.href = notification.actionUrl;
@@ -342,9 +330,12 @@ function NotificationItem({ notification, onMarkAsRead, markingAsRead }: Notific
 
   const getPriorityClass = (priority: Priority) => {
     switch (priority) {
-      case 'URGENT': return 'priority-urgent';
-      case 'HIGH': return 'priority-high';
-      default: return 'priority-normal';
+      case 'URGENT':
+        return 'priority-urgent';
+      case 'HIGH':
+        return 'priority-high';
+      default:
+        return 'priority-normal';
     }
   };
 
@@ -357,16 +348,16 @@ function NotificationItem({ notification, onMarkAsRead, markingAsRead }: Notific
       className={`notification-item ${!notification.isRead ? 'unread' : 'read'} ${getPriorityClass(notification.priority)}`}
       onClick={handleClick}
     >
-      <div className="notification-content">
-        <div className="notification-header">
-          <h4 className="notification-title">{notification.title}</h4>
-          <span className="notification-time">{formatDate(notification.createdAt)}</span>
+      <div className='notification-content'>
+        <div className='notification-header'>
+          <h4 className='notification-title'>{notification.title}</h4>
+          <span className='notification-time'>{formatDate(notification.createdAt)}</span>
         </div>
-        
-        <p className="notification-message">{notification.content}</p>
-        
-        <div className="notification-meta">
-          <span className="notification-type">
+
+        <p className='notification-message'>{notification.content}</p>
+
+        <div className='notification-meta'>
+          <span className='notification-type'>
             {notification.notificationType.replace(/_/g, ' ').toLowerCase()}
           </span>
           {notification.priority !== 'NORMAL' && (
@@ -378,14 +369,14 @@ function NotificationItem({ notification, onMarkAsRead, markingAsRead }: Notific
       </div>
 
       {!notification.isRead && (
-        <div className="notification-actions">
+        <div className='notification-actions'>
           <button
-            onClick={(e) => {
+            onClick={e => {
               e.stopPropagation();
               onMarkAsRead(notification.id);
             }}
             disabled={markingAsRead}
-            className="mark-read-btn"
+            className='mark-read-btn'
           >
             Mark as Read
           </button>
@@ -428,101 +419,87 @@ function NotificationPreferencesModal({ onClose }: NotificationPreferencesModalP
     }
   }, [localPreferences, updatePreferences, onClose]);
 
-  const handleChannelChange = useCallback((
-    notificationType: string,
-    channel: string,
-    enabled: boolean
-  ) => {
-    if (!localPreferences) return;
+  const handleChannelChange = useCallback(
+    (notificationType: string, channel: string, enabled: boolean) => {
+      if (!localPreferences) return;
 
-    setLocalPreferences(prev => {
-      if (!prev) return prev;
-      const currentType = prev[notificationType as keyof typeof prev];
-      if (!currentType) return prev;
-      
-      return {
-        ...prev,
-        [notificationType]: {
-          ...currentType,
-          [channel]: enabled,
-        },
-      };
-    });
-  }, [localPreferences]);
+      setLocalPreferences(prev => {
+        if (!prev) return prev;
+        const currentType = prev[notificationType as keyof typeof prev];
+        if (!currentType) return prev;
+
+        return {
+          ...prev,
+          [notificationType]: {
+            ...currentType,
+            [channel]: enabled,
+          },
+        };
+      });
+    },
+    [localPreferences]
+  );
 
   if (loadingPreferences) {
     return (
-      <div className="modal-overlay">
-        <div className="modal">
-          <div className="loading">Loading preferences...</div>
+      <div className='modal-overlay'>
+        <div className='modal'>
+          <div className='loading'>Loading preferences...</div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="modal-overlay">
-      <div className="modal preferences-modal">
-        <div className="modal-header">
+    <div className='modal-overlay'>
+      <div className='modal preferences-modal'>
+        <div className='modal-header'>
           <h3>Notification Preferences</h3>
-          <button onClick={onClose} className="close-btn">×</button>
+          <button onClick={onClose} className='close-btn'>
+            ×
+          </button>
         </div>
 
-        <div className="modal-content">
-          {localPreferences && Object.entries(localPreferences).map(([type, channels]) => (
-            <div key={type} className="preference-group">
-              <h4>{type.replace(/([A-Z])/g, ' $1').toLowerCase()}</h4>
-              <div className="channel-preferences">
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={channels.email}
-                    onChange={(e) => handleChannelChange(
-                      type,
-                      'email',
-                      e.target.checked
-                    )}
-                  />
-                  Email
-                </label>
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={channels.push}
-                    onChange={(e) => handleChannelChange(
-                      type,
-                      'push',
-                      e.target.checked
-                    )}
-                  />
-                  Push
-                </label>
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={channels.inApp}
-                    onChange={(e) => handleChannelChange(
-                      type,
-                      'inApp',
-                      e.target.checked
-                    )}
-                  />
-                  In-App
-                </label>
+        <div className='modal-content'>
+          {localPreferences &&
+            Object.entries(localPreferences).map(([type, channels]) => (
+              <div key={type} className='preference-group'>
+                <h4>{type.replace(/([A-Z])/g, ' $1').toLowerCase()}</h4>
+                <div className='channel-preferences'>
+                  <label>
+                    <input
+                      type='checkbox'
+                      checked={channels.email}
+                      onChange={e => handleChannelChange(type, 'email', e.target.checked)}
+                    />
+                    Email
+                  </label>
+                  <label>
+                    <input
+                      type='checkbox'
+                      checked={channels.push}
+                      onChange={e => handleChannelChange(type, 'push', e.target.checked)}
+                    />
+                    Push
+                  </label>
+                  <label>
+                    <input
+                      type='checkbox'
+                      checked={channels.inApp}
+                      onChange={e => handleChannelChange(type, 'inApp', e.target.checked)}
+                    />
+                    In-App
+                  </label>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
         </div>
 
-        <div className="modal-footer">
-          <button onClick={onClose} className="cancel-btn">
+        <div className='modal-footer'>
+          <button onClick={onClose} className='cancel-btn'>
             Cancel
           </button>
-          <button
-            onClick={handleSave}
-            disabled={updating}
-            className="save-btn"
-          >
+          <button onClick={handleSave} disabled={updating} className='save-btn'>
             {updating ? 'Saving...' : 'Save'}
           </button>
         </div>
@@ -543,90 +520,100 @@ function NotificationAnalyticsModal({ onClose }: NotificationAnalyticsModalProps
   const dateRange = useMemo(() => {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    
+
     return {
       start: thirtyDaysAgo.toISOString(),
       end: new Date().toISOString(),
     };
   }, []);
 
-  const {
-    engagementMetrics,
-    channelPerformance,
-    typeBreakdown,
-    loading,
-    generateReport,
-  } = useNotificationAnalytics({
-    dateRange,
-  });
+  const { engagementMetrics, channelPerformance, typeBreakdown, loading, generateReport } =
+    useNotificationAnalytics({
+      dateRange,
+    });
 
-  const handleExportReport = useCallback(async (format: 'pdf' | 'csv' | 'excel') => {
-    try {
-      await generateReport(format);
-    } catch (error) {
-      console.error('Failed to generate report:', error);
-    }
-  }, [generateReport]);
+  const handleExportReport = useCallback(
+    async (format: 'pdf' | 'csv' | 'excel') => {
+      try {
+        await generateReport(format);
+      } catch (error) {
+        console.error('Failed to generate report:', error);
+      }
+    },
+    [generateReport]
+  );
 
   return (
-    <div className="modal-overlay">
-      <div className="modal analytics-modal">
-        <div className="modal-header">
+    <div className='modal-overlay'>
+      <div className='modal analytics-modal'>
+        <div className='modal-header'>
           <h3>Notification Analytics</h3>
-          <button onClick={onClose} className="close-btn">×</button>
+          <button onClick={onClose} className='close-btn'>
+            ×
+          </button>
         </div>
 
-        <div className="modal-content">
+        <div className='modal-content'>
           {loading ? (
-            <div className="loading">Loading analytics...</div>
+            <div className='loading'>Loading analytics...</div>
           ) : (
             <>
               {engagementMetrics && (
-                <div className="metrics-section">
+                <div className='metrics-section'>
                   <h4>Engagement Metrics</h4>
-                  <div className="metrics-grid">
-                    <div className="metric">
-                      <span className="metric-label">Total Sent</span>
-                      <span className="metric-value">{engagementMetrics.totalSent}</span>
+                  <div className='metrics-grid'>
+                    <div className='metric'>
+                      <span className='metric-label'>Total Sent</span>
+                      <span className='metric-value'>{engagementMetrics.totalSent}</span>
                     </div>
-                    <div className="metric">
-                      <span className="metric-label">Delivery Rate</span>
-                      <span className="metric-value">{(engagementMetrics.deliveryRate * 100).toFixed(1)}%</span>
+                    <div className='metric'>
+                      <span className='metric-label'>Delivery Rate</span>
+                      <span className='metric-value'>
+                        {(engagementMetrics.deliveryRate * 100).toFixed(1)}%
+                      </span>
                     </div>
-                    <div className="metric">
-                      <span className="metric-label">Open Rate</span>
-                      <span className="metric-value">{(engagementMetrics.openRate * 100).toFixed(1)}%</span>
+                    <div className='metric'>
+                      <span className='metric-label'>Open Rate</span>
+                      <span className='metric-value'>
+                        {(engagementMetrics.openRate * 100).toFixed(1)}%
+                      </span>
                     </div>
-                    <div className="metric">
-                      <span className="metric-label">Click Rate</span>
-                      <span className="metric-value">{(engagementMetrics.clickRate * 100).toFixed(1)}%</span>
+                    <div className='metric'>
+                      <span className='metric-label'>Click Rate</span>
+                      <span className='metric-value'>
+                        {(engagementMetrics.clickRate * 100).toFixed(1)}%
+                      </span>
                     </div>
                   </div>
                 </div>
               )}
 
-              <div className="channel-performance-section">
+              <div className='channel-performance-section'>
                 <h4>Channel Performance</h4>
-                <div className="channel-list">
+                <div className='channel-list'>
                   {channelPerformance.map(channel => (
-                    <div key={channel.channel} className="channel-item">
-                      <span className="channel-name">{channel.channel}</span>
-                      <span className="channel-sent">{channel.sent} sent</span>
-                      <span className="channel-delivered">{channel.delivered} delivered</span>
-                      <span className="channel-engagement">{(channel.engagementRate * 100).toFixed(1)}% engagement</span>
+                    <div key={channel.channel} className='channel-item'>
+                      <span className='channel-name'>{channel.channel}</span>
+                      <span className='channel-sent'>{channel.sent} sent</span>
+                      <span className='channel-delivered'>{channel.delivered} delivered</span>
+                      <span className='channel-engagement'>
+                        {(channel.engagementRate * 100).toFixed(1)}% engagement
+                      </span>
                     </div>
                   ))}
                 </div>
               </div>
 
-              <div className="type-breakdown-section">
+              <div className='type-breakdown-section'>
                 <h4>Notification Types</h4>
-                <div className="type-list">
+                <div className='type-list'>
                   {typeBreakdown.map(type => (
-                    <div key={type.type} className="type-item">
-                      <span className="type-name">{type.type.replace(/_/g, ' ')}</span>
-                      <span className="type-count">{type.count}</span>
-                      <span className="type-engagement">{(type.engagementRate * 100).toFixed(1)}%</span>
+                    <div key={type.type} className='type-item'>
+                      <span className='type-name'>{type.type.replace(/_/g, ' ')}</span>
+                      <span className='type-count'>{type.count}</span>
+                      <span className='type-engagement'>
+                        {(type.engagementRate * 100).toFixed(1)}%
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -635,19 +622,19 @@ function NotificationAnalyticsModal({ onClose }: NotificationAnalyticsModalProps
           )}
         </div>
 
-        <div className="modal-footer">
-          <div className="export-buttons">
-            <button onClick={() => handleExportReport('pdf')} className="export-btn">
+        <div className='modal-footer'>
+          <div className='export-buttons'>
+            <button onClick={() => handleExportReport('pdf')} className='export-btn'>
               Export PDF
             </button>
-            <button onClick={() => handleExportReport('csv')} className="export-btn">
+            <button onClick={() => handleExportReport('csv')} className='export-btn'>
               Export CSV
             </button>
-            <button onClick={() => handleExportReport('excel')} className="export-btn">
+            <button onClick={() => handleExportReport('excel')} className='export-btn'>
               Export Excel
             </button>
           </div>
-          <button onClick={onClose} className="close-btn">
+          <button onClick={onClose} className='close-btn'>
             Close
           </button>
         </div>
@@ -672,96 +659,104 @@ export function MultiChannelNotificationSender() {
     priority: 'NORMAL' as Priority,
   });
 
-  const handleSend = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    try {
-      await sendMultiChannel({
-        type: formData.type,
-        recipients: formData.recipients,
-        channels: formData.channels,
-        content: {
-          title: formData.title,
-          message: formData.message,
-          ...(formData.actionUrl && { actionUrl: formData.actionUrl }),
-        },
-        priority: formData.priority,
-        fallbackStrategy: 'cascade',
-      });
-      
-      // Reset form
-      setFormData({
-        type: 'COURSE_UPDATE',
-        recipients: [],
-        channels: ['EMAIL', 'IN_APP'],
-        title: '',
-        message: '',
-        actionUrl: '',
-        priority: 'NORMAL',
-      });
-    } catch (error) {
-      console.error('Failed to send notification:', error);
-    }
-  }, [formData, sendMultiChannel]);
+  const handleSend = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+
+      try {
+        await sendMultiChannel({
+          type: formData.type,
+          recipients: formData.recipients,
+          channels: formData.channels,
+          content: {
+            title: formData.title,
+            message: formData.message,
+            ...(formData.actionUrl && { actionUrl: formData.actionUrl }),
+          },
+          priority: formData.priority,
+          fallbackStrategy: 'cascade',
+        });
+
+        // Reset form
+        setFormData({
+          type: 'COURSE_UPDATE',
+          recipients: [],
+          channels: ['EMAIL', 'IN_APP'],
+          title: '',
+          message: '',
+          actionUrl: '',
+          priority: 'NORMAL',
+        });
+      } catch (error) {
+        console.error('Failed to send notification:', error);
+      }
+    },
+    [formData, sendMultiChannel]
+  );
 
   return (
-    <form onSubmit={handleSend} className="multi-channel-sender">
+    <form onSubmit={handleSend} className='multi-channel-sender'>
       <h3>Send Multi-Channel Notification</h3>
-      
-      <div className="form-group">
+
+      <div className='form-group'>
         <label>Type:</label>
         <select
           value={formData.type}
-          onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as NotificationType }))}
+          onChange={e =>
+            setFormData(prev => ({ ...prev, type: e.target.value as NotificationType }))
+          }
         >
-          <option value="COURSE_UPDATE">Course Update</option>
-          <option value="ASSIGNMENT_DUE">Assignment Due</option>
-          <option value="GRADE_POSTED">Grade Posted</option>
-          <option value="ANNOUNCEMENT">Announcement</option>
+          <option value='COURSE_UPDATE'>Course Update</option>
+          <option value='ASSIGNMENT_DUE'>Assignment Due</option>
+          <option value='GRADE_POSTED'>Grade Posted</option>
+          <option value='ANNOUNCEMENT'>Announcement</option>
         </select>
       </div>
 
-      <div className="form-group">
+      <div className='form-group'>
         <label>Title:</label>
         <input
-          type="text"
+          type='text'
           value={formData.title}
-          onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+          onChange={e => setFormData(prev => ({ ...prev, title: e.target.value }))}
           required
         />
       </div>
 
-      <div className="form-group">
+      <div className='form-group'>
         <label>Message:</label>
         <textarea
           value={formData.message}
-          onChange={(e) => setFormData(prev => ({ ...prev, message: e.target.value }))}
+          onChange={e => setFormData(prev => ({ ...prev, message: e.target.value }))}
           required
         />
       </div>
 
-      <div className="form-group">
+      <div className='form-group'>
         <label>Action URL (optional):</label>
         <input
-          type="url"
+          type='url'
           value={formData.actionUrl}
-          onChange={(e) => setFormData(prev => ({ ...prev, actionUrl: e.target.value }))}
+          onChange={e => setFormData(prev => ({ ...prev, actionUrl: e.target.value }))}
         />
       </div>
 
-      <div className="form-group">
+      <div className='form-group'>
         <label>Channels:</label>
-        <div className="checkbox-group">
+        <div className='checkbox-group'>
           {(['EMAIL', 'PUSH', 'IN_APP'] as NotificationChannel[]).map(channel => (
             <label key={channel}>
               <input
-                type="checkbox"
+                type='checkbox'
                 checked={formData.channels.includes(channel)}
-                onChange={(e) => {
+                onChange={e => {
                   if (e.target.checked) {
                     setFormData(prev => ({ ...prev, channels: [...prev.channels, channel] }));
                   } else {
-                    setFormData(prev => ({ ...prev, channels: prev.channels.filter(c => c !== channel) }));
+                    setFormData(prev => ({
+                      ...prev,
+                      channels: prev.channels.filter(c => c !== channel),
+                    }));
                   }
                 }}
               />
@@ -771,7 +766,7 @@ export function MultiChannelNotificationSender() {
         </div>
       </div>
 
-      <button type="submit" disabled={loading || formData.channels.length === 0}>
+      <button type='submit' disabled={loading || formData.channels.length === 0}>
         {loading ? 'Sending...' : 'Send Notification'}
       </button>
     </form>

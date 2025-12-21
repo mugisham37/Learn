@@ -1,9 +1,9 @@
 /**
  * Error Handling Link
- * 
+ *
  * Apollo Link that provides comprehensive error handling with user-friendly
  * messages, error classification, and integration with error tracking services.
- * 
+ *
  * This link integrates with the comprehensive error handling system.
  */
 
@@ -19,11 +19,11 @@ import type { ClassifiedError, ErrorType } from '../../../types';
  * Creates the error handling link
  */
 export function createErrorLink() {
-  return onError((errorContext) => {
+  return onError(errorContext => {
     // Type assertion to work around Apollo Client v4 type issues
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { graphQLErrors, networkError, operation } = errorContext as any;
-    
+
     const operationName = operation.operationName;
     const variables = operation.variables;
 
@@ -35,9 +35,11 @@ export function createErrorLink() {
 
     // Handle GraphQL errors using the new error handling system
     if (graphQLErrors) {
-      graphQLErrors.forEach(async (error: { message: string; extensions?: { code?: string; field?: string } }) => {
-        await errorHandler.handleGraphQLError(error, context);
-      });
+      graphQLErrors.forEach(
+        async (error: { message: string; extensions?: { code?: string; field?: string } }) => {
+          await errorHandler.handleGraphQLError(error, context);
+        }
+      );
     }
 
     // Handle network errors using the new error handling system
@@ -45,9 +47,9 @@ export function createErrorLink() {
       const networkErrorWithDetails = {
         ...networkError,
         statusCode: (networkError as ServerError).statusCode,
-        response: (networkError as ServerError).response ? 
-          JSON.parse(JSON.stringify((networkError as ServerError).response)) : 
-          undefined,
+        response: (networkError as ServerError).response
+          ? JSON.parse(JSON.stringify((networkError as ServerError).response))
+          : undefined,
       };
       errorHandler.handleNetworkError(networkErrorWithDetails, undefined, context);
     }
@@ -62,7 +64,9 @@ export const errorUtils = {
   /**
    * Extracts field-specific errors from GraphQL errors
    */
-  extractFieldErrors: (errors: { message: string; extensions?: { code?: string; field?: string } }[]): Record<string, string> => {
+  extractFieldErrors: (
+    errors: { message: string; extensions?: { code?: string; field?: string } }[]
+  ): Record<string, string> => {
     return errorHandler.extractFieldErrors(errors);
   },
 
@@ -70,7 +74,7 @@ export const errorUtils = {
    * Checks if any errors are retryable
    */
   hasRetryableErrors: (errors: { message: string; extensions?: { code?: string } }[]): boolean => {
-    return errors.some((error) => {
+    return errors.some(error => {
       // Simple retryable check based on error codes
       const code = error.extensions?.code;
       return code === 'NETWORK_ERROR' || code === 'TIMEOUT' || code === 'RATE_LIMITED';
@@ -80,7 +84,9 @@ export const errorUtils = {
   /**
    * Gets the most severe error from a list of errors
    */
-  getMostSevereError: (errors: { message: string; extensions?: { code?: string; field?: string } }[]): ClassifiedError => {
+  getMostSevereError: (
+    errors: { message: string; extensions?: { code?: string; field?: string } }[]
+  ): ClassifiedError => {
     // Return the first error as a classified error
     const firstError = errors[0];
     if (!firstError) {

@@ -1,9 +1,9 @@
 /**
  * Analytics Module Hooks
- * 
+ *
  * React hooks for analytics-related operations including course analytics,
  * student metrics, dashboard data, and report generation.
- * 
+ *
  * Requirements: 2.3 - Complete Module Hook Implementation (Analytics)
  */
 
@@ -444,18 +444,18 @@ interface GetTopPerformingStudentsResponse {
 
 /**
  * Hook for fetching course analytics with engagement and performance metrics
- * 
+ *
  * @param courseId - The course ID to fetch analytics for
  * @returns Query result with course analytics data, loading state, and error handling
- * 
+ *
  * @example
  * ```tsx
  * function CourseAnalyticsPage({ courseId }: { courseId: string }) {
  *   const { data, loading, error } = useCourseAnalytics(courseId);
- *   
+ *
  *   if (loading) return <div>Loading analytics...</div>;
  *   if (error) return <div>Error loading analytics</div>;
- *   
+ *
  *   return (
  *     <div>
  *       <h2>Course Analytics</h2>
@@ -490,18 +490,18 @@ export function useCourseAnalytics(courseId: string): QueryResult<CourseAnalytic
 
 /**
  * Hook for fetching student analytics with learning progress and performance metrics
- * 
+ *
  * @param userId - The user ID to fetch analytics for (defaults to current user)
  * @returns Query result with student analytics data, loading state, and error handling
- * 
+ *
  * @example
  * ```tsx
  * function StudentDashboard({ userId }: { userId?: string }) {
  *   const { data, loading, error } = useStudentMetrics(userId);
- *   
+ *
  *   if (loading) return <div>Loading metrics...</div>;
  *   if (error) return <div>Error loading metrics</div>;
- *   
+ *
  *   return (
  *     <div>
  *       <h2>Your Learning Progress</h2>
@@ -536,22 +536,22 @@ export function useStudentMetrics(userId?: string): QueryResult<StudentAnalytics
 
 /**
  * Hook for fetching role-specific dashboard metrics
- * 
+ *
  * Returns different metrics based on user role:
  * - Students: enrollment stats, upcoming deadlines, recent grades
  * - Educators: course performance, pending grading, student activity
  * - Admins: platform health, growth metrics, top performers
- * 
+ *
  * @returns Query result with dashboard metrics data, loading state, and error handling
- * 
+ *
  * @example
  * ```tsx
  * function Dashboard() {
  *   const { data, loading, error } = useDashboardData();
- *   
+ *
  *   if (loading) return <div>Loading dashboard...</div>;
  *   if (error) return <div>Error loading dashboard</div>;
- *   
+ *
  *   return (
  *     <div>
  *       {data?.studentMetrics && (
@@ -590,10 +590,10 @@ export function useDashboardData(): QueryResult<DashboardMetrics> {
 
 /**
  * Hook for generating comprehensive course reports with date filtering
- * 
+ *
  * @param input - Course report input with courseId and date range
  * @returns Query result with course report data, loading state, and error handling
- * 
+ *
  * @example
  * ```tsx
  * function CourseReportPage({ courseId }: { courseId: string }) {
@@ -604,10 +604,10 @@ export function useDashboardData(): QueryResult<DashboardMetrics> {
  *       endDate: '2024-12-31'
  *     }
  *   });
- *   
+ *
  *   if (loading) return <div>Generating report...</div>;
  *   if (error) return <div>Error generating report</div>;
- *   
+ *
  *   return (
  *     <div>
  *       <h2>Course Report: {data?.courseName}</h2>
@@ -619,9 +619,7 @@ export function useDashboardData(): QueryResult<DashboardMetrics> {
  * }
  * ```
  */
-export function useReportGeneration(
-  input: CourseReportInput
-): QueryResult<CourseReport> {
+export function useReportGeneration(input: CourseReportInput): QueryResult<CourseReport> {
   const { data, loading, error, refetch } = useQuery<GenerateCourseReportResponse>(
     GENERATE_COURSE_REPORT,
     {
@@ -643,10 +641,10 @@ export function useReportGeneration(
 
 /**
  * Hook for generating comprehensive student reports with date filtering
- * 
+ *
  * @param input - Student report input with studentId and date range
  * @returns Query result with student report data, loading state, and error handling
- * 
+ *
  * @example
  * ```tsx
  * function StudentReportPage({ studentId }: { studentId: string }) {
@@ -657,10 +655,10 @@ export function useReportGeneration(
  *       endDate: '2024-12-31'
  *     }
  *   });
- *   
+ *
  *   if (loading) return <div>Generating report...</div>;
  *   if (error) return <div>Error generating report</div>;
- *   
+ *
  *   return (
  *     <div>
  *       <h2>Student Report: {data?.studentName}</h2>
@@ -672,9 +670,7 @@ export function useReportGeneration(
  * }
  * ```
  */
-export function useStudentReport(
-  input: StudentReportInput
-): QueryResult<StudentReport> {
+export function useStudentReport(input: StudentReportInput): QueryResult<StudentReport> {
   const { data, loading, error, refetch } = useQuery<GenerateStudentReportResponse>(
     GENERATE_STUDENT_REPORT,
     {
@@ -696,10 +692,10 @@ export function useStudentReport(
 
 /**
  * Hook for fetching platform-wide metrics (admin only)
- * 
+ *
  * @param input - Platform metrics input with date range
  * @returns Query result with platform health data, loading state, and error handling
- * 
+ *
  * @example
  * ```tsx
  * function PlatformMetricsPage() {
@@ -709,10 +705,10 @@ export function useStudentReport(
  *       endDate: '2024-12-31'
  *     }
  *   });
- *   
+ *
  *   if (loading) return <div>Loading metrics...</div>;
  *   if (error) return <div>Error loading metrics</div>;
- *   
+ *
  *   return (
  *     <div>
  *       <h2>Platform Metrics</h2>
@@ -724,9 +720,7 @@ export function useStudentReport(
  * }
  * ```
  */
-export function usePlatformMetrics(
-  input: PlatformMetricsInput
-): QueryResult<PlatformHealth> {
+export function usePlatformMetrics(input: PlatformMetricsInput): QueryResult<PlatformHealth> {
   const { data, loading, error, refetch } = useQuery<GetPlatformMetricsResponse>(
     GET_PLATFORM_METRICS,
     {
@@ -749,11 +743,11 @@ export function usePlatformMetrics(
 
 /**
  * Hook for fetching trending courses based on enrollment and engagement
- * 
+ *
  * @param limit - Maximum number of trending courses to return (default: 10)
  * @param dateRange - Date range for trending analysis
  * @returns Query result with trending courses data, loading state, and error handling
- * 
+ *
  * @example
  * ```tsx
  * function TrendingCoursesWidget() {
@@ -761,10 +755,10 @@ export function usePlatformMetrics(
  *     startDate: '2024-01-01',
  *     endDate: '2024-12-31'
  *   });
- *   
+ *
  *   if (loading) return <div>Loading trending courses...</div>;
  *   if (error) return <div>Error loading courses</div>;
- *   
+ *
  *   return (
  *     <div>
  *       <h3>Trending Courses</h3>
@@ -802,18 +796,18 @@ export function useTrendingCourses(
 
 /**
  * Hook for fetching top performing students (admin only)
- * 
+ *
  * @param limit - Maximum number of top students to return (default: 10)
  * @returns Query result with top students data, loading state, and error handling
- * 
+ *
  * @example
  * ```tsx
  * function TopStudentsLeaderboard() {
  *   const { data, loading, error } = useTopPerformingStudents(10);
- *   
+ *
  *   if (loading) return <div>Loading leaderboard...</div>;
  *   if (error) return <div>Error loading leaderboard</div>;
- *   
+ *
  *   return (
  *     <div>
  *       <h3>Top Performing Students</h3>
@@ -825,9 +819,7 @@ export function useTrendingCourses(
  * }
  * ```
  */
-export function useTopPerformingStudents(
-  limit: number = 10
-): QueryResult<StudentAnalytics[]> {
+export function useTopPerformingStudents(limit: number = 10): QueryResult<StudentAnalytics[]> {
   const { data, loading, error, refetch } = useQuery<GetTopPerformingStudentsResponse>(
     GET_TOP_PERFORMING_STUDENTS,
     {

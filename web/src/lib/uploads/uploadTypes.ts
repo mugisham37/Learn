@@ -1,6 +1,6 @@
 /**
  * Upload System Types
- * 
+ *
  * Type definitions for the file upload system including progress tracking,
  * queue management, and error handling.
  */
@@ -17,13 +17,13 @@ export interface UploadProgress {
   fileName?: string | undefined;
 }
 
-export type UploadStatus = 
-  | 'pending' 
-  | 'uploading' 
-  | 'processing' 
-  | 'completed' 
-  | 'failed' 
-  | 'cancelled' 
+export type UploadStatus =
+  | 'pending'
+  | 'uploading'
+  | 'processing'
+  | 'completed'
+  | 'failed'
+  | 'cancelled'
   | 'paused';
 
 export interface UploadOptions {

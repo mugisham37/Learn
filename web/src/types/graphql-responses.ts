@@ -1,6 +1,6 @@
 /**
  * GraphQL Response Types
- * 
+ *
  * TypeScript interfaces for GraphQL query and mutation responses.
  * These types represent the exact structure returned by GraphQL operations.
  */

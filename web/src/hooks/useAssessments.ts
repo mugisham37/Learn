@@ -1,6 +1,6 @@
 /**
  * Assessment Hooks
- * 
+ *
  * React hooks for assessment-related operations including quiz attempts,
  * assignment submissions, and grading workflows.
  */
@@ -367,15 +367,15 @@ interface QuizSession {
 
 /**
  * Hook for starting a quiz attempt with timer management
- * 
+ *
  * @returns Quiz session management utilities
- * 
+ *
  * @example
  * ```tsx
  * function QuizTaker({ quizId }: { quizId: string }) {
  *   const { mutate: startQuiz, loading, error } = useStartQuiz();
  *   const [attempt, setAttempt] = useState<QuizAttempt | null>(null);
- *   
+ *
  *   const handleStartQuiz = async () => {
  *     try {
  *       const newAttempt = await startQuiz({ input: { quizId } });
@@ -384,7 +384,7 @@ interface QuizSession {
  *       console.error('Failed to start quiz:', err);
  *     }
  *   };
- *   
+ *
  *   if (!attempt) {
  *     return (
  *       <div>
@@ -396,23 +396,29 @@ interface QuizSession {
  *       </div>
  *     );
  *   }
- *   
+ *
  *   return <QuizInterface attempt={attempt} />;
  * }
  * ```
  */
 export function useStartQuiz(): MutationResult<QuizAttempt, { input: StartQuizInput }> {
-  const [startQuizMutation, { loading, error, reset }] = useMutation<StartQuizResponse>(START_QUIZ, {
-    errorPolicy: 'all',
-  });
-
-  const mutate = useCallback(async (variables: { input: StartQuizInput }): Promise<QuizAttempt> => {
-    const result = await startQuizMutation({ variables });
-    if (!result.data?.startQuiz) {
-      throw new Error('Failed to start quiz');
+  const [startQuizMutation, { loading, error, reset }] = useMutation<StartQuizResponse>(
+    START_QUIZ,
+    {
+      errorPolicy: 'all',
     }
-    return result.data.startQuiz;
-  }, [startQuizMutation]);
+  );
+
+  const mutate = useCallback(
+    async (variables: { input: StartQuizInput }): Promise<QuizAttempt> => {
+      const result = await startQuizMutation({ variables });
+      if (!result.data?.startQuiz) {
+        throw new Error('Failed to start quiz');
+      }
+      return result.data.startQuiz;
+    },
+    [startQuizMutation]
+  );
 
   return {
     mutate,
@@ -424,15 +430,15 @@ export function useStartQuiz(): MutationResult<QuizAttempt, { input: StartQuizIn
 
 /**
  * Hook for managing quiz sessions with auto-save functionality
- * 
+ *
  * @param attemptId - The quiz attempt ID
  * @returns Quiz session management utilities
- * 
+ *
  * @example
  * ```tsx
  * function QuizInterface({ attemptId }: { attemptId: string }) {
  *   const { attempt, timeRemaining, submitAnswer, submitQuiz, loading, error } = useQuizSession(attemptId);
- *   
+ *
  *   const handleAnswerChange = async (questionId: string, answer: any) => {
  *     try {
  *       await submitAnswer(questionId, answer);
@@ -440,7 +446,7 @@ export function useStartQuiz(): MutationResult<QuizAttempt, { input: StartQuizIn
  *       console.error('Failed to save answer:', err);
  *     }
  *   };
- *   
+ *
  *   const handleSubmitQuiz = async () => {
  *     try {
  *       const result = await submitQuiz();
@@ -449,16 +455,16 @@ export function useStartQuiz(): MutationResult<QuizAttempt, { input: StartQuizIn
  *       console.error('Failed to submit quiz:', err);
  *     }
  *   };
- *   
+ *
  *   if (!attempt) return <div>Loading quiz...</div>;
- *   
+ *
  *   return (
  *     <div>
  *       <div>Time Remaining: {Math.floor(timeRemaining / 60)}:{(timeRemaining % 60).toString().padStart(2, '0')}</div>
  *       {attempt.quiz.questions.map(question => (
- *         <QuestionComponent 
- *           key={question.id} 
- *           question={question} 
+ *         <QuestionComponent
+ *           key={question.id}
+ *           question={question}
  *           onAnswerChange={(answer) => handleAnswerChange(question.id, answer)}
  *         />
  *       ))}
@@ -472,13 +478,18 @@ export function useStartQuiz(): MutationResult<QuizAttempt, { input: StartQuizIn
  */
 export function useQuizSession(attemptId: string): QuizSession {
   const [submitAnswerMutation] = useMutation(SUBMIT_QUIZ_ANSWER);
-  const [submitQuizMutation, { loading: submitLoading, error: submitError }] = useMutation<SubmitQuizResponse>(SUBMIT_QUIZ);
-  
+  const [submitQuizMutation, { loading: submitLoading, error: submitError }] =
+    useMutation<SubmitQuizResponse>(SUBMIT_QUIZ);
+
   // Initialize time remaining from server data using lazy initial state
   const [timeRemaining, setTimeRemaining] = useState(() => 0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const { data: attemptData, loading, error } = useQuery<GetQuizAttemptResponse>(GET_QUIZ_ATTEMPT, {
+  const {
+    data: attemptData,
+    loading,
+    error,
+  } = useQuery<GetQuizAttemptResponse>(GET_QUIZ_ATTEMPT, {
     variables: { id: attemptId },
     skip: !attemptId,
     errorPolicy: 'all',
@@ -517,33 +528,36 @@ export function useQuizSession(attemptId: string): QuizSession {
     };
   }, [attemptData?.quizAttempt?.status, timeRemaining, attemptId, submitQuizMutation]);
 
-  const submitAnswer = useCallback(async (questionId: string, answer: string | string[]) => {
-    try {
-      await submitAnswerMutation({
-        variables: {
-          input: {
-            attemptId,
-            questionId,
-            answer: typeof answer === 'string' ? answer : answer.join(','),
+  const submitAnswer = useCallback(
+    async (questionId: string, answer: string | string[]) => {
+      try {
+        await submitAnswerMutation({
+          variables: {
+            input: {
+              attemptId,
+              questionId,
+              answer: typeof answer === 'string' ? answer : answer.join(','),
+            },
           },
-        },
-      });
-    } catch (err) {
-      console.error('Failed to submit answer:', err);
-      throw err;
-    }
-  }, [attemptId, submitAnswerMutation]);
+        });
+      } catch (err) {
+        console.error('Failed to submit answer:', err);
+        throw err;
+      }
+    },
+    [attemptId, submitAnswerMutation]
+  );
 
   const submitQuiz = useCallback(async () => {
     try {
       const result = await submitQuizMutation({ variables: { attemptId } });
-      
+
       // Clear timer
       if (timerRef.current) {
         clearInterval(timerRef.current);
         timerRef.current = null;
       }
-      
+
       return result.data?.submitQuiz;
     } catch (err) {
       console.error('Failed to submit quiz:', err);
@@ -570,15 +584,15 @@ export function useQuizSession(attemptId: string): QuizSession {
 
 /**
  * Hook for submitting assignments with file upload support
- * 
+ *
  * @returns Assignment submission utilities
- * 
+ *
  * @example
  * ```tsx
  * function AssignmentSubmission({ assignmentId }: { assignmentId: string }) {
  *   const { mutate: submitAssignment, loading, error } = useSubmitAssignment();
  *   const { uploadFile } = useFileUpload();
- *   
+ *
  *   const handleSubmit = async (formData: { text: string; files: File[] }) => {
  *     try {
  *       // Upload files first if any
@@ -591,7 +605,7 @@ export function useQuizSession(attemptId: string): QuizSession {
  *           fileSize: file.size,
  *         });
  *       }
- *       
+ *
  *       // Submit assignment
  *       const submission = await submitAssignment({
  *         input: {
@@ -600,13 +614,13 @@ export function useQuizSession(attemptId: string): QuizSession {
  *           files: uploadedFiles,
  *         }
  *       });
- *       
+ *
  *       console.log('Assignment submitted:', submission);
  *     } catch (err) {
  *       console.error('Failed to submit assignment:', err);
  *     }
  *   };
- *   
+ *
  *   return (
  *     <form onSubmit={handleSubmit}>
  *       <textarea placeholder="Your submission..." />
@@ -620,42 +634,46 @@ export function useQuizSession(attemptId: string): QuizSession {
  * }
  * ```
  */
-export function useSubmitAssignment(): MutationResult<AssignmentSubmission, { input: SubmitAssignmentInput }> {
-  const [submitAssignmentMutation, { loading, error, reset }] = useMutation<SubmitAssignmentResponse>(SUBMIT_ASSIGNMENT, {
-    errorPolicy: 'all',
-    // Update cache after successful submission
-    update: (cache: ApolloCache, { data }) => {
-      if (data?.submitAssignment) {
-        const assignmentId = data.submitAssignment.assignment.id;
-        
-        // Update assignment submissions list
-        cache.updateQuery<GetAssignmentResponse>(
-          { query: GET_ASSIGNMENT, variables: { id: assignmentId } },
-          (existingData: GetAssignmentResponse | null) => {
-            if (!existingData?.assignment) return existingData;
-            
-            return {
-              assignment: {
-                ...existingData.assignment,
-                submissions: [
-                  data.submitAssignment,
-                  ...existingData.assignment.submissions,
-                ],
-              },
-            };
-          }
-        );
-      }
-    },
-  });
+export function useSubmitAssignment(): MutationResult<
+  AssignmentSubmission,
+  { input: SubmitAssignmentInput }
+> {
+  const [submitAssignmentMutation, { loading, error, reset }] =
+    useMutation<SubmitAssignmentResponse>(SUBMIT_ASSIGNMENT, {
+      errorPolicy: 'all',
+      // Update cache after successful submission
+      update: (cache: ApolloCache, { data }) => {
+        if (data?.submitAssignment) {
+          const assignmentId = data.submitAssignment.assignment.id;
 
-  const mutate = useCallback(async (variables: { input: SubmitAssignmentInput }): Promise<AssignmentSubmission> => {
-    const result = await submitAssignmentMutation({ variables });
-    if (!result.data?.submitAssignment) {
-      throw new Error('Failed to submit assignment');
-    }
-    return result.data.submitAssignment;
-  }, [submitAssignmentMutation]);
+          // Update assignment submissions list
+          cache.updateQuery<GetAssignmentResponse>(
+            { query: GET_ASSIGNMENT, variables: { id: assignmentId } },
+            (existingData: GetAssignmentResponse | null) => {
+              if (!existingData?.assignment) return existingData;
+
+              return {
+                assignment: {
+                  ...existingData.assignment,
+                  submissions: [data.submitAssignment, ...existingData.assignment.submissions],
+                },
+              };
+            }
+          );
+        }
+      },
+    });
+
+  const mutate = useCallback(
+    async (variables: { input: SubmitAssignmentInput }): Promise<AssignmentSubmission> => {
+      const result = await submitAssignmentMutation({ variables });
+      if (!result.data?.submitAssignment) {
+        throw new Error('Failed to submit assignment');
+      }
+      return result.data.submitAssignment;
+    },
+    [submitAssignmentMutation]
+  );
 
   return {
     mutate,
@@ -667,14 +685,14 @@ export function useSubmitAssignment(): MutationResult<AssignmentSubmission, { in
 
 /**
  * Hook for grading assignments (educator workflow)
- * 
+ *
  * @returns Assignment grading utilities
- * 
+ *
  * @example
  * ```tsx
  * function GradingInterface({ submissionId }: { submissionId: string }) {
  *   const { mutate: gradeAssignment, loading, error } = useGradeAssignment();
- *   
+ *
  *   const handleGrade = async (grade: number, feedback: string) => {
  *     try {
  *       const result = await gradeAssignment({
@@ -684,21 +702,21 @@ export function useSubmitAssignment(): MutationResult<AssignmentSubmission, { in
  *           feedback,
  *         }
  *       });
- *       
+ *
  *       console.log('Assignment graded:', result);
  *     } catch (err) {
  *       console.error('Failed to grade assignment:', err);
  *     }
  *   };
- *   
+ *
  *   return (
  *     <div>
- *       <input 
- *         type="number" 
- *         placeholder="Grade (0-100)" 
+ *       <input
+ *         type="number"
+ *         placeholder="Grade (0-100)"
  *         onChange={(e) => setGrade(Number(e.target.value))}
  *       />
- *       <textarea 
+ *       <textarea
  *         placeholder="Feedback for student..."
  *         onChange={(e) => setFeedback(e.target.value)}
  *       />
@@ -711,37 +729,49 @@ export function useSubmitAssignment(): MutationResult<AssignmentSubmission, { in
  * }
  * ```
  */
-export function useGradeAssignment(): MutationResult<AssignmentSubmission, { input: GradeAssignmentInput }> {
-  const [gradeAssignmentMutation, { loading, error, reset }] = useMutation<GradeAssignmentResponse>(GRADE_ASSIGNMENT, {
-    errorPolicy: 'all',
-    // Update cache after successful grading
-    update: (cache: ApolloCache, { data }) => {
-      if (data?.gradeAssignment) {
-        // Update submission in cache
-        const submissionId = cache.identify({ __typename: 'AssignmentSubmission', id: data.gradeAssignment.id });
-        if (submissionId) {
-          cache.modify({
-            id: submissionId,
-            fields: {
-              grade: () => data.gradeAssignment.grade,
-              feedback: () => data.gradeAssignment.feedback,
-              gradedAt: () => data.gradeAssignment.gradedAt,
-              gradedBy: () => data.gradeAssignment.gradedBy,
-              status: () => data.gradeAssignment.status,
-            },
+export function useGradeAssignment(): MutationResult<
+  AssignmentSubmission,
+  { input: GradeAssignmentInput }
+> {
+  const [gradeAssignmentMutation, { loading, error, reset }] = useMutation<GradeAssignmentResponse>(
+    GRADE_ASSIGNMENT,
+    {
+      errorPolicy: 'all',
+      // Update cache after successful grading
+      update: (cache: ApolloCache, { data }) => {
+        if (data?.gradeAssignment) {
+          // Update submission in cache
+          const submissionId = cache.identify({
+            __typename: 'AssignmentSubmission',
+            id: data.gradeAssignment.id,
           });
+          if (submissionId) {
+            cache.modify({
+              id: submissionId,
+              fields: {
+                grade: () => data.gradeAssignment.grade,
+                feedback: () => data.gradeAssignment.feedback,
+                gradedAt: () => data.gradeAssignment.gradedAt,
+                gradedBy: () => data.gradeAssignment.gradedBy,
+                status: () => data.gradeAssignment.status,
+              },
+            });
+          }
         }
-      }
-    },
-  });
-
-  const mutate = useCallback(async (variables: { input: GradeAssignmentInput }): Promise<AssignmentSubmission> => {
-    const result = await gradeAssignmentMutation({ variables });
-    if (!result.data?.gradeAssignment) {
-      throw new Error('Failed to grade assignment');
+      },
     }
-    return result.data.gradeAssignment;
-  }, [gradeAssignmentMutation]);
+  );
+
+  const mutate = useCallback(
+    async (variables: { input: GradeAssignmentInput }): Promise<AssignmentSubmission> => {
+      const result = await gradeAssignmentMutation({ variables });
+      if (!result.data?.gradeAssignment) {
+        throw new Error('Failed to grade assignment');
+      }
+      return result.data.gradeAssignment;
+    },
+    [gradeAssignmentMutation]
+  );
 
   return {
     mutate,
@@ -753,7 +783,7 @@ export function useGradeAssignment(): MutationResult<AssignmentSubmission, { inp
 
 /**
  * Hook for fetching quiz data with questions
- * 
+ *
  * @param quizId - The quiz ID to fetch
  * @returns Query result with quiz data
  */
@@ -774,7 +804,7 @@ export function useQuiz(quizId: string): QueryResult<Quiz> {
 
 /**
  * Hook for fetching assignment data with submissions
- * 
+ *
  * @param assignmentId - The assignment ID to fetch
  * @returns Query result with assignment data
  */
@@ -795,11 +825,11 @@ export function useAssignment(assignmentId: string): QueryResult<Assignment> {
 
 /**
  * Hook for fetching quiz analytics and reporting data
- * 
+ *
  * @param quizId - The quiz ID to get analytics for
  * @param dateRange - Optional date range filter
  * @returns Query result with quiz analytics
- * 
+ *
  * @example
  * ```tsx
  * function QuizAnalyticsDashboard({ quizId }: { quizId: string }) {
@@ -807,11 +837,11 @@ export function useAssignment(assignmentId: string): QueryResult<Assignment> {
  *     startDate: '2024-01-01',
  *     endDate: '2024-12-31'
  *   });
- *   
+ *
  *   if (loading) return <div>Loading analytics...</div>;
  *   if (error) return <div>Error: {error.message}</div>;
  *   if (!analytics) return <div>No analytics data available</div>;
- *   
+ *
  *   return (
  *     <div>
  *       <h2>Quiz Analytics</h2>
@@ -819,7 +849,7 @@ export function useAssignment(assignmentId: string): QueryResult<Assignment> {
  *       <div>Average Score: {analytics.averageScore}%</div>
  *       <div>Pass Rate: {analytics.passRate}%</div>
  *       <div>Average Time: {analytics.averageTimeSpent} minutes</div>
- *       
+ *
  *       <h3>Question Performance</h3>
  *       {analytics.questionAnalytics.map(qa => (
  *         <div key={qa.questionId}>
@@ -832,16 +862,18 @@ export function useAssignment(assignmentId: string): QueryResult<Assignment> {
  * ```
  */
 export function useQuizAnalytics(
-  quizId: string, 
+  quizId: string,
   dateRange?: { startDate: string; endDate: string }
 ): QueryResult<any> {
   const { data, loading, error, refetch } = useQuery(GET_QUIZ_ANALYTICS, {
-    variables: { 
+    variables: {
       quizId,
-      dateRange: dateRange ? {
-        startDate: dateRange.startDate,
-        endDate: dateRange.endDate
-      } : undefined
+      dateRange: dateRange
+        ? {
+            startDate: dateRange.startDate,
+            endDate: dateRange.endDate,
+          }
+        : undefined,
     },
     skip: !quizId,
     errorPolicy: 'all',
@@ -857,20 +889,20 @@ export function useQuizAnalytics(
 
 /**
  * Hook for fetching assignment analytics and reporting data
- * 
+ *
  * @param assignmentId - The assignment ID to get analytics for
  * @param dateRange - Optional date range filter
  * @returns Query result with assignment analytics
- * 
+ *
  * @example
  * ```tsx
  * function AssignmentAnalyticsDashboard({ assignmentId }: { assignmentId: string }) {
  *   const { data: analytics, loading, error } = useAssignmentAnalytics(assignmentId);
- *   
+ *
  *   if (loading) return <div>Loading analytics...</div>;
  *   if (error) return <div>Error: {error.message}</div>;
  *   if (!analytics) return <div>No analytics data available</div>;
- *   
+ *
  *   return (
  *     <div>
  *       <h2>Assignment Analytics</h2>
@@ -878,7 +910,7 @@ export function useQuizAnalytics(
  *       <div>Average Grade: {analytics.averageGrade}%</div>
  *       <div>Submission Rate: {analytics.submissionRate}%</div>
  *       <div>Late Submissions: {analytics.lateSubmissions.count} ({analytics.lateSubmissions.percentage}%)</div>
- *       
+ *
  *       <h3>Grade Distribution</h3>
  *       {analytics.gradeDistribution.map(grade => (
  *         <div key={grade.range}>
@@ -895,12 +927,14 @@ export function useAssignmentAnalytics(
   dateRange?: { startDate: string; endDate: string }
 ): QueryResult<any> {
   const { data, loading, error, refetch } = useQuery(GET_ASSIGNMENT_ANALYTICS, {
-    variables: { 
+    variables: {
       assignmentId,
-      dateRange: dateRange ? {
-        startDate: dateRange.startDate,
-        endDate: dateRange.endDate
-      } : undefined
+      dateRange: dateRange
+        ? {
+            startDate: dateRange.startDate,
+            endDate: dateRange.endDate,
+          }
+        : undefined,
     },
     skip: !assignmentId,
     errorPolicy: 'all',
@@ -916,27 +950,27 @@ export function useAssignmentAnalytics(
 
 /**
  * Hook for tracking student assessment progress across courses
- * 
+ *
  * @param studentId - The student ID to track progress for
  * @param courseId - Optional course ID to filter by specific course
  * @returns Query result with student progress data
- * 
+ *
  * @example
  * ```tsx
  * function StudentProgressDashboard({ studentId, courseId }: { studentId: string; courseId?: string }) {
  *   const { data: progress, loading, error } = useStudentAssessmentProgress(studentId, courseId);
- *   
+ *
  *   if (loading) return <div>Loading progress...</div>;
  *   if (error) return <div>Error: {error.message}</div>;
  *   if (!progress) return <div>No progress data available</div>;
- *   
+ *
  *   return (
  *     <div>
  *       <h2>Assessment Progress</h2>
  *       <div>Quiz Progress: {progress.completedQuizzes}/{progress.totalQuizzes} ({progress.averageQuizScore}% avg)</div>
  *       <div>Assignment Progress: {progress.submittedAssignments}/{progress.totalAssignments} ({progress.averageAssignmentGrade}% avg)</div>
  *       <div>Overall Progress: {progress.overallProgress}%</div>
- *       
+ *
  *       <h3>Recent Activity</h3>
  *       {progress.recentActivity.map((activity, index) => (
  *         <div key={index}>
@@ -968,20 +1002,20 @@ export function useStudentAssessmentProgress(
 
 /**
  * Hook for tracking assessment attempts and time management
- * 
+ *
  * @param assessmentId - The assessment (quiz/assignment) ID
  * @param studentId - The student ID to track attempts for
  * @returns Query result with attempt tracking data
- * 
+ *
  * @example
  * ```tsx
  * function AttemptTracker({ assessmentId, studentId }: { assessmentId: string; studentId: string }) {
  *   const { data: attempts, loading, error } = useAssessmentAttempts(assessmentId, studentId);
- *   
+ *
  *   if (loading) return <div>Loading attempts...</div>;
  *   if (error) return <div>Error: {error.message}</div>;
  *   if (!attempts || attempts.length === 0) return <div>No attempts found</div>;
- *   
+ *
  *   return (
  *     <div>
  *       <h2>Assessment Attempts</h2>
@@ -1000,10 +1034,7 @@ export function useStudentAssessmentProgress(
  * }
  * ```
  */
-export function useAssessmentAttempts(
-  assessmentId: string,
-  studentId: string
-): QueryResult<any[]> {
+export function useAssessmentAttempts(assessmentId: string, studentId: string): QueryResult<any[]> {
   const { data, loading, error, refetch } = useQuery(GET_ASSESSMENT_ATTEMPTS, {
     variables: { assessmentId, studentId },
     skip: !assessmentId || !studentId,

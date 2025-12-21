@@ -1,26 +1,26 @@
 /**
  * Notifications Module Hooks
- * 
+ *
  * React hooks for notification management including:
  * - Notification queries with filtering and pagination
  * - Notification preference management
  * - Real-time notification delivery
  * - Multi-channel notification support
  * - Notification analytics and reporting
- * 
+ *
  * Requirements: 2.7
  */
 
 import { useCallback, useEffect, useState } from 'react';
-import { 
-  useQuery, 
-  useMutation, 
+import {
+  useQuery,
+  useMutation,
   useSubscription,
   ApolloCache,
   gql,
   type QueryResult,
   type MutationResult as ApolloMutationResult,
-  type SubscriptionResult
+  type SubscriptionResult,
 } from '@apollo/client';
 import type { ID, DateTime, JSON } from '../types';
 
@@ -171,10 +171,7 @@ const NOTIFICATION_FRAGMENT = gql`
 
 const GET_USER_NOTIFICATIONS = gql`
   ${NOTIFICATION_FRAGMENT}
-  query GetUserNotifications(
-    $filter: NotificationFilter
-    $pagination: PaginationInput
-  ) {
+  query GetUserNotifications($filter: NotificationFilter, $pagination: PaginationInput) {
     getUserNotifications(filter: $filter, pagination: $pagination) {
       edges {
         node {
@@ -438,11 +435,11 @@ export interface SubscriptionHookResult<T> {
 
 /**
  * Hook for fetching user notifications with filtering and pagination
- * 
+ *
  * @param filter - Optional filter criteria for notifications
  * @param pagination - Optional pagination parameters
  * @returns Query result with notifications connection
- * 
+ *
  * @example
  * ```tsx
  * function NotificationList() {
@@ -450,9 +447,9 @@ export interface SubscriptionHookResult<T> {
  *     filter: { isRead: false },
  *     pagination: { first: 20 }
  *   });
- * 
+ *
  *   if (loading) return <Spinner />;
- *   
+ *
  *   return (
  *     <div>
  *       {data?.edges.map(({ node }) => (
@@ -475,17 +472,20 @@ export function useNotifications(options?: {
   totalCount: number;
   unreadCount: number;
 } {
-  const { data, loading, error, refetch, fetchMore: apolloFetchMore } = useQuery<GetUserNotificationsResponse>(
-    GET_USER_NOTIFICATIONS,
-    {
-      variables: {
-        filter: options?.filter,
-        pagination: options?.pagination,
-      },
-      errorPolicy: 'all',
-      fetchPolicy: 'cache-and-network',
-    }
-  );
+  const {
+    data,
+    loading,
+    error,
+    refetch,
+    fetchMore: apolloFetchMore,
+  } = useQuery<GetUserNotificationsResponse>(GET_USER_NOTIFICATIONS, {
+    variables: {
+      filter: options?.filter,
+      pagination: options?.pagination,
+    },
+    errorPolicy: 'all',
+    fetchPolicy: 'cache-and-network',
+  });
 
   const fetchMore = useCallback(async () => {
     if (!data?.getUserNotifications.pageInfo.hasNextPage) return;
@@ -531,31 +531,28 @@ export function useNotifications(options?: {
 
 /**
  * Hook for fetching a single notification by ID
- * 
+ *
  * @param id - Notification ID
  * @returns Query result with notification data
- * 
+ *
  * @example
  * ```tsx
  * function NotificationDetail({ notificationId }: { notificationId: string }) {
  *   const { data: notification, loading } = useNotification(notificationId);
- * 
+ *
  *   if (loading) return <Spinner />;
  *   if (!notification) return <NotFound />;
- *   
+ *
  *   return <NotificationCard notification={notification} />;
  * }
  * ```
  */
 export function useNotification(id: ID): QueryHookResult<Notification | null> {
-  const { data, loading, error, refetch } = useQuery<GetNotificationResponse>(
-    GET_NOTIFICATION,
-    {
-      variables: { id },
-      errorPolicy: 'all',
-      skip: !id,
-    }
-  );
+  const { data, loading, error, refetch } = useQuery<GetNotificationResponse>(GET_NOTIFICATION, {
+    variables: { id },
+    errorPolicy: 'all',
+    skip: !id,
+  });
 
   return {
     data: data?.getNotification ?? null,
@@ -569,17 +566,17 @@ export function useNotification(id: ID): QueryHookResult<Notification | null> {
 
 /**
  * Hook for fetching unread notification count
- * 
+ *
  * @param notificationType - Optional filter by notification type
  * @returns Query result with unread count
- * 
+ *
  * @example
  * ```tsx
  * function NotificationBadge() {
  *   const { data: unreadCount } = useUnreadNotificationCount();
- *   
+ *
  *   if (!unreadCount) return null;
- *   
+ *
  *   return <Badge count={unreadCount} />;
  * }
  * ```
@@ -608,21 +605,23 @@ export function useUnreadNotificationCount(
 
 /**
  * Hook for fetching notification preferences
- * 
+ *
  * @returns Query result with notification preferences
- * 
+ *
  * @example
  * ```tsx
  * function NotificationSettings() {
  *   const { data: preferences, loading } = useGetNotificationPreferences();
- * 
+ *
  *   if (loading) return <Spinner />;
- *   
+ *
  *   return <PreferencesForm preferences={preferences} />;
  * }
  * ```
  */
-export function useGetNotificationPreferences(): QueryHookResult<NotificationPreferences | undefined> {
+export function useGetNotificationPreferences(): QueryHookResult<
+  NotificationPreferences | undefined
+> {
   const { data, loading, error, refetch } = useQuery<GetNotificationPreferencesResponse>(
     GET_NOTIFICATION_PREFERENCES,
     {
@@ -642,18 +641,18 @@ export function useGetNotificationPreferences(): QueryHookResult<NotificationPre
 
 /**
  * Hook for marking a notification as read
- * 
+ *
  * @returns Mutation function with loading state and error handling
- * 
+ *
  * @example
  * ```tsx
  * function NotificationItem({ notification }: { notification: Notification }) {
  *   const { mutate: markAsRead, loading } = useMarkNotificationRead();
- * 
+ *
  *   const handleClick = async () => {
  *     await markAsRead({ input: { notificationId: notification.id } });
  *   };
- *   
+ *
  *   return (
  *     <div onClick={handleClick}>
  *       {notification.title}
@@ -717,18 +716,18 @@ export function useMarkNotificationRead(): MutationResult<
 
 /**
  * Hook for marking all notifications as read
- * 
+ *
  * @returns Mutation function with loading state and error handling
- * 
+ *
  * @example
  * ```tsx
  * function NotificationHeader() {
  *   const { mutate: markAllAsRead, loading } = useMarkAllNotificationsRead();
- * 
+ *
  *   const handleMarkAllRead = async () => {
  *     await markAllAsRead({ input: {} });
  *   };
- *   
+ *
  *   return (
  *     <button onClick={handleMarkAllRead} disabled={loading}>
  *       Mark All as Read
@@ -741,16 +740,11 @@ export function useMarkAllNotificationsRead(): MutationResult<
   boolean,
   { input?: MarkAllNotificationsReadInput }
 > {
-  const [markAllReadMutation, { loading, error, reset }] = useMutation<MarkAllNotificationsReadResponse>(
-    MARK_ALL_NOTIFICATIONS_READ,
-    {
+  const [markAllReadMutation, { loading, error, reset }] =
+    useMutation<MarkAllNotificationsReadResponse>(MARK_ALL_NOTIFICATIONS_READ, {
       errorPolicy: 'all',
-      refetchQueries: [
-        { query: GET_USER_NOTIFICATIONS },
-        { query: GET_UNREAD_NOTIFICATION_COUNT },
-      ],
-    }
-  );
+      refetchQueries: [{ query: GET_USER_NOTIFICATIONS }, { query: GET_UNREAD_NOTIFICATION_COUNT }],
+    });
 
   const mutate = async (variables: { input?: MarkAllNotificationsReadInput }): Promise<boolean> => {
     const result = await markAllReadMutation({ variables });
@@ -770,18 +764,18 @@ export function useMarkAllNotificationsRead(): MutationResult<
 
 /**
  * Hook for updating notification preferences
- * 
+ *
  * @returns Mutation function with loading state and error handling
- * 
+ *
  * @example
  * ```tsx
  * function PreferencesForm() {
  *   const { mutate: updatePreferences, loading } = useUpdateNotificationPreferences();
- * 
+ *
  *   const handleSubmit = async (preferences: NotificationPreferencesInput) => {
  *     await updatePreferences({ input: { preferences } });
  *   };
- *   
+ *
  *   return <Form onSubmit={handleSubmit} />;
  * }
  * ```
@@ -790,9 +784,8 @@ export function useUpdateNotificationPreferences(): MutationResult<
   NotificationPreferences,
   { input: UpdateNotificationPreferencesInput }
 > {
-  const [updatePreferencesMutation, { loading, error, reset }] = useMutation<UpdateNotificationPreferencesResponse>(
-    UPDATE_NOTIFICATION_PREFERENCES,
-    {
+  const [updatePreferencesMutation, { loading, error, reset }] =
+    useMutation<UpdateNotificationPreferencesResponse>(UPDATE_NOTIFICATION_PREFERENCES, {
       errorPolicy: 'all',
       update: (cache: ApolloCache<unknown>, { data }) => {
         if (data?.updateNotificationPreferences) {
@@ -805,12 +798,11 @@ export function useUpdateNotificationPreferences(): MutationResult<
           });
         }
       },
-    }
-  );
+    });
 
-  const mutate = async (
-    variables: { input: UpdateNotificationPreferencesInput }
-  ): Promise<NotificationPreferences> => {
+  const mutate = async (variables: {
+    input: UpdateNotificationPreferencesInput;
+  }): Promise<NotificationPreferences> => {
     const result = await updatePreferencesMutation({ variables });
     if (!result.data?.updateNotificationPreferences) {
       throw new Error('Failed to update notification preferences');
@@ -828,18 +820,18 @@ export function useUpdateNotificationPreferences(): MutationResult<
 
 /**
  * Hook for real-time notification delivery
- * 
+ *
  * @param userId - User ID to receive notifications for
  * @param onNotification - Callback function when notification is received
  * @returns Subscription result with connection status
- * 
+ *
  * @example
  * ```tsx
  * function NotificationListener({ userId }: { userId: string }) {
  *   const { connected } = useNotificationReceived(userId, (notification) => {
  *     toast.info(notification.title);
  *   });
- *   
+ *
  *   return <StatusIndicator connected={connected} />;
  * }
  * ```
@@ -871,18 +863,18 @@ export function useNotificationReceived(
 
 /**
  * Hook for real-time notification read status updates
- * 
+ *
  * @param userId - User ID to receive updates for
  * @param onNotificationRead - Callback function when notification is marked as read
  * @returns Subscription result with connection status
- * 
+ *
  * @example
  * ```tsx
  * function NotificationSync({ userId }: { userId: string }) {
  *   useNotificationRead(userId, (notification) => {
  *     console.log('Notification marked as read:', notification.id);
  *   });
- *   
+ *
  *   return null;
  * }
  * ```
@@ -914,20 +906,20 @@ export function useNotificationRead(
 
 /**
  * Hook for real-time unread count updates
- * 
+ *
  * @param userId - User ID to receive updates for
  * @param onCountChanged - Callback function when unread count changes
  * @returns Subscription result with connection status
- * 
+ *
  * @example
  * ```tsx
  * function UnreadBadge({ userId }: { userId: string }) {
  *   const [count, setCount] = useState(0);
- *   
+ *
  *   useUnreadCountChanged(userId, (newCount) => {
  *     setCount(newCount);
  *   });
- *   
+ *
  *   return <Badge count={count} />;
  * }
  * ```
@@ -959,11 +951,11 @@ export function useUnreadCountChanged(
 
 /**
  * Comprehensive hook that combines all notification functionality
- * 
+ *
  * @param userId - User ID for subscriptions
  * @param options - Optional filter and pagination options
  * @returns Combined notification management interface
- * 
+ *
  * @example
  * ```tsx
  * function NotificationCenter({ userId }: { userId: string }) {
@@ -979,7 +971,7 @@ export function useUnreadCountChanged(
  *     filter: { isRead: false },
  *     pagination: { first: 20 },
  *   });
- * 
+ *
  *   return (
  *     <div>
  *       <Header unreadCount={unreadCount} onMarkAllRead={markAllAsRead} />
@@ -1006,17 +998,17 @@ export function useNotificationManagement(
   const { mutate: markAllAsRead, loading: markingAllAsRead } = useMarkAllNotificationsRead();
 
   // Set up real-time subscriptions
-  useNotificationReceived(userId, (notification) => {
+  useNotificationReceived(userId, notification => {
     // Notification will be automatically added to cache by subscription
     console.log('New notification received:', notification.title);
   });
 
-  useUnreadCountChanged(userId, (count) => {
+  useUnreadCountChanged(userId, count => {
     console.log('Unread count changed:', count);
   });
 
   return {
-    notifications: notificationsQuery.data?.edges.map((edge) => edge.node) ?? [],
+    notifications: notificationsQuery.data?.edges.map(edge => edge.node) ?? [],
     unreadCount: notificationsQuery.unreadCount,
     totalCount: notificationsQuery.totalCount,
     loading: notificationsQuery.loading,
@@ -1042,10 +1034,10 @@ export function useNotificationManagement(
 
 /**
  * Hook for notification analytics and reporting
- * 
+ *
  * @param options - Analytics options and filters
  * @returns Analytics data and reporting functions
- * 
+ *
  * @example
  * ```tsx
  * function NotificationAnalytics() {
@@ -1058,7 +1050,7 @@ export function useNotificationManagement(
  *     dateRange: { start: '2024-01-01', end: '2024-12-31' },
  *     notificationTypes: ['ASSIGNMENT_DUE', 'GRADE_POSTED'],
  *   });
- * 
+ *
  *   return (
  *     <div>
  *       <DeliveryChart data={deliveryStats} />
@@ -1177,23 +1169,26 @@ export function useNotificationAnalytics(options?: {
     }
   }, [options]);
 
-  const generateReport = useCallback(async (format: 'pdf' | 'csv' | 'excel') => {
-    if (!analyticsData) return;
+  const generateReport = useCallback(
+    async (format: 'pdf' | 'csv' | 'excel') => {
+      if (!analyticsData) return;
 
-    // In a real implementation, this would call a backend service to generate reports
-    console.log(`Generating ${format} report with data:`, analyticsData);
-    
-    // Simulate report generation
-    const reportData = {
-      format,
-      data: analyticsData,
-      generatedAt: new Date().toISOString(),
-      filters: options,
-    };
+      // In a real implementation, this would call a backend service to generate reports
+      console.log(`Generating ${format} report with data:`, analyticsData);
 
-    // In a real app, this would trigger a download
-    console.log('Report generated:', reportData);
-  }, [analyticsData, options]);
+      // Simulate report generation
+      const reportData = {
+        format,
+        data: analyticsData,
+        generatedAt: new Date().toISOString(),
+        filters: options,
+      };
+
+      // In a real app, this would trigger a download
+      console.log('Report generated:', reportData);
+    },
+    [analyticsData, options]
+  );
 
   useEffect(() => {
     fetchAnalytics();
@@ -1213,9 +1208,9 @@ export function useNotificationAnalytics(options?: {
 
 /**
  * Hook for notification scheduling and batching
- * 
+ *
  * @returns Scheduling and batching functions
- * 
+ *
  * @example
  * ```tsx
  * function NotificationScheduler() {
@@ -1225,7 +1220,7 @@ export function useNotificationAnalytics(options?: {
  *     getScheduledNotifications,
  *     cancelScheduled,
  *   } = useNotificationScheduling();
- * 
+ *
  *   const handleSchedule = async () => {
  *     await scheduleNotification({
  *       type: 'ASSIGNMENT_DUE',
@@ -1235,121 +1230,130 @@ export function useNotificationAnalytics(options?: {
  *       data: { assignmentId: 'assignment123' },
  *     });
  *   };
- * 
+ *
  *   return <ScheduleForm onSubmit={handleSchedule} />;
  * }
  * ```
  */
 export function useNotificationScheduling() {
-  const [scheduledNotifications, setScheduledNotifications] = useState<Array<{
-    id: ID;
-    type: NotificationType;
-    recipients: ID[];
-    scheduledFor: DateTime;
-    status: 'pending' | 'sent' | 'cancelled';
-    template: string;
-    data: Record<string, unknown>;
-  }>>([]);
+  const [scheduledNotifications, setScheduledNotifications] = useState<
+    Array<{
+      id: ID;
+      type: NotificationType;
+      recipients: ID[];
+      scheduledFor: DateTime;
+      status: 'pending' | 'sent' | 'cancelled';
+      template: string;
+      data: Record<string, unknown>;
+    }>
+  >([]);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | undefined>();
 
-  const scheduleNotification = useCallback(async (notification: {
-    type: NotificationType;
-    recipients: ID[];
-    scheduledFor: DateTime;
-    template: string;
-    data: Record<string, unknown>;
-    priority?: Priority;
-  }) => {
-    setLoading(true);
-    setError(undefined);
+  const scheduleNotification = useCallback(
+    async (notification: {
+      type: NotificationType;
+      recipients: ID[];
+      scheduledFor: DateTime;
+      template: string;
+      data: Record<string, unknown>;
+      priority?: Priority;
+    }) => {
+      setLoading(true);
+      setError(undefined);
 
-    try {
-      // In a real implementation, this would call a GraphQL mutation
-      const scheduledNotification = {
-        id: `scheduled_${Date.now()}`,
-        ...notification,
-        status: 'pending' as const,
-      };
+      try {
+        // In a real implementation, this would call a GraphQL mutation
+        const scheduledNotification = {
+          id: `scheduled_${Date.now()}`,
+          ...notification,
+          status: 'pending' as const,
+        };
 
-      setScheduledNotifications(prev => [...prev, scheduledNotification]);
-      
-      console.log('Notification scheduled:', scheduledNotification);
-      return scheduledNotification;
-    } catch (err) {
-      setError(err as Error);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+        setScheduledNotifications(prev => [...prev, scheduledNotification]);
 
-  const scheduleBatch = useCallback(async (notifications: Array<{
-    type: NotificationType;
-    recipients: ID[];
-    scheduledFor: DateTime;
-    template: string;
-    data: Record<string, unknown>;
-    priority?: Priority;
-  }>) => {
-    setLoading(true);
-    setError(undefined);
-
-    try {
-      const scheduledBatch = notifications.map(notification => ({
-        id: `batch_${Date.now()}_${Math.random()}`,
-        ...notification,
-        status: 'pending' as const,
-      }));
-
-      setScheduledNotifications(prev => [...prev, ...scheduledBatch]);
-      
-      console.log('Batch scheduled:', scheduledBatch);
-      return scheduledBatch;
-    } catch (err) {
-      setError(err as Error);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const getScheduledNotifications = useCallback(async (filter?: {
-    status?: 'pending' | 'sent' | 'cancelled';
-    type?: NotificationType;
-    scheduledAfter?: DateTime;
-    scheduledBefore?: DateTime;
-  }) => {
-    let filtered = scheduledNotifications;
-
-    if (filter) {
-      if (filter.status) {
-        filtered = filtered.filter(n => n.status === filter.status);
+        console.log('Notification scheduled:', scheduledNotification);
+        return scheduledNotification;
+      } catch (err) {
+        setError(err as Error);
+        throw err;
+      } finally {
+        setLoading(false);
       }
-      if (filter.type) {
-        filtered = filtered.filter(n => n.type === filter.type);
-      }
-      if (filter.scheduledAfter) {
-        filtered = filtered.filter(n => n.scheduledFor >= filter.scheduledAfter!);
-      }
-      if (filter.scheduledBefore) {
-        filtered = filtered.filter(n => n.scheduledFor <= filter.scheduledBefore!);
-      }
-    }
+    },
+    []
+  );
 
-    return filtered;
-  }, [scheduledNotifications]);
+  const scheduleBatch = useCallback(
+    async (
+      notifications: Array<{
+        type: NotificationType;
+        recipients: ID[];
+        scheduledFor: DateTime;
+        template: string;
+        data: Record<string, unknown>;
+        priority?: Priority;
+      }>
+    ) => {
+      setLoading(true);
+      setError(undefined);
+
+      try {
+        const scheduledBatch = notifications.map(notification => ({
+          id: `batch_${Date.now()}_${Math.random()}`,
+          ...notification,
+          status: 'pending' as const,
+        }));
+
+        setScheduledNotifications(prev => [...prev, ...scheduledBatch]);
+
+        console.log('Batch scheduled:', scheduledBatch);
+        return scheduledBatch;
+      } catch (err) {
+        setError(err as Error);
+        throw err;
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
+
+  const getScheduledNotifications = useCallback(
+    async (filter?: {
+      status?: 'pending' | 'sent' | 'cancelled';
+      type?: NotificationType;
+      scheduledAfter?: DateTime;
+      scheduledBefore?: DateTime;
+    }) => {
+      let filtered = scheduledNotifications;
+
+      if (filter) {
+        if (filter.status) {
+          filtered = filtered.filter(n => n.status === filter.status);
+        }
+        if (filter.type) {
+          filtered = filtered.filter(n => n.type === filter.type);
+        }
+        if (filter.scheduledAfter) {
+          filtered = filtered.filter(n => n.scheduledFor >= filter.scheduledAfter!);
+        }
+        if (filter.scheduledBefore) {
+          filtered = filtered.filter(n => n.scheduledFor <= filter.scheduledBefore!);
+        }
+      }
+
+      return filtered;
+    },
+    [scheduledNotifications]
+  );
 
   const cancelScheduled = useCallback(async (notificationId: ID) => {
     setScheduledNotifications(prev =>
-      prev.map(n =>
-        n.id === notificationId
-          ? { ...n, status: 'cancelled' as const }
-          : n
-      )
+      prev.map(n => (n.id === notificationId ? { ...n, status: 'cancelled' as const } : n))
     );
-    
+
     console.log('Notification cancelled:', notificationId);
   }, []);
 
@@ -1366,9 +1370,9 @@ export function useNotificationScheduling() {
 
 /**
  * Hook for multi-channel notification support
- * 
+ *
  * @returns Multi-channel notification functions
- * 
+ *
  * @example
  * ```tsx
  * function MultiChannelNotifier() {
@@ -1377,7 +1381,7 @@ export function useNotificationScheduling() {
  *     getChannelStatus,
  *     configureChannels,
  *   } = useMultiChannelNotifications();
- * 
+ *
  *   const handleSend = async () => {
  *     await sendMultiChannel({
  *       type: 'COURSE_UPDATE',
@@ -1390,17 +1394,22 @@ export function useNotificationScheduling() {
  *       fallbackStrategy: 'cascade',
  *     });
  *   };
- * 
+ *
  *   return <MultiChannelForm onSubmit={handleSend} />;
  * }
  * ```
  */
 export function useMultiChannelNotifications() {
-  const [channelStatus, setChannelStatus] = useState<Record<NotificationChannel, {
-    available: boolean;
-    lastError?: string;
-    deliveryRate: number;
-  }>>({
+  const [channelStatus, setChannelStatus] = useState<
+    Record<
+      NotificationChannel,
+      {
+        available: boolean;
+        lastError?: string;
+        deliveryRate: number;
+      }
+    >
+  >({
     EMAIL: { available: true, deliveryRate: 0.95 },
     PUSH: { available: true, deliveryRate: 0.85 },
     IN_APP: { available: true, deliveryRate: 1.0 },
@@ -1409,76 +1418,89 @@ export function useMultiChannelNotifications() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | undefined>();
 
-  const sendMultiChannel = useCallback(async (notification: {
-    type: NotificationType;
-    recipients: ID[];
-    channels: NotificationChannel[];
-    content: {
-      title: string;
-      message: string;
-      actionUrl?: string;
-    };
-    fallbackStrategy?: 'cascade' | 'parallel' | 'none';
-    priority?: Priority;
-  }) => {
-    setLoading(true);
-    setError(undefined);
+  const sendMultiChannel = useCallback(
+    async (notification: {
+      type: NotificationType;
+      recipients: ID[];
+      channels: NotificationChannel[];
+      content: {
+        title: string;
+        message: string;
+        actionUrl?: string;
+      };
+      fallbackStrategy?: 'cascade' | 'parallel' | 'none';
+      priority?: Priority;
+    }) => {
+      setLoading(true);
+      setError(undefined);
 
-    try {
-      // In a real implementation, this would call backend services for each channel
-      const results = await Promise.allSettled(
-        notification.channels.map(async (channel) => {
-          // Simulate channel-specific delivery
-          const channelInfo = channelStatus[channel];
-          if (!channelInfo.available) {
-            throw new Error(`Channel ${channel} is not available`);
-          }
+      try {
+        // In a real implementation, this would call backend services for each channel
+        const results = await Promise.allSettled(
+          notification.channels.map(async channel => {
+            // Simulate channel-specific delivery
+            const channelInfo = channelStatus[channel];
+            if (!channelInfo.available) {
+              throw new Error(`Channel ${channel} is not available`);
+            }
 
-          // Simulate delivery success/failure based on delivery rate
-          const success = Math.random() < channelInfo.deliveryRate;
-          if (!success) {
-            throw new Error(`Delivery failed for channel ${channel}`);
-          }
+            // Simulate delivery success/failure based on delivery rate
+            const success = Math.random() < channelInfo.deliveryRate;
+            if (!success) {
+              throw new Error(`Delivery failed for channel ${channel}`);
+            }
 
-          return {
-            channel,
-            status: 'delivered',
-            deliveredAt: new Date().toISOString(),
-          };
-        })
-      );
+            return {
+              channel,
+              status: 'delivered',
+              deliveredAt: new Date().toISOString(),
+            };
+          })
+        );
 
-      const deliveryResults = results.map((result, index) => ({
-        channel: notification.channels[index]!,
-        success: result.status === 'fulfilled',
-        error: result.status === 'rejected' ? result.reason.message : undefined,
-        data: result.status === 'fulfilled' ? result.value : undefined,
-      }));
+        const deliveryResults = results.map((result, index) => ({
+          channel: notification.channels[index]!,
+          success: result.status === 'fulfilled',
+          error: result.status === 'rejected' ? result.reason.message : undefined,
+          data: result.status === 'fulfilled' ? result.value : undefined,
+        }));
 
-      console.log('Multi-channel delivery results:', deliveryResults);
-      return deliveryResults;
-    } catch (err) {
-      setError(err as Error);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, [channelStatus]);
+        console.log('Multi-channel delivery results:', deliveryResults);
+        return deliveryResults;
+      } catch (err) {
+        setError(err as Error);
+        throw err;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [channelStatus]
+  );
 
   const getChannelStatus = useCallback(async () => {
     // In a real implementation, this would check backend service status
     return channelStatus;
   }, [channelStatus]);
 
-  const configureChannels = useCallback(async (config: Partial<Record<NotificationChannel, {
-    enabled: boolean;
-    priority: number;
-    retryAttempts: number;
-    timeout: number;
-  }>>) => {
-    // In a real implementation, this would update backend configuration
-    console.log('Channel configuration updated:', config);
-  }, []);
+  const configureChannels = useCallback(
+    async (
+      config: Partial<
+        Record<
+          NotificationChannel,
+          {
+            enabled: boolean;
+            priority: number;
+            retryAttempts: number;
+            timeout: number;
+          }
+        >
+      >
+    ) => {
+      // In a real implementation, this would update backend configuration
+      console.log('Channel configuration updated:', config);
+    },
+    []
+  );
 
   return {
     sendMultiChannel,

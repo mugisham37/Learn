@@ -1,6 +1,6 @@
 /**
  * Foundation Layer Initialization
- * 
+ *
  * Central initialization system for the frontend foundation layer.
  * Handles setup, configuration validation, and service initialization.
  */
@@ -49,22 +49,22 @@ let foundationState: FoundationState = {
 
 /**
  * Initialize the Foundation Layer
- * 
+ *
  * Sets up all foundation services and validates configuration.
  * Should be called once at application startup.
- * 
+ *
  * @param options - Initialization options
  * @returns Promise resolving to initialization result
- * 
+ *
  * @example
  * ```typescript
  * import { initializeFoundation } from '@/lib/foundation';
- * 
+ *
  * async function setupApp() {
  *   const result = await initializeFoundation({
  *     enableDevMode: process.env.NODE_ENV === 'development'
  *   });
- *   
+ *
  *   if (!result.success) {
  *     console.error('Foundation initialization failed:', result.errors);
  *   }
@@ -77,7 +77,7 @@ export async function initializeFoundation(
   try {
     // Reset state
     foundationState.errors = [];
-    
+
     // Merge configuration
     foundationState.config = {
       ...config,
@@ -110,7 +110,7 @@ export async function initializeFoundation(
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown initialization error';
     foundationState.errors.push(errorMessage);
-    
+
     return {
       success: false,
       errors: foundationState.errors,
@@ -121,7 +121,7 @@ export async function initializeFoundation(
 
 /**
  * Get Foundation Layer Status
- * 
+ *
  * Returns the current state of the foundation layer.
  */
 export function getFoundationStatus(): FoundationState {
@@ -130,7 +130,7 @@ export function getFoundationStatus(): FoundationState {
 
 /**
  * Reset Foundation Layer
- * 
+ *
  * Resets the foundation layer state. Useful for testing.
  */
 export function resetFoundation(): void {
@@ -186,7 +186,11 @@ async function initializeServices(devMode: boolean): Promise<void> {
   try {
     // Apollo client is already initialized, just verify it's working
     await apolloClient.query({
-      query: gql`query { __typename }`,
+      query: gql`
+        query {
+          __typename
+        }
+      `,
       errorPolicy: 'ignore',
     });
     foundationState.services.graphql = true;

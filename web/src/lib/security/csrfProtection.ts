@@ -1,9 +1,9 @@
 /**
  * CSRF Protection Utilities
- * 
+ *
  * Cross-Site Request Forgery protection utilities for secure form submissions
  * and API requests. Provides token generation, validation, and request integration.
- * 
+ *
  * Requirements: 13.3
  */
 
@@ -51,14 +51,17 @@ export class CSRFTokenManagerImpl implements CSRFTokenManager {
       // Generate new token
       const newToken = await this.generateToken();
       await this.setToken(newToken);
-      
+
       return newToken;
     } catch (error) {
       console.error('Failed to get CSRF token:', error);
       this.logSecurityEvent({
         type: 'csrf_violation',
         timestamp: new Date(),
-        details: { error: 'Failed to get CSRF token', message: error instanceof Error ? error.message : 'Unknown error' },
+        details: {
+          error: 'Failed to get CSRF token',
+          message: error instanceof Error ? error.message : 'Unknown error',
+        },
         severity: 'medium',
       });
       return null;
@@ -99,7 +102,7 @@ export class CSRFTokenManagerImpl implements CSRFTokenManager {
     try {
       this.token = null;
       this.tokenExpiry = null;
-      
+
       // Clear from cookie
       this.clearTokenFromCookie();
 
@@ -139,7 +142,7 @@ export class CSRFTokenManagerImpl implements CSRFTokenManager {
         this.logSecurityEvent({
           type: 'csrf_violation',
           timestamp: new Date(),
-          details: { 
+          details: {
             action: 'token_validation_failed',
             providedTokenLength: token.length,
             expectedTokenLength: this.token?.length || 0,
@@ -163,7 +166,7 @@ export class CSRFTokenManagerImpl implements CSRFTokenManager {
     // Use crypto.getRandomValues for secure random token generation
     const array = new Uint8Array(SECURITY_CONSTANTS.CSRF_TOKEN_LENGTH);
     crypto.getRandomValues(array);
-    
+
     // Convert to base64 string
     return btoa(String.fromCharCode(...array))
       .replace(/\+/g, '-')
@@ -220,7 +223,7 @@ export class CSRFTokenManagerImpl implements CSRFTokenManager {
       cookieString += `expires=${expires.toUTCString()}; `;
       cookieString += `path=/; `;
       cookieString += `samesite=${sameSite}; `;
-      
+
       if (secure) {
         cookieString += 'secure; ';
       }
@@ -383,7 +386,12 @@ export class CSRFFetch {
       method,
       url,
       headers,
-      requiresCSRF: CSRFProtector.requiresCSRFProtection({ method, url, headers, requiresCSRF: true }),
+      requiresCSRF: CSRFProtector.requiresCSRFProtection({
+        method,
+        url,
+        headers,
+        requiresCSRF: true,
+      }),
     };
 
     // Add CSRF token if required

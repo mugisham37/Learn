@@ -1,9 +1,9 @@
 /**
  * Backend Cache Integration Service
- * 
+ *
  * Comprehensive cache management system that integrates with all backend modules.
  * Provides unified cache operations, subscription handling, and persistence management.
- * 
+ *
  * Requirements: 6.1, 6.2, 6.3, 6.4, 6.5
  */
 
@@ -13,9 +13,17 @@ import { cacheHelpers, cachePersistence, backendCacheInvalidation } from '../gra
 import { updateCacheAfterMutation } from './cacheUpdaters';
 import { invalidateCache } from './cacheInvalidation';
 import { generateOptimisticResponse, commonOptimisticResponses } from './optimisticResponses';
-import { handleSubscriptionCacheUpdate, subscriptionCachePatterns } from './subscriptionIntegration';
+import {
+  handleSubscriptionCacheUpdate,
+  subscriptionCachePatterns,
+} from './subscriptionIntegration';
 import { CacheOptimizer, createCacheWarmingConfig } from './optimization';
-import { CacheEntity, CacheUpdateConfig, CacheInvalidationConfig, OptimisticResponseConfig } from './types';
+import {
+  CacheEntity,
+  CacheUpdateConfig,
+  CacheInvalidationConfig,
+  OptimisticResponseConfig,
+} from './types';
 import { cacheConfig } from '../config';
 
 /**
@@ -49,7 +57,7 @@ export interface BackendCacheOperation<T extends CacheEntity = CacheEntity> {
 
 /**
  * Backend Cache Integration Manager
- * 
+ *
  * Central service for managing cache operations across all backend modules
  */
 export class BackendCacheManager {
@@ -90,9 +98,12 @@ export class BackendCacheManager {
 
     // Set up periodic cache persistence
     if (this.persistenceEnabled) {
-      setInterval(() => {
-        this.persistCache();
-      }, 5 * 60 * 1000); // Every 5 minutes
+      setInterval(
+        () => {
+          this.persistCache();
+        },
+        5 * 60 * 1000
+      ); // Every 5 minutes
     }
   }
 
@@ -106,19 +117,19 @@ export class BackendCacheManager {
       switch (operation.operation) {
         case 'create':
           return this.handleCreate(operation);
-        
+
         case 'update':
           return this.handleUpdate(operation);
-        
+
         case 'delete':
           return this.handleDelete(operation);
-        
+
         case 'invalidate':
           return this.handleInvalidate(operation);
-        
+
         case 'subscribe':
           return this.handleSubscription(operation);
-        
+
         default:
           throw new Error(`Unknown operation: ${operation.operation}`);
       }
@@ -222,7 +233,10 @@ export class BackendCacheManager {
     operation: BackendCacheOperation<T>
   ): { success: boolean; error?: Error } {
     if (!operation.subscriptionData) {
-      return { success: false, error: new Error('Subscription operation requires subscription data') };
+      return {
+        success: false,
+        error: new Error('Subscription operation requires subscription data'),
+      };
     }
 
     // Apply module-specific subscription handling
@@ -253,25 +267,25 @@ export class BackendCacheManager {
           return commonOptimisticResponses.course.create(data as Partial<CacheEntity>) as T;
         }
         break;
-      
+
       case BackendModule.ENROLLMENTS:
         if (typename === 'Enrollment') {
           return commonOptimisticResponses.enrollment.create(data as Partial<CacheEntity>) as T;
         }
         break;
-      
+
       case BackendModule.COMMUNICATION:
         if (typename === 'Message') {
           return commonOptimisticResponses.message.send(data as Partial<CacheEntity>) as T;
         }
         break;
-      
+
       case BackendModule.ASSESSMENTS:
         if (typename === 'AssignmentSubmission') {
           return commonOptimisticResponses.assignment.submit(data as Partial<CacheEntity>) as T;
         }
         break;
-      
+
       case BackendModule.USERS:
         if (typename === 'User') {
           return commonOptimisticResponses.user.updateProfile(
@@ -280,7 +294,7 @@ export class BackendCacheManager {
           ) as T;
         }
         break;
-      
+
       case BackendModule.NOTIFICATIONS:
         if (typename === 'Notification') {
           return commonOptimisticResponses.notification.markAsRead(data.id!) as T;
@@ -302,13 +316,13 @@ export class BackendCacheManager {
           backendCacheInvalidation.userProfileUpdated(this.cache, id);
         }
         break;
-      
+
       case BackendModule.COURSES:
         if (typename === 'Course') {
           backendCacheInvalidation.coursePublished(this.cache, id);
         }
         break;
-      
+
       case BackendModule.COMMUNICATION:
         if (typename === 'Message') {
           // Extract conversation ID from message data if available
@@ -316,7 +330,7 @@ export class BackendCacheManager {
           backendCacheInvalidation.messageSent(this.cache, conversationId, id);
         }
         break;
-      
+
       case BackendModule.ASSESSMENTS:
         if (typename === 'AssignmentSubmission') {
           // Extract assignment and student IDs
@@ -325,7 +339,7 @@ export class BackendCacheManager {
           backendCacheInvalidation.assignmentSubmitted(this.cache, assignmentId, studentId);
         }
         break;
-      
+
       case BackendModule.PAYMENTS:
         if (typename === 'Payment') {
           // Extract course and user IDs
@@ -334,7 +348,7 @@ export class BackendCacheManager {
           backendCacheInvalidation.paymentCompleted(this.cache, courseId, userId, id);
         }
         break;
-      
+
       case BackendModule.NOTIFICATIONS:
         if (typename === 'Notification') {
           // Extract user ID
@@ -342,7 +356,7 @@ export class BackendCacheManager {
           backendCacheInvalidation.notificationRead(this.cache, id, userId);
         }
         break;
-      
+
       case BackendModule.CONTENT:
         if (typename === 'MediaAsset') {
           // Extract job ID
@@ -358,7 +372,7 @@ export class BackendCacheManager {
    */
   private applySubscriptionHandling(module: BackendModule, subscriptionData: unknown): void {
     const data = subscriptionData as CacheEntity;
-    
+
     switch (module) {
       case BackendModule.COMMUNICATION:
         if (data.__typename === 'Message') {
@@ -366,27 +380,31 @@ export class BackendCacheManager {
           subscriptionCachePatterns.messageAdded(this.cache, data, conversationId);
         }
         break;
-      
+
       case BackendModule.ENROLLMENTS:
         if (data.__typename === 'EnrollmentProgress') {
           const enrollmentId = (data as { enrollmentId?: string }).enrollmentId || '';
-          subscriptionCachePatterns.progressUpdated(this.cache, data as Record<string, unknown>, enrollmentId);
+          subscriptionCachePatterns.progressUpdated(
+            this.cache,
+            data as Record<string, unknown>,
+            enrollmentId
+          );
         }
         break;
-      
+
       case BackendModule.COURSES:
         if (data.__typename === 'Course') {
           subscriptionCachePatterns.coursePublished(this.cache, data);
         }
         break;
-      
+
       case BackendModule.NOTIFICATIONS:
         if (data.__typename === 'Notification') {
           const userId = (data as { userId?: string }).userId || '';
           subscriptionCachePatterns.notificationReceived(this.cache, data, userId);
         }
         break;
-      
+
       case BackendModule.ASSESSMENTS:
         if (data.__typename === 'AssignmentSubmission') {
           const assignmentId = (data as { assignmentId?: string }).assignmentId || '';
@@ -402,9 +420,7 @@ export class BackendCacheManager {
   async warmModuleCache(module: BackendModule, queries: DocumentNode[]): Promise<void> {
     if (!this.optimizer) return;
 
-    const warmingConfig = createCacheWarmingConfig(
-      queries.map(query => ({ query, priority: 1 }))
-    );
+    const warmingConfig = createCacheWarmingConfig(queries.map(query => ({ query, priority: 1 })));
 
     await this.optimizer.warmCache(this.client);
   }
@@ -418,7 +434,7 @@ export class BackendCacheManager {
     memoryUsage: string;
   } {
     const stats = cacheHelpers.getCacheStats(this.cache);
-    
+
     // This is a simplified version - in a real implementation,
     // you'd filter by module-specific entity types
     return {
@@ -463,11 +479,11 @@ export class BackendCacheManager {
     recommendations: string[];
   } {
     const stats = cacheHelpers.getCacheStats(this.cache);
-    const persistence = this.persistenceEnabled 
+    const persistence = this.persistenceEnabled
       ? cachePersistence.getStorageInfo(this.persistenceKey)
       : null;
     const optimization = this.optimizer?.getOptimizationReport() || null;
-    
+
     const recommendations: string[] = [];
     let overall: 'healthy' | 'warning' | 'critical' = 'healthy';
 
@@ -510,11 +526,11 @@ export class BackendCacheManager {
     if (this.optimizer) {
       this.optimizer.stop();
     }
-    
+
     if (this.persistenceEnabled) {
       this.persistCache();
     }
-    
+
     this.subscriptionHandlers.clear();
   }
 }
@@ -550,7 +566,7 @@ export const moduleOperations = {
       });
     },
   },
-  
+
   courses: {
     publish: (cache: InMemoryCache, courseId: string) => {
       const manager = new BackendCacheManager(cache, {} as ApolloClient<unknown>);
@@ -559,26 +575,30 @@ export const moduleOperations = {
         operation: 'update',
         typename: 'Course',
         id: courseId,
-        data: { 
-          id: courseId, 
-          __typename: 'Course', 
+        data: {
+          id: courseId,
+          __typename: 'Course',
           status: 'PUBLISHED',
           publishedAt: new Date().toISOString(),
         },
       });
     },
   },
-  
+
   enrollments: {
-    updateProgress: (cache: InMemoryCache, enrollmentId: string, progress: { percentage: number; lessons: unknown[] }) => {
+    updateProgress: (
+      cache: InMemoryCache,
+      enrollmentId: string,
+      progress: { percentage: number; lessons: unknown[] }
+    ) => {
       const manager = new BackendCacheManager(cache, {} as ApolloClient<unknown>);
       return manager.executeOperation({
         module: BackendModule.ENROLLMENTS,
         operation: 'update',
         typename: 'Enrollment',
         id: enrollmentId,
-        data: { 
-          id: enrollmentId, 
+        data: {
+          id: enrollmentId,
           __typename: 'Enrollment',
           progressPercentage: progress.percentage,
           lessonProgress: progress.lessons,
@@ -586,7 +606,7 @@ export const moduleOperations = {
       });
     },
   },
-  
+
   communication: {
     sendMessage: (cache: InMemoryCache, messageData: CacheEntity, conversationId: string) => {
       const manager = new BackendCacheManager(cache, {} as ApolloClient<unknown>);
@@ -616,7 +636,7 @@ export const moduleOperations = {
       });
     },
   },
-  
+
   notifications: {
     markAsRead: (cache: InMemoryCache, notificationId: string, userId: string) => {
       const manager = new BackendCacheManager(cache, {} as ApolloClient<unknown>);
@@ -625,8 +645,8 @@ export const moduleOperations = {
         operation: 'update',
         typename: 'Notification',
         id: notificationId,
-        data: { 
-          id: notificationId, 
+        data: {
+          id: notificationId,
           __typename: 'Notification',
           isRead: true,
           readAt: new Date().toISOString(),

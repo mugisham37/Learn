@@ -1,6 +1,6 @@
 /**
  * Configuration Monitoring and Health Checks
- * 
+ *
  * Provides monitoring capabilities for configuration health and service status.
  */
 
@@ -58,7 +58,7 @@ async function checkGraphQLHealth(): Promise<ServiceStatus> {
  * Check WebSocket endpoint health
  */
 async function checkWebSocketHealth(): Promise<ServiceStatus> {
-  return new Promise((resolve) => {
+  return new Promise(resolve => {
     try {
       const ws = new WebSocket(config.wsEndpoint);
       const timeout = setTimeout(() => {
@@ -81,7 +81,7 @@ async function checkWebSocketHealth(): Promise<ServiceStatus> {
         });
       };
 
-      ws.onerror = (error) => {
+      ws.onerror = error => {
         clearTimeout(timeout);
         resolve({
           name: 'WebSocket',
@@ -258,7 +258,7 @@ export class ConfigurationMonitor {
     }
 
     console.log('🔄 Starting configuration monitor...');
-    
+
     // Initial check
     this.performCheck();
 
@@ -309,10 +309,10 @@ export class ConfigurationMonitor {
   private async performCheck(): Promise<void> {
     try {
       const health = await checkConfigurationHealth();
-      
+
       // Check if health status changed
       const statusChanged = !this.lastHealth || this.lastHealth.overall !== health.overall;
-      
+
       this.lastHealth = health;
 
       // Notify listeners if status changed
@@ -343,7 +343,7 @@ export function initializeConfigurationMonitoring(): void {
     configurationMonitor.start();
 
     // Log health changes
-    configurationMonitor.onHealthChange((health) => {
+    configurationMonitor.onHealthChange(health => {
       if (health.overall === 'unhealthy') {
         console.error('🚨 Configuration health is UNHEALTHY');
       } else if (health.overall === 'degraded') {

@@ -1,9 +1,9 @@
 /**
  * Schema Integration Utilities
- * 
+ *
  * This module provides utilities for managing GraphQL schema integration
  * between the frontend and backend, including validation and synchronization.
- * 
+ *
  * Requirements: 1.1, 1.2, 1.3, 1.5
  */
 
@@ -88,7 +88,7 @@ export class SchemaIntegration {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Accept': 'application/json',
+            Accept: 'application/json',
           },
           body: JSON.stringify({
             query: `
@@ -205,10 +205,9 @@ export class SchemaIntegration {
         }
 
         return result.data;
-
       } catch (error) {
         lastError = error as Error;
-        
+
         if (attempt < retryAttempts) {
           await new Promise(resolve => setTimeout(resolve, retryDelay));
         }
@@ -223,18 +222,18 @@ export class SchemaIntegration {
    */
   validateSchema(introspectionResult: IntrospectionQuery): SchemaValidationResult {
     const errors: SchemaValidationResult['errors'] = [];
-    
+
     try {
       const schema = buildClientSchema(introspectionResult);
-      
+
       // Get schema statistics
       const queryType = schema.getQueryType();
       const mutationType = schema.getMutationType();
       const subscriptionType = schema.getSubscriptionType();
-      
+
       const typeMap = schema.getTypeMap();
       const customTypes = Object.keys(typeMap).filter(name => !name.startsWith('__'));
-      
+
       const queryFields = queryType ? Object.keys(queryType.getFields()) : [];
       const mutationFields = mutationType ? Object.keys(mutationType.getFields()) : [];
       const subscriptionFields = subscriptionType ? Object.keys(subscriptionType.getFields()) : [];
@@ -256,9 +255,10 @@ export class SchemaIntegration {
       }
 
       // Check for placeholder operations
-      const hasPlaceholders = queryFields.includes('_empty') || 
-                             mutationFields.includes('_empty') || 
-                             subscriptionFields.includes('_empty');
+      const hasPlaceholders =
+        queryFields.includes('_empty') ||
+        mutationFields.includes('_empty') ||
+        subscriptionFields.includes('_empty');
 
       if (hasPlaceholders) {
         errors.push({
@@ -282,39 +282,45 @@ export class SchemaIntegration {
 
       // Calculate health score
       let healthScore = 0;
-      
+
       // Base score for having required types
       if (queryType) healthScore += 20;
       if (mutationType) healthScore += 15;
       if (subscriptionType) healthScore += 10;
-      
+
       // Score for operation completeness
       if (queryFields.length > 1 || !queryFields.includes('_empty')) healthScore += 20;
       if (mutationFields.length > 1 || !mutationFields.includes('_empty')) healthScore += 15;
-      if (subscriptionFields.length > 1 || !subscriptionFields.includes('_empty')) healthScore += 10;
-      
+      if (subscriptionFields.length > 1 || !subscriptionFields.includes('_empty'))
+        healthScore += 10;
+
       // Score for type richness
       if (customTypes.length > 10) healthScore += 10;
 
-      const healthStatus = healthScore >= 80 ? 'excellent' : 
-                          healthScore >= 60 ? 'good' : 
-                          healthScore >= 40 ? 'fair' : 'poor';
+      const healthStatus =
+        healthScore >= 80
+          ? 'excellent'
+          : healthScore >= 60
+            ? 'good'
+            : healthScore >= 40
+              ? 'fair'
+              : 'poor';
 
       // Generate recommendations
       const recommendations: string[] = [];
-      
+
       if (hasPlaceholders) {
         recommendations.push('Replace placeholder operations with real implementations');
       }
-      
+
       if (queryFields.length < 5) {
         recommendations.push('Add more query operations for better API coverage');
       }
-      
+
       if (mutationFields.length < 3) {
         recommendations.push('Add more mutation operations for CRUD functionality');
       }
-      
+
       if (subscriptionFields.length === 0) {
         recommendations.push('Consider adding subscription operations for real-time features');
       }
@@ -332,15 +338,16 @@ export class SchemaIntegration {
 
       this.lastValidation = result;
       return result;
-
     } catch (error) {
       return {
         valid: false,
-        errors: [{
-          message: `Schema validation failed: ${(error as Error).message}`,
-          code: 'VALIDATION_ERROR',
-          severity: 'error',
-        }],
+        errors: [
+          {
+            message: `Schema validation failed: ${(error as Error).message}`,
+            code: 'VALIDATION_ERROR',
+            severity: 'error',
+          },
+        ],
         stats: { types: 0, queries: 0, mutations: 0, subscriptions: 0 },
         health: {
           score: 0,
@@ -370,7 +377,7 @@ export class SchemaIntegration {
     if (!previousSDL) {
       return true; // First time, consider it changed
     }
-    
+
     // Simple string comparison (could be enhanced with semantic comparison)
     return newSDL !== previousSDL;
   }
@@ -412,23 +419,25 @@ export class SchemaIntegration {
     try {
       // Step 1: Fetch schema
       const introspectionResult = await this.fetchSchema(options);
-      
+
       // Step 2: Validate schema if requested
       let validation: SchemaValidationResult | undefined;
       if (options.validateBeforeUse !== false) {
         validation = this.validateSchema(introspectionResult);
-        
+
         if (!validation.valid) {
           const criticalErrors = validation.errors.filter(e => e.severity === 'error');
           if (criticalErrors.length > 0) {
-            throw new Error(`Schema validation failed: ${criticalErrors.map(e => e.message).join(', ')}`);
+            throw new Error(
+              `Schema validation failed: ${criticalErrors.map(e => e.message).join(', ')}`
+            );
           }
         }
       }
-      
+
       // Step 3: Convert to SDL
       const schemaSDL = this.introspectionToSDL(introspectionResult);
-      
+
       // Step 4: Update metadata
       const metadata: SchemaMetadata = {
         extractedAt: new Date().toISOString(),
@@ -436,16 +445,15 @@ export class SchemaIntegration {
         stats: validation?.stats || { types: 0, queries: 0, mutations: 0, subscriptions: 0 },
         version: '1.0.0',
       };
-      
+
       this.updateMetadata(metadata);
-      
+
       return {
         success: true,
         schemaSDL,
         validation,
         metadata,
       };
-      
     } catch (error) {
       return {
         success: false,
@@ -475,7 +483,7 @@ export function checkSchemaCompatibility(
 } {
   // Simple compatibility check (could be enhanced with proper schema diffing)
   const compatible = currentSchema === newSchema;
-  
+
   return {
     compatible,
     breakingChanges: compatible ? [] : ['Schema structure changed'],
@@ -492,7 +500,7 @@ export function getSchemaHealthStatus(validation: SchemaValidationResult): {
   message: string;
 } {
   const { health } = validation;
-  
+
   switch (health.status) {
     case 'excellent':
       return {

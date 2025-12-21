@@ -1,9 +1,9 @@
 /**
  * Form Integration Module
- * 
+ *
  * Exports form types, validation utilities, and submission handlers
  * that integrate with GraphQL mutations and provide type safety.
- * 
+ *
  * Requirements: 2.5 - Form type integration with GraphQL
  */
 

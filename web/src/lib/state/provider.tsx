@@ -1,6 +1,6 @@
 /**
  * State Provider Component
- * 
+ *
  * React provider component that provides global state management functionality.
  */
 
@@ -31,7 +31,7 @@ export interface AppState {
   error: string | null;
 }
 
-export type AppAction = 
+export type AppAction =
   | { type: 'SET_USER'; payload: User | null }
   | { type: 'SET_THEME'; payload: 'light' | 'dark' }
   | { type: 'SET_LANGUAGE'; payload: string }
@@ -78,9 +78,9 @@ function appReducer(state: AppState, action: AppAction): AppState {
     case 'ADD_NOTIFICATION':
       return { ...state, notifications: [...state.notifications, action.payload] };
     case 'REMOVE_NOTIFICATION':
-      return { 
-        ...state, 
-        notifications: state.notifications.filter(n => n.id !== action.payload) 
+      return {
+        ...state,
+        notifications: state.notifications.filter(n => n.id !== action.payload),
       };
     case 'SET_LOADING':
       return { ...state, loading: action.payload };
@@ -159,11 +159,7 @@ export function StateProvider({ children, initialState: customInitialState }: St
     resetState,
   };
 
-  return (
-    <StateContext.Provider value={contextValue}>
-      {children}
-    </StateContext.Provider>
-  );
+  return <StateContext.Provider value={contextValue}>{children}</StateContext.Provider>;
 }
 
 // =============================================================================
@@ -180,7 +176,7 @@ export function useAppState(): StateContextValue {
 
 export function useStateManager() {
   const { state, dispatch, ...actions } = useAppState();
-  
+
   return {
     state,
     dispatch,

@@ -1,6 +1,6 @@
 /**
  * Communication Hooks
- * 
+ *
  * React hooks for communication-related operations including messaging,
  * discussions, announcements, and real-time chat functionality.
  */
@@ -377,7 +377,11 @@ const TYPING_SUBSCRIPTION = gql`
 
 // Additional GraphQL Operations for Announcements
 const GET_ANNOUNCEMENTS = gql`
-  query GetAnnouncements($courseId: ID!, $filter: AnnouncementFilter, $pagination: PaginationInput) {
+  query GetAnnouncements(
+    $courseId: ID!
+    $filter: AnnouncementFilter
+    $pagination: PaginationInput
+  ) {
     announcements(courseId: $courseId, filter: $filter, pagination: $pagination) {
       edges {
         node {
@@ -607,11 +611,11 @@ interface AnnouncementManager {
 
 /**
  * Hook for fetching user conversations with real-time updates
- * 
+ *
  * @param filter - Optional conversation filter criteria
  * @param pagination - Optional pagination parameters
  * @returns Query result with conversations data
- * 
+ *
  * @example
  * ```tsx
  * function ConversationList() {
@@ -619,10 +623,10 @@ interface AnnouncementManager {
  *     filter: { unreadOnly: true },
  *     pagination: { first: 20 }
  *   });
- *   
+ *
  *   if (loading) return <div>Loading conversations...</div>;
  *   if (error) return <div>Error loading conversations</div>;
- *   
+ *
  *   return (
  *     <div>
  *       {data?.edges.map(({ node: conversation }) => (
@@ -642,12 +646,15 @@ export function useConversations(
   filter?: ConversationFilter,
   pagination?: PaginationInput
 ): QueryResult<ConversationConnection> {
-  const { data, loading, error, refetch, fetchMore } = useQuery<GetConversationsResponse>(GET_CONVERSATIONS, {
-    variables: { filter, pagination },
-    errorPolicy: 'all',
-    notifyOnNetworkStatusChange: true,
-    pollInterval: 30000, // Poll every 30 seconds for new conversations
-  });
+  const { data, loading, error, refetch, fetchMore } = useQuery<GetConversationsResponse>(
+    GET_CONVERSATIONS,
+    {
+      variables: { filter, pagination },
+      errorPolicy: 'all',
+      notifyOnNetworkStatusChange: true,
+      pollInterval: 30000, // Poll every 30 seconds for new conversations
+    }
+  );
 
   return {
     data: data?.conversations,
@@ -660,27 +667,27 @@ export function useConversations(
 
 /**
  * Hook for managing a chat session with real-time messaging
- * 
+ *
  * @param conversationId - The conversation ID to manage
  * @returns Chat session management utilities
- * 
+ *
  * @example
  * ```tsx
  * function ChatInterface({ conversationId }: { conversationId: string }) {
  *   const { messages, sendMessage, markAsRead, typingUsers, setTyping, loading, error } = useChatSession(conversationId);
  *   const [messageText, setMessageText] = useState('');
- *   
+ *
  *   const handleSendMessage = async () => {
  *     if (messageText.trim()) {
  *       await sendMessage(messageText);
  *       setMessageText('');
  *     }
  *   };
- *   
+ *
  *   const handleTyping = (isTyping: boolean) => {
  *     setTyping(isTyping);
  *   };
- *   
+ *
  *   useEffect(() => {
  *     // Mark messages as read when they come into view
  *     const unreadMessages = messages.filter(msg => !msg.readBy.some(read => read.id === currentUserId));
@@ -688,7 +695,7 @@ export function useConversations(
  *       markAsRead(unreadMessages.map(msg => msg.id));
  *     }
  *   }, [messages, markAsRead]);
- *   
+ *
  *   return (
  *     <div>
  *       <div className="messages">
@@ -720,13 +727,18 @@ export function useConversations(
  */
 export function useChatSession(conversationId: string): ChatSession {
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
-  const [sendMessageMutation, { loading: sendLoading, error: sendError }] = useMutation<SendMessageResponse>(SEND_MESSAGE);
+  const [sendMessageMutation, { loading: sendLoading, error: sendError }] =
+    useMutation<SendMessageResponse>(SEND_MESSAGE);
   const [markReadMutation] = useMutation(MARK_MESSAGES_READ);
   const setTypingRef = useRef<((isTyping: boolean) => void) | null>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Fetch conversation messages
-  const { data: conversationData, loading, error } = useQuery<GetConversationMessagesResponse>(GET_CONVERSATION_MESSAGES, {
+  const {
+    data: conversationData,
+    loading,
+    error,
+  } = useQuery<GetConversationMessagesResponse>(GET_CONVERSATION_MESSAGES, {
     variables: { conversationId, pagination: { first: 50 } },
     skip: !conversationId,
     errorPolicy: 'all',
@@ -743,7 +755,7 @@ export function useChatSession(conversationId: string): ChatSession {
           { query: GET_CONVERSATION_MESSAGES, variables: { conversationId } },
           (existingData: GetConversationMessagesResponse | null) => {
             if (!existingData?.conversation?.messages?.edges) return existingData;
-            
+
             return {
               conversation: {
                 ...existingData.conversation,
@@ -773,7 +785,7 @@ export function useChatSession(conversationId: string): ChatSession {
     onData: ({ data }) => {
       if (data.data?.userTyping) {
         const { userId, isTyping } = data.data.userTyping;
-        
+
         setTypingUsers(prev => {
           if (isTyping) {
             return prev.includes(userId) ? prev : [...prev, userId];
@@ -785,43 +797,50 @@ export function useChatSession(conversationId: string): ChatSession {
     },
   });
 
-  const sendMessage = useCallback(async (content: string, attachments?: File[]) => {
-    try {
-      // Upload attachments first if any
-      const uploadedAttachments: Array<{ fileName: string; fileKey: string; fileSize: number }> = [];
-      if (attachments && attachments.length > 0) {
-        // TODO: Implement file upload for attachments
-        // This would use the useFileUpload hook
-      }
+  const sendMessage = useCallback(
+    async (content: string, attachments?: File[]) => {
+      try {
+        // Upload attachments first if any
+        const uploadedAttachments: Array<{ fileName: string; fileKey: string; fileSize: number }> =
+          [];
+        if (attachments && attachments.length > 0) {
+          // TODO: Implement file upload for attachments
+          // This would use the useFileUpload hook
+        }
 
-      await sendMessageMutation({
-        variables: {
-          input: {
-            conversationId,
-            content,
-            attachments: uploadedAttachments,
+        await sendMessageMutation({
+          variables: {
+            input: {
+              conversationId,
+              content,
+              attachments: uploadedAttachments,
+            },
           },
-        },
-      });
-    } catch (err) {
-      console.error('Failed to send message:', err);
-      throw err;
-    }
-  }, [conversationId, sendMessageMutation]);
+        });
+      } catch (err) {
+        console.error('Failed to send message:', err);
+        throw err;
+      }
+    },
+    [conversationId, sendMessageMutation]
+  );
 
-  const markAsRead = useCallback(async (messageIds: string[]) => {
-    try {
-      await markReadMutation({
-        variables: {
-          conversationId,
-          messageIds,
-        },
-      });
-    } catch (err) {
-      console.error('Failed to mark messages as read:', err);
-    }
-  }, [conversationId, markReadMutation]);
-  
+  const markAsRead = useCallback(
+    async (messageIds: string[]) => {
+      try {
+        await markReadMutation({
+          variables: {
+            conversationId,
+            messageIds,
+          },
+        });
+      } catch (err) {
+        console.error('Failed to mark messages as read:', err);
+      }
+    },
+    [conversationId, markReadMutation]
+  );
+
   const setTyping = useCallback((isTyping: boolean) => {
     // Clear existing timeout
     if (typingTimeoutRef.current) {
@@ -831,7 +850,7 @@ export function useChatSession(conversationId: string): ChatSession {
     if (isTyping) {
       // Send typing indicator
       // TODO: Implement typing mutation
-      
+
       // Auto-stop typing after 3 seconds
       typingTimeoutRef.current = setTimeout(() => {
         if (setTypingRef.current) {
@@ -849,7 +868,9 @@ export function useChatSession(conversationId: string): ChatSession {
     setTypingRef.current = setTyping;
   }, [setTyping]);
 
-  const messages = conversationData?.conversation?.messages?.edges?.map((edge: { node: Message }) => edge.node) || [];
+  const messages =
+    conversationData?.conversation?.messages?.edges?.map((edge: { node: Message }) => edge.node) ||
+    [];
 
   return {
     messages,
@@ -864,12 +885,12 @@ export function useChatSession(conversationId: string): ChatSession {
 
 /**
  * Hook for fetching discussion threads in a course
- * 
+ *
  * @param courseId - The course ID to fetch threads for
  * @param filter - Optional thread filter criteria
  * @param pagination - Optional pagination parameters
  * @returns Query result with discussion threads
- * 
+ *
  * @example
  * ```tsx
  * function DiscussionBoard({ courseId }: { courseId: string }) {
@@ -877,10 +898,10 @@ export function useChatSession(conversationId: string): ChatSession {
  *     filter: { isPinned: true },
  *     pagination: { first: 20 }
  *   });
- *   
+ *
  *   if (loading) return <div>Loading discussions...</div>;
  *   if (error) return <div>Error loading discussions</div>;
- *   
+ *
  *   return (
  *     <div>
  *       <h2>Course Discussions</h2>
@@ -902,12 +923,15 @@ export function useDiscussionThreads(
   filter?: ThreadFilter,
   pagination?: PaginationInput
 ): QueryResult<ThreadConnection> {
-  const { data, loading, error, refetch, fetchMore } = useQuery<GetDiscussionThreadsResponse>(GET_DISCUSSION_THREADS, {
-    variables: { courseId, filter, pagination },
-    skip: !courseId,
-    errorPolicy: 'all',
-    notifyOnNetworkStatusChange: true,
-  });
+  const { data, loading, error, refetch, fetchMore } = useQuery<GetDiscussionThreadsResponse>(
+    GET_DISCUSSION_THREADS,
+    {
+      variables: { courseId, filter, pagination },
+      skip: !courseId,
+      errorPolicy: 'all',
+      notifyOnNetworkStatusChange: true,
+    }
+  );
 
   return {
     data: data?.discussionThreads,
@@ -920,14 +944,14 @@ export function useDiscussionThreads(
 
 /**
  * Hook for creating a new discussion thread
- * 
+ *
  * @returns Mutation function for creating threads
- * 
+ *
  * @example
  * ```tsx
  * function CreateThreadForm({ courseId }: { courseId: string }) {
  *   const { mutate: createThread, loading, error } = useCreateThread();
- *   
+ *
  *   const handleSubmit = async (formData: { title: string; content: string; lessonId?: string }) => {
  *     try {
  *       const newThread = await createThread({
@@ -938,14 +962,14 @@ export function useDiscussionThreads(
  *           lessonId: formData.lessonId,
  *         }
  *       });
- *       
+ *
  *       // Navigate to the new thread
  *       router.push(`/discussions/${newThread.id}`);
  *     } catch (err) {
  *       console.error('Failed to create thread:', err);
  *     }
  *   };
- *   
+ *
  *   return (
  *     <form onSubmit={handleSubmit}>
  *       <input placeholder="Thread title..." />
@@ -960,46 +984,52 @@ export function useDiscussionThreads(
  * ```
  */
 export function useCreateThread(): MutationResult<DiscussionThread, { input: CreateThreadInput }> {
-  const [createThreadMutation, { loading, error, reset }] = useMutation<CreateThreadResponse>(CREATE_THREAD, {
-    errorPolicy: 'all',
-    // Update cache after successful creation
-    update: (cache: ApolloCache, { data }) => {
-      if (data?.createDiscussionThread) {
-        const courseId = data.createDiscussionThread.course.id;
-        
-        // Add to threads list
-        cache.updateQuery<GetDiscussionThreadsResponse>(
-          { query: GET_DISCUSSION_THREADS, variables: { courseId } },
-          (existingData: GetDiscussionThreadsResponse | null) => {
-            if (!existingData?.discussionThreads) return existingData;
-            
-            return {
-              discussionThreads: {
-                ...existingData.discussionThreads,
-                edges: [
-                  {
-                    node: data.createDiscussionThread,
-                    cursor: data.createDiscussionThread.id,
-                    __typename: 'ThreadEdge',
-                  },
-                  ...existingData.discussionThreads.edges,
-                ],
-                totalCount: existingData.discussionThreads.totalCount + 1,
-              },
-            };
-          }
-        );
-      }
-    },
-  });
+  const [createThreadMutation, { loading, error, reset }] = useMutation<CreateThreadResponse>(
+    CREATE_THREAD,
+    {
+      errorPolicy: 'all',
+      // Update cache after successful creation
+      update: (cache: ApolloCache, { data }) => {
+        if (data?.createDiscussionThread) {
+          const courseId = data.createDiscussionThread.course.id;
 
-  const mutate = useCallback(async (variables: { input: CreateThreadInput }): Promise<DiscussionThread> => {
-    const result = await createThreadMutation({ variables });
-    if (!result.data?.createDiscussionThread) {
-      throw new Error('Failed to create thread');
+          // Add to threads list
+          cache.updateQuery<GetDiscussionThreadsResponse>(
+            { query: GET_DISCUSSION_THREADS, variables: { courseId } },
+            (existingData: GetDiscussionThreadsResponse | null) => {
+              if (!existingData?.discussionThreads) return existingData;
+
+              return {
+                discussionThreads: {
+                  ...existingData.discussionThreads,
+                  edges: [
+                    {
+                      node: data.createDiscussionThread,
+                      cursor: data.createDiscussionThread.id,
+                      __typename: 'ThreadEdge',
+                    },
+                    ...existingData.discussionThreads.edges,
+                  ],
+                  totalCount: existingData.discussionThreads.totalCount + 1,
+                },
+              };
+            }
+          );
+        }
+      },
     }
-    return result.data.createDiscussionThread;
-  }, [createThreadMutation]);
+  );
+
+  const mutate = useCallback(
+    async (variables: { input: CreateThreadInput }): Promise<DiscussionThread> => {
+      const result = await createThreadMutation({ variables });
+      if (!result.data?.createDiscussionThread) {
+        throw new Error('Failed to create thread');
+      }
+      return result.data.createDiscussionThread;
+    },
+    [createThreadMutation]
+  );
 
   return {
     mutate,
@@ -1011,14 +1041,14 @@ export function useCreateThread(): MutationResult<DiscussionThread, { input: Cre
 
 /**
  * Hook for replying to discussion threads
- * 
+ *
  * @returns Mutation function for creating replies
- * 
+ *
  * @example
  * ```tsx
  * function ReplyForm({ threadId, parentReplyId }: { threadId: string; parentReplyId?: string }) {
  *   const { mutate: replyToThread, loading, error } = useReplyToThread();
- *   
+ *
  *   const handleSubmit = async (content: string) => {
  *     try {
  *       const reply = await replyToThread({
@@ -1028,13 +1058,13 @@ export function useCreateThread(): MutationResult<DiscussionThread, { input: Cre
  *           parentReplyId,
  *         }
  *       });
- *       
+ *
  *       console.log('Reply posted:', reply);
  *     } catch (err) {
  *       console.error('Failed to post reply:', err);
  *     }
  *   };
- *   
+ *
  *   return (
  *     <form onSubmit={handleSubmit}>
  *       <textarea placeholder="Write your reply..." />
@@ -1048,59 +1078,65 @@ export function useCreateThread(): MutationResult<DiscussionThread, { input: Cre
  * ```
  */
 export function useReplyToThread(): MutationResult<DiscussionReply, { input: ReplyToThreadInput }> {
-  const [replyToThreadMutation, { loading, error, reset }] = useMutation<ReplyToThreadResponse>(REPLY_TO_THREAD, {
-    errorPolicy: 'all',
-    // Update cache after successful reply
-    update: (cache: ApolloCache, { data }) => {
-      if (data?.replyToThread) {
-        const threadId = data.replyToThread.thread.id;
-        
-        // Add to thread replies
-        cache.updateQuery<GetThreadRepliesResponse>(
-          { query: GET_THREAD_REPLIES, variables: { threadId } },
-          (existingData: GetThreadRepliesResponse | null) => {
-            if (!existingData?.discussionThread?.replies?.edges) return existingData;
-            
-            return {
-              discussionThread: {
-                ...existingData.discussionThread,
-                replies: {
-                  ...existingData.discussionThread.replies,
-                  edges: [
-                    ...existingData.discussionThread.replies.edges,
-                    {
-                      node: data.replyToThread,
-                      cursor: data.replyToThread.id,
-                      __typename: 'ReplyEdge',
-                    },
-                  ],
+  const [replyToThreadMutation, { loading, error, reset }] = useMutation<ReplyToThreadResponse>(
+    REPLY_TO_THREAD,
+    {
+      errorPolicy: 'all',
+      // Update cache after successful reply
+      update: (cache: ApolloCache, { data }) => {
+        if (data?.replyToThread) {
+          const threadId = data.replyToThread.thread.id;
+
+          // Add to thread replies
+          cache.updateQuery<GetThreadRepliesResponse>(
+            { query: GET_THREAD_REPLIES, variables: { threadId } },
+            (existingData: GetThreadRepliesResponse | null) => {
+              if (!existingData?.discussionThread?.replies?.edges) return existingData;
+
+              return {
+                discussionThread: {
+                  ...existingData.discussionThread,
+                  replies: {
+                    ...existingData.discussionThread.replies,
+                    edges: [
+                      ...existingData.discussionThread.replies.edges,
+                      {
+                        node: data.replyToThread,
+                        cursor: data.replyToThread.id,
+                        __typename: 'ReplyEdge',
+                      },
+                    ],
+                  },
                 },
+              };
+            }
+          );
+
+          // Update thread reply count
+          const threadCacheId = cache.identify({ __typename: 'DiscussionThread', id: threadId });
+          if (threadCacheId) {
+            cache.modify({
+              id: threadCacheId,
+              fields: {
+                replyCount: () => data.replyToThread.thread.replyCount,
               },
-            };
+            });
           }
-        );
-
-        // Update thread reply count
-        const threadCacheId = cache.identify({ __typename: 'DiscussionThread', id: threadId });
-        if (threadCacheId) {
-          cache.modify({
-            id: threadCacheId,
-            fields: {
-              replyCount: () => data.replyToThread.thread.replyCount,
-            },
-          });
         }
-      }
-    },
-  });
-
-  const mutate = useCallback(async (variables: { input: ReplyToThreadInput }): Promise<DiscussionReply> => {
-    const result = await replyToThreadMutation({ variables });
-    if (!result.data?.replyToThread) {
-      throw new Error('Failed to reply to thread');
+      },
     }
-    return result.data.replyToThread;
-  }, [replyToThreadMutation]);
+  );
+
+  const mutate = useCallback(
+    async (variables: { input: ReplyToThreadInput }): Promise<DiscussionReply> => {
+      const result = await replyToThreadMutation({ variables });
+      if (!result.data?.replyToThread) {
+        throw new Error('Failed to reply to thread');
+      }
+      return result.data.replyToThread;
+    },
+    [replyToThreadMutation]
+  );
 
   return {
     mutate,
@@ -1110,26 +1146,25 @@ export function useReplyToThread(): MutationResult<DiscussionReply, { input: Rep
   };
 }
 
-
 /**
  * Hook for managing course announcements
- * 
+ *
  * @param courseId - The course ID to manage announcements for
  * @returns Announcement management utilities
- * 
+ *
  * @example
  * ```tsx
  * function AnnouncementManager({ courseId }: { courseId: string }) {
- *   const { 
- *     announcements, 
- *     createAnnouncement, 
- *     updateAnnouncement, 
- *     publishAnnouncement, 
- *     deleteAnnouncement, 
- *     loading, 
- *     error 
+ *   const {
+ *     announcements,
+ *     createAnnouncement,
+ *     updateAnnouncement,
+ *     publishAnnouncement,
+ *     deleteAnnouncement,
+ *     loading,
+ *     error
  *   } = useAnnouncements(courseId);
- *   
+ *
  *   const handleCreateAnnouncement = async (data: { title: string; content: string; scheduledFor?: Date }) => {
  *     try {
  *       const announcement = await createAnnouncement({
@@ -1142,13 +1177,13 @@ export function useReplyToThread(): MutationResult<DiscussionReply, { input: Rep
  *       console.error('Failed to create announcement:', err);
  *     }
  *   };
- *   
+ *
  *   return (
  *     <div>
  *       <h2>Course Announcements</h2>
  *       {announcements.map(announcement => (
- *         <AnnouncementCard 
- *           key={announcement.id} 
+ *         <AnnouncementCard
+ *           key={announcement.id}
  *           announcement={announcement}
  *           onUpdate={(input) => updateAnnouncement(announcement.id, input)}
  *           onPublish={() => publishAnnouncement(announcement.id)}
@@ -1162,13 +1197,21 @@ export function useReplyToThread(): MutationResult<DiscussionReply, { input: Rep
  * ```
  */
 export function useAnnouncements(courseId: string): AnnouncementManager {
-  const [createAnnouncementMutation, { loading: createLoading, error: createError }] = useMutation<CreateAnnouncementResponse>(CREATE_ANNOUNCEMENT);
-  const [updateAnnouncementMutation, { loading: updateLoading, error: updateError }] = useMutation<UpdateAnnouncementResponse>(UPDATE_ANNOUNCEMENT);
-  const [publishAnnouncementMutation, { loading: publishLoading, error: publishError }] = useMutation<PublishAnnouncementResponse>(PUBLISH_ANNOUNCEMENT);
-  const [deleteAnnouncementMutation, { loading: deleteLoading, error: deleteError }] = useMutation<DeleteAnnouncementResponse>(DELETE_ANNOUNCEMENT);
+  const [createAnnouncementMutation, { loading: createLoading, error: createError }] =
+    useMutation<CreateAnnouncementResponse>(CREATE_ANNOUNCEMENT);
+  const [updateAnnouncementMutation, { loading: updateLoading, error: updateError }] =
+    useMutation<UpdateAnnouncementResponse>(UPDATE_ANNOUNCEMENT);
+  const [publishAnnouncementMutation, { loading: publishLoading, error: publishError }] =
+    useMutation<PublishAnnouncementResponse>(PUBLISH_ANNOUNCEMENT);
+  const [deleteAnnouncementMutation, { loading: deleteLoading, error: deleteError }] =
+    useMutation<DeleteAnnouncementResponse>(DELETE_ANNOUNCEMENT);
 
   // Fetch announcements
-  const { data: announcementsData, loading: queryLoading, error: queryError } = useQuery<GetAnnouncementsResponse>(GET_ANNOUNCEMENTS, {
+  const {
+    data: announcementsData,
+    loading: queryLoading,
+    error: queryError,
+  } = useQuery<GetAnnouncementsResponse>(GET_ANNOUNCEMENTS, {
     variables: { courseId, pagination: { first: 50 } },
     skip: !courseId,
     errorPolicy: 'all',
@@ -1185,7 +1228,7 @@ export function useAnnouncements(courseId: string): AnnouncementManager {
           { query: GET_ANNOUNCEMENTS, variables: { courseId } },
           (existingData: GetAnnouncementsResponse | null) => {
             if (!existingData?.announcements?.edges) return existingData;
-            
+
             return {
               announcements: {
                 ...existingData.announcements,
@@ -1206,44 +1249,57 @@ export function useAnnouncements(courseId: string): AnnouncementManager {
     },
   });
 
-  const createAnnouncement = useCallback(async (input: AnnouncementInput): Promise<Announcement> => {
-    const result = await createAnnouncementMutation({
-      variables: { courseId, input },
-    });
-    if (!result.data?.createAnnouncement) {
-      throw new Error('Failed to create announcement');
-    }
-    return result.data.createAnnouncement;
-  }, [courseId, createAnnouncementMutation]);
+  const createAnnouncement = useCallback(
+    async (input: AnnouncementInput): Promise<Announcement> => {
+      const result = await createAnnouncementMutation({
+        variables: { courseId, input },
+      });
+      if (!result.data?.createAnnouncement) {
+        throw new Error('Failed to create announcement');
+      }
+      return result.data.createAnnouncement;
+    },
+    [courseId, createAnnouncementMutation]
+  );
 
-  const updateAnnouncement = useCallback(async (announcementId: string, input: UpdateAnnouncementInput): Promise<Announcement> => {
-    const result = await updateAnnouncementMutation({
-      variables: { announcementId, input },
-    });
-    if (!result.data?.updateAnnouncement) {
-      throw new Error('Failed to update announcement');
-    }
-    return result.data.updateAnnouncement;
-  }, [updateAnnouncementMutation]);
+  const updateAnnouncement = useCallback(
+    async (announcementId: string, input: UpdateAnnouncementInput): Promise<Announcement> => {
+      const result = await updateAnnouncementMutation({
+        variables: { announcementId, input },
+      });
+      if (!result.data?.updateAnnouncement) {
+        throw new Error('Failed to update announcement');
+      }
+      return result.data.updateAnnouncement;
+    },
+    [updateAnnouncementMutation]
+  );
 
-  const publishAnnouncement = useCallback(async (announcementId: string): Promise<Announcement> => {
-    const result = await publishAnnouncementMutation({
-      variables: { announcementId },
-    });
-    if (!result.data?.publishAnnouncement) {
-      throw new Error('Failed to publish announcement');
-    }
-    return result.data.publishAnnouncement;
-  }, [publishAnnouncementMutation]);
+  const publishAnnouncement = useCallback(
+    async (announcementId: string): Promise<Announcement> => {
+      const result = await publishAnnouncementMutation({
+        variables: { announcementId },
+      });
+      if (!result.data?.publishAnnouncement) {
+        throw new Error('Failed to publish announcement');
+      }
+      return result.data.publishAnnouncement;
+    },
+    [publishAnnouncementMutation]
+  );
 
-  const deleteAnnouncement = useCallback(async (announcementId: string): Promise<boolean> => {
-    const result = await deleteAnnouncementMutation({
-      variables: { announcementId },
-    });
-    return result.data?.deleteAnnouncement || false;
-  }, [deleteAnnouncementMutation]);
+  const deleteAnnouncement = useCallback(
+    async (announcementId: string): Promise<boolean> => {
+      const result = await deleteAnnouncementMutation({
+        variables: { announcementId },
+      });
+      return result.data?.deleteAnnouncement || false;
+    },
+    [deleteAnnouncementMutation]
+  );
 
-  const announcements = announcementsData?.announcements?.edges?.map((edge: { node: Announcement }) => edge.node) || [];
+  const announcements =
+    announcementsData?.announcements?.edges?.map((edge: { node: Announcement }) => edge.node) || [];
   const loading = queryLoading || createLoading || updateLoading || publishLoading || deleteLoading;
   const error = queryError || createError || updateError || publishError || deleteError;
 
@@ -1260,35 +1316,35 @@ export function useAnnouncements(courseId: string): AnnouncementManager {
 
 /**
  * Hook for managing user presence in courses
- * 
+ *
  * @param courseId - The course ID to track presence for
  * @returns Presence management utilities
- * 
+ *
  * @example
  * ```tsx
  * function CoursePresence({ courseId }: { courseId: string }) {
  *   const { presenceList, updatePresence, loading, error } = usePresenceTracking(courseId);
- *   
+ *
  *   useEffect(() => {
  *     // Set user as online when component mounts
  *     updatePresence('ONLINE', courseId);
- *     
+ *
  *     // Set user as offline when component unmounts
  *     return () => {
  *       updatePresence('OFFLINE', courseId);
  *     };
  *   }, [courseId, updatePresence]);
- *   
+ *
  *   const handleActivityChange = (isActive: boolean) => {
  *     updatePresence(isActive ? 'ONLINE' : 'AWAY', courseId);
  *   };
- *   
+ *
  *   return (
  *     <div>
  *       <h3>Online Users ({presenceList.filter(p => p.status === 'ONLINE').length})</h3>
  *       {presenceList.map(presence => (
- *         <UserPresenceIndicator 
- *           key={presence.userId} 
+ *         <UserPresenceIndicator
+ *           key={presence.userId}
  *           user={presence.user}
  *           status={presence.status}
  *           lastSeen={presence.lastSeen}
@@ -1300,10 +1356,15 @@ export function useAnnouncements(courseId: string): AnnouncementManager {
  * ```
  */
 export function usePresenceTracking(courseId: string): PresenceManager {
-  const [updatePresenceMutation, { loading: mutationLoading, error: mutationError }] = useMutation<UpdatePresenceResponse>(UPDATE_PRESENCE);
-  
+  const [updatePresenceMutation, { loading: mutationLoading, error: mutationError }] =
+    useMutation<UpdatePresenceResponse>(UPDATE_PRESENCE);
+
   // Fetch current presence
-  const { data: presenceData, loading: queryLoading, error: queryError } = useQuery<GetCoursePresenceResponse>(GET_COURSE_PRESENCE, {
+  const {
+    data: presenceData,
+    loading: queryLoading,
+    error: queryError,
+  } = useQuery<GetCoursePresenceResponse>(GET_COURSE_PRESENCE, {
     variables: { courseId },
     skip: !courseId,
     errorPolicy: 'all',
@@ -1321,17 +1382,19 @@ export function usePresenceTracking(courseId: string): PresenceManager {
           { query: GET_COURSE_PRESENCE, variables: { courseId } },
           (existingData: GetCoursePresenceResponse | null) => {
             if (!existingData?.coursePresence) return existingData;
-            
+
             const updatedPresence = data.data!.userPresence;
             const existingPresenceList = [...existingData.coursePresence];
-            const existingIndex = existingPresenceList.findIndex(p => p.userId === updatedPresence.userId);
-            
+            const existingIndex = existingPresenceList.findIndex(
+              p => p.userId === updatedPresence.userId
+            );
+
             if (existingIndex >= 0) {
               existingPresenceList[existingIndex] = updatedPresence;
             } else {
               existingPresenceList.push(updatedPresence);
             }
-            
+
             return {
               coursePresence: existingPresenceList,
             };
@@ -1341,19 +1404,22 @@ export function usePresenceTracking(courseId: string): PresenceManager {
     },
   });
 
-  const updatePresence = useCallback(async (status: PresenceStatus, targetCourseId?: string): Promise<void> => {
-    try {
-      await updatePresenceMutation({
-        variables: {
-          status,
-          courseId: targetCourseId || courseId,
-        },
-      });
-    } catch (err) {
-      console.error('Failed to update presence:', err);
-      throw err;
-    }
-  }, [courseId, updatePresenceMutation]);
+  const updatePresence = useCallback(
+    async (status: PresenceStatus, targetCourseId?: string): Promise<void> => {
+      try {
+        await updatePresenceMutation({
+          variables: {
+            status,
+            courseId: targetCourseId || courseId,
+          },
+        });
+      } catch (err) {
+        console.error('Failed to update presence:', err);
+        throw err;
+      }
+    },
+    [courseId, updatePresenceMutation]
+  );
 
   const presenceList = presenceData?.coursePresence || [];
   const loading = queryLoading || mutationLoading;
@@ -1369,25 +1435,25 @@ export function usePresenceTracking(courseId: string): PresenceManager {
 
 /**
  * Hook for managing typing indicators in discussion threads
- * 
+ *
  * @param threadId - The thread ID to track typing for
  * @returns Typing indicator utilities
- * 
+ *
  * @example
  * ```tsx
  * function ThreadReplyForm({ threadId }: { threadId: string }) {
  *   const { typingUsers, setTyping } = useThreadTyping(threadId);
  *   const [replyContent, setReplyContent] = useState('');
- *   
+ *
  *   const handleContentChange = (content: string) => {
  *     setReplyContent(content);
  *     setTyping(content.length > 0);
  *   };
- *   
+ *
  *   const handleBlur = () => {
  *     setTyping(false);
  *   };
- *   
+ *
  *   return (
  *     <div>
  *       <textarea
@@ -1398,7 +1464,7 @@ export function usePresenceTracking(courseId: string): PresenceManager {
  *       />
  *       {typingUsers.length > 0 && (
  *         <div className="typing-indicator">
- *           {typingUsers.map(user => user.profile.fullName).join(', ')} 
+ *           {typingUsers.map(user => user.profile.fullName).join(', ')}
  *           {typingUsers.length === 1 ? ' is' : ' are'} typing...
  *         </div>
  *       )}
@@ -1420,7 +1486,7 @@ export function useThreadTyping(threadId: string) {
     onData: ({ data }) => {
       if (data.data?.typingIndicator) {
         const { user, isTyping } = data.data.typingIndicator;
-        
+
         setTypingUsers(prev => {
           if (isTyping) {
             return prev.find(u => u.id === user.id) ? prev : [...prev, user];
@@ -1432,33 +1498,36 @@ export function useThreadTyping(threadId: string) {
     },
   });
 
-  const setTyping = useCallback(async (isTyping: boolean) => {
-    // Clear existing timeout
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-    }
+  const setTyping = useCallback(
+    async (isTyping: boolean) => {
+      // Clear existing timeout
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
 
-    try {
-      if (isTyping) {
-        await startTypingMutation({
-          variables: { threadId },
-        });
-        
-        // Auto-stop typing after 3 seconds
-        typingTimeoutRef.current = setTimeout(async () => {
+      try {
+        if (isTyping) {
+          await startTypingMutation({
+            variables: { threadId },
+          });
+
+          // Auto-stop typing after 3 seconds
+          typingTimeoutRef.current = setTimeout(async () => {
+            await stopTypingMutation({
+              variables: { threadId },
+            });
+          }, 3000);
+        } else {
           await stopTypingMutation({
             variables: { threadId },
           });
-        }, 3000);
-      } else {
-        await stopTypingMutation({
-          variables: { threadId },
-        });
+        }
+      } catch (err) {
+        console.error('Failed to update typing status:', err);
       }
-    } catch (err) {
-      console.error('Failed to update typing status:', err);
-    }
-  }, [threadId, startTypingMutation, stopTypingMutation]);
+    },
+    [threadId, startTypingMutation, stopTypingMutation]
+  );
 
   return {
     typingUsers,

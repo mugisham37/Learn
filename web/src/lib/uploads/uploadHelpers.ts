@@ -1,6 +1,6 @@
 /**
  * Upload Workflow Utilities
- * 
+ *
  * Core utilities for implementing the two-step presigned URL upload process
  * with file validation, progress tracking, and error recovery.
  */
@@ -35,10 +35,7 @@ export class FileValidator {
   /**
    * Validates a file against the specified criteria
    */
-  static validateFile(
-    file: File,
-    options: FileValidationOptions = {}
-  ): FileValidationResult {
+  static validateFile(file: File, options: FileValidationOptions = {}): FileValidationResult {
     const errors: string[] = [];
     const maxFileSize = options.maxFileSize || this.DEFAULT_MAX_FILE_SIZE;
     const allowedMimeTypes = options.allowedMimeTypes || this.DEFAULT_ALLOWED_TYPES;
@@ -79,11 +76,11 @@ export class FileValidator {
    */
   static formatFileSize(bytes: number): string {
     if (bytes === 0) return '0 Bytes';
-    
+
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    
+
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   }
 
@@ -143,12 +140,12 @@ export class UploadProgressCalculator {
     if (timeDiff > 0) {
       const currentSpeed = loadedDiff / (timeDiff / 1000);
       this.speedSamples.push(currentSpeed);
-      
+
       // Keep only recent samples
       if (this.speedSamples.length > this.maxSamples) {
         this.speedSamples.shift();
       }
-      
+
       // Average speed over recent samples
       speed = this.speedSamples.reduce((sum, s) => sum + s, 0) / this.speedSamples.length;
     }
@@ -229,8 +226,12 @@ export class UploadErrorHandler {
     }
 
     // Server errors (5xx) are retryable
-    if (error.message.includes('500') || error.message.includes('502') || 
-        error.message.includes('503') || error.message.includes('504')) {
+    if (
+      error.message.includes('500') ||
+      error.message.includes('502') ||
+      error.message.includes('503') ||
+      error.message.includes('504')
+    ) {
       return true;
     }
 
@@ -288,10 +289,7 @@ export class UploadUtils {
   /**
    * Creates FormData for S3 upload
    */
-  static createUploadFormData(
-    file: File,
-    presignedData: PresignedUploadData
-  ): FormData {
+  static createUploadFormData(file: File, presignedData: PresignedUploadData): FormData {
     const formData = new FormData();
 
     // Add presigned URL fields first
@@ -317,11 +315,11 @@ export class UploadUtils {
    */
   static formatSpeed(bytesPerSecond: number): string {
     if (bytesPerSecond === 0) return '0 B/s';
-    
+
     const k = 1024;
     const sizes = ['B/s', 'KB/s', 'MB/s', 'GB/s'];
     const i = Math.floor(Math.log(bytesPerSecond) / Math.log(k));
-    
+
     return parseFloat((bytesPerSecond / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
   }
 
@@ -330,7 +328,7 @@ export class UploadUtils {
    */
   static formatTimeRemaining(seconds: number): string {
     if (seconds === 0 || !isFinite(seconds)) return 'Unknown';
-    
+
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     const secs = Math.floor(seconds % 60);
@@ -356,7 +354,7 @@ export class UploadUtils {
 
     return (progress: UploadProgress) => {
       lastProgress = progress;
-      
+
       clearTimeout(timeoutId);
       timeoutId = setTimeout(() => {
         callback(lastProgress);

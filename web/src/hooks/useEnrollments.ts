@@ -1,6 +1,6 @@
 /**
  * Enrollment Tracking Hooks
- * 
+ *
  * React hooks for enrollment-related operations including enrollment management,
  * progress tracking, and lesson completion.
  */
@@ -361,11 +361,11 @@ interface MutationResult<T, V = Record<string, unknown>> {
 
 /**
  * Hook for fetching the current user's enrollments with status filtering
- * 
+ *
  * @param filter - Optional enrollment filter criteria
  * @param pagination - Optional pagination parameters
  * @returns Query result with enrollments data, loading state, and pagination
- * 
+ *
  * @example
  * ```tsx
  * function MyCoursesPage() {
@@ -373,10 +373,10 @@ interface MutationResult<T, V = Record<string, unknown>> {
  *     filter: { status: 'ACTIVE' },
  *     pagination: { first: 10 }
  *   });
- *   
+ *
  *   if (loading) return <div>Loading your courses...</div>;
  *   if (error) return <div>Error loading enrollments</div>;
- *   
+ *
  *   return (
  *     <div>
  *       <h1>My Enrolled Courses ({data?.totalCount})</h1>
@@ -397,11 +397,14 @@ export function useMyEnrollments(
   filter?: EnrollmentFilter,
   pagination?: PaginationInput
 ): QueryResult<EnrollmentConnection> {
-  const { data, loading, error, refetch, fetchMore } = useQuery<GetMyEnrollmentsResponse>(GET_MY_ENROLLMENTS, {
-    variables: { filter, pagination },
-    errorPolicy: 'all',
-    notifyOnNetworkStatusChange: true,
-  });
+  const { data, loading, error, refetch, fetchMore } = useQuery<GetMyEnrollmentsResponse>(
+    GET_MY_ENROLLMENTS,
+    {
+      variables: { filter, pagination },
+      errorPolicy: 'all',
+      notifyOnNetworkStatusChange: true,
+    }
+  );
 
   return {
     data: data?.myEnrollments,
@@ -414,18 +417,18 @@ export function useMyEnrollments(
 
 /**
  * Hook for fetching detailed enrollment progress for a specific enrollment
- * 
+ *
  * @param enrollmentId - The enrollment ID to fetch progress for
  * @returns Query result with detailed enrollment progress data
- * 
+ *
  * @example
  * ```tsx
  * function CourseProgressPage({ enrollmentId }: { enrollmentId: string }) {
  *   const { data: enrollment, loading, error } = useEnrollmentProgress(enrollmentId);
- *   
+ *
  *   if (loading) return <div>Loading progress...</div>;
  *   if (error) return <div>Error loading progress</div>;
- *   
+ *
  *   return (
  *     <div>
  *       <h1>{enrollment?.course.title}</h1>
@@ -441,11 +444,14 @@ export function useMyEnrollments(
  * ```
  */
 export function useEnrollmentProgress(enrollmentId: string): QueryResult<Enrollment> {
-  const { data, loading, error, refetch } = useQuery<GetEnrollmentProgressResponse>(GET_ENROLLMENT_PROGRESS, {
-    variables: { enrollmentId },
-    skip: !enrollmentId,
-    errorPolicy: 'all',
-  });
+  const { data, loading, error, refetch } = useQuery<GetEnrollmentProgressResponse>(
+    GET_ENROLLMENT_PROGRESS,
+    {
+      variables: { enrollmentId },
+      skip: !enrollmentId,
+      errorPolicy: 'all',
+    }
+  );
 
   return {
     data: data?.enrollment,
@@ -457,24 +463,24 @@ export function useEnrollmentProgress(enrollmentId: string): QueryResult<Enrollm
 
 /**
  * Hook for enrolling in a course with payment integration
- * 
+ *
  * @returns Mutation function with loading state and error handling
- * 
+ *
  * @example
  * ```tsx
  * function EnrollButton({ courseId, price }: { courseId: string; price: number }) {
  *   const { mutate: enrollInCourse, loading, error } = useEnrollInCourse();
- *   
+ *
  *   const handleEnroll = async () => {
  *     try {
  *       if (price > 0) {
  *         // Handle payment flow first
  *         const paymentResult = await processPayment({ courseId, amount: price });
- *         await enrollInCourse({ 
- *           input: { 
- *             courseId, 
- *             paymentIntentId: paymentResult.paymentIntentId 
- *           } 
+ *         await enrollInCourse({
+ *           input: {
+ *             courseId,
+ *             paymentIntentId: paymentResult.paymentIntentId
+ *           }
  *         });
  *       } else {
  *         // Free course enrollment
@@ -485,7 +491,7 @@ export function useEnrollmentProgress(enrollmentId: string): QueryResult<Enrollm
  *       // Handle error
  *     }
  *   };
- *   
+ *
  *   return (
  *     <button onClick={handleEnroll} disabled={loading}>
  *       {loading ? 'Enrolling...' : price > 0 ? `Enroll for $${price}` : 'Enroll Free'}
@@ -495,50 +501,53 @@ export function useEnrollmentProgress(enrollmentId: string): QueryResult<Enrollm
  * ```
  */
 export function useEnrollInCourse(): MutationResult<Enrollment, { input: EnrollInCourseInput }> {
-  const [enrollInCourseMutation, { loading, error, reset }] = useMutation<EnrollInCourseResponse>(ENROLL_IN_COURSE, {
-    errorPolicy: 'all',
-    // Update cache after successful enrollment
-    update: (cache: ApolloCache, { data }) => {
-      if (data?.enrollInCourse) {
-        // Add to my enrollments list
-        cache.updateQuery<GetMyEnrollmentsResponse>(
-          { query: GET_MY_ENROLLMENTS, variables: {} },
-          (existingData: GetMyEnrollmentsResponse | null) => {
-            if (!existingData?.myEnrollments) return existingData;
-            
-            return {
-              myEnrollments: {
-                ...existingData.myEnrollments,
-                edges: [
-                  {
-                    node: data.enrollInCourse,
-                    cursor: data.enrollInCourse.id,
-                    __typename: 'EnrollmentEdge',
-                  },
-                  ...existingData.myEnrollments.edges,
-                ],
-                totalCount: existingData.myEnrollments.totalCount + 1,
-              },
-            };
-          }
-        );
+  const [enrollInCourseMutation, { loading, error, reset }] = useMutation<EnrollInCourseResponse>(
+    ENROLL_IN_COURSE,
+    {
+      errorPolicy: 'all',
+      // Update cache after successful enrollment
+      update: (cache: ApolloCache, { data }) => {
+        if (data?.enrollInCourse) {
+          // Add to my enrollments list
+          cache.updateQuery<GetMyEnrollmentsResponse>(
+            { query: GET_MY_ENROLLMENTS, variables: {} },
+            (existingData: GetMyEnrollmentsResponse | null) => {
+              if (!existingData?.myEnrollments) return existingData;
 
-        // Update course enrollment count in cache
-        const courseId = data.enrollInCourse.course.id;
-        const courseCacheId = cache.identify({ __typename: 'Course', id: courseId });
-        if (courseCacheId) {
-          cache.modify({
-            id: courseCacheId,
-            fields: {
-              enrollmentCount(existingCount = 0) {
-                return existingCount + 1;
+              return {
+                myEnrollments: {
+                  ...existingData.myEnrollments,
+                  edges: [
+                    {
+                      node: data.enrollInCourse,
+                      cursor: data.enrollInCourse.id,
+                      __typename: 'EnrollmentEdge',
+                    },
+                    ...existingData.myEnrollments.edges,
+                  ],
+                  totalCount: existingData.myEnrollments.totalCount + 1,
+                },
+              };
+            }
+          );
+
+          // Update course enrollment count in cache
+          const courseId = data.enrollInCourse.course.id;
+          const courseCacheId = cache.identify({ __typename: 'Course', id: courseId });
+          if (courseCacheId) {
+            cache.modify({
+              id: courseCacheId,
+              fields: {
+                enrollmentCount(existingCount = 0) {
+                  return existingCount + 1;
+                },
               },
-            },
-          });
+            });
+          }
         }
-      }
-    },
-  });
+      },
+    }
+  );
 
   const mutate = async (variables: { input: EnrollInCourseInput }): Promise<Enrollment> => {
     const result = await enrollInCourseMutation({ variables });
@@ -558,14 +567,14 @@ export function useEnrollInCourse(): MutationResult<Enrollment, { input: EnrollI
 
 /**
  * Hook for updating lesson progress with optimistic updates
- * 
+ *
  * @returns Mutation function with loading state and error handling
- * 
+ *
  * @example
  * ```tsx
  * function LessonPlayer({ lessonId, enrollmentId }: { lessonId: string; enrollmentId: string }) {
  *   const { mutate: updateProgress, loading } = useUpdateLessonProgress();
- *   
+ *
  *   const handleLessonComplete = async (timeSpent: number) => {
  *     try {
  *       await updateProgress({
@@ -582,7 +591,7 @@ export function useEnrollInCourse(): MutationResult<Enrollment, { input: EnrollI
  *       // Handle error
  *     }
  *   };
- *   
+ *
  *   const handleProgressUpdate = async (timeSpent: number) => {
  *     await updateProgress({
  *       input: {
@@ -593,27 +602,29 @@ export function useEnrollInCourse(): MutationResult<Enrollment, { input: EnrollI
  *       }
  *     });
  *   };
- *   
+ *
  *   return <div>...</div>;
  * }
  * ```
  */
-export function useUpdateLessonProgress(): MutationResult<LessonProgress, { input: UpdateLessonProgressInput }> {
-  const [updateProgressMutation, { loading, error, reset }] = useMutation<UpdateLessonProgressResponse>(
-    UPDATE_LESSON_PROGRESS,
-    {
+export function useUpdateLessonProgress(): MutationResult<
+  LessonProgress,
+  { input: UpdateLessonProgressInput }
+> {
+  const [updateProgressMutation, { loading, error, reset }] =
+    useMutation<UpdateLessonProgressResponse>(UPDATE_LESSON_PROGRESS, {
       errorPolicy: 'all',
       // Update cache after successful mutation
       update: (cache: ApolloCache, { data }) => {
         if (data?.updateLessonProgress) {
           const enrollmentId = data.updateLessonProgress.enrollment.id;
-          
+
           // Update enrollment progress in cache
           cache.updateQuery<GetEnrollmentProgressResponse>(
             { query: GET_ENROLLMENT_PROGRESS, variables: { enrollmentId } },
             (existingData: GetEnrollmentProgressResponse | null) => {
               if (!existingData?.enrollment) return existingData;
-              
+
               // Update lesson progress in the list
               const updatedLessonProgress = existingData.enrollment.lessonProgress.map(
                 (progress: LessonProgress) =>
@@ -621,13 +632,16 @@ export function useUpdateLessonProgress(): MutationResult<LessonProgress, { inpu
                     ? data.updateLessonProgress
                     : progress
               );
-              
+
               return {
                 enrollment: {
                   ...existingData.enrollment,
                   progressPercentage: data.updateLessonProgress.enrollment.progressPercentage,
                   status: data.updateLessonProgress.enrollment.status,
-                  completedAt: data.updateLessonProgress.enrollment.completedAt || existingData.enrollment.completedAt || null,
+                  completedAt:
+                    data.updateLessonProgress.enrollment.completedAt ||
+                    existingData.enrollment.completedAt ||
+                    null,
                   lessonProgress: updatedLessonProgress,
                 },
               } as GetEnrollmentProgressResponse;
@@ -635,10 +649,11 @@ export function useUpdateLessonProgress(): MutationResult<LessonProgress, { inpu
           );
         }
       },
-    }
-  );
+    });
 
-  const mutate = async (variables: { input: UpdateLessonProgressInput }): Promise<LessonProgress> => {
+  const mutate = async (variables: {
+    input: UpdateLessonProgressInput;
+  }): Promise<LessonProgress> => {
     const result = await updateProgressMutation({ variables });
     if (!result.data?.updateLessonProgress) {
       throw new Error('Failed to update lesson progress');
@@ -656,17 +671,17 @@ export function useUpdateLessonProgress(): MutationResult<LessonProgress, { inpu
 
 /**
  * Hook for fetching the current user's certificates
- * 
+ *
  * @returns Query result with certificates data
- * 
+ *
  * @example
  * ```tsx
  * function MyCertificatesPage() {
  *   const { data: certificates, loading, error } = useMyCertificates();
- *   
+ *
  *   if (loading) return <div>Loading certificates...</div>;
  *   if (error) return <div>Error loading certificates</div>;
- *   
+ *
  *   return (
  *     <div>
  *       <h1>My Certificates ({certificates?.length || 0})</h1>
@@ -679,9 +694,12 @@ export function useUpdateLessonProgress(): MutationResult<LessonProgress, { inpu
  * ```
  */
 export function useMyCertificates(): QueryResult<Certificate[]> {
-  const { data, loading, error, refetch } = useQuery<GetMyCertificatesResponse>(GET_MY_CERTIFICATES, {
-    errorPolicy: 'all',
-  });
+  const { data, loading, error, refetch } = useQuery<GetMyCertificatesResponse>(
+    GET_MY_CERTIFICATES,
+    {
+      errorPolicy: 'all',
+    }
+  );
 
   return {
     data: data?.myCertificates,
@@ -693,18 +711,18 @@ export function useMyCertificates(): QueryResult<Certificate[]> {
 
 /**
  * Hook for verifying a certificate by its ID
- * 
+ *
  * @param certificateId - The certificate ID to verify
  * @returns Query result with certificate verification data
- * 
+ *
  * @example
  * ```tsx
  * function CertificateVerificationPage({ certificateId }: { certificateId: string }) {
  *   const { data: certificate, loading, error } = useVerifyCertificate(certificateId);
- *   
+ *
  *   if (loading) return <div>Verifying certificate...</div>;
  *   if (error) return <div>Invalid certificate</div>;
- *   
+ *
  *   return (
  *     <div>
  *       <h1>Certificate Verified</h1>
@@ -717,11 +735,14 @@ export function useMyCertificates(): QueryResult<Certificate[]> {
  * ```
  */
 export function useVerifyCertificate(certificateId: string): QueryResult<Certificate> {
-  const { data, loading, error, refetch } = useQuery<VerifyCertificateResponse>(VERIFY_CERTIFICATE, {
-    variables: { certificateId },
-    skip: !certificateId,
-    errorPolicy: 'all',
-  });
+  const { data, loading, error, refetch } = useQuery<VerifyCertificateResponse>(
+    VERIFY_CERTIFICATE,
+    {
+      variables: { certificateId },
+      skip: !certificateId,
+      errorPolicy: 'all',
+    }
+  );
 
   return {
     data: data?.verifyCertificate,
@@ -733,18 +754,18 @@ export function useVerifyCertificate(certificateId: string): QueryResult<Certifi
 
 /**
  * Hook for checking enrollment eligibility for a course
- * 
+ *
  * @param studentId - The student ID to check eligibility for
  * @param courseId - The course ID to check eligibility for
  * @returns Query result with eligibility data
- * 
+ *
  * @example
  * ```tsx
  * function EnrollmentEligibilityCheck({ studentId, courseId }: { studentId: string; courseId: string }) {
  *   const { data: eligibility, loading } = useCheckEnrollmentEligibility(studentId, courseId);
- *   
+ *
  *   if (loading) return <div>Checking eligibility...</div>;
- *   
+ *
  *   if (!eligibility?.eligible) {
  *     return (
  *       <div>
@@ -757,17 +778,23 @@ export function useVerifyCertificate(certificateId: string): QueryResult<Certifi
  *       </div>
  *     );
  *   }
- *   
+ *
  *   return <EnrollButton courseId={courseId} />;
  * }
  * ```
  */
-export function useCheckEnrollmentEligibility(studentId: string, courseId: string): QueryResult<CheckEnrollmentEligibilityResponse['checkEnrollmentEligibility']> {
-  const { data, loading, error, refetch } = useQuery<CheckEnrollmentEligibilityResponse>(CHECK_ENROLLMENT_ELIGIBILITY, {
-    variables: { studentId, courseId },
-    skip: !studentId || !courseId,
-    errorPolicy: 'all',
-  });
+export function useCheckEnrollmentEligibility(
+  studentId: string,
+  courseId: string
+): QueryResult<CheckEnrollmentEligibilityResponse['checkEnrollmentEligibility']> {
+  const { data, loading, error, refetch } = useQuery<CheckEnrollmentEligibilityResponse>(
+    CHECK_ENROLLMENT_ELIGIBILITY,
+    {
+      variables: { studentId, courseId },
+      skip: !studentId || !courseId,
+      errorPolicy: 'all',
+    }
+  );
 
   return {
     data: data?.checkEnrollmentEligibility,
@@ -779,18 +806,18 @@ export function useCheckEnrollmentEligibility(studentId: string, courseId: strin
 
 /**
  * Hook for checking lesson access permissions
- * 
+ *
  * @param enrollmentId - The enrollment ID
  * @param lessonId - The lesson ID to check access for
  * @returns Query result with access data
- * 
+ *
  * @example
  * ```tsx
  * function LessonAccessCheck({ enrollmentId, lessonId }: { enrollmentId: string; lessonId: string }) {
  *   const { data: access, loading } = useCheckLessonAccess(enrollmentId, lessonId);
- *   
+ *
  *   if (loading) return <div>Checking access...</div>;
- *   
+ *
  *   if (!access?.canAccess) {
  *     return (
  *       <div>
@@ -805,17 +832,23 @@ export function useCheckEnrollmentEligibility(studentId: string, courseId: strin
  *       </div>
  *     );
  *   }
- *   
+ *
  *   return <LessonPlayer lessonId={lessonId} />;
  * }
  * ```
  */
-export function useCheckLessonAccess(enrollmentId: string, lessonId: string): QueryResult<CheckLessonAccessResponse['checkLessonAccess']> {
-  const { data, loading, error, refetch } = useQuery<CheckLessonAccessResponse>(CHECK_LESSON_ACCESS, {
-    variables: { enrollmentId, lessonId },
-    skip: !enrollmentId || !lessonId,
-    errorPolicy: 'all',
-  });
+export function useCheckLessonAccess(
+  enrollmentId: string,
+  lessonId: string
+): QueryResult<CheckLessonAccessResponse['checkLessonAccess']> {
+  const { data, loading, error, refetch } = useQuery<CheckLessonAccessResponse>(
+    CHECK_LESSON_ACCESS,
+    {
+      variables: { enrollmentId, lessonId },
+      skip: !enrollmentId || !lessonId,
+      errorPolicy: 'all',
+    }
+  );
 
   return {
     data: data?.checkLessonAccess,
@@ -827,17 +860,17 @@ export function useCheckLessonAccess(enrollmentId: string, lessonId: string): Qu
 
 /**
  * Hook for withdrawing from a course enrollment
- * 
+ *
  * @returns Mutation function with loading state and error handling
- * 
+ *
  * @example
  * ```tsx
  * function WithdrawButton({ enrollmentId }: { enrollmentId: string }) {
  *   const { mutate: withdrawEnrollment, loading } = useWithdrawEnrollment();
- *   
+ *
  *   const handleWithdraw = async () => {
  *     if (!confirm('Are you sure you want to withdraw from this course?')) return;
- *     
+ *
  *     try {
  *       await withdrawEnrollment({ input: { enrollmentId, reason: 'User requested' } });
  *       // Withdrawal successful
@@ -845,7 +878,7 @@ export function useCheckLessonAccess(enrollmentId: string, lessonId: string): Qu
  *       // Handle error
  *     }
  *   };
- *   
+ *
  *   return (
  *     <button onClick={handleWithdraw} disabled={loading}>
  *       {loading ? 'Withdrawing...' : 'Withdraw from Course'}
@@ -854,31 +887,37 @@ export function useCheckLessonAccess(enrollmentId: string, lessonId: string): Qu
  * }
  * ```
  */
-export function useWithdrawEnrollment(): MutationResult<boolean, { input: WithdrawEnrollmentInput }> {
-  const [withdrawMutation, { loading, error, reset }] = useMutation<WithdrawEnrollmentResponse>(WITHDRAW_ENROLLMENT, {
-    errorPolicy: 'all',
-    update: (cache: ApolloCache, { data }, { variables }) => {
-      if (data?.withdrawEnrollment && variables?.input.enrollmentId) {
-        // Remove from my enrollments list
-        cache.updateQuery<GetMyEnrollmentsResponse>(
-          { query: GET_MY_ENROLLMENTS, variables: {} },
-          (existingData: GetMyEnrollmentsResponse | null) => {
-            if (!existingData?.myEnrollments) return existingData;
-            
-            return {
-              myEnrollments: {
-                ...existingData.myEnrollments,
-                edges: existingData.myEnrollments.edges.filter(
-                  edge => edge.node.id !== variables.input.enrollmentId
-                ),
-                totalCount: existingData.myEnrollments.totalCount - 1,
-              },
-            };
-          }
-        );
-      }
-    },
-  });
+export function useWithdrawEnrollment(): MutationResult<
+  boolean,
+  { input: WithdrawEnrollmentInput }
+> {
+  const [withdrawMutation, { loading, error, reset }] = useMutation<WithdrawEnrollmentResponse>(
+    WITHDRAW_ENROLLMENT,
+    {
+      errorPolicy: 'all',
+      update: (cache: ApolloCache, { data }, { variables }) => {
+        if (data?.withdrawEnrollment && variables?.input.enrollmentId) {
+          // Remove from my enrollments list
+          cache.updateQuery<GetMyEnrollmentsResponse>(
+            { query: GET_MY_ENROLLMENTS, variables: {} },
+            (existingData: GetMyEnrollmentsResponse | null) => {
+              if (!existingData?.myEnrollments) return existingData;
+
+              return {
+                myEnrollments: {
+                  ...existingData.myEnrollments,
+                  edges: existingData.myEnrollments.edges.filter(
+                    edge => edge.node.id !== variables.input.enrollmentId
+                  ),
+                  totalCount: existingData.myEnrollments.totalCount - 1,
+                },
+              };
+            }
+          );
+        }
+      },
+    }
+  );
 
   const mutate = async (variables: { input: WithdrawEnrollmentInput }): Promise<boolean> => {
     const result = await withdrawMutation({ variables });
@@ -898,14 +937,14 @@ export function useWithdrawEnrollment(): MutationResult<boolean, { input: Withdr
 
 /**
  * Hook for marking a lesson as complete
- * 
+ *
  * @returns Mutation function with loading state and error handling
- * 
+ *
  * @example
  * ```tsx
  * function CompleteLessonButton({ enrollmentId, lessonId }: { enrollmentId: string; lessonId: string }) {
  *   const { mutate: completeLesson, loading } = useCompleteLesson();
- *   
+ *
  *   const handleComplete = async () => {
  *     try {
  *       await completeLesson({ enrollmentId, lessonId });
@@ -914,7 +953,7 @@ export function useWithdrawEnrollment(): MutationResult<boolean, { input: Withdr
  *       // Handle error
  *     }
  *   };
- *   
+ *
  *   return (
  *     <button onClick={handleComplete} disabled={loading}>
  *       {loading ? 'Completing...' : 'Mark as Complete'}
@@ -923,42 +962,54 @@ export function useWithdrawEnrollment(): MutationResult<boolean, { input: Withdr
  * }
  * ```
  */
-export function useCompleteLesson(): MutationResult<LessonProgress, { enrollmentId: string; lessonId: string }> {
-  const [completeLessonMutation, { loading, error, reset }] = useMutation<CompleteLessonResponse>(COMPLETE_LESSON, {
-    errorPolicy: 'all',
-    update: (cache: ApolloCache, { data }) => {
-      if (data?.completeLesson) {
-        const enrollmentId = data.completeLesson.enrollment.id;
-        
-        // Update enrollment progress in cache
-        cache.updateQuery<GetEnrollmentProgressResponse>(
-          { query: GET_ENROLLMENT_PROGRESS, variables: { enrollmentId } },
-          (existingData: GetEnrollmentProgressResponse | null) => {
-            if (!existingData?.enrollment) return existingData;
-            
-            const updatedLessonProgress = existingData.enrollment.lessonProgress.map(
-              (progress: LessonProgress) =>
-                progress.lesson.id === data.completeLesson.lesson.id
-                  ? data.completeLesson
-                  : progress
-            );
-            
-            return {
-              enrollment: {
-                ...existingData.enrollment,
-                progressPercentage: data.completeLesson.enrollment.progressPercentage,
-                status: data.completeLesson.enrollment.status,
-                completedAt: data.completeLesson.enrollment.completedAt || existingData.enrollment.completedAt || null,
-                lessonProgress: updatedLessonProgress,
-              },
-            } as GetEnrollmentProgressResponse;
-          }
-        );
-      }
-    },
-  });
+export function useCompleteLesson(): MutationResult<
+  LessonProgress,
+  { enrollmentId: string; lessonId: string }
+> {
+  const [completeLessonMutation, { loading, error, reset }] = useMutation<CompleteLessonResponse>(
+    COMPLETE_LESSON,
+    {
+      errorPolicy: 'all',
+      update: (cache: ApolloCache, { data }) => {
+        if (data?.completeLesson) {
+          const enrollmentId = data.completeLesson.enrollment.id;
 
-  const mutate = async (variables: { enrollmentId: string; lessonId: string }): Promise<LessonProgress> => {
+          // Update enrollment progress in cache
+          cache.updateQuery<GetEnrollmentProgressResponse>(
+            { query: GET_ENROLLMENT_PROGRESS, variables: { enrollmentId } },
+            (existingData: GetEnrollmentProgressResponse | null) => {
+              if (!existingData?.enrollment) return existingData;
+
+              const updatedLessonProgress = existingData.enrollment.lessonProgress.map(
+                (progress: LessonProgress) =>
+                  progress.lesson.id === data.completeLesson.lesson.id
+                    ? data.completeLesson
+                    : progress
+              );
+
+              return {
+                enrollment: {
+                  ...existingData.enrollment,
+                  progressPercentage: data.completeLesson.enrollment.progressPercentage,
+                  status: data.completeLesson.enrollment.status,
+                  completedAt:
+                    data.completeLesson.enrollment.completedAt ||
+                    existingData.enrollment.completedAt ||
+                    null,
+                  lessonProgress: updatedLessonProgress,
+                },
+              } as GetEnrollmentProgressResponse;
+            }
+          );
+        }
+      },
+    }
+  );
+
+  const mutate = async (variables: {
+    enrollmentId: string;
+    lessonId: string;
+  }): Promise<LessonProgress> => {
     const result = await completeLessonMutation({ variables });
     if (!result.data?.completeLesson) {
       throw new Error('Failed to complete lesson');
@@ -976,17 +1027,17 @@ export function useCompleteLesson(): MutationResult<LessonProgress, { enrollment
 
 /**
  * Hook for resetting lesson progress
- * 
+ *
  * @returns Mutation function with loading state and error handling
- * 
+ *
  * @example
  * ```tsx
  * function ResetProgressButton({ enrollmentId, lessonId }: { enrollmentId: string; lessonId: string }) {
  *   const { mutate: resetProgress, loading } = useResetLessonProgress();
- *   
+ *
  *   const handleReset = async () => {
  *     if (!confirm('Are you sure you want to reset your progress for this lesson?')) return;
- *     
+ *
  *     try {
  *       await resetProgress({ enrollmentId, lessonId });
  *       // Progress reset successful
@@ -994,7 +1045,7 @@ export function useCompleteLesson(): MutationResult<LessonProgress, { enrollment
  *       // Handle error
  *     }
  *   };
- *   
+ *
  *   return (
  *     <button onClick={handleReset} disabled={loading}>
  *       {loading ? 'Resetting...' : 'Reset Progress'}
@@ -1003,41 +1054,48 @@ export function useCompleteLesson(): MutationResult<LessonProgress, { enrollment
  * }
  * ```
  */
-export function useResetLessonProgress(): MutationResult<LessonProgress, { enrollmentId: string; lessonId: string }> {
-  const [resetProgressMutation, { loading, error, reset }] = useMutation<ResetLessonProgressResponse>(RESET_LESSON_PROGRESS, {
-    errorPolicy: 'all',
-    update: (cache: ApolloCache, { data }) => {
-      if (data?.resetLessonProgress) {
-        const enrollmentId = data.resetLessonProgress.enrollment?.id;
-        
-        if (enrollmentId) {
-          // Update enrollment progress in cache
-          cache.updateQuery<GetEnrollmentProgressResponse>(
-            { query: GET_ENROLLMENT_PROGRESS, variables: { enrollmentId } },
-            (existingData: GetEnrollmentProgressResponse | null) => {
-              if (!existingData?.enrollment) return existingData;
-              
-              const updatedLessonProgress = existingData.enrollment.lessonProgress.map(
-                (progress: LessonProgress) =>
-                  progress.lesson.id === data.resetLessonProgress.lesson.id
-                    ? data.resetLessonProgress
-                    : progress
-              );
-              
-              return {
-                enrollment: {
-                  ...existingData.enrollment,
-                  lessonProgress: updatedLessonProgress,
-                },
-              } as GetEnrollmentProgressResponse;
-            }
-          );
-        }
-      }
-    },
-  });
+export function useResetLessonProgress(): MutationResult<
+  LessonProgress,
+  { enrollmentId: string; lessonId: string }
+> {
+  const [resetProgressMutation, { loading, error, reset }] =
+    useMutation<ResetLessonProgressResponse>(RESET_LESSON_PROGRESS, {
+      errorPolicy: 'all',
+      update: (cache: ApolloCache, { data }) => {
+        if (data?.resetLessonProgress) {
+          const enrollmentId = data.resetLessonProgress.enrollment?.id;
 
-  const mutate = async (variables: { enrollmentId: string; lessonId: string }): Promise<LessonProgress> => {
+          if (enrollmentId) {
+            // Update enrollment progress in cache
+            cache.updateQuery<GetEnrollmentProgressResponse>(
+              { query: GET_ENROLLMENT_PROGRESS, variables: { enrollmentId } },
+              (existingData: GetEnrollmentProgressResponse | null) => {
+                if (!existingData?.enrollment) return existingData;
+
+                const updatedLessonProgress = existingData.enrollment.lessonProgress.map(
+                  (progress: LessonProgress) =>
+                    progress.lesson.id === data.resetLessonProgress.lesson.id
+                      ? data.resetLessonProgress
+                      : progress
+                );
+
+                return {
+                  enrollment: {
+                    ...existingData.enrollment,
+                    lessonProgress: updatedLessonProgress,
+                  },
+                } as GetEnrollmentProgressResponse;
+              }
+            );
+          }
+        }
+      },
+    });
+
+  const mutate = async (variables: {
+    enrollmentId: string;
+    lessonId: string;
+  }): Promise<LessonProgress> => {
     const result = await resetProgressMutation({ variables });
     if (!result.data?.resetLessonProgress) {
       throw new Error('Failed to reset lesson progress');
@@ -1055,14 +1113,14 @@ export function useResetLessonProgress(): MutationResult<LessonProgress, { enrol
 
 /**
  * Hook for regenerating a certificate for a completed enrollment
- * 
+ *
  * @returns Mutation function with loading state and error handling
- * 
+ *
  * @example
  * ```tsx
  * function RegenerateCertificateButton({ enrollmentId }: { enrollmentId: string }) {
  *   const { mutate: regenerateCertificate, loading } = useRegenerateCertificate();
- *   
+ *
  *   const handleRegenerate = async () => {
  *     try {
  *       const certificate = await regenerateCertificate({ enrollmentId });
@@ -1072,7 +1130,7 @@ export function useResetLessonProgress(): MutationResult<LessonProgress, { enrol
  *       // Handle error
  *     }
  *   };
- *   
+ *
  *   return (
  *     <button onClick={handleRegenerate} disabled={loading}>
  *       {loading ? 'Regenerating...' : 'Regenerate Certificate'}
@@ -1082,44 +1140,45 @@ export function useResetLessonProgress(): MutationResult<LessonProgress, { enrol
  * ```
  */
 export function useRegenerateCertificate(): MutationResult<Certificate, { enrollmentId: string }> {
-  const [regenerateMutation, { loading, error, reset }] = useMutation<RegenerateCertificateResponse>(REGENERATE_CERTIFICATE, {
-    errorPolicy: 'all',
-    update: (cache: ApolloCache, { data }, { variables }) => {
-      if (data?.regenerateCertificate && variables?.enrollmentId) {
-        // Update enrollment with new certificate
-        cache.updateQuery<GetEnrollmentProgressResponse>(
-          { query: GET_ENROLLMENT_PROGRESS, variables: { enrollmentId: variables.enrollmentId } },
-          (existingData: GetEnrollmentProgressResponse | null) => {
-            if (!existingData?.enrollment) return existingData;
-            
-            return {
-              enrollment: {
-                ...existingData.enrollment,
-                certificate: data.regenerateCertificate,
-              },
-            } as GetEnrollmentProgressResponse;
-          }
-        );
+  const [regenerateMutation, { loading, error, reset }] =
+    useMutation<RegenerateCertificateResponse>(REGENERATE_CERTIFICATE, {
+      errorPolicy: 'all',
+      update: (cache: ApolloCache, { data }, { variables }) => {
+        if (data?.regenerateCertificate && variables?.enrollmentId) {
+          // Update enrollment with new certificate
+          cache.updateQuery<GetEnrollmentProgressResponse>(
+            { query: GET_ENROLLMENT_PROGRESS, variables: { enrollmentId: variables.enrollmentId } },
+            (existingData: GetEnrollmentProgressResponse | null) => {
+              if (!existingData?.enrollment) return existingData;
 
-        // Update certificates list
-        cache.updateQuery<GetMyCertificatesResponse>(
-          { query: GET_MY_CERTIFICATES, variables: {} },
-          (existingData: GetMyCertificatesResponse | null) => {
-            if (!existingData?.myCertificates) return existingData;
-            
-            // Replace old certificate with new one
-            const updatedCertificates = existingData.myCertificates.map(cert =>
-              cert.enrollment.id === variables.enrollmentId ? data.regenerateCertificate : cert
-            );
-            
-            return {
-              myCertificates: updatedCertificates,
-            };
-          }
-        );
-      }
-    },
-  });
+              return {
+                enrollment: {
+                  ...existingData.enrollment,
+                  certificate: data.regenerateCertificate,
+                },
+              } as GetEnrollmentProgressResponse;
+            }
+          );
+
+          // Update certificates list
+          cache.updateQuery<GetMyCertificatesResponse>(
+            { query: GET_MY_CERTIFICATES, variables: {} },
+            (existingData: GetMyCertificatesResponse | null) => {
+              if (!existingData?.myCertificates) return existingData;
+
+              // Replace old certificate with new one
+              const updatedCertificates = existingData.myCertificates.map(cert =>
+                cert.enrollment.id === variables.enrollmentId ? data.regenerateCertificate : cert
+              );
+
+              return {
+                myCertificates: updatedCertificates,
+              };
+            }
+          );
+        }
+      },
+    });
 
   const mutate = async (variables: { enrollmentId: string }): Promise<Certificate> => {
     const result = await regenerateMutation({ variables });
@@ -1139,17 +1198,17 @@ export function useRegenerateCertificate(): MutationResult<Certificate, { enroll
 
 /**
  * Hook for fetching enrollment analytics and reporting data
- * 
+ *
  * @param enrollmentId - Optional enrollment ID to get specific enrollment analytics
  * @returns Query result with analytics data
- * 
+ *
  * @example
  * ```tsx
  * function EnrollmentAnalytics({ enrollmentId }: { enrollmentId?: string }) {
  *   const { data: analytics, loading } = useEnrollmentAnalytics(enrollmentId);
- *   
+ *
  *   if (loading) return <div>Loading analytics...</div>;
- *   
+ *
  *   return (
  *     <div>
  *       <h2>Enrollment Analytics</h2>

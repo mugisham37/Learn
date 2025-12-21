@@ -2,10 +2,10 @@
 
 /**
  * Automated Schema Synchronization Workflow
- * 
+ *
  * This script provides an automated workflow for synchronizing the GraphQL schema
  * from the backend server, validating it, and regenerating TypeScript types.
- * 
+ *
  * Requirements: 1.1, 1.2, 1.3, 1.5
  */
 
@@ -65,14 +65,14 @@ function checkLock() {
     try {
       const lockData = JSON.parse(fs.readFileSync(LOCK_FILE, 'utf8'));
       const lockAge = Date.now() - lockData.timestamp;
-      
+
       // If lock is older than 10 minutes, consider it stale
       if (lockAge > 10 * 60 * 1000) {
         console.log('🔓 Removing stale lock file');
         fs.unlinkSync(LOCK_FILE);
         return false;
       }
-      
+
       console.log('🔒 Another sync process is running, exiting...');
       return true;
     } catch (error) {
@@ -110,22 +110,22 @@ function removeLock() {
 function runCommand(command, args = [], options = {}) {
   return new Promise((resolve, reject) => {
     console.log(`🔧 Running: ${command} ${args.join(' ')}`);
-    
+
     const child = spawn(command, args, {
       stdio: 'inherit',
       shell: true,
       ...options,
     });
-    
-    child.on('close', (code) => {
+
+    child.on('close', code => {
       if (code === 0) {
         resolve();
       } else {
         reject(new Error(`Command failed with exit code ${code}`));
       }
     });
-    
-    child.on('error', (error) => {
+
+    child.on('error', error => {
       reject(error);
     });
   });
@@ -143,31 +143,30 @@ function delay(ms) {
  */
 async function extractSchemaWithRetry(config) {
   let lastError;
-  
+
   for (let attempt = 1; attempt <= config.retryAttempts; attempt++) {
     try {
       console.log(`🔄 Schema extraction attempt ${attempt}/${config.retryAttempts}`);
-      
+
       const result = await extractSchema();
-      
+
       if (result.success) {
         console.log('✅ Schema extraction successful');
         return result;
       } else {
         throw new Error('Schema extraction failed');
       }
-      
     } catch (error) {
       lastError = error;
       console.error(`❌ Attempt ${attempt} failed:`, error.message);
-      
+
       if (attempt < config.retryAttempts) {
         console.log(`⏳ Waiting ${config.retryDelay}ms before retry...`);
         await delay(config.retryDelay);
       }
     }
   }
-  
+
   throw lastError;
 }
 
@@ -176,27 +175,28 @@ async function extractSchemaWithRetry(config) {
  */
 async function validateSchemaHealth(config) {
   console.log('🔍 Validating schema health...');
-  
+
   try {
     const result = await validateSchema();
-    
+
     if (!result.success) {
       console.warn('⚠️  Schema validation completed with issues');
     }
-    
+
     const healthScore = result.report.health.score;
-    
+
     if (healthScore < config.healthCheckThreshold) {
-      console.warn(`⚠️  Schema health score (${healthScore}) below threshold (${config.healthCheckThreshold})`);
-      
+      console.warn(
+        `⚠️  Schema health score (${healthScore}) below threshold (${config.healthCheckThreshold})`
+      );
+
       if (config.notifyOnBreakingChanges) {
         console.log('📧 Health check notification would be sent here');
         // TODO: Implement notification system (email, Slack, etc.)
       }
     }
-    
+
     return result;
-    
   } catch (error) {
     console.error('❌ Schema validation failed:', error.message);
     throw error;
@@ -208,14 +208,13 @@ async function validateSchemaHealth(config) {
  */
 async function runCodeGeneration() {
   console.log('🔧 Running GraphQL code generation...');
-  
+
   try {
     await runCommand('npm', ['run', 'codegen:generate'], {
       cwd: path.join(__dirname, '..'),
     });
-    
+
     console.log('✅ Code generation completed');
-    
   } catch (error) {
     console.error('❌ Code generation failed:', error.message);
     throw error;
@@ -228,53 +227,53 @@ async function runCodeGeneration() {
 async function syncSchema(options = {}) {
   const config = loadConfig();
   const startTime = Date.now();
-  
+
   console.log('🚀 Starting automated schema synchronization...\n');
-  
+
   // Check for concurrent processes
   if (checkLock()) {
     return { success: false, error: 'Another sync process is running' };
   }
-  
+
   // Create lock file
   createLock();
-  
+
   try {
     // Step 1: Extract schema from backend
     console.log('📡 Step 1: Extracting schema from backend...');
     const extractionResult = await extractSchemaWithRetry(config);
-    
+
     // Step 2: Validate schema if enabled
     let validationResult;
     if (config.validateBeforeCodegen) {
       console.log('\n🔍 Step 2: Validating schema...');
       validationResult = await validateSchemaHealth(config);
-      
+
       // Stop if validation fails critically
       if (!validationResult.success && validationResult.report.summary.overall === 'FAIL') {
         throw new Error('Schema validation failed critically');
       }
     }
-    
+
     // Step 3: Run code generation
     console.log('\n⚙️  Step 3: Generating TypeScript types...');
     await runCodeGeneration();
-    
+
     // Step 4: Final summary
     const duration = Date.now() - startTime;
     console.log('\n🎉 Schema synchronization completed successfully!');
     console.log(`   ⏱️  Duration: ${Math.round(duration / 1000)}s`);
-    
+
     if (extractionResult.hasChanges) {
       console.log('   📝 Schema changes detected and processed');
     } else {
       console.log('   ✨ No schema changes detected');
     }
-    
+
     if (validationResult) {
       console.log(`   🏥 Health Score: ${validationResult.report.health.score}/100`);
     }
-    
+
     return {
       success: true,
       duration,
@@ -282,10 +281,9 @@ async function syncSchema(options = {}) {
       healthScore: validationResult?.report.health.score,
       stats: extractionResult.stats,
     };
-    
   } catch (error) {
     console.error('\n💥 Schema synchronization failed:', error.message);
-    
+
     // Try to restore from backup if available
     const backupPath = path.join(__dirname, '..', 'schema.backup.graphql');
     if (fs.existsSync(backupPath)) {
@@ -298,13 +296,12 @@ async function syncSchema(options = {}) {
         console.error('❌ Failed to restore from backup:', restoreError.message);
       }
     }
-    
+
     return {
       success: false,
       error: error.message,
       duration: Date.now() - startTime,
     };
-    
   } finally {
     // Always remove lock file
     removeLock();
@@ -317,21 +314,20 @@ async function syncSchema(options = {}) {
 async function watchMode(config) {
   console.log('👀 Starting schema watch mode...');
   console.log('   Press Ctrl+C to stop watching\n');
-  
+
   const watchInterval = config.watchInterval || 30000; // 30 seconds default
-  
+
   while (true) {
     try {
       const result = await syncSchema();
-      
+
       if (result.hasChanges) {
         console.log('🔄 Schema changes detected and synchronized');
       }
-      
     } catch (error) {
       console.error('❌ Watch sync failed:', error.message);
     }
-    
+
     console.log(`⏳ Waiting ${watchInterval / 1000}s before next check...`);
     await delay(watchInterval);
   }
@@ -343,18 +339,18 @@ async function watchMode(config) {
 async function main() {
   const args = process.argv.slice(2);
   const command = args[0] || 'sync';
-  
+
   try {
     switch (command) {
       case 'sync':
         await syncSchema();
         break;
-        
+
       case 'watch':
         const config = loadConfig();
         await watchMode(config);
         break;
-        
+
       case 'config':
         const configPath = CONFIG_FILE;
         console.log(`📝 Configuration file: ${configPath}`);
@@ -364,14 +360,14 @@ async function main() {
           console.log('No configuration file found. Run sync to create default config.');
         }
         break;
-        
+
       case 'status':
         const lockExists = fs.existsSync(LOCK_FILE);
         console.log(`🔒 Lock file: ${lockExists ? 'EXISTS' : 'NOT FOUND'}`);
-        
+
         const schemaExists = fs.existsSync(path.join(__dirname, '..', 'schema.graphql'));
         console.log(`📄 Schema file: ${schemaExists ? 'EXISTS' : 'NOT FOUND'}`);
-        
+
         if (schemaExists) {
           const metadataPath = path.join(__dirname, '..', 'schema-metadata.json');
           if (fs.existsSync(metadataPath)) {
@@ -381,7 +377,7 @@ async function main() {
           }
         }
         break;
-        
+
       default:
         console.log('Usage: node sync-schema.js [command]');
         console.log('Commands:');
@@ -391,7 +387,6 @@ async function main() {
         console.log('  status  - Show synchronization status');
         break;
     }
-    
   } catch (error) {
     console.error('💥 Command failed:', error.message);
     process.exit(1);

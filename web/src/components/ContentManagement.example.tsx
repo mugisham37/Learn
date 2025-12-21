@@ -1,6 +1,6 @@
 /**
  * Content Management Example Component
- * 
+ *
  * Demonstrates the comprehensive content management capabilities
  * with real backend integration for S3 uploads, MediaConvert processing,
  * and CloudFront streaming.
@@ -32,14 +32,20 @@ export function ContentManagementExample({ courseId, lessonId }: ContentManageme
   const videoUpload = useVideoUpload();
 
   // Asset management hooks
-  const { data: videoAsset, loading: videoLoading, error: videoError } = useVideoAsset(
-    assetType === 'video' && uploadedAssetId ? uploadedAssetId : ''
-  );
-  const { data: fileAsset, loading: fileLoading, error: fileError } = useFileAsset(
-    assetType === 'file' && uploadedAssetId ? uploadedAssetId : ''
-  );
+  const {
+    data: videoAsset,
+    loading: videoLoading,
+    error: videoError,
+  } = useVideoAsset(assetType === 'video' && uploadedAssetId ? uploadedAssetId : '');
+  const {
+    data: fileAsset,
+    loading: fileLoading,
+    error: fileError,
+  } = useFileAsset(assetType === 'file' && uploadedAssetId ? uploadedAssetId : '');
   const { data: streamingUrl, loading: streamingLoading } = useStreamingUrl(
-    lessonId || '', '720p', 'hls'
+    lessonId || '',
+    '720p',
+    'hls'
   );
   const { data: processingStatus, subscriptionData } = useVideoProcessingStatus(
     assetType === 'video' && uploadedAssetId ? uploadedAssetId : ''
@@ -68,7 +74,7 @@ export function ContentManagementExample({ courseId, lessonId }: ContentManageme
       const result = await fileUpload.uploadFile(selectedFile, {
         courseId,
         lessonId,
-        onProgress: (progress) => {
+        onProgress: progress => {
           console.log(`Upload progress: ${progress.percentage}%`);
         },
         onComplete: (result: any) => {
@@ -77,11 +83,11 @@ export function ContentManagementExample({ courseId, lessonId }: ContentManageme
             setUploadedAssetId(result.id);
           }
         },
-        onError: (error) => {
+        onError: error => {
           console.error('Upload failed:', error);
         },
       });
-      
+
       console.log('File upload result:', result);
     } catch (error) {
       console.error('Upload error:', error);
@@ -95,7 +101,7 @@ export function ContentManagementExample({ courseId, lessonId }: ContentManageme
     try {
       const result = await videoUpload.uploadVideo(selectedFile, lessonId, {
         courseId,
-        onProgress: (progress) => {
+        onProgress: progress => {
           console.log(`Video upload progress: ${progress.percentage}%`);
         },
         onComplete: (result: any) => {
@@ -104,11 +110,11 @@ export function ContentManagementExample({ courseId, lessonId }: ContentManageme
             setUploadedAssetId(result.id);
           }
         },
-        onError: (error) => {
+        onError: error => {
           console.error('Video upload failed:', error);
         },
       });
-      
+
       console.log('Video upload result:', result);
     } catch (error) {
       console.error('Video upload error:', error);
@@ -142,19 +148,15 @@ export function ContentManagementExample({ courseId, lessonId }: ContentManageme
   }, [processingStatus, assetManagement]);
 
   return (
-    <div className="content-management-example">
+    <div className='content-management-example'>
       <h2>Content Management System</h2>
-      
+
       {/* File Selection */}
-      <div className="file-selection">
+      <div className='file-selection'>
         <h3>Select File</h3>
-        <input
-          type="file"
-          onChange={handleFileSelect}
-          accept="*/*"
-        />
+        <input type='file' onChange={handleFileSelect} accept='*/*' />
         {selectedFile && (
-          <div className="selected-file">
+          <div className='selected-file'>
             <p>Selected: {selectedFile.name}</p>
             <p>Size: {(selectedFile.size / 1024 / 1024).toFixed(2)} MB</p>
             <p>Type: {selectedFile.type}</p>
@@ -165,49 +167,51 @@ export function ContentManagementExample({ courseId, lessonId }: ContentManageme
 
       {/* Upload Controls */}
       {selectedFile && (
-        <div className="upload-controls">
+        <div className='upload-controls'>
           <h3>Upload File</h3>
           {assetType === 'video' ? (
-            <button 
-              onClick={handleVideoUpload}
-              disabled={videoUpload.loading || !lessonId}
-            >
+            <button onClick={handleVideoUpload} disabled={videoUpload.loading || !lessonId}>
               {videoUpload.loading ? 'Uploading Video...' : 'Upload Video'}
             </button>
           ) : (
-            <button 
-              onClick={handleFileUpload}
-              disabled={fileUpload.loading}
-            >
+            <button onClick={handleFileUpload} disabled={fileUpload.loading}>
               {fileUpload.loading ? 'Uploading File...' : 'Upload File'}
             </button>
           )}
-          
+
           {/* Upload Progress */}
           {(fileUpload.uploadProgress || videoUpload.uploadProgress) && (
-            <div className="upload-progress">
-              <div className="progress-bar">
-                <div 
-                  className="progress-fill"
-                  style={{ 
-                    width: `${(fileUpload.uploadProgress || videoUpload.uploadProgress)?.percentage || 0}%` 
+            <div className='upload-progress'>
+              <div className='progress-bar'>
+                <div
+                  className='progress-fill'
+                  style={{
+                    width: `${(fileUpload.uploadProgress || videoUpload.uploadProgress)?.percentage || 0}%`,
                   }}
                 />
               </div>
               <p>
-                {(fileUpload.uploadProgress || videoUpload.uploadProgress)?.percentage || 0}% - 
+                {(fileUpload.uploadProgress || videoUpload.uploadProgress)?.percentage || 0}% -
                 {(fileUpload.uploadProgress || videoUpload.uploadProgress)?.status}
               </p>
               {(fileUpload.uploadProgress || videoUpload.uploadProgress)?.speed && (
-                <p>Speed: {((fileUpload.uploadProgress || videoUpload.uploadProgress)?.speed! / 1024 / 1024).toFixed(2)} MB/s</p>
+                <p>
+                  Speed:{' '}
+                  {(
+                    (fileUpload.uploadProgress || videoUpload.uploadProgress)?.speed! /
+                    1024 /
+                    1024
+                  ).toFixed(2)}{' '}
+                  MB/s
+                </p>
               )}
             </div>
           )}
 
           {/* Upload Errors */}
           {(fileUpload.error || videoUpload.error) && (
-            <div className="upload-error">
-              <p>Upload Error: {String((fileUpload.error || videoUpload.error))}</p>
+            <div className='upload-error'>
+              <p>Upload Error: {String(fileUpload.error || videoUpload.error)}</p>
             </div>
           )}
         </div>
@@ -215,11 +219,11 @@ export function ContentManagementExample({ courseId, lessonId }: ContentManageme
 
       {/* Asset Information */}
       {uploadedAssetId && (
-        <div className="asset-info">
+        <div className='asset-info'>
           <h3>Asset Information</h3>
-          
+
           {assetType === 'video' && videoAsset && (
-            <div className="video-asset">
+            <div className='video-asset'>
               <h4>Video Asset</h4>
               <p>ID: {videoAsset.id}</p>
               <p>File Name: {videoAsset.originalFileName}</p>
@@ -227,15 +231,15 @@ export function ContentManagementExample({ courseId, lessonId }: ContentManageme
               <p>Duration: {videoAsset.formattedDuration}</p>
               <p>Processing Status: {videoAsset.processingStatus}</p>
               <p>Ready for Streaming: {videoAsset.isReadyForStreaming ? 'Yes' : 'No'}</p>
-              
+
               {videoAsset.thumbnailUrl && (
-                <div className="thumbnail">
-                  <img src={videoAsset.thumbnailUrl} alt="Video thumbnail" />
+                <div className='thumbnail'>
+                  <img src={videoAsset.thumbnailUrl} alt='Video thumbnail' />
                 </div>
               )}
-              
+
               {videoAsset.isReadyForStreaming && videoAsset.streamingUrls?.hls && (
-                <div className="video-player">
+                <div className='video-player'>
                   <video controls src={videoAsset.streamingUrls.hls}>
                     Your browser does not support the video tag.
                   </video>
@@ -245,7 +249,7 @@ export function ContentManagementExample({ courseId, lessonId }: ContentManageme
           )}
 
           {assetType === 'file' && fileAsset && (
-            <div className="file-asset">
+            <div className='file-asset'>
               <h4>File Asset</h4>
               <p>ID: {fileAsset.id}</p>
               <p>File Name: {fileAsset.fileName}</p>
@@ -253,16 +257,16 @@ export function ContentManagementExample({ courseId, lessonId }: ContentManageme
               <p>Type: {fileAsset.assetType}</p>
               <p>Access Level: {fileAsset.accessLevel}</p>
               <p>Public: {fileAsset.isPublic ? 'Yes' : 'No'}</p>
-              
+
               {fileAsset.thumbnailUrl && (
-                <div className="thumbnail">
-                  <img src={fileAsset.thumbnailUrl} alt="File thumbnail" />
+                <div className='thumbnail'>
+                  <img src={fileAsset.thumbnailUrl} alt='File thumbnail' />
                 </div>
               )}
-              
+
               {fileAsset.cdnUrl && (
-                <div className="file-link">
-                  <a href={fileAsset.cdnUrl} target="_blank" rel="noopener noreferrer">
+                <div className='file-link'>
+                  <a href={fileAsset.cdnUrl} target='_blank' rel='noopener noreferrer'>
                     Download File
                   </a>
                 </div>
@@ -272,54 +276,55 @@ export function ContentManagementExample({ courseId, lessonId }: ContentManageme
 
           {/* Processing Status for Videos */}
           {assetType === 'video' && processingStatus && (
-            <div className="processing-status">
+            <div className='processing-status'>
               <h4>Processing Status</h4>
               <p>Status: {processingStatus.status}</p>
               <p>Progress: {processingStatus.progress}%</p>
               <p>Job Type: {processingStatus.jobTypeDescription}</p>
               <p>Priority: {processingStatus.priorityDescription}</p>
-              
+
               {processingStatus.errorMessage && (
-                <p className="error">Error: {processingStatus.errorMessage}</p>
+                <p className='error'>Error: {processingStatus.errorMessage}</p>
               )}
-              
+
               {processingStatus.canRetry && (
-                <button onClick={handleRetryProcessing}>
-                  Retry Processing
-                </button>
+                <button onClick={handleRetryProcessing}>Retry Processing</button>
               )}
-              
+
               {processingStatus.estimatedCompletionTime && (
-                <p>Estimated Completion: {new Date(processingStatus.estimatedCompletionTime).toLocaleString()}</p>
+                <p>
+                  Estimated Completion:{' '}
+                  {new Date(processingStatus.estimatedCompletionTime).toLocaleString()}
+                </p>
               )}
             </div>
           )}
 
           {/* Real-time Processing Updates */}
           {subscriptionData && (
-            <div className="realtime-updates">
+            <div className='realtime-updates'>
               <h4>Real-time Updates</h4>
               <p>Status: {subscriptionData.status}</p>
               <p>Progress: {subscriptionData.progress}%</p>
               {subscriptionData.errorMessage && (
-                <p className="error">Error: {subscriptionData.errorMessage}</p>
+                <p className='error'>Error: {subscriptionData.errorMessage}</p>
               )}
             </div>
           )}
 
           {/* Asset Management */}
-          <div className="asset-management">
+          <div className='asset-management'>
             <h4>Asset Management</h4>
-            <button 
+            <button
               onClick={handleDeleteAsset}
               disabled={assetManagement.loading}
-              className="delete-button"
+              className='delete-button'
             >
               {assetManagement.loading ? 'Deleting...' : 'Delete Asset'}
             </button>
-            
+
             {assetManagement.error && (
-              <p className="error">Management Error: {String(assetManagement.error)}</p>
+              <p className='error'>Management Error: {String(assetManagement.error)}</p>
             )}
           </div>
         </div>
@@ -327,15 +332,15 @@ export function ContentManagementExample({ courseId, lessonId }: ContentManageme
 
       {/* Streaming URL Demo */}
       {lessonId && streamingUrl && (
-        <div className="streaming-demo">
+        <div className='streaming-demo'>
           <h3>Streaming URL Demo</h3>
           <p>Lesson ID: {lessonId}</p>
           <p>Streaming URL: {streamingUrl.streamingUrl}</p>
           <p>Resolution: {streamingUrl.resolution}</p>
           <p>Format: {streamingUrl.format}</p>
           <p>Expires At: {new Date(streamingUrl.expiresAt).toLocaleString()}</p>
-          
-          <div className="video-player">
+
+          <div className='video-player'>
             <video controls src={streamingUrl.streamingUrl}>
               Your browser does not support the video tag.
             </video>
@@ -345,14 +350,14 @@ export function ContentManagementExample({ courseId, lessonId }: ContentManageme
 
       {/* Loading States */}
       {(videoLoading || fileLoading || streamingLoading) && (
-        <div className="loading">
+        <div className='loading'>
           <p>Loading asset information...</p>
         </div>
       )}
 
       {/* Error States */}
       {(videoError || fileError) && (
-        <div className="error">
+        <div className='error'>
           <p>Error loading asset: {String(videoError || fileError)}</p>
         </div>
       )}
@@ -364,7 +369,10 @@ export function ContentManagementExample({ courseId, lessonId }: ContentManageme
           padding: 20px;
         }
 
-        .file-selection, .upload-controls, .asset-info, .streaming-demo {
+        .file-selection,
+        .upload-controls,
+        .asset-info,
+        .streaming-demo {
           margin-bottom: 30px;
           padding: 20px;
           border: 1px solid #ddd;
@@ -396,12 +404,17 @@ export function ContentManagementExample({ courseId, lessonId }: ContentManageme
           transition: width 0.3s ease;
         }
 
-        .upload-error, .error {
+        .upload-error,
+        .error {
           color: #f44336;
           margin-top: 10px;
         }
 
-        .video-asset, .file-asset, .processing-status, .realtime-updates, .asset-management {
+        .video-asset,
+        .file-asset,
+        .processing-status,
+        .realtime-updates,
+        .asset-management {
           margin-bottom: 20px;
           padding: 15px;
           background-color: #f9f9f9;

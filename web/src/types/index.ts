@@ -1,6 +1,6 @@
 /**
  * Type Definitions
- * 
+ *
  * Generated GraphQL types and custom frontend types.
  * This file exports all types used throughout the foundation layer.
  */
@@ -86,7 +86,7 @@ export type {
   EnrollmentFilter,
   ConversationFilter,
   ThreadFilter,
-  PaginationInput
+  PaginationInput,
 } from './entities';
 
 // Import User and Course from entities with different names to avoid conflicts
@@ -103,15 +103,15 @@ export interface FoundationConfig {
   // Environment
   nodeEnv: 'development' | 'staging' | 'production';
   appEnv: 'development' | 'staging' | 'production';
-  
+
   // GraphQL Configuration
   graphqlEndpoint: string;
   wsEndpoint: string;
-  
+
   // Development Configuration
   enableDevTools: boolean;
   enableGraphQLPlayground: boolean;
-  
+
   // Feature Flags
   features: {
     analytics: boolean;
@@ -119,13 +119,13 @@ export interface FoundationConfig {
     realTime: boolean;
     fileUploads: boolean;
   };
-  
+
   // Performance Monitoring
   performanceMonitoring: {
     enabled: boolean;
     sampleRate: number;
   };
-  
+
   // Logging
   logLevel: 'debug' | 'info' | 'warn' | 'error';
 }
@@ -221,9 +221,9 @@ export interface ConnectionStatus {
 }
 
 // Error classification
-export type ErrorType = 
+export type ErrorType =
   | 'AUTHENTICATION_ERROR'
-  | 'AUTHORIZATION_ERROR' 
+  | 'AUTHORIZATION_ERROR'
   | 'VALIDATION_ERROR'
   | 'NETWORK_ERROR'
   | 'UPLOAD_ERROR'

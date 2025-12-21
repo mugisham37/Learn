@@ -1,16 +1,16 @@
 /**
  * Subscription System Exports
- * 
+ *
  * Main entry point for the real-time subscription system.
  * Exports all subscription providers, hooks, and utilities.
  */
 
 // Provider and context
-export { 
-  SubscriptionProvider, 
-  useSubscriptionContext, 
-  useConnectionStatus, 
-  useIsConnected 
+export {
+  SubscriptionProvider,
+  useSubscriptionContext,
+  useConnectionStatus,
+  useIsConnected,
 } from './SubscriptionProvider';
 
 // Core subscription hooks

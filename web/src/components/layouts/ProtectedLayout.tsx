@@ -1,9 +1,9 @@
 /**
  * Protected Layout Component
- * 
+ *
  * Provides role-based layout protection with authentication checks.
  * Handles loading states, error boundaries, and role-specific UI elements.
- * 
+ *
  * Requirements: 8.1, 8.4
  */
 
@@ -190,13 +190,8 @@ function getLayoutConfig(userRole: string): LayoutConfig {
 /**
  * Filter items based on user roles
  */
-function filterByRole<T extends { roles?: string[] }>(
-  items: T[],
-  userRole: string
-): T[] {
-  return items.filter(item => 
-    !item.roles || item.roles.includes(userRole)
-  );
+function filterByRole<T extends { roles?: string[] }>(items: T[], userRole: string): T[] {
+  return items.filter(item => !item.roles || item.roles.includes(userRole));
 }
 
 /**
@@ -206,27 +201,27 @@ function Sidebar({ items, userRole }: { items: SidebarItem[]; userRole: string }
   const filteredItems = filterByRole(items, userRole);
 
   return (
-    <aside className="w-64 bg-white shadow-sm border-r border-gray-200 min-h-screen">
-      <div className="p-6">
-        <h2 className="text-lg font-semibold text-gray-900">Navigation</h2>
+    <aside className='w-64 bg-white shadow-sm border-r border-gray-200 min-h-screen'>
+      <div className='p-6'>
+        <h2 className='text-lg font-semibold text-gray-900'>Navigation</h2>
       </div>
-      <nav className="px-4 pb-4">
-        <ul className="space-y-2">
-          {filteredItems.map((item) => (
+      <nav className='px-4 pb-4'>
+        <ul className='space-y-2'>
+          {filteredItems.map(item => (
             <li key={item.id}>
               <a
                 href={item.href}
-                className="flex items-center px-4 py-2 text-sm font-medium text-gray-700 rounded-md hover:bg-gray-100 hover:text-gray-900"
+                className='flex items-center px-4 py-2 text-sm font-medium text-gray-700 rounded-md hover:bg-gray-100 hover:text-gray-900'
               >
                 {item.icon && (
-                  <span className="mr-3 text-gray-400">
+                  <span className='mr-3 text-gray-400'>
                     {/* Icon placeholder - replace with actual icon component */}
                     📄
                   </span>
                 )}
                 {item.label}
                 {item.badge && (
-                  <span className="ml-auto bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full">
+                  <span className='ml-auto bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full'>
                     {item.badge}
                   </span>
                 )}
@@ -242,8 +237,12 @@ function Sidebar({ items, userRole }: { items: SidebarItem[]; userRole: string }
 /**
  * Header Component
  */
-function Header({ actions, userRole, user }: { 
-  actions: HeaderAction[]; 
+function Header({
+  actions,
+  userRole,
+  user,
+}: {
+  actions: HeaderAction[];
   userRole: string;
   user: any;
 }) {
@@ -251,21 +250,19 @@ function Header({ actions, userRole, user }: {
   const filteredActions = filterByRole(actions, userRole);
 
   return (
-    <header className="bg-white shadow-sm border-b border-gray-200">
-      <div className="px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center">
-            <h1 className="text-xl font-semibold text-gray-900">
-              Learning Management System
-            </h1>
+    <header className='bg-white shadow-sm border-b border-gray-200'>
+      <div className='px-6 py-4'>
+        <div className='flex items-center justify-between'>
+          <div className='flex items-center'>
+            <h1 className='text-xl font-semibold text-gray-900'>Learning Management System</h1>
           </div>
-          
-          <div className="flex items-center space-x-4">
-            {filteredActions.map((action) => (
+
+          <div className='flex items-center space-x-4'>
+            {filteredActions.map(action => (
               <button
                 key={action.id}
                 onClick={action.onClick}
-                className="p-2 text-gray-400 hover:text-gray-500 hover:bg-gray-100 rounded-md"
+                className='p-2 text-gray-400 hover:text-gray-500 hover:bg-gray-100 rounded-md'
                 title={action.label}
               >
                 {action.icon && (
@@ -276,35 +273,26 @@ function Header({ actions, userRole, user }: {
                 )}
               </button>
             ))}
-            
-            <div className="flex items-center space-x-3">
-              <div className="text-sm">
-                <p className="font-medium text-gray-900">
+
+            <div className='flex items-center space-x-3'>
+              <div className='text-sm'>
+                <p className='font-medium text-gray-900'>
                   {user?.profile?.fullName || user?.email}
                 </p>
-                <p className="text-gray-500 capitalize">
-                  {userRole.toLowerCase()}
-                </p>
+                <p className='text-gray-500 capitalize'>{userRole.toLowerCase()}</p>
               </div>
-              
+
               {user?.profile?.avatarUrl ? (
-                <img
-                  src={user.profile.avatarUrl}
-                  alt="Profile"
-                  className="w-8 h-8 rounded-full"
-                />
+                <img src={user.profile.avatarUrl} alt='Profile' className='w-8 h-8 rounded-full' />
               ) : (
-                <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-                  <span className="text-xs font-medium text-gray-700">
+                <div className='w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center'>
+                  <span className='text-xs font-medium text-gray-700'>
                     {user?.profile?.fullName?.[0] || user?.email?.[0] || '?'}
                   </span>
                 </div>
               )}
-              
-              <button
-                onClick={logout}
-                className="text-sm text-gray-500 hover:text-gray-700"
-              >
+
+              <button onClick={logout} className='text-sm text-gray-500 hover:text-gray-700'>
                 Logout
               </button>
             </div>
@@ -320,10 +308,10 @@ function Header({ actions, userRole, user }: {
  */
 function LoadingLayout() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-        <p className="mt-4 text-gray-600">Loading...</p>
+    <div className='min-h-screen flex items-center justify-center bg-gray-50'>
+      <div className='text-center'>
+        <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto'></div>
+        <p className='mt-4 text-gray-600'>Loading...</p>
       </div>
     </div>
   );
@@ -334,18 +322,14 @@ function LoadingLayout() {
  */
 function ErrorLayout({ error, retry }: { error: Error; retry: () => void }) {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="text-center max-w-md">
-        <div className="text-red-500 text-6xl mb-4">⚠️</div>
-        <h2 className="text-xl font-semibold text-gray-900 mb-2">
-          Something went wrong
-        </h2>
-        <p className="text-gray-600 mb-4">
-          {error.message || 'An unexpected error occurred'}
-        </p>
+    <div className='min-h-screen flex items-center justify-center bg-gray-50'>
+      <div className='text-center max-w-md'>
+        <div className='text-red-500 text-6xl mb-4'>⚠️</div>
+        <h2 className='text-xl font-semibold text-gray-900 mb-2'>Something went wrong</h2>
+        <p className='text-gray-600 mb-4'>{error.message || 'An unexpected error occurred'}</p>
         <button
           onClick={retry}
-          className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+          className='bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700'
         >
           Try Again
         </button>
@@ -408,30 +392,19 @@ export function ProtectedLayout({
 
   return (
     <ErrorBoundary
-      fallback={({ error, resetError }) => (
-        <ErrorLayout error={error} retry={resetError} />
-      )}
+      fallback={({ error, resetError }) => <ErrorLayout error={error} retry={resetError} />}
     >
       <div className={`min-h-screen bg-gray-50 ${className}`}>
         {showHeader && layoutConfig.showHeader && (
-          <Header
-            actions={layoutConfig.headerActions}
-            userRole={user.role}
-            user={user}
-          />
+          <Header actions={layoutConfig.headerActions} userRole={user.role} user={user} />
         )}
-        
-        <div className="flex">
+
+        <div className='flex'>
           {showSidebar && layoutConfig.showSidebar && (
-            <Sidebar
-              items={layoutConfig.sidebarItems}
-              userRole={user.role}
-            />
+            <Sidebar items={layoutConfig.sidebarItems} userRole={user.role} />
           )}
-          
-          <main className="flex-1 p-6">
-            {children}
-          </main>
+
+          <main className='flex-1 p-6'>{children}</main>
         </div>
       </div>
     </ErrorBoundary>
@@ -449,7 +422,10 @@ export function AdminLayout({ children, ...props }: Omit<ProtectedLayoutProps, '
   );
 }
 
-export function EducatorLayout({ children, ...props }: Omit<ProtectedLayoutProps, 'requiredRoles'>) {
+export function EducatorLayout({
+  children,
+  ...props
+}: Omit<ProtectedLayoutProps, 'requiredRoles'>) {
   return (
     <ProtectedLayout requiredRoles={['EDUCATOR', 'ADMIN']} {...props}>
       {children}

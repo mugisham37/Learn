@@ -1,9 +1,9 @@
 /**
  * Subscription Management and Cleanup
- * 
+ *
  * Efficient subscription lifecycle management, automatic cleanup,
  * memory leak prevention, and performance monitoring for GraphQL subscriptions.
- * 
+ *
  * Requirements: 11.2
  */
 
@@ -75,13 +75,16 @@ export interface SubscriptionState<T = unknown> {
 // =============================================================================
 
 export class SubscriptionManager {
-  private subscriptions = new Map<string, {
-    subscription: { unsubscribe: () => void };
-    config: SubscriptionConfig;
-    metrics: SubscriptionMetrics;
-    cleanup: () => void;
-  }>();
-  
+  private subscriptions = new Map<
+    string,
+    {
+      subscription: { unsubscribe: () => void };
+      config: SubscriptionConfig;
+      metrics: SubscriptionMetrics;
+      cleanup: () => void;
+    }
+  >();
+
   private cleanupInterval: NodeJS.Timeout | null = null;
   private config: Required<SubscriptionManagerConfig>;
 
@@ -142,7 +145,7 @@ export class SubscriptionManager {
     const createObservable = (): Observable<T> => {
       return new Observable<T>(subscriber => {
         const connectionStart = performance.now();
-        
+
         // Simulate subscription (in real implementation, this would use Apollo Client)
         const interval = setInterval(() => {
           try {
@@ -152,7 +155,7 @@ export class SubscriptionManager {
             metrics.messageCount = messageCount;
             metrics.lastActivity = new Date();
             metrics.connectionTime = performance.now() - connectionStart;
-            
+
             observer.next(mockData);
             subscriber.next(mockData);
           } catch (error) {
@@ -173,31 +176,34 @@ export class SubscriptionManager {
 
     const executeSubscription = (): { unsubscribe: () => void } => {
       const observable = createObservable();
-      
+
       return observable.subscribe({
-        next: (data) => {
+        next: data => {
           metrics.status = 'active';
           metrics.lastActivity = new Date();
           observer.next(data);
         },
-        error: (error) => {
+        error: error => {
           metrics.status = 'error';
           metrics.errorCount++;
-          
+
           // Retry logic
           if (retryCount < (config.maxRetries || 3)) {
             retryCount++;
             metrics.retryCount = retryCount;
-            
-            setTimeout(() => {
-              if (this.subscriptions.has(id)) {
-                const entry = this.subscriptions.get(id);
-                if (entry) {
-                  entry.subscription.unsubscribe();
-                  entry.subscription = executeSubscription();
+
+            setTimeout(
+              () => {
+                if (this.subscriptions.has(id)) {
+                  const entry = this.subscriptions.get(id);
+                  if (entry) {
+                    entry.subscription.unsubscribe();
+                    entry.subscription = executeSubscription();
+                  }
                 }
-              }
-            }, config.retryDelay || 1000 * retryCount);
+              },
+              config.retryDelay || 1000 * retryCount
+            );
           } else {
             observer.error(error);
           }
@@ -282,7 +288,7 @@ export class SubscriptionManager {
     averageConnectionTime: number;
   } {
     const metrics = this.getAllMetrics();
-    
+
     return {
       totalSubscriptions: metrics.length,
       activeSubscriptions: metrics.filter(m => m.status === 'active').length,
@@ -290,7 +296,8 @@ export class SubscriptionManager {
       totalMessages: metrics.reduce((sum, m) => sum + m.messageCount, 0),
       totalErrors: metrics.reduce((sum, m) => sum + m.errorCount, 0),
       memoryUsage: metrics.reduce((sum, m) => sum + m.memoryUsage, 0),
-      averageConnectionTime: metrics.reduce((sum, m) => sum + m.connectionTime, 0) / metrics.length || 0,
+      averageConnectionTime:
+        metrics.reduce((sum, m) => sum + m.connectionTime, 0) / metrics.length || 0,
     };
   }
 
@@ -313,7 +320,7 @@ export class SubscriptionManager {
 
     for (const [id, entry] of this.subscriptions) {
       const timeSinceActivity = now - entry.metrics.lastActivity.getTime();
-      
+
       // Mark for cleanup if inactive for too long
       if (timeSinceActivity > inactiveThreshold || entry.metrics.status === 'error') {
         toCleanup.push(id);
@@ -333,10 +340,10 @@ export class SubscriptionManager {
    */
   private performEmergencyCleanup(): void {
     const metrics = this.getAllMetrics();
-    
+
     // Sort by last activity (oldest first)
-    const sortedByActivity = metrics.sort((a, b) => 
-      a.lastActivity.getTime() - b.lastActivity.getTime()
+    const sortedByActivity = metrics.sort(
+      (a, b) => a.lastActivity.getTime() - b.lastActivity.getTime()
     );
 
     // Remove oldest 25% of subscriptions
@@ -346,7 +353,9 @@ export class SubscriptionManager {
     toCleanup.forEach(metric => this.unsubscribe(metric.id));
 
     if (this.config.enableMonitoring) {
-      console.warn(`[SubscriptionManager] Emergency cleanup: removed ${toCleanup.length} subscriptions`);
+      console.warn(
+        `[SubscriptionManager] Emergency cleanup: removed ${toCleanup.length} subscriptions`
+      );
     }
   }
 
@@ -358,7 +367,7 @@ export class SubscriptionManager {
       clearInterval(this.cleanupInterval);
       this.cleanupInterval = null;
     }
-    
+
     this.unsubscribeAll();
   }
 }
@@ -421,7 +430,7 @@ export function useManagedSubscription<T = unknown>(
         retryDelay: 1000,
       },
       {
-        next: (data) => {
+        next: data => {
           setState({
             data,
             loading: false,
@@ -431,7 +440,7 @@ export function useManagedSubscription<T = unknown>(
           });
           options?.onData?.(data);
         },
-        error: (error) => {
+        error: error => {
           setState(prev => ({
             ...prev,
             error,
@@ -532,8 +541,12 @@ export function batchSubscriptionOperations<T>(
   }>,
   manager: SubscriptionManager
 ): () => void {
-  const cleanupFunctions = operations.map(op => 
-    manager.createSubscription(op.id, { query: op.query, variables: op.variables || undefined }, op.observer)
+  const cleanupFunctions = operations.map(op =>
+    manager.createSubscription(
+      op.id,
+      { query: op.query, variables: op.variables || undefined },
+      op.observer
+    )
   );
 
   return () => {

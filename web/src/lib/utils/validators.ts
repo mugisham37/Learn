@@ -1,9 +1,9 @@
 /**
  * Validation Utilities
- * 
+ *
  * Client-side validation utilities that match backend constraints exactly.
  * Provides form validation helpers, input sanitization, and schema generation.
- * 
+ *
  * Requirements: 9.4
  */
 
@@ -101,7 +101,11 @@ export const VALIDATION_CONSTRAINTS = {
     },
     DOCUMENT: {
       MAX_SIZE: 50 * 1024 * 1024, // 50MB
-      ALLOWED_TYPES: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+      ALLOWED_TYPES: [
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      ],
     },
   },
 } as const;
@@ -162,18 +166,32 @@ export const password = (message?: string): ValidationRule<string> => ({
   name: 'password',
   validate: (value: string) => {
     if (typeof value !== 'string') return false;
-    
-    const { MIN_LENGTH, MAX_LENGTH, REQUIRE_UPPERCASE, REQUIRE_LOWERCASE, REQUIRE_NUMBER, REQUIRE_SPECIAL, SPECIAL_CHARS } = VALIDATION_CONSTRAINTS.PASSWORD;
-    
+
+    const {
+      MIN_LENGTH,
+      MAX_LENGTH,
+      REQUIRE_UPPERCASE,
+      REQUIRE_LOWERCASE,
+      REQUIRE_NUMBER,
+      REQUIRE_SPECIAL,
+      SPECIAL_CHARS,
+    } = VALIDATION_CONSTRAINTS.PASSWORD;
+
     if (value.length < MIN_LENGTH || value.length > MAX_LENGTH) return false;
     if (REQUIRE_UPPERCASE && !/[A-Z]/.test(value)) return false;
     if (REQUIRE_LOWERCASE && !/[a-z]/.test(value)) return false;
     if (REQUIRE_NUMBER && !/\d/.test(value)) return false;
-    if (REQUIRE_SPECIAL && !new RegExp(`[${SPECIAL_CHARS.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}]`).test(value)) return false;
-    
+    if (
+      REQUIRE_SPECIAL &&
+      !new RegExp(`[${SPECIAL_CHARS.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}]`).test(value)
+    )
+      return false;
+
     return true;
   },
-  message: message || `Password must be ${VALIDATION_CONSTRAINTS.PASSWORD.MIN_LENGTH}-${VALIDATION_CONSTRAINTS.PASSWORD.MAX_LENGTH} characters with uppercase, lowercase, number, and special character`,
+  message:
+    message ||
+    `Password must be ${VALIDATION_CONSTRAINTS.PASSWORD.MIN_LENGTH}-${VALIDATION_CONSTRAINTS.PASSWORD.MAX_LENGTH} characters with uppercase, lowercase, number, and special character`,
 });
 
 /**
@@ -197,10 +215,7 @@ export const numberRange = (
 /**
  * Pattern validation
  */
-export const pattern = (
-  regex: RegExp,
-  message = 'Invalid format'
-): ValidationRule<string> => ({
+export const pattern = (regex: RegExp, message = 'Invalid format'): ValidationRule<string> => ({
   name: 'pattern',
   validate: (value: string) => {
     if (typeof value !== 'string') return false;
@@ -277,16 +292,16 @@ export const file = (
   name: 'file',
   validate: (value: File) => {
     if (!(value instanceof File)) return false;
-    
+
     const typeKey = type.toUpperCase() as 'IMAGE' | 'VIDEO' | 'DOCUMENT';
     const constraints = VALIDATION_CONSTRAINTS.FILE[typeKey];
-    
+
     // Check file size
     if (value.size > constraints.MAX_SIZE) return false;
-    
+
     // Check file type
     if (!constraints.ALLOWED_TYPES.includes(value.type as never)) return false;
-    
+
     return true;
   },
   message: message || `Invalid ${type} file`,
@@ -308,7 +323,7 @@ export const validateField = <T>(
 
   for (const rule of rules) {
     const result = rule.validate(value, context);
-    
+
     if (result === false || typeof result === 'string') {
       errors.push({
         field: context?.field || 'unknown',
@@ -339,12 +354,12 @@ export const validateForm = <T extends Record<string, unknown>>(
   for (const [field, rules] of Object.entries(schema)) {
     const value = values[field];
     const fieldContext = { ...context, field, allValues: values };
-    
+
     const fieldResult = validateField(value, rules, fieldContext);
-    
+
     if (!fieldResult.isValid) {
       errors.push(...fieldResult.errors);
-      
+
       if (abortEarly) {
         break;
       }
@@ -378,7 +393,7 @@ export const sanitizeHtml = memoize((html: string): string => {
  */
 export const sanitizeInput = (input: string): string => {
   if (typeof input !== 'string') return '';
-  
+
   return input
     .trim()
     .replace(/[\x00-\x1F\x7F]/g, '') // Remove control characters
@@ -406,7 +421,13 @@ export const ValidationSchemas = {
   userRegistration: {
     email: [required(), email()],
     password: [required(), password()],
-    fullName: [required(), stringLength(VALIDATION_CONSTRAINTS.USER.FULL_NAME.MIN_LENGTH, VALIDATION_CONSTRAINTS.USER.FULL_NAME.MAX_LENGTH)],
+    fullName: [
+      required(),
+      stringLength(
+        VALIDATION_CONSTRAINTS.USER.FULL_NAME.MIN_LENGTH,
+        VALIDATION_CONSTRAINTS.USER.FULL_NAME.MAX_LENGTH
+      ),
+    ],
   } as Record<string, ValidationRule<unknown>[]>,
 
   // User login
@@ -417,16 +438,29 @@ export const ValidationSchemas = {
 
   // Profile update
   profileUpdate: {
-    fullName: [stringLength(VALIDATION_CONSTRAINTS.USER.FULL_NAME.MIN_LENGTH, VALIDATION_CONSTRAINTS.USER.FULL_NAME.MAX_LENGTH)],
+    fullName: [
+      stringLength(
+        VALIDATION_CONSTRAINTS.USER.FULL_NAME.MIN_LENGTH,
+        VALIDATION_CONSTRAINTS.USER.FULL_NAME.MAX_LENGTH
+      ),
+    ],
     bio: [stringLength(0, VALIDATION_CONSTRAINTS.USER.BIO.MAX_LENGTH)],
   } as Record<string, ValidationRule<unknown>[]>,
 
   // Course creation
   courseCreation: {
     title: [required(), courseTitle()],
-    description: [required(), stringLength(VALIDATION_CONSTRAINTS.COURSE.DESCRIPTION.MIN_LENGTH, VALIDATION_CONSTRAINTS.COURSE.DESCRIPTION.MAX_LENGTH)],
+    description: [
+      required(),
+      stringLength(
+        VALIDATION_CONSTRAINTS.COURSE.DESCRIPTION.MIN_LENGTH,
+        VALIDATION_CONSTRAINTS.COURSE.DESCRIPTION.MAX_LENGTH
+      ),
+    ],
     slug: [required(), courseSlug()],
-    price: [numberRange(VALIDATION_CONSTRAINTS.COURSE.PRICE.MIN, VALIDATION_CONSTRAINTS.COURSE.PRICE.MAX)],
+    price: [
+      numberRange(VALIDATION_CONSTRAINTS.COURSE.PRICE.MIN, VALIDATION_CONSTRAINTS.COURSE.PRICE.MAX),
+    ],
     category: [required()],
   } as Record<string, ValidationRule<unknown>[]>,
 

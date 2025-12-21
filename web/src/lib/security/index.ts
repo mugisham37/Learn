@@ -1,10 +1,10 @@
 /**
  * Security Module
- * 
+ *
  * Comprehensive security implementation for the frontend foundation layer.
  * Provides CSRF protection, XSS protection, secure token storage, input validation,
  * file security, and security middleware integration.
- * 
+ *
  * Requirements: 12.1, 12.2, 12.3, 12.4, 12.5
  */
 

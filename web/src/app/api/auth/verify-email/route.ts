@@ -1,6 +1,6 @@
 /**
  * Email Verification API Route
- * 
+ *
  * Next.js API route that handles email verification using the backend GraphQL API.
  * Supports both sending verification emails and verifying tokens.
  */
@@ -80,18 +80,15 @@ export async function POST(request: NextRequest) {
       // Send verification email
       return await sendVerificationEmail({ email });
     } else {
-      return NextResponse.json(
-        { error: 'Email or token is required' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Email or token is required' }, { status: 400 });
     }
   } catch (error) {
     console.error('Email verification API error:', error);
-    
+
     return NextResponse.json(
-      { 
+      {
         error: error instanceof Error ? error.message : 'Email verification failed',
-        code: 'INTERNAL_ERROR'
+        code: 'INTERNAL_ERROR',
       },
       { status: 500 }
     );
@@ -106,20 +103,17 @@ export async function GET(request: NextRequest) {
     const email = searchParams.get('email');
 
     if (!token || !email) {
-      return NextResponse.json(
-        { error: 'Token and email are required' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Token and email are required' }, { status: 400 });
     }
 
     return await verifyEmail({ token, email });
   } catch (error) {
     console.error('Email verification API error:', error);
-    
+
     return NextResponse.json(
-      { 
+      {
         error: error instanceof Error ? error.message : 'Email verification failed',
-        code: 'INTERNAL_ERROR'
+        code: 'INTERNAL_ERROR',
       },
       { status: 500 }
     );
@@ -132,10 +126,7 @@ async function sendVerificationEmail(input: SendVerificationInput) {
   // Validate email format
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(email)) {
-    return NextResponse.json(
-      { error: 'Invalid email format' },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: 'Invalid email format' }, { status: 400 });
   }
 
   // Call backend GraphQL API
@@ -156,15 +147,15 @@ async function sendVerificationEmail(input: SendVerificationInput) {
     throw new Error(`Backend request failed: ${response.status}`);
   }
 
-  const data = await response.json() as SendVerificationResponse;
+  const data = (await response.json()) as SendVerificationResponse;
 
   // Check for GraphQL errors
   if (data.errors && data.errors.length > 0) {
     const error = data.errors[0];
     return NextResponse.json(
-      { 
+      {
         error: error.message,
-        code: error.extensions?.code || 'VERIFICATION_SEND_FAILED'
+        code: error.extensions?.code || 'VERIFICATION_SEND_FAILED',
       },
       { status: 400 }
     );
@@ -172,7 +163,7 @@ async function sendVerificationEmail(input: SendVerificationInput) {
 
   return NextResponse.json({
     success: true,
-    message: 'Verification email sent successfully'
+    message: 'Verification email sent successfully',
   });
 }
 
@@ -181,10 +172,7 @@ async function verifyEmail(input: VerifyEmailInput) {
 
   // Validate input
   if (!token || !email) {
-    return NextResponse.json(
-      { error: 'Token and email are required' },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: 'Token and email are required' }, { status: 400 });
   }
 
   // Call backend GraphQL API
@@ -205,25 +193,22 @@ async function verifyEmail(input: VerifyEmailInput) {
     throw new Error(`Backend request failed: ${response.status}`);
   }
 
-  const data = await response.json() as VerifyEmailResponse;
+  const data = (await response.json()) as VerifyEmailResponse;
 
   // Check for GraphQL errors
   if (data.errors && data.errors.length > 0) {
     const error = data.errors[0];
     return NextResponse.json(
-      { 
+      {
         error: error.message,
-        code: error.extensions?.code || 'EMAIL_VERIFICATION_FAILED'
+        code: error.extensions?.code || 'EMAIL_VERIFICATION_FAILED',
       },
       { status: 400 }
     );
   }
 
   if (!data.data?.verifyEmail) {
-    return NextResponse.json(
-      { error: 'Invalid verification response' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Invalid verification response' }, { status: 500 });
   }
 
   const { success, user } = data.data.verifyEmail;
@@ -231,6 +216,6 @@ async function verifyEmail(input: VerifyEmailInput) {
   return NextResponse.json({
     success,
     user,
-    message: success ? 'Email verified successfully' : 'Email verification failed'
+    message: success ? 'Email verified successfully' : 'Email verification failed',
   });
 }

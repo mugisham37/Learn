@@ -1,9 +1,9 @@
 /**
  * GraphQL Field Selection Optimization
- * 
+ *
  * Implements intelligent field selection to minimize data transfer and improve query performance.
  * Provides automatic field pruning, query optimization, and performance monitoring.
- * 
+ *
  * Requirements: 11.1
  */
 
@@ -151,9 +151,9 @@ export class FieldSelectionOptimizer {
     const excludedFieldSet = new Set(this.options.alwaysExclude);
 
     return visit(query, {
-      Field: (node) => {
+      Field: node => {
         const fieldName = node.name.value;
-        
+
         // Always exclude certain fields
         if (excludedFieldSet.has(fieldName)) {
           return null;
@@ -167,7 +167,7 @@ export class FieldSelectionOptimizer {
         // Check field usage metrics
         const fieldPath = this.getFieldPath(node);
         const metrics = this.fieldUsage.get(fieldPath);
-        
+
         if (metrics && metrics.usageCount > 0) {
           return node;
         }
@@ -188,7 +188,7 @@ export class FieldSelectionOptimizer {
       SelectionSet: {
         enter: () => {
           currentDepth++;
-          
+
           // Limit query depth
           if (currentDepth > this.options.maxDepth) {
             return null;
@@ -215,7 +215,7 @@ export class FieldSelectionOptimizer {
   private getFieldDifference(original: DocumentNode, optimized: DocumentNode): string[] {
     const originalFields = this.extractFields(original);
     const optimizedFields = this.extractFields(optimized);
-    
+
     return originalFields.filter(field => !optimizedFields.includes(field));
   }
 
@@ -224,9 +224,9 @@ export class FieldSelectionOptimizer {
    */
   private extractFields(query: DocumentNode): string[] {
     const fields: string[] = [];
-    
+
     visit(query, {
-      Field: (node) => {
+      Field: node => {
         fields.push(node.name.value);
       },
     });
@@ -239,7 +239,7 @@ export class FieldSelectionOptimizer {
    */
   trackFieldUsage(fieldPath: string, responseSize: number, responseTime: number): void {
     const existing = this.fieldUsage.get(fieldPath);
-    
+
     if (existing) {
       existing.usageCount++;
       existing.lastUsed = new Date();
@@ -269,7 +269,7 @@ export class FieldSelectionOptimizer {
     const unusedFields = allFields
       .filter(field => field.usageCount === 0)
       .map(field => field.fieldPath);
-    
+
     const heavyFields = allFields
       .filter(field => field.performanceImpact > 100) // 100ms threshold
       .sort((a, b) => b.performanceImpact - a.performanceImpact)
@@ -277,11 +277,11 @@ export class FieldSelectionOptimizer {
       .map(field => field.fieldPath);
 
     const recommendations: string[] = [];
-    
+
     if (unusedFields.length > 0) {
       recommendations.push(`Remove ${unusedFields.length} unused fields to improve performance`);
     }
-    
+
     if (heavyFields.length > 0) {
       recommendations.push(`Consider optimizing ${heavyFields.length} performance-heavy fields`);
     }
@@ -309,9 +309,7 @@ export class FieldSelectionOptimizer {
 /**
  * Creates an Apollo Link for automatic field selection optimization
  */
-export function createFieldSelectionLink(
-  options?: FieldSelectionOptions
-): ApolloLink {
+export function createFieldSelectionLink(options?: FieldSelectionOptions): ApolloLink {
   const optimizer = new FieldSelectionOptimizer(options);
 
   return new ApolloLink((operation, forward) => {
@@ -321,13 +319,17 @@ export function createFieldSelectionLink(
 
     // Skip optimization for mutations and subscriptions
     const definition = operation.query.definitions[0];
-    if (definition && definition.kind === 'OperationDefinition' && definition.operation !== 'query') {
+    if (
+      definition &&
+      definition.kind === 'OperationDefinition' &&
+      definition.operation !== 'query'
+    ) {
       return forward(operation);
     }
 
     // Optimize the query
     const optimization = optimizer.optimizeQuery(operation.query);
-    
+
     // Update operation with optimized query
     const optimizedOperation = {
       ...operation,
@@ -339,7 +341,7 @@ export function createFieldSelectionLink(
 
     return new Observable<FetchResult>(observer => {
       forward(optimizedOperation).subscribe({
-        next: (result) => {
+        next: result => {
           const endTime = performance.now();
           const responseTime = endTime - startTime;
           const responseSize = JSON.stringify(result.data || {}).length;
@@ -351,7 +353,7 @@ export function createFieldSelectionLink(
 
           observer.next(result);
         },
-        error: (error) => observer.error(error),
+        error: error => observer.error(error),
         complete: () => observer.complete(),
       });
     });
@@ -373,22 +375,22 @@ export function analyzeQueryPerformance(query: DocumentNode): {
   const optimizer = new FieldSelectionOptimizer();
   const complexity = optimizer.calculateComplexity(query);
   const recommendations: string[] = [];
-  
+
   // Generate recommendations based on complexity
   if (complexity.depth > 8) {
     recommendations.push('Query depth is high, consider flattening the structure');
   }
-  
+
   if (complexity.fieldCount > 50) {
     recommendations.push('Query selects many fields, consider field pruning');
   }
-  
+
   if (complexity.score > 500) {
     recommendations.push('Query complexity is high, consider breaking into smaller queries');
   }
 
   // Calculate optimization potential (0-100)
-  const optimizationPotential = Math.min(100, (complexity.score / 10));
+  const optimizationPotential = Math.min(100, complexity.score / 10);
 
   return {
     complexity,

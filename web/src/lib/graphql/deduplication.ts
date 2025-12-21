@@ -1,9 +1,9 @@
 /**
  * GraphQL Request Deduplication Utilities
- * 
+ *
  * Advanced request deduplication specifically designed for GraphQL operations.
  * Provides intelligent merging, caching with TTL, and request batching.
- * 
+ *
  * Requirements: 12.1
  */
 
@@ -96,7 +96,7 @@ export class GraphQLRequestDeduplicator {
     const query = print(operation.query);
     const variables = JSON.stringify(operation.variables || {});
     const operationName = operation.operationName || 'anonymous';
-    
+
     return `${operationName}:${this.hashString(query + variables)}`;
   };
 
@@ -107,7 +107,7 @@ export class GraphQLRequestDeduplicator {
     let hash = 0;
     for (let i = 0; i < str.length; i++) {
       const char = str.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
+      hash = (hash << 5) - hash + char;
       hash = hash & hash; // Convert to 32-bit integer
     }
     return hash.toString(36);
@@ -118,7 +118,7 @@ export class GraphQLRequestDeduplicator {
    */
   private shouldDeduplicate(operation: Operation): boolean {
     const definition = operation.query.definitions[0] as OperationDefinitionNode;
-    
+
     // Only deduplicate queries, not mutations or subscriptions
     if (definition.operation !== 'query') {
       return false;
@@ -151,7 +151,7 @@ export class GraphQLRequestDeduplicator {
    */
   private manageCacheSize(): void {
     const maxSize = this.options.maxCacheSize!;
-    
+
     if (this.cache.size >= maxSize) {
       // Remove oldest entries (simple FIFO)
       const entries = Array.from(this.cache.entries());
@@ -174,7 +174,7 @@ export class GraphQLRequestDeduplicator {
 
     // Group operations by query to enable batching
     const groupedOperations = new Map<string, BatchedRequest[]>();
-    
+
     batch.forEach(request => {
       const queryKey = print(request.operation.query);
       if (!groupedOperations.has(queryKey)) {
@@ -209,7 +209,7 @@ export class GraphQLRequestDeduplicator {
   private executeBatchedOperations(requests: BatchedRequest[]): void {
     // For now, execute individually
     // In a real implementation, you'd modify the query to accept multiple variable sets
-    requests.forEach((request) => {
+    requests.forEach(request => {
       this.executeOperation(request.operation).subscribe(request.observer);
     });
   }
@@ -222,7 +222,7 @@ export class GraphQLRequestDeduplicator {
     // For now, return a placeholder observable
     // Use operation parameter to avoid unused variable warning
     console.debug('Executing operation:', operation.operationName);
-    
+
     return new Observable(observer => {
       // Simulate async operation
       setTimeout(() => {
@@ -235,7 +235,10 @@ export class GraphQLRequestDeduplicator {
   /**
    * Deduplicate a GraphQL request
    */
-  public deduplicate(operation: Operation, forward: (operation: Operation) => Observable<FetchResult>): Observable<FetchResult> {
+  public deduplicate(
+    operation: Operation,
+    forward: (operation: Operation) => Observable<FetchResult>
+  ): Observable<FetchResult> {
     this.metrics.totalRequests++;
 
     // Check if operation should be deduplicated
@@ -247,13 +250,14 @@ export class GraphQLRequestDeduplicator {
     const now = Date.now();
 
     // Clean expired entries periodically
-    if (Math.random() < 0.1) { // 10% chance
+    if (Math.random() < 0.1) {
+      // 10% chance
       this.cleanExpiredEntries();
     }
 
     // Check cache for existing request
     const cached = this.cache.get(key);
-    if (cached && (now - cached.timestamp) < this.options.ttl!) {
+    if (cached && now - cached.timestamp < this.options.ttl!) {
       this.metrics.cacheHits++;
       this.metrics.deduplicatedRequests++;
       return cached.observable;
@@ -331,9 +335,7 @@ export class GraphQLRequestDeduplicator {
 /**
  * Creates an Apollo Link for GraphQL request deduplication
  */
-export function createGraphQLDeduplicationLink(
-  options?: GraphQLDeduplicationOptions
-): ApolloLink {
+export function createGraphQLDeduplicationLink(options?: GraphQLDeduplicationOptions): ApolloLink {
   const deduplicator = new GraphQLRequestDeduplicator(options);
 
   return new ApolloLink((operation, forward) => {
@@ -360,11 +362,7 @@ export function createRequestCache<TArgs extends unknown[], TReturn>(
     keyGenerator?: (...args: TArgs) => string;
   } = {}
 ): (...args: TArgs) => Promise<TReturn> {
-  const {
-    ttl = 30000,
-    maxSize = 100,
-    keyGenerator = (...args) => JSON.stringify(args),
-  } = options;
+  const { ttl = 30000, maxSize = 100, keyGenerator = (...args) => JSON.stringify(args) } = options;
 
   const cache = new Map<string, { promise: Promise<TReturn>; timestamp: number }>();
 
@@ -374,7 +372,7 @@ export function createRequestCache<TArgs extends unknown[], TReturn>(
 
     // Check for cached result
     const cached = cache.get(key);
-    if (cached && (now - cached.timestamp) < ttl) {
+    if (cached && now - cached.timestamp < ttl) {
       return cached.promise;
     }
 
@@ -403,7 +401,7 @@ export function createRequestCache<TArgs extends unknown[], TReturn>(
 export function mergeGraphQLQueries(queries: DocumentNode[]): DocumentNode {
   // This is a simplified implementation
   // In practice, you'd need to handle field conflicts, aliases, etc.
-  
+
   if (queries.length === 0) {
     throw new Error('Cannot merge empty query list');
   }

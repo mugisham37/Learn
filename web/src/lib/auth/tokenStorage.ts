@@ -1,6 +1,6 @@
 /**
  * Token Storage Utilities
- * 
+ *
  * Secure token storage with httpOnly cookie support and localStorage fallback.
  * Handles JWT token generation, validation, and automatic refresh with backend integration.
  */
@@ -142,9 +142,9 @@ export class TokenManager {
       const payload = this.parseToken(token);
       const currentTime = Math.floor(Date.now() / 1000);
       const expirationTime = payload.exp as number;
-      
+
       // Consider token expired if it expires within the buffer time
-      return expirationTime <= currentTime + (authConfig.tokenExpirationBuffer / 1000);
+      return expirationTime <= currentTime + authConfig.tokenExpirationBuffer / 1000;
     } catch {
       console.warn('Failed to check token expiration');
       return true; // Treat invalid tokens as expired
@@ -185,7 +185,7 @@ export class TokenManager {
     }
 
     this.refreshPromise = this.performTokenRefresh(refreshToken);
-    
+
     try {
       const newAccessToken = await this.refreshPromise;
       return newAccessToken;
@@ -213,14 +213,14 @@ export class TokenManager {
       }
 
       const data = await response.json();
-      
+
       if (!data.accessToken) {
         throw new Error('No access token in refresh response');
       }
 
       // Store the new tokens (backend handles token rotation)
       this.storage.setTokens(data.accessToken, data.refreshToken || refreshToken || '');
-      
+
       return data.accessToken;
     } catch (error) {
       console.error('Token refresh failed:', error);
@@ -314,7 +314,11 @@ export class TokenManager {
   /**
    * Resets password with token
    */
-  async resetPassword(token: string, email: string, newPassword: string): Promise<{ success: boolean; user?: any }> {
+  async resetPassword(
+    token: string,
+    email: string,
+    newPassword: string
+  ): Promise<{ success: boolean; user?: any }> {
     const response = await fetch('/api/auth/reset-password', {
       method: 'POST',
       headers: {

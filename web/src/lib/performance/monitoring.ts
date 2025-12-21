@@ -1,9 +1,9 @@
 /**
  * Performance Monitoring and Metrics
- * 
+ *
  * Comprehensive performance monitoring, metrics collection, and analytics
  * for GraphQL operations, subscriptions, and overall application performance.
- * 
+ *
  * Requirements: 11.5
  */
 
@@ -136,10 +136,7 @@ export class PerformanceMonitor {
   private maxMetrics: number;
   private observers: Array<(metric: PerformanceMetric) => void> = [];
 
-  constructor(
-    thresholds?: Partial<PerformanceThresholds>,
-    maxMetrics: number = 10000
-  ) {
+  constructor(thresholds?: Partial<PerformanceThresholds>, maxMetrics: number = 10000) {
     this.maxMetrics = maxMetrics;
     this.thresholds = {
       query: {
@@ -351,7 +348,8 @@ export class PerformanceMonitor {
       case 'query':
         const queryMetric = metric as QueryPerformanceMetric;
         if (queryMetric.value > this.thresholds.query.maxResponseTime) {
-          alertType = queryMetric.value > this.thresholds.query.maxResponseTime * 2 ? 'critical' : 'warning';
+          alertType =
+            queryMetric.value > this.thresholds.query.maxResponseTime * 2 ? 'critical' : 'warning';
           message = `Query ${queryMetric.queryName} response time (${queryMetric.value}ms) exceeds threshold`;
           threshold = this.thresholds.query.maxResponseTime;
         }
@@ -360,7 +358,8 @@ export class PerformanceMonitor {
       case 'bundle':
         const bundleMetric = metric as BundlePerformanceMetric;
         if (bundleMetric.loadTime > this.thresholds.bundle.maxLoadTime) {
-          alertType = bundleMetric.loadTime > this.thresholds.bundle.maxLoadTime * 2 ? 'critical' : 'warning';
+          alertType =
+            bundleMetric.loadTime > this.thresholds.bundle.maxLoadTime * 2 ? 'critical' : 'warning';
           message = `Bundle ${bundleMetric.bundleName} load time (${bundleMetric.loadTime}ms) exceeds threshold`;
           threshold = this.thresholds.bundle.maxLoadTime;
         }
@@ -369,7 +368,8 @@ export class PerformanceMonitor {
       case 'network':
         const networkMetric = metric as NetworkPerformanceMetric;
         if (networkMetric.latency > this.thresholds.network.maxLatency) {
-          alertType = networkMetric.latency > this.thresholds.network.maxLatency * 2 ? 'critical' : 'warning';
+          alertType =
+            networkMetric.latency > this.thresholds.network.maxLatency * 2 ? 'critical' : 'warning';
           message = `Network latency (${networkMetric.latency}ms) to ${networkMetric.endpoint} exceeds threshold`;
           threshold = this.thresholds.network.maxLatency;
         }
@@ -378,7 +378,10 @@ export class PerformanceMonitor {
       case 'render':
         const renderMetric = metric as RenderPerformanceMetric;
         if (renderMetric.renderTime > this.thresholds.render.maxRenderTime) {
-          alertType = renderMetric.renderTime > this.thresholds.render.maxRenderTime * 2 ? 'critical' : 'warning';
+          alertType =
+            renderMetric.renderTime > this.thresholds.render.maxRenderTime * 2
+              ? 'critical'
+              : 'warning';
           message = `Component ${renderMetric.componentName} render time (${renderMetric.renderTime}ms) exceeds threshold`;
           threshold = this.thresholds.render.maxRenderTime;
         }
@@ -420,12 +423,17 @@ export class PerformanceMonitor {
 
     // Calculate summary statistics
     const totalMetrics = filteredMetrics.length;
-    const queryMetrics = filteredMetrics.filter(m => m.category === 'query') as QueryPerformanceMetric[];
-    const networkMetrics = filteredMetrics.filter(m => m.category === 'network') as NetworkPerformanceMetric[];
-    
-    const averageResponseTime = queryMetrics.length > 0
-      ? queryMetrics.reduce((sum, m) => sum + m.value, 0) / queryMetrics.length
-      : 0;
+    const queryMetrics = filteredMetrics.filter(
+      m => m.category === 'query'
+    ) as QueryPerformanceMetric[];
+    const networkMetrics = filteredMetrics.filter(
+      m => m.category === 'network'
+    ) as NetworkPerformanceMetric[];
+
+    const averageResponseTime =
+      queryMetrics.length > 0
+        ? queryMetrics.reduce((sum, m) => sum + m.value, 0) / queryMetrics.length
+        : 0;
 
     const cacheHits = queryMetrics.filter(m => m.cacheHit).length;
     const cacheHitRate = queryMetrics.length > 0 ? cacheHits / queryMetrics.length : 0;
@@ -434,20 +442,29 @@ export class PerformanceMonitor {
     const errorRate = networkMetrics.length > 0 ? errors / networkMetrics.length : 0;
 
     // Calculate performance score (0-100)
-    const responseTimeScore = Math.max(0, 100 - (averageResponseTime / 20));
+    const responseTimeScore = Math.max(0, 100 - averageResponseTime / 20);
     const cacheScore = cacheHitRate * 100;
-    const errorScore = Math.max(0, 100 - (errorRate * 100));
+    const errorScore = Math.max(0, 100 - errorRate * 100);
     const performanceScore = (responseTimeScore + cacheScore + errorScore) / 3;
 
     // Group metrics by category
     const categories = {} as PerformanceReport['categories'];
-    const categoryNames: PerformanceMetric['category'][] = ['query', 'mutation', 'subscription', 'bundle', 'network', 'cache', 'render'];
+    const categoryNames: PerformanceMetric['category'][] = [
+      'query',
+      'mutation',
+      'subscription',
+      'bundle',
+      'network',
+      'cache',
+      'render',
+    ];
 
     categoryNames.forEach(category => {
       const categoryMetrics = filteredMetrics.filter(m => m.category === category);
-      const averageValue = categoryMetrics.length > 0
-        ? categoryMetrics.reduce((sum, m) => sum + m.value, 0) / categoryMetrics.length
-        : 0;
+      const averageValue =
+        categoryMetrics.length > 0
+          ? categoryMetrics.reduce((sum, m) => sum + m.value, 0) / categoryMetrics.length
+          : 0;
 
       // Create trend data (last 24 hours, hourly buckets)
       const trends = this.createTrendData(categoryMetrics);
@@ -485,12 +502,12 @@ export class PerformanceMonitor {
   private createTrendData(metrics: PerformanceMetric[]): Array<{ timestamp: Date; value: number }> {
     // Group metrics by hour
     const hourlyBuckets = new Map<string, PerformanceMetric[]>();
-    
+
     metrics.forEach(metric => {
       const hour = new Date(metric.timestamp);
       hour.setMinutes(0, 0, 0);
       const key = hour.toISOString();
-      
+
       if (!hourlyBuckets.has(key)) {
         hourlyBuckets.set(key, []);
       }
@@ -501,43 +518,58 @@ export class PerformanceMonitor {
     });
 
     // Calculate average for each hour
-    return Array.from(hourlyBuckets.entries()).map(([timestamp, bucketMetrics]) => ({
-      timestamp: new Date(timestamp),
-      value: bucketMetrics.reduce((sum, m) => sum + m.value, 0) / bucketMetrics.length,
-    })).sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+    return Array.from(hourlyBuckets.entries())
+      .map(([timestamp, bucketMetrics]) => ({
+        timestamp: new Date(timestamp),
+        value: bucketMetrics.reduce((sum, m) => sum + m.value, 0) / bucketMetrics.length,
+      }))
+      .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
   }
 
   /**
    * Generate performance recommendations
    */
-  private generateRecommendations(metrics: PerformanceMetric[], alerts: PerformanceAlert[]): string[] {
+  private generateRecommendations(
+    metrics: PerformanceMetric[],
+    alerts: PerformanceAlert[]
+  ): string[] {
     const recommendations: string[] = [];
 
     // Query performance recommendations
     const queryMetrics = metrics.filter(m => m.category === 'query') as QueryPerformanceMetric[];
     const slowQueries = queryMetrics.filter(m => m.value > this.thresholds.query.maxResponseTime);
-    
+
     if (slowQueries.length > 0) {
-      recommendations.push(`Optimize ${slowQueries.length} slow queries with response times > ${this.thresholds.query.maxResponseTime}ms`);
+      recommendations.push(
+        `Optimize ${slowQueries.length} slow queries with response times > ${this.thresholds.query.maxResponseTime}ms`
+      );
     }
 
     const lowCacheHitRate = queryMetrics.filter(m => !m.cacheHit).length / queryMetrics.length;
     if (lowCacheHitRate > 0.3) {
-      recommendations.push('Improve cache hit rate by optimizing cache policies and query structure');
+      recommendations.push(
+        'Improve cache hit rate by optimizing cache policies and query structure'
+      );
     }
 
     // Bundle performance recommendations
     const bundleMetrics = metrics.filter(m => m.category === 'bundle') as BundlePerformanceMetric[];
-    const largeBundles = bundleMetrics.filter(m => m.bundleSize > this.thresholds.bundle.maxBundleSize);
-    
+    const largeBundles = bundleMetrics.filter(
+      m => m.bundleSize > this.thresholds.bundle.maxBundleSize
+    );
+
     if (largeBundles.length > 0) {
-      recommendations.push(`Reduce size of ${largeBundles.length} large bundles through code splitting`);
+      recommendations.push(
+        `Reduce size of ${largeBundles.length} large bundles through code splitting`
+      );
     }
 
     // Network performance recommendations
-    const networkMetrics = metrics.filter(m => m.category === 'network') as NetworkPerformanceMetric[];
+    const networkMetrics = metrics.filter(
+      m => m.category === 'network'
+    ) as NetworkPerformanceMetric[];
     const highLatency = networkMetrics.filter(m => m.latency > this.thresholds.network.maxLatency);
-    
+
     if (highLatency.length > 0) {
       recommendations.push(`Investigate ${highLatency.length} high-latency network requests`);
     }
@@ -545,7 +577,9 @@ export class PerformanceMonitor {
     // Alert-based recommendations
     const criticalAlerts = alerts.filter(a => a.type === 'critical');
     if (criticalAlerts.length > 0) {
-      recommendations.push(`Address ${criticalAlerts.length} critical performance issues immediately`);
+      recommendations.push(
+        `Address ${criticalAlerts.length} critical performance issues immediately`
+      );
     }
 
     return recommendations;
@@ -615,7 +649,7 @@ export class PerformanceMonitor {
     let hash = 0;
     for (let i = 0; i < str.length; i++) {
       const char = str.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
+      hash = (hash << 5) - hash + char;
       hash = hash & hash;
     }
     return hash.toString(36);
@@ -654,14 +688,20 @@ export function usePerformanceMonitoring(monitor: PerformanceMonitor): {
     return unsubscribe;
   }, [monitor]);
 
-  const recordMetric = React.useCallback((metric: Omit<PerformanceMetric, 'id' | 'timestamp'>) => {
-    monitor.recordMetric(metric);
-  }, [monitor]);
+  const recordMetric = React.useCallback(
+    (metric: Omit<PerformanceMetric, 'id' | 'timestamp'>) => {
+      monitor.recordMetric(metric);
+    },
+    [monitor]
+  );
 
-  const resolveAlert = React.useCallback((alertId: string) => {
-    monitor.resolveAlert(alertId);
-    setAlerts(monitor.getAlerts());
-  }, [monitor]);
+  const resolveAlert = React.useCallback(
+    (alertId: string) => {
+      monitor.resolveAlert(alertId);
+      setAlerts(monitor.getAlerts());
+    },
+    [monitor]
+  );
 
   return {
     metrics,
@@ -694,7 +734,7 @@ export function useRenderPerformance(componentName: string, monitor?: Performanc
           renderTime,
           renderCount.current,
           false, // Would need actual props comparison
-          false  // Would need actual state comparison
+          false // Would need actual state comparison
         );
       }
     };

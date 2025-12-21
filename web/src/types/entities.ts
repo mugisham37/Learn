@@ -1,6 +1,6 @@
 /**
  * Domain Entity Types
- * 
+ *
  * TypeScript interfaces for all domain entities used in the application.
  * These types represent the structure of data returned from the GraphQL API.
  */

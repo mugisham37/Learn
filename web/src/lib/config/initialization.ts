@@ -1,6 +1,6 @@
 /**
  * Configuration Initialization System
- * 
+ *
  * Handles the complete initialization of the application configuration,
  * including validation, monitoring, and error tracking setup.
  */
@@ -15,7 +15,7 @@ import type { InitializationResult } from '@/types';
  */
 export async function initializeAllSystems(): Promise<InitializationResult> {
   console.log('🚀 Starting application configuration initialization...');
-  
+
   const result: InitializationResult = {
     success: false,
     errors: [],
@@ -68,7 +68,7 @@ export async function initializeAllSystems(): Promise<InitializationResult> {
     try {
       const { checkConfigurationHealth } = await import('./monitoring');
       const health = await checkConfigurationHealth();
-      
+
       // Update service status based on health check
       health.services.forEach(service => {
         switch (service.name) {
@@ -118,7 +118,6 @@ export async function initializeAllSystems(): Promise<InitializationResult> {
       console.error('🔍 Errors encountered:');
       result.errors.forEach(error => console.error(`  - ${error}`));
     }
-
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown initialization error';
     result.errors.push(`Initialization process failed: ${errorMessage}`);
@@ -139,13 +138,13 @@ export async function initializeNextJSConfiguration(): Promise<void> {
 
   try {
     const result = await initializeAllSystems();
-    
+
     // Store initialization result globally for debugging
     (window as any).__APP_INIT_RESULT__ = result;
-    
+
     if (!result.success) {
       console.error('⚠️  Application started with configuration issues');
-      
+
       // In development, show more detailed error information
       if (process.env.NODE_ENV === 'development') {
         console.group('🔍 Configuration Issues Details:');
@@ -165,7 +164,7 @@ export function getInitializationStatus(): InitializationResult | null {
   if (typeof window === 'undefined') {
     return null;
   }
-  
+
   return (window as any).__APP_INIT_RESULT__ || null;
 }
 
@@ -181,23 +180,23 @@ export function isApplicationReady(): boolean {
  * Wait for application to be ready
  */
 export function waitForApplicationReady(timeout: number = 10000): Promise<boolean> {
-  return new Promise((resolve) => {
+  return new Promise(resolve => {
     const startTime = Date.now();
-    
+
     const checkReady = () => {
       if (isApplicationReady()) {
         resolve(true);
         return;
       }
-      
+
       if (Date.now() - startTime > timeout) {
         resolve(false);
         return;
       }
-      
+
       setTimeout(checkReady, 100);
     };
-    
+
     checkReady();
   });
 }

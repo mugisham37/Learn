@@ -1,17 +1,13 @@
 /**
  * User Management Hooks
- * 
+ *
  * React hooks for user-related operations including profile management,
  * notification preferences, and user data fetching.
  */
 
 import { useQuery, useMutation } from '@apollo/client/react';
 import { gql, type ApolloCache } from '@apollo/client';
-import type {
-  User,
-  UpdateProfileInput,
-  UpdateNotificationPreferencesInput,
-} from '../types';
+import type { User, UpdateProfileInput, UpdateNotificationPreferencesInput } from '../types';
 import type {
   GetCurrentUserResponse,
   GetUserByIdResponse,
@@ -121,17 +117,17 @@ interface MutationResult<T, V = Record<string, unknown>> {
 
 /**
  * Hook for fetching the current authenticated user's data
- * 
+ *
  * @returns Query result with current user data, loading state, and error handling
- * 
+ *
  * @example
  * ```tsx
  * function UserProfile() {
  *   const { data: user, loading, error, refetch } = useCurrentUser();
- *   
+ *
  *   if (loading) return <div>Loading...</div>;
  *   if (error) return <div>Error: {error.message}</div>;
- *   
+ *
  *   return <div>Welcome, {user?.profile.fullName}!</div>;
  * }
  * ```
@@ -152,18 +148,18 @@ export function useCurrentUser(): QueryResult<User> {
 
 /**
  * Hook for fetching a specific user by ID
- * 
+ *
  * @param id - The user ID to fetch
  * @returns Query result with user data, loading state, and error handling
- * 
+ *
  * @example
  * ```tsx
  * function UserCard({ userId }: { userId: string }) {
  *   const { data: user, loading, error } = useUserById(userId);
- *   
+ *
  *   if (loading) return <div>Loading user...</div>;
  *   if (error) return <div>User not found</div>;
- *   
+ *
  *   return <div>{user?.profile.fullName}</div>;
  * }
  * ```
@@ -185,14 +181,14 @@ export function useUserById(id: string): QueryResult<User> {
 
 /**
  * Hook for updating the current user's profile with optimistic updates
- * 
+ *
  * @returns Mutation function with loading state and error handling
- * 
+ *
  * @example
  * ```tsx
  * function EditProfile() {
  *   const { mutate: updateProfile, loading, error } = useUpdateProfile();
- *   
+ *
  *   const handleSubmit = async (formData: UpdateProfileInput) => {
  *     try {
  *       await updateProfile({ input: formData });
@@ -201,34 +197,40 @@ export function useUserById(id: string): QueryResult<User> {
  *       // Handle error
  *     }
  *   };
- *   
+ *
  *   return <form onSubmit={handleSubmit}>...</form>;
  * }
  * ```
  */
 export function useUpdateProfile(): MutationResult<User, { input: UpdateProfileInput }> {
-  const [updateProfileMutation, { loading, error, reset }] = useMutation<UpdateProfileResponse>(UPDATE_PROFILE, {
-    errorPolicy: 'all',
-    // Update cache after successful mutation
-    update: (cache: ApolloCache, { data }) => {
-      if (data?.updateProfile) {
-        cache.updateQuery<GetCurrentUserResponse>({ query: GET_CURRENT_USER }, (existingData: GetCurrentUserResponse | null) => {
-          if (!existingData?.currentUser) return existingData;
-          
-          return {
-            currentUser: {
-              ...existingData.currentUser,
-              profile: {
-                ...existingData.currentUser.profile,
-                ...data.updateProfile.profile,
-              },
-              updatedAt: data.updateProfile.updatedAt,
-            },
-          };
-        });
-      }
-    },
-  });
+  const [updateProfileMutation, { loading, error, reset }] = useMutation<UpdateProfileResponse>(
+    UPDATE_PROFILE,
+    {
+      errorPolicy: 'all',
+      // Update cache after successful mutation
+      update: (cache: ApolloCache, { data }) => {
+        if (data?.updateProfile) {
+          cache.updateQuery<GetCurrentUserResponse>(
+            { query: GET_CURRENT_USER },
+            (existingData: GetCurrentUserResponse | null) => {
+              if (!existingData?.currentUser) return existingData;
+
+              return {
+                currentUser: {
+                  ...existingData.currentUser,
+                  profile: {
+                    ...existingData.currentUser.profile,
+                    ...data.updateProfile.profile,
+                  },
+                  updatedAt: data.updateProfile.updatedAt,
+                },
+              };
+            }
+          );
+        }
+      },
+    }
+  );
 
   const mutate = async (variables: { input: UpdateProfileInput }): Promise<User> => {
     const result = await updateProfileMutation({ variables });
@@ -248,53 +250,59 @@ export function useUpdateProfile(): MutationResult<User, { input: UpdateProfileI
 
 /**
  * Hook for managing basic user notification preferences (legacy)
- * 
+ *
  * @deprecated Use useUpdateNotificationPreferences from useNotifications for full functionality
  * @returns Mutation function with loading state and error handling
- * 
+ *
  * @example
  * ```tsx
  * function BasicNotificationSettings() {
  *   const { mutate: updatePreferences, loading } = useUserNotificationPreferences();
- *   
+ *
  *   const handleToggle = async (setting: keyof NotificationPreferences, value: boolean) => {
  *     await updatePreferences({
  *       input: { [setting]: value }
  *     });
  *   };
- *   
+ *
  *   return <div>...</div>;
  * }
  * ```
  */
-export function useUserNotificationPreferences(): MutationResult<User, { input: UpdateNotificationPreferencesInput }> {
-  const [updatePreferencesMutation, { loading, error, reset }] = useMutation<UpdateNotificationPreferencesResponse>(
-    UPDATE_NOTIFICATION_PREFERENCES,
-    {
+export function useUserNotificationPreferences(): MutationResult<
+  User,
+  { input: UpdateNotificationPreferencesInput }
+> {
+  const [updatePreferencesMutation, { loading, error, reset }] =
+    useMutation<UpdateNotificationPreferencesResponse>(UPDATE_NOTIFICATION_PREFERENCES, {
       errorPolicy: 'all',
       // Update cache after successful mutation
       update: (cache: ApolloCache, { data }) => {
         if (data?.updateNotificationPreferences) {
-          cache.updateQuery<GetCurrentUserResponse>({ query: GET_CURRENT_USER }, (existingData: GetCurrentUserResponse | null) => {
-            if (!existingData?.currentUser) return existingData;
-            
-            return {
-              currentUser: {
-                ...existingData.currentUser,
-                notificationPreferences: {
-                  ...existingData.currentUser.notificationPreferences,
-                  ...data.updateNotificationPreferences.notificationPreferences,
+          cache.updateQuery<GetCurrentUserResponse>(
+            { query: GET_CURRENT_USER },
+            (existingData: GetCurrentUserResponse | null) => {
+              if (!existingData?.currentUser) return existingData;
+
+              return {
+                currentUser: {
+                  ...existingData.currentUser,
+                  notificationPreferences: {
+                    ...existingData.currentUser.notificationPreferences,
+                    ...data.updateNotificationPreferences.notificationPreferences,
+                  },
+                  updatedAt: data.updateNotificationPreferences.updatedAt,
                 },
-                updatedAt: data.updateNotificationPreferences.updatedAt,
-              },
-            };
-          });
+              };
+            }
+          );
         }
       },
-    }
-  );
+    });
 
-  const mutate = async (variables: { input: UpdateNotificationPreferencesInput }): Promise<User> => {
+  const mutate = async (variables: {
+    input: UpdateNotificationPreferencesInput;
+  }): Promise<User> => {
     const result = await updatePreferencesMutation({ variables });
     if (!result.data?.updateNotificationPreferences) {
       throw new Error('Failed to update notification preferences');
@@ -409,14 +417,14 @@ const REFRESH_TOKEN = gql`
 
 /**
  * Hook for user login with backend GraphQL integration
- * 
+ *
  * @returns Mutation function with loading state and error handling
- * 
+ *
  * @example
  * ```tsx
  * function LoginForm() {
  *   const { mutate: login, loading, error } = useLogin();
- *   
+ *
  *   const handleSubmit = async (email: string, password: string) => {
  *     try {
  *       const result = await login({ input: { email, password } });
@@ -425,12 +433,15 @@ const REFRESH_TOKEN = gql`
  *       // Handle login error
  *     }
  *   };
- *   
+ *
  *   return <form onSubmit={handleSubmit}>...</form>;
  * }
  * ```
  */
-export function useLogin(): MutationResult<{ accessToken: string; refreshToken: string; user: User }, { input: { email: string; password: string } }> {
+export function useLogin(): MutationResult<
+  { accessToken: string; refreshToken: string; user: User },
+  { input: { email: string; password: string } }
+> {
   const [loginMutation, { loading, error, reset }] = useMutation<LoginResponse>(LOGIN, {
     errorPolicy: 'all',
     // Update cache after successful login
@@ -462,14 +473,14 @@ export function useLogin(): MutationResult<{ accessToken: string; refreshToken: 
 
 /**
  * Hook for user registration with backend GraphQL integration
- * 
+ *
  * @returns Mutation function with loading state and error handling
- * 
+ *
  * @example
  * ```tsx
  * function RegisterForm() {
  *   const { mutate: register, loading, error } = useRegister();
- *   
+ *
  *   const handleSubmit = async (email: string, password: string, fullName: string, role: string) => {
  *     try {
  *       const result = await register({ input: { email, password, fullName, role } });
@@ -478,12 +489,15 @@ export function useLogin(): MutationResult<{ accessToken: string; refreshToken: 
  *       // Handle registration error
  *     }
  *   };
- *   
+ *
  *   return <form onSubmit={handleSubmit}>...</form>;
  * }
  * ```
  */
-export function useRegister(): MutationResult<{ accessToken: string; refreshToken: string; user: User }, { input: { email: string; password: string; fullName: string; role: string } }> {
+export function useRegister(): MutationResult<
+  { accessToken: string; refreshToken: string; user: User },
+  { input: { email: string; password: string; fullName: string; role: string } }
+> {
   const [registerMutation, { loading, error, reset }] = useMutation<RegisterResponse>(REGISTER, {
     errorPolicy: 'all',
     // Update cache after successful registration
@@ -497,7 +511,9 @@ export function useRegister(): MutationResult<{ accessToken: string; refreshToke
     },
   });
 
-  const mutate = async (variables: { input: { email: string; password: string; fullName: string; role: string } }) => {
+  const mutate = async (variables: {
+    input: { email: string; password: string; fullName: string; role: string };
+  }) => {
     const result = await registerMutation({ variables });
     if (!result.data?.register) {
       throw new Error('Registration failed');
@@ -515,14 +531,14 @@ export function useRegister(): MutationResult<{ accessToken: string; refreshToke
 
 /**
  * Hook for user logout with backend GraphQL integration
- * 
+ *
  * @returns Mutation function with loading state and error handling
- * 
+ *
  * @example
  * ```tsx
  * function LogoutButton() {
  *   const { mutate: logout, loading } = useLogout();
- *   
+ *
  *   const handleLogout = async () => {
  *     try {
  *       await logout({ input: { refreshToken: 'optional-refresh-token' } });
@@ -531,7 +547,7 @@ export function useRegister(): MutationResult<{ accessToken: string; refreshToke
  *       // Handle logout error
  *     }
  *   };
- *   
+ *
  *   return <button onClick={handleLogout} disabled={loading}>Logout</button>;
  * }
  * ```
@@ -561,14 +577,14 @@ export function useLogout(): MutationResult<boolean, { input?: { refreshToken?: 
 
 /**
  * Hook for email verification with backend GraphQL integration
- * 
+ *
  * @returns Mutation function with loading state and error handling
- * 
+ *
  * @example
  * ```tsx
  * function EmailVerification({ token }: { token: string }) {
  *   const { mutate: verifyEmail, loading, error } = useVerifyEmail();
- *   
+ *
  *   const handleVerify = async () => {
  *     try {
  *       await verifyEmail({ input: { token } });
@@ -577,17 +593,20 @@ export function useLogout(): MutationResult<boolean, { input?: { refreshToken?: 
  *       // Handle verification error
  *     }
  *   };
- *   
+ *
  *   return <button onClick={handleVerify} disabled={loading}>Verify Email</button>;
  * }
  * ```
  */
 export function useVerifyEmail(): MutationResult<boolean, { input: { token: string } }> {
-  const [verifyEmailMutation, { loading, error, reset }] = useMutation<VerifyEmailResponse>(VERIFY_EMAIL, {
-    errorPolicy: 'all',
-    // Refetch current user after successful verification
-    refetchQueries: [{ query: GET_CURRENT_USER }],
-  });
+  const [verifyEmailMutation, { loading, error, reset }] = useMutation<VerifyEmailResponse>(
+    VERIFY_EMAIL,
+    {
+      errorPolicy: 'all',
+      // Refetch current user after successful verification
+      refetchQueries: [{ query: GET_CURRENT_USER }],
+    }
+  );
 
   const mutate = async (variables: { input: { token: string } }) => {
     const result = await verifyEmailMutation({ variables });
@@ -604,14 +623,14 @@ export function useVerifyEmail(): MutationResult<boolean, { input: { token: stri
 
 /**
  * Hook for requesting password reset with backend GraphQL integration
- * 
+ *
  * @returns Mutation function with loading state and error handling
- * 
+ *
  * @example
  * ```tsx
  * function ForgotPassword() {
  *   const { mutate: requestReset, loading, error } = useRequestPasswordReset();
- *   
+ *
  *   const handleSubmit = async (email: string) => {
  *     try {
  *       await requestReset({ input: { email } });
@@ -620,15 +639,16 @@ export function useVerifyEmail(): MutationResult<boolean, { input: { token: stri
  *       // Handle request error
  *     }
  *   };
- *   
+ *
  *   return <form onSubmit={handleSubmit}>...</form>;
  * }
  * ```
  */
 export function useRequestPasswordReset(): MutationResult<boolean, { input: { email: string } }> {
-  const [requestResetMutation, { loading, error, reset }] = useMutation<RequestPasswordResetResponse>(REQUEST_PASSWORD_RESET, {
-    errorPolicy: 'all',
-  });
+  const [requestResetMutation, { loading, error, reset }] =
+    useMutation<RequestPasswordResetResponse>(REQUEST_PASSWORD_RESET, {
+      errorPolicy: 'all',
+    });
 
   const mutate = async (variables: { input: { email: string } }) => {
     const result = await requestResetMutation({ variables });
@@ -645,14 +665,14 @@ export function useRequestPasswordReset(): MutationResult<boolean, { input: { em
 
 /**
  * Hook for resetting password with backend GraphQL integration
- * 
+ *
  * @returns Mutation function with loading state and error handling
- * 
+ *
  * @example
  * ```tsx
  * function ResetPassword({ token }: { token: string }) {
  *   const { mutate: resetPassword, loading, error } = useResetPassword();
- *   
+ *
  *   const handleSubmit = async (newPassword: string) => {
  *     try {
  *       await resetPassword({ input: { token, newPassword } });
@@ -661,15 +681,21 @@ export function useRequestPasswordReset(): MutationResult<boolean, { input: { em
  *       // Handle reset error
  *     }
  *   };
- *   
+ *
  *   return <form onSubmit={handleSubmit}>...</form>;
  * }
  * ```
  */
-export function useResetPassword(): MutationResult<boolean, { input: { token: string; newPassword: string } }> {
-  const [resetPasswordMutation, { loading, error, reset }] = useMutation<ResetPasswordResponse>(RESET_PASSWORD, {
-    errorPolicy: 'all',
-  });
+export function useResetPassword(): MutationResult<
+  boolean,
+  { input: { token: string; newPassword: string } }
+> {
+  const [resetPasswordMutation, { loading, error, reset }] = useMutation<ResetPasswordResponse>(
+    RESET_PASSWORD,
+    {
+      errorPolicy: 'all',
+    }
+  );
 
   const mutate = async (variables: { input: { token: string; newPassword: string } }) => {
     const result = await resetPasswordMutation({ variables });
@@ -686,14 +712,14 @@ export function useResetPassword(): MutationResult<boolean, { input: { token: st
 
 /**
  * Hook for refreshing authentication tokens with backend GraphQL integration
- * 
+ *
  * @returns Mutation function with loading state and error handling
- * 
+ *
  * @example
  * ```tsx
  * function TokenRefresh() {
  *   const { mutate: refreshToken, loading, error } = useRefreshToken();
- *   
+ *
  *   const handleRefresh = async (refreshToken: string) => {
  *     try {
  *       const result = await refreshToken({ input: { refreshToken } });
@@ -702,15 +728,21 @@ export function useResetPassword(): MutationResult<boolean, { input: { token: st
  *       // Handle refresh error
  *     }
  *   };
- *   
+ *
  *   return <button onClick={handleRefresh} disabled={loading}>Refresh Token</button>;
  * }
  * ```
  */
-export function useRefreshToken(): MutationResult<{ accessToken: string; refreshToken: string }, { input: { refreshToken: string } }> {
-  const [refreshTokenMutation, { loading, error, reset }] = useMutation<RefreshTokenResponse>(REFRESH_TOKEN, {
-    errorPolicy: 'all',
-  });
+export function useRefreshToken(): MutationResult<
+  { accessToken: string; refreshToken: string },
+  { input: { refreshToken: string } }
+> {
+  const [refreshTokenMutation, { loading, error, reset }] = useMutation<RefreshTokenResponse>(
+    REFRESH_TOKEN,
+    {
+      errorPolicy: 'all',
+    }
+  );
 
   const mutate = async (variables: { input: { refreshToken: string } }) => {
     const result = await refreshTokenMutation({ variables });
@@ -733,18 +765,18 @@ export function useRefreshToken(): MutationResult<{ accessToken: string; refresh
 /**
  * Hook for checking user roles and permissions
  * Integrates with the existing auth system for comprehensive permission checking
- * 
+ *
  * @returns Object with role and permission checking functions
- * 
+ *
  * @example
  * ```tsx
  * function ProtectedComponent() {
  *   const { hasRole, hasPermission, canAccessCourse } = useUserPermissions();
- *   
+ *
  *   if (!hasRole('EDUCATOR')) {
  *     return <div>Access denied</div>;
  *   }
- *   
+ *
  *   return <div>Protected content</div>;
  * }
  * ```
@@ -784,18 +816,18 @@ export function useUserPermissions() {
 /**
  * Hook for user resource ownership validation
  * Checks if the current user owns or can modify a specific resource
- * 
+ *
  * @returns Object with ownership checking functions
- * 
+ *
  * @example
  * ```tsx
  * function EditButton({ resourceOwnerId }: { resourceOwnerId: string }) {
  *   const { isOwner, canModify } = useUserOwnership();
- *   
+ *
  *   if (!canModify(resourceOwnerId)) {
  *     return null;
  *   }
- *   
+ *
  *   return <button>Edit</button>;
  * }
  * ```
@@ -810,7 +842,7 @@ export function useUserOwnership() {
   const canModify = (resourceOwnerId: string): boolean => {
     // Admins can modify any resource
     if (user?.role === 'ADMIN') return true;
-    
+
     // Users can modify their own resources
     return isOwner(resourceOwnerId);
   };

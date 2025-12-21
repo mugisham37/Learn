@@ -1,6 +1,6 @@
 /**
  * Error Tracking Integration
- * 
+ *
  * Integrates with backend-aware error tracking system for comprehensive error monitoring.
  * Uses the new backend-integrated error handling system.
  */
@@ -56,7 +56,7 @@ export function reportError(error: Error, context?: Record<string, any>): void {
       if (context) {
         scope.setContext('error_context', context);
       }
-      
+
       scope.setLevel('error');
       Sentry.captureException(error);
     });
@@ -69,7 +69,11 @@ export function reportError(error: Error, context?: Record<string, any>): void {
 /**
  * Report message to tracking service
  */
-export function reportMessage(message: string, level: 'info' | 'warning' | 'error' = 'info', context?: Record<string, any>): void {
+export function reportMessage(
+  message: string,
+  level: 'info' | 'warning' | 'error' = 'info',
+  context?: Record<string, any>
+): void {
   if (!Sentry) {
     console.log('Error tracking not initialized, logging message:', message);
     return;
@@ -80,7 +84,7 @@ export function reportMessage(message: string, level: 'info' | 'warning' | 'erro
       if (context) {
         scope.setContext('message_context', context);
       }
-      
+
       scope.setLevel(level);
       Sentry.captureMessage(message);
     });
@@ -171,9 +175,12 @@ export function startTransaction(name: string, operation: string): any {
 /**
  * Performance monitoring for GraphQL operations
  */
-export function monitorGraphQLOperation(operationName: string, operationType: 'query' | 'mutation' | 'subscription') {
+export function monitorGraphQLOperation(
+  operationName: string,
+  operationType: 'query' | 'mutation' | 'subscription'
+) {
   const transaction = startTransaction(`GraphQL ${operationType}`, 'graphql');
-  
+
   if (transaction) {
     transaction.setTag('graphql.operation_name', operationName);
     transaction.setTag('graphql.operation_type', operationType);

@@ -1,6 +1,6 @@
 /**
  * Register API Route
- * 
+ *
  * Next.js API route that proxies registration requests to the backend GraphQL API.
  * Handles user registration and automatic login with JWT token management.
  */
@@ -78,10 +78,7 @@ export async function POST(request: NextRequest) {
     // Basic email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      return NextResponse.json(
-        { error: 'Invalid email format' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Invalid email format' }, { status: 400 });
     }
 
     // Basic password validation
@@ -110,25 +107,22 @@ export async function POST(request: NextRequest) {
       throw new Error(`Backend request failed: ${response.status}`);
     }
 
-    const data = await response.json() as RegisterResponse;
+    const data = (await response.json()) as RegisterResponse;
 
     // Check for GraphQL errors
     if (data.errors && data.errors.length > 0) {
       const error = data.errors[0];
       return NextResponse.json(
-        { 
+        {
           error: error.message,
-          code: error.extensions?.code || 'REGISTRATION_FAILED'
+          code: error.extensions?.code || 'REGISTRATION_FAILED',
         },
         { status: 400 }
       );
     }
 
     if (!data.data?.register) {
-      return NextResponse.json(
-        { error: 'Invalid registration response' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Invalid registration response' }, { status: 500 });
     }
 
     const { accessToken, refreshToken, user } = data.data.register;
@@ -165,11 +159,11 @@ export async function POST(request: NextRequest) {
     return nextResponse;
   } catch (error) {
     console.error('Registration API error:', error);
-    
+
     return NextResponse.json(
-      { 
+      {
         error: error instanceof Error ? error.message : 'Registration failed',
-        code: 'INTERNAL_ERROR'
+        code: 'INTERNAL_ERROR',
       },
       { status: 500 }
     );

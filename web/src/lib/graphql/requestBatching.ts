@@ -1,9 +1,9 @@
 /**
  * Request Batching and Deduplication Integration
- * 
+ *
  * Advanced request batching, intelligent deduplication, and performance optimization
  * for GraphQL operations with comprehensive monitoring and analytics.
- * 
+ *
  * Requirements: 11.4
  */
 
@@ -235,23 +235,22 @@ export class RequestBatcher {
   private analyzeOperation(operation: Operation): RequestAnalysis {
     const query = print(operation.query);
     const queryHash = this.hashString(query);
-    
+
     // Simple complexity calculation
-    const complexity = query.length + (Object.keys(operation.variables || {}).length * 10);
-    
+    const complexity = query.length + Object.keys(operation.variables || {}).length * 10;
+
     // Estimate response size
     const estimatedSize = complexity * 50; // Rough estimate
-    
+
     // Determine if operation can be batched
     const definition = operation.query.definitions[0];
-    const canBatch = definition && 
-      definition.kind === 'OperationDefinition' && 
-      definition.operation === 'query';
-    
+    const canBatch =
+      definition && definition.kind === 'OperationDefinition' && definition.operation === 'query';
+
     // Create batch group identifier
     const operationName = operation.operationName || 'anonymous';
     const batchGroup = canBatch ? `${operationName}_${queryHash.slice(0, 8)}` : queryHash;
-    
+
     // Calculate priority (lower complexity = higher priority)
     const priority = Math.max(1, 100 - complexity / 10);
 
@@ -320,7 +319,9 @@ export class RequestBatcher {
     this.metrics.performanceGain += performanceGain;
 
     if (this.config.enableMonitoring) {
-      console.log(`[RequestBatcher] Processed batch of ${batchSize} operations, avg wait: ${averageWaitTime.toFixed(2)}ms`);
+      console.log(
+        `[RequestBatcher] Processed batch of ${batchSize} operations, avg wait: ${averageWaitTime.toFixed(2)}ms`
+      );
     }
   }
 
@@ -341,7 +342,7 @@ export class RequestBatcher {
     let hash = 0;
     for (let i = 0; i < str.length; i++) {
       const char = str.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
+      hash = (hash << 5) - hash + char;
       hash = hash & hash;
     }
     return hash.toString(36);
@@ -451,7 +452,9 @@ export function createBatchingLink(config?: BatchingConfig): ApolloLink {
 /**
  * Create optimized batching configuration for different scenarios
  */
-export function createBatchingConfig(scenario: 'aggressive' | 'balanced' | 'conservative'): BatchingConfig {
+export function createBatchingConfig(
+  scenario: 'aggressive' | 'balanced' | 'conservative'
+): BatchingConfig {
   switch (scenario) {
     case 'aggressive':
       return {
@@ -462,7 +465,7 @@ export function createBatchingConfig(scenario: 'aggressive' | 'balanced' | 'cons
         deduplicationTTL: 60000,
         enableMonitoring: true,
       };
-    
+
     case 'balanced':
       return {
         maxBatchSize: 10,
@@ -472,7 +475,7 @@ export function createBatchingConfig(scenario: 'aggressive' | 'balanced' | 'cons
         deduplicationTTL: 30000,
         enableMonitoring: true,
       };
-    
+
     case 'conservative':
       return {
         maxBatchSize: 5,
@@ -482,7 +485,7 @@ export function createBatchingConfig(scenario: 'aggressive' | 'balanced' | 'cons
         deduplicationTTL: 15000,
         enableMonitoring: false,
       };
-    
+
     default:
       return {};
   }
@@ -491,9 +494,7 @@ export function createBatchingConfig(scenario: 'aggressive' | 'balanced' | 'cons
 /**
  * Analyze request patterns for optimization recommendations
  */
-export function analyzeRequestPatterns(
-  operations: Operation[]
-): {
+export function analyzeRequestPatterns(operations: Operation[]): {
   batchingPotential: number;
   deduplicationPotential: number;
   recommendations: string[];
@@ -513,7 +514,11 @@ export function analyzeRequestPatterns(
     }
 
     const definition = operation.query.definitions[0];
-    if (definition && definition.kind === 'OperationDefinition' && definition.operation === 'query') {
+    if (
+      definition &&
+      definition.kind === 'OperationDefinition' &&
+      definition.operation === 'query'
+    ) {
       batchableQueries++;
     }
   });

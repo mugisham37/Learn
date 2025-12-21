@@ -1,6 +1,6 @@
 /**
  * Retry Link
- * 
+ *
  * Apollo Link that implements intelligent retry logic with exponential backoff
  * for network errors and transient failures.
  */
@@ -63,7 +63,7 @@ class RequestDeduplicator {
     executeRequest: () => Promise<T>
   ): Promise<T> {
     const key = this.generateKey(operation);
-    
+
     // Check if identical request is already pending
     if (this.pendingRequests.has(key)) {
       return this.pendingRequests.get(key) as Promise<T>;
@@ -102,8 +102,8 @@ class BackoffCalculator {
    */
   calculateDelay(attemptNumber: number): number {
     // Exponential backoff: delay = initialDelay * (backoffMultiplier ^ attemptNumber)
-    const exponentialDelay = this.config.initialDelay * 
-      Math.pow(this.config.backoffMultiplier, attemptNumber - 1);
+    const exponentialDelay =
+      this.config.initialDelay * Math.pow(this.config.backoffMultiplier, attemptNumber - 1);
 
     // Cap at maximum delay
     const cappedDelay = Math.min(exponentialDelay, this.config.maxDelay);
@@ -128,7 +128,13 @@ class RetryChecker {
   /**
    * Determines if an error is retryable
    */
-  isRetryable(error: { networkError?: { code?: string; name?: string; statusCode?: number }; graphQLErrors?: { extensions?: { code?: string } }[] }, attemptNumber: number): boolean {
+  isRetryable(
+    error: {
+      networkError?: { code?: string; name?: string; statusCode?: number };
+      graphQLErrors?: { extensions?: { code?: string } }[];
+    },
+    attemptNumber: number
+  ): boolean {
     // Don't retry if max attempts reached
     if (attemptNumber >= this.config.maxAttempts) {
       return false;
@@ -155,24 +161,28 @@ class RetryChecker {
   /**
    * Checks if error is a network error
    */
-  private isNetworkError(error: { networkError?: { code?: string; name?: string; statusCode?: number } }): boolean {
+  private isNetworkError(error: {
+    networkError?: { code?: string; name?: string; statusCode?: number };
+  }): boolean {
     return !!(
       error.networkError &&
       (error.networkError.code === 'NETWORK_ERROR' ||
-       error.networkError.name === 'NetworkError' ||
-       !error.networkError.statusCode)
+        error.networkError.name === 'NetworkError' ||
+        !error.networkError.statusCode)
     );
   }
 
   /**
    * Checks if GraphQL error is retryable
    */
-  private isRetryableGraphQLError(error: { graphQLErrors?: { extensions?: { code?: string } }[] }): boolean {
+  private isRetryableGraphQLError(error: {
+    graphQLErrors?: { extensions?: { code?: string } }[];
+  }): boolean {
     if (!error.graphQLErrors) {
       return false;
     }
 
-    return error.graphQLErrors.some((gqlError) => {
+    return error.graphQLErrors.some(gqlError => {
       const code = gqlError.extensions?.code;
       return code && this.config.retryableErrorCodes.includes(code);
     });
@@ -213,7 +223,13 @@ export function createRetryLink(customConfig?: Partial<RetryConfig>) {
     },
 
     attempts: (count: number, operation: Operation, error: unknown) => {
-      const shouldRetry = retryChecker.isRetryable(error as { networkError?: { code?: string; name?: string; statusCode?: number }; graphQLErrors?: { extensions?: { code?: string } }[] }, count);
+      const shouldRetry = retryChecker.isRetryable(
+        error as {
+          networkError?: { code?: string; name?: string; statusCode?: number };
+          graphQLErrors?: { extensions?: { code?: string } }[];
+        },
+        count
+      );
 
       // Log final failure in development
       if (!shouldRetry && process.env.NODE_ENV === 'development') {
@@ -249,7 +265,13 @@ export function createRetryLinkWithDeduplication(customConfig?: Partial<RetryCon
     },
 
     attempts: (count: number, operation: Operation, error: unknown) => {
-      const shouldRetry = retryChecker.isRetryable(error as { networkError?: { code?: string; name?: string; statusCode?: number }; graphQLErrors?: { extensions?: { code?: string } }[] }, count);
+      const shouldRetry = retryChecker.isRetryable(
+        error as {
+          networkError?: { code?: string; name?: string; statusCode?: number };
+          graphQLErrors?: { extensions?: { code?: string } }[];
+        },
+        count
+      );
 
       if (!shouldRetry && process.env.NODE_ENV === 'development') {
         console.error(
@@ -287,7 +309,7 @@ export const retryUtils = {
       );
       totalTime += delay;
     }
-    return totalTime + (config.jitterMax * config.maxAttempts);
+    return totalTime + config.jitterMax * config.maxAttempts;
   },
 
   /**

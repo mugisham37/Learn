@@ -1,6 +1,6 @@
 /**
  * Cache Helper Utilities
- * 
+ *
  * Core utilities for reading and writing to Apollo Client cache.
  * Provides type-safe cache operations with error handling.
  */
@@ -97,7 +97,7 @@ export function updateEntity<T extends CacheEntity>(
           }
         `,
       },
-      (data) => {
+      data => {
         if (!data) return null;
         return {
           ...data,
@@ -113,11 +113,7 @@ export function updateEntity<T extends CacheEntity>(
 /**
  * Delete an entity from the cache
  */
-export function deleteEntity(
-  cache: InMemoryCache,
-  typename: string,
-  id: string
-): void {
+export function deleteEntity(cache: InMemoryCache, typename: string, id: string): void {
   try {
     const entityId = cache.identify({ __typename: typename, id });
     if (!entityId) {
@@ -150,7 +146,7 @@ export function readList<T extends CacheEntity>(
     // Assumes the query has a single root field that contains the list
     const rootFields = Object.keys(result || {});
     const rootField = rootFields[0];
-    
+
     if (!rootField || !result) {
       return null;
     }
@@ -173,36 +169,33 @@ export function updateList<T extends CacheEntity>(
   updater: (list: T[]) => T[]
 ): void {
   try {
-    cache.updateQuery(
-      { query, variables },
-      (existingData) => {
-        if (!existingData) return existingData;
+    cache.updateQuery({ query, variables }, existingData => {
+      if (!existingData) return existingData;
 
-        // Find the list field in the query result
-        const rootFields = Object.keys(existingData);
-        const rootField = rootFields[0];
-        
-        if (!rootField) {
-          console.warn('Query result does not contain any fields');
-          return existingData;
-        }
+      // Find the list field in the query result
+      const rootFields = Object.keys(existingData);
+      const rootField = rootFields[0];
 
-        const existingDataTyped = existingData as Record<string, unknown>;
-        const existingList = existingDataTyped[rootField];
-
-        if (!Array.isArray(existingList)) {
-          console.warn('Query result does not contain a list');
-          return existingData;
-        }
-
-        const updatedList = updater(existingList as T[]);
-
-        return {
-          ...existingData,
-          [rootField]: updatedList,
-        };
+      if (!rootField) {
+        console.warn('Query result does not contain any fields');
+        return existingData;
       }
-    );
+
+      const existingDataTyped = existingData as Record<string, unknown>;
+      const existingList = existingDataTyped[rootField];
+
+      if (!Array.isArray(existingList)) {
+        console.warn('Query result does not contain a list');
+        return existingData;
+      }
+
+      const updatedList = updater(existingList as T[]);
+
+      return {
+        ...existingData,
+        [rootField]: updatedList,
+      };
+    });
   } catch (error) {
     console.error('Failed to update list in cache', error);
   }
@@ -218,7 +211,9 @@ export function getCacheStats(cache: InMemoryCache): {
 } {
   try {
     const data = cache.extract();
-    const entities = Object.keys(data).filter(key => key !== 'ROOT_QUERY' && key !== 'ROOT_MUTATION').length;
+    const entities = Object.keys(data).filter(
+      key => key !== 'ROOT_QUERY' && key !== 'ROOT_MUTATION'
+    ).length;
     const queries = data.ROOT_QUERY ? Object.keys(data.ROOT_QUERY).length : 0;
 
     return {

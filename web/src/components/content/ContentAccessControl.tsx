@@ -1,16 +1,16 @@
 /**
  * Content Access Control Component
- * 
+ *
  * Handles permission-based content access control with user-friendly
  * messaging and upgrade prompts.
- * 
+ *
  * Features:
  * - Role-based access control
  * - Course enrollment checking
  * - Subscription status validation
  * - Payment integration for upgrades
  * - Clear messaging for access restrictions
- * 
+ *
  * Requirements: 13.2, 13.3
  */
 
@@ -73,16 +73,16 @@ export function ContentAccessControl({
     }
 
     // Check course enrollment
-    const isEnrolled = enrollments?.some(enrollment => 
-      enrollment.courseId === courseId && enrollment.status === 'active'
+    const isEnrolled = enrollments?.some(
+      enrollment => enrollment.courseId === courseId && enrollment.status === 'active'
     );
 
     if (!isEnrolled) {
       const isPaid = course?.price && course.price > 0;
-      
+
       return {
         type: 'enrollment',
-        message: isPaid 
+        message: isPaid
           ? 'This is a premium course. Enroll to access all content.'
           : 'Enroll in this course to access the content.',
         actionText: isPaid ? 'Enroll Now' : 'Enroll Free',
@@ -131,45 +131,36 @@ export function ContentAccessControl({
 
   return (
     <div className={`content-access-control ${className}`}>
-      <div className="access-restriction-card">
+      <div className='access-restriction-card'>
         {/* Thumbnail or placeholder */}
-        <div className="content-preview">
+        <div className='content-preview'>
           {thumbnail ? (
-            <img 
-              src={thumbnail} 
-              alt={title}
-              className="thumbnail"
-            />
+            <img src={thumbnail} alt={title} className='thumbnail' />
           ) : (
-            <div className="thumbnail-placeholder">
-              <div className="play-icon">▶️</div>
+            <div className='thumbnail-placeholder'>
+              <div className='play-icon'>▶️</div>
             </div>
           )}
-          <div className="overlay">
-            <div className="lock-icon">🔒</div>
+          <div className='overlay'>
+            <div className='lock-icon'>🔒</div>
           </div>
         </div>
 
         {/* Access restriction info */}
-        <div className="restriction-info">
-          <h3 className="content-title">{title}</h3>
-          <p className="restriction-message">{restriction.message}</p>
-          
+        <div className='restriction-info'>
+          <h3 className='content-title'>{title}</h3>
+          <p className='restriction-message'>{restriction.message}</p>
+
           {restriction.canUpgrade && (
-            <div className="upgrade-section">
-              <button 
-                onClick={handleAction}
-                className="upgrade-button primary"
-              >
+            <div className='upgrade-section'>
+              <button onClick={handleAction} className='upgrade-button primary'>
                 {restriction.actionText}
               </button>
-              
+
               {restriction.type === 'enrollment' && course && (
-                <div className="course-info">
-                  <div className="price">
-                    {course.price > 0 ? `$${course.price}` : 'Free'}
-                  </div>
-                  <div className="benefits">
+                <div className='course-info'>
+                  <div className='price'>{course.price > 0 ? `$${course.price}` : 'Free'}</div>
+                  <div className='benefits'>
                     <ul>
                       <li>✓ Full course access</li>
                       <li>✓ Downloadable resources</li>
@@ -179,10 +170,10 @@ export function ContentAccessControl({
                   </div>
                 </div>
               )}
-              
+
               {restriction.type === 'subscription' && (
-                <div className="subscription-info">
-                  <div className="benefits">
+                <div className='subscription-info'>
+                  <div className='benefits'>
                     <ul>
                       <li>✓ Access to all premium courses</li>
                       <li>✓ Exclusive content and features</li>
@@ -194,12 +185,9 @@ export function ContentAccessControl({
               )}
             </div>
           )}
-          
+
           {!restriction.canUpgrade && (
-            <button 
-              onClick={handleAction}
-              className="action-button secondary"
-            >
+            <button onClick={handleAction} className='action-button secondary'>
               {restriction.actionText}
             </button>
           )}
@@ -207,33 +195,33 @@ export function ContentAccessControl({
       </div>
 
       {/* Additional context */}
-      <div className="access-context">
+      <div className='access-context'>
         {restriction.type === 'enrollment' && (
-          <div className="enrollment-context">
+          <div className='enrollment-context'>
             <h4>Why enroll?</h4>
             <p>
-              Enrolling gives you structured access to all course materials,
-              progress tracking, and the ability to earn certificates.
+              Enrolling gives you structured access to all course materials, progress tracking, and
+              the ability to earn certificates.
             </p>
           </div>
         )}
-        
+
         {restriction.type === 'subscription' && (
-          <div className="subscription-context">
+          <div className='subscription-context'>
             <h4>Premium Benefits</h4>
             <p>
-              Premium subscribers get access to exclusive content, advanced features,
-              and priority support to accelerate their learning journey.
+              Premium subscribers get access to exclusive content, advanced features, and priority
+              support to accelerate their learning journey.
             </p>
           </div>
         )}
-        
+
         {restriction.type === 'payment' && (
-          <div className="payment-context">
+          <div className='payment-context'>
             <h4>Secure Payment</h4>
             <p>
-              Your payment is processed securely. Complete your purchase to
-              immediately access all course content.
+              Your payment is processed securely. Complete your purchase to immediately access all
+              course content.
             </p>
           </div>
         )}

@@ -1,9 +1,9 @@
 /**
  * Socket.io Client Integration
- * 
+ *
  * Manages WebSocket connection to backend Socket.io server with authentication,
  * automatic reconnection, and event handling for real-time features.
- * 
+ *
  * Features:
  * - Authenticated WebSocket connections with JWT tokens
  * - Automatic reconnection with exponential backoff
@@ -48,28 +48,28 @@ export const SOCKET_EVENTS = {
   RECONNECT_ATTEMPT: 'reconnect_attempt',
   RECONNECT_ERROR: 'reconnect_error',
   RECONNECT_FAILED: 'reconnect_failed',
-  
+
   // Notification events
   NOTIFICATION_RECEIVED: 'NOTIFICATION_RECEIVED',
   NOTIFICATION_READ: 'NOTIFICATION_READ',
   UNREAD_COUNT_CHANGED: 'UNREAD_COUNT_CHANGED',
-  
+
   // Message events
   MESSAGE_RECEIVED: 'MESSAGE_RECEIVED',
   CONVERSATION_UPDATED: 'CONVERSATION_UPDATED',
-  
+
   // Discussion events
   NEW_DISCUSSION_POST: 'NEW_DISCUSSION_POST',
   THREAD_UPDATED: 'THREAD_UPDATED',
   POST_VOTED: 'POST_VOTED',
-  
+
   // Announcement events
   ANNOUNCEMENT_PUBLISHED: 'ANNOUNCEMENT_PUBLISHED',
-  
+
   // Presence events
   USER_PRESENCE: 'USER_PRESENCE',
   TYPING_INDICATOR: 'TYPING_INDICATOR',
-  
+
   // Progress events
   ENROLLMENT_PROGRESS_UPDATED: 'ENROLLMENT_PROGRESS_UPDATED',
   LESSON_PROGRESS_UPDATED: 'LESSON_PROGRESS_UPDATED',
@@ -84,10 +84,10 @@ export function createSocketClient(): Socket {
   if (socket && socket.connected) {
     return socket;
   }
-  
+
   // Get access token for authentication
   const accessToken = tokenManager.getAccessToken();
-  
+
   // Create Socket.io client with authentication
   socket = io(config.wsEndpoint, {
     auth: {
@@ -101,48 +101,51 @@ export function createSocketClient(): Socket {
     timeout: 20000,
     autoConnect: true,
   });
-  
+
   // Setup connection event handlers
   socket.on(SOCKET_EVENTS.CONNECT, () => {
     console.log('Socket.io connected');
   });
-  
-  socket.on(SOCKET_EVENTS.DISCONNECT, (reason) => {
+
+  socket.on(SOCKET_EVENTS.DISCONNECT, reason => {
     console.log('Socket.io disconnected:', reason);
   });
-  
-  socket.on(SOCKET_EVENTS.CONNECT_ERROR, (error) => {
+
+  socket.on(SOCKET_EVENTS.CONNECT_ERROR, error => {
     console.error('Socket.io connection error:', error);
   });
-  
-  socket.on(SOCKET_EVENTS.RECONNECT, (attemptNumber) => {
+
+  socket.on(SOCKET_EVENTS.RECONNECT, attemptNumber => {
     console.log('Socket.io reconnected after', attemptNumber, 'attempts');
   });
-  
-  socket.on(SOCKET_EVENTS.RECONNECT_ATTEMPT, (attemptNumber) => {
+
+  socket.on(SOCKET_EVENTS.RECONNECT_ATTEMPT, attemptNumber => {
     console.log('Socket.io reconnection attempt:', attemptNumber);
-    
+
     // Refresh token before reconnection attempt
     const currentToken = tokenManager.getAccessToken();
     if (currentToken && tokenManager.isTokenExpired(currentToken)) {
-      tokenManager.refreshAccessToken().then((newToken) => {
-        if (socket) {
-          socket.auth = { token: newToken };
-        }
-      }).catch((error) => {
-        console.error('Token refresh failed during reconnection:', error);
-      });
+      tokenManager
+        .refreshAccessToken()
+        .then(newToken => {
+          if (socket) {
+            socket.auth = { token: newToken };
+          }
+        })
+        .catch(error => {
+          console.error('Token refresh failed during reconnection:', error);
+        });
     }
   });
-  
-  socket.on(SOCKET_EVENTS.RECONNECT_ERROR, (error) => {
+
+  socket.on(SOCKET_EVENTS.RECONNECT_ERROR, error => {
     console.error('Socket.io reconnection error:', error);
   });
-  
+
   socket.on(SOCKET_EVENTS.RECONNECT_FAILED, () => {
     console.error('Socket.io reconnection failed after maximum attempts');
   });
-  
+
   return socket;
 }
 
@@ -194,17 +197,14 @@ export function leaveRoom(roomName: string): void {
 /**
  * Subscribes to a Socket.io event
  */
-export function subscribeToEvent(
-  eventName: string,
-  handler: SocketEventHandler
-): () => void {
+export function subscribeToEvent(eventName: string, handler: SocketEventHandler): () => void {
   if (!socket) {
     createSocketClient();
   }
-  
+
   if (socket) {
     socket.on(eventName, handler);
-    
+
     // Return unsubscribe function
     return () => {
       if (socket) {
@@ -212,7 +212,7 @@ export function subscribeToEvent(
       }
     };
   }
-  
+
   return () => {};
 }
 
@@ -237,7 +237,7 @@ export function getConnectionStatus(): SocketConnectionStatus {
       reconnectAttempts: 0,
     };
   }
-  
+
   return {
     connected: socket.connected,
     connecting: socket.connecting,

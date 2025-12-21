@@ -1,9 +1,9 @@
 /**
  * Search Module Index
- * 
+ *
  * Centralized exports for all search-related functionality including hooks,
  * utilities, context providers, and type definitions.
- * 
+ *
  * Requirements: 2.2 - Complete Module Hook Implementation (Search)
  */
 

@@ -1,6 +1,6 @@
 /**
  * Security Types
- * 
+ *
  * Type definitions for security-related functionality.
  */
 

@@ -1,6 +1,6 @@
 /**
  * GraphQL Provider Component
- * 
+ *
  * React provider component that wraps the application with Apollo Client.
  * Provides GraphQL capabilities to all child components.
  */
@@ -18,11 +18,7 @@ export interface GraphQLProviderProps {
  * GraphQL Provider component that wraps the app with Apollo Client
  */
 export function GraphQLProvider({ children, client = apolloClient }: GraphQLProviderProps) {
-  return (
-    <ApolloProvider client={client}>
-      {children}
-    </ApolloProvider>
-  );
+  return <ApolloProvider client={client}>{children}</ApolloProvider>;
 }
 
 /**

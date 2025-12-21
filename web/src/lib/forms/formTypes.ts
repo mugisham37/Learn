@@ -1,9 +1,9 @@
 /**
  * Form Type Integration
- * 
+ *
  * Provides form input types that match GraphQL mutation inputs exactly,
  * form validation schema from GraphQL types, and type-safe form utilities.
- * 
+ *
  * Requirements: 2.5 - Form input types matching GraphQL mutations
  */
 
@@ -29,14 +29,10 @@ import type {
   CreateThreadInput,
   ReplyToThreadInput,
   LessonType,
-  QuestionType
+  QuestionType,
 } from '@/types/entities';
 
-import type {
-  FormInput,
-  FormState,
-  FormErrors,
-} from '@/lib/types/utilityTypes';
+import type { FormInput, FormState, FormErrors } from '@/lib/types/utilityTypes';
 
 // Re-export commonly used types for easier access
 export type { FormErrors, FormSubmissionState } from '@/lib/types/utilityTypes';
@@ -362,7 +358,18 @@ export type RegistrationValidationSchema = ValidationSchema<RegistrationFormInpu
 export type FormFieldConfig<T> = {
   name: keyof T;
   label: string;
-  type: 'text' | 'email' | 'password' | 'number' | 'textarea' | 'select' | 'checkbox' | 'radio' | 'file' | 'date' | 'datetime-local';
+  type:
+    | 'text'
+    | 'email'
+    | 'password'
+    | 'number'
+    | 'textarea'
+    | 'select'
+    | 'checkbox'
+    | 'radio'
+    | 'file'
+    | 'date'
+    | 'datetime-local';
   placeholder?: string;
   options?: Array<{ value: string; label: string }>;
   validation?: ValidationRule<T[keyof T]>;
@@ -418,22 +425,22 @@ export type FormHookReturn<T> = {
   isSubmitted: boolean;
   isValid: boolean;
   submitCount: number;
-  
+
   // Field methods
   setValue: (field: keyof T, value: T[keyof T]) => void;
   setError: (field: keyof T, error: string) => void;
   setTouched: (field: keyof T, touched?: boolean) => void;
-  
+
   // Form methods
   handleChange: (field: keyof T) => (value: T[keyof T]) => void;
   handleBlur: (field: keyof T) => () => void;
   handleSubmit: (e?: React.FormEvent) => Promise<void>;
   handleReset: () => void;
-  
+
   // Validation methods
   validateField: (field: keyof T) => Promise<string | null>;
   validateForm: () => Promise<FormErrors<T>>;
-  
+
   // Utility methods
   setValues: (values: Partial<T>) => void;
   setErrors: (errors: FormErrors<T>) => void;

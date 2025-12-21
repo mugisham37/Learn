@@ -1,6 +1,6 @@
 /**
  * Security Provider Component
- * 
+ *
  * React provider component that provides security functionality to child components.
  */
 
@@ -83,62 +83,74 @@ export function SecurityProvider({ children, config: customConfig }: SecurityPro
     }
   }, [config.enableCSRFProtection]);
 
-  const sanitizeContent = useCallback((content: string): string => {
-    if (!config.enableXSSProtection) return content;
-    
-    // Basic XSS sanitization (in production, use a proper library like DOMPurify)
-    return content
-      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-      .replace(/javascript:/gi, '')
-      .replace(/on\w+\s*=/gi, '');
-  }, [config.enableXSSProtection]);
+  const sanitizeContent = useCallback(
+    (content: string): string => {
+      if (!config.enableXSSProtection) return content;
 
-  const validateFileUpload = useCallback(async (file: File): Promise<boolean> => {
-    if (!config.enableFileValidation) return true;
-    
-    // Check file type
-    if (!config.allowedFileTypes.includes(file.type)) {
-      return false;
-    }
-    
-    // Check file size
-    if (file.size > config.maxFileSize) {
-      return false;
-    }
-    
-    // Additional security checks could be added here
-    return true;
-  }, [config.enableFileValidation, config.allowedFileTypes, config.maxFileSize]);
+      // Basic XSS sanitization (in production, use a proper library like DOMPurify)
+      return content
+        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+        .replace(/javascript:/gi, '')
+        .replace(/on\w+\s*=/gi, '');
+    },
+    [config.enableXSSProtection]
+  );
+
+  const validateFileUpload = useCallback(
+    async (file: File): Promise<boolean> => {
+      if (!config.enableFileValidation) return true;
+
+      // Check file type
+      if (!config.allowedFileTypes.includes(file.type)) {
+        return false;
+      }
+
+      // Check file size
+      if (file.size > config.maxFileSize) {
+        return false;
+      }
+
+      // Additional security checks could be added here
+      return true;
+    },
+    [config.enableFileValidation, config.allowedFileTypes, config.maxFileSize]
+  );
 
   const generateCSRFToken = useCallback((): string => {
     if (!config.enableCSRFProtection) return '';
-    
+
     const newToken = generateRandomToken();
     setCSRFToken(newToken);
     return newToken;
   }, [config.enableCSRFProtection]);
 
-  const validateCSRFToken = useCallback((token: string): boolean => {
-    if (!config.enableCSRFProtection) return true;
-    
-    return token === csrfToken;
-  }, [config.enableCSRFProtection, csrfToken]);
+  const validateCSRFToken = useCallback(
+    (token: string): boolean => {
+      if (!config.enableCSRFProtection) return true;
 
-  const isSafeURL = useCallback((url: string): boolean => {
-    try {
-      const urlObj = new URL(url);
-      
-      // Check if domain is allowed
-      if (config.allowedDomains.length > 0) {
-        return config.allowedDomains.includes(urlObj.hostname);
+      return token === csrfToken;
+    },
+    [config.enableCSRFProtection, csrfToken]
+  );
+
+  const isSafeURL = useCallback(
+    (url: string): boolean => {
+      try {
+        const urlObj = new URL(url);
+
+        // Check if domain is allowed
+        if (config.allowedDomains.length > 0) {
+          return config.allowedDomains.includes(urlObj.hostname);
+        }
+
+        // Basic safety checks
+        return urlObj.protocol === 'https:' || urlObj.protocol === 'http:';
+      } catch {
+        return false;
       }
-      
-      // Basic safety checks
-      return urlObj.protocol === 'https:' || urlObj.protocol === 'http:';
-    } catch {
-      return false;
-    }
-  }, [config.allowedDomains]);
+    },
+    [config.allowedDomains]
+  );
 
   const contextValue: SecurityContextValue = {
     sanitizeContent,
@@ -149,11 +161,7 @@ export function SecurityProvider({ children, config: customConfig }: SecurityPro
     config,
   };
 
-  return (
-    <SecurityContext.Provider value={contextValue}>
-      {children}
-    </SecurityContext.Provider>
-  );
+  return <SecurityContext.Provider value={contextValue}>{children}</SecurityContext.Provider>;
 }
 
 // =============================================================================

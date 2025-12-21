@@ -1,6 +1,6 @@
 /**
  * Current User API Route
- * 
+ *
  * Next.js API route that fetches current user information from the backend.
  * Used for refreshing user data and session validation.
  */
@@ -81,10 +81,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (!accessToken) {
-      return NextResponse.json(
-        { error: 'No access token provided' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'No access token provided' }, { status: 401 });
     }
 
     // Call backend GraphQL API
@@ -103,18 +100,18 @@ export async function GET(request: NextRequest) {
       throw new Error(`Backend request failed: ${response.status}`);
     }
 
-    const data = await response.json() as MeResponse;
+    const data = (await response.json()) as MeResponse;
 
     // Check for GraphQL errors
     if (data.errors && data.errors.length > 0) {
       const error = data.errors[0];
-      
+
       // If authentication error, clear cookies
       if (error.extensions?.code === 'UNAUTHENTICATED') {
         const errorResponse = NextResponse.json(
-          { 
+          {
             error: error.message,
-            code: error.extensions.code
+            code: error.extensions.code,
           },
           { status: 401 }
         );
@@ -128,29 +125,26 @@ export async function GET(request: NextRequest) {
       }
 
       return NextResponse.json(
-        { 
+        {
           error: error.message,
-          code: error.extensions?.code || 'QUERY_FAILED'
+          code: error.extensions?.code || 'QUERY_FAILED',
         },
         { status: 400 }
       );
     }
 
     if (!data.data?.me) {
-      return NextResponse.json(
-        { error: 'Invalid user data response' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Invalid user data response' }, { status: 500 });
     }
 
     return NextResponse.json(data.data.me);
   } catch (error) {
     console.error('Me API error:', error);
-    
+
     return NextResponse.json(
-      { 
+      {
         error: error instanceof Error ? error.message : 'Failed to fetch user data',
-        code: 'INTERNAL_ERROR'
+        code: 'INTERNAL_ERROR',
       },
       { status: 500 }
     );

@@ -1,6 +1,6 @@
 /**
  * Real-time Communication Infrastructure
- * 
+ *
  * Comprehensive real-time system that integrates GraphQL subscriptions and Socket.io
  * for seamless real-time features including messaging, presence, notifications,
  * and progress updates.

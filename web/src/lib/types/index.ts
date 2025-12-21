@@ -1,9 +1,9 @@
 /**
  * Type System Module
- * 
+ *
  * Exports type guards, utility types, and type manipulation helpers
  * for building type-safe GraphQL applications.
- * 
+ *
  * Requirements: 2.4 - Type guards and utility types for polymorphic GraphQL types
  */
 
@@ -30,15 +30,8 @@ export type {
   Edge,
   PageInfo,
   ID,
-  DateTime
+  DateTime,
 } from '@/types/entities';
 
 // Re-export generated GraphQL types
-export type {
-  Maybe,
-  InputMaybe,
-  Exact,
-  MakeOptional,
-  MakeMaybe,
-  Scalars
-} from '@/types/schema';
+export type { Maybe, InputMaybe, Exact, MakeOptional, MakeMaybe, Scalars } from '@/types/schema';

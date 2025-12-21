@@ -1,9 +1,9 @@
 /**
  * Utility Types for Common Patterns
- * 
+ *
  * Provides utility types for common GraphQL and React patterns,
  * including form handling, API responses, and component props.
- * 
+ *
  * Requirements: 2.4 - Utility types for common patterns
  */
 
@@ -15,7 +15,7 @@ import type {
   Quiz,
   Assignment,
   Connection,
-  Edge
+  Edge,
 } from '@/types/entities';
 
 // =============================================================================
@@ -161,14 +161,14 @@ export type FormInput<T> = {
   [K in keyof T]: T[K] extends string | number | boolean | null | undefined
     ? T[K]
     : T[K] extends Date
-    ? string
-    : T[K] extends File
-    ? File | null
-    : T[K] extends Array<infer U>
-    ? Array<FormInput<U>>
-    : T[K] extends object
-    ? FormInput<T[K]>
-    : T[K];
+      ? string
+      : T[K] extends File
+        ? File | null
+        : T[K] extends Array<infer U>
+          ? Array<FormInput<U>>
+          : T[K] extends object
+            ? FormInput<T[K]>
+            : T[K];
 };
 
 /**
@@ -284,10 +284,11 @@ export type ErrorProps = {
 /**
  * Props for components with async data
  */
-export type AsyncProps<T> = LoadingProps & ErrorProps & {
-  data?: T;
-  onRefresh?: () => void;
-};
+export type AsyncProps<T> = LoadingProps &
+  ErrorProps & {
+    data?: T;
+    onRefresh?: () => void;
+  };
 
 // =============================================================================
 // Domain-Specific Utility Types
@@ -318,7 +319,14 @@ export type LessonWithType<T extends Lesson['type']> = Lesson & { type: T };
  */
 export type CourseCreationData = Omit<
   Course,
-  'id' | 'instructor' | 'modules' | 'enrollmentCount' | 'averageRating' | 'reviews' | 'createdAt' | 'updatedAt'
+  | 'id'
+  | 'instructor'
+  | 'modules'
+  | 'enrollmentCount'
+  | 'averageRating'
+  | 'reviews'
+  | 'createdAt'
+  | 'updatedAt'
 >;
 
 /**
@@ -337,14 +345,14 @@ export type ProfileUpdateData = Partial<User['profile']>;
 export type LessonContentByType<T extends Lesson['type']> = T extends 'VIDEO'
   ? { videoUrl: string; duration?: number }
   : T extends 'TEXT'
-  ? { content: string }
-  : T extends 'QUIZ'
-  ? { quiz: Quiz }
-  : T extends 'ASSIGNMENT'
-  ? { assignment: Assignment }
-  : T extends 'INTERACTIVE'
-  ? { content?: string }
-  : never;
+    ? { content: string }
+    : T extends 'QUIZ'
+      ? { quiz: Quiz }
+      : T extends 'ASSIGNMENT'
+        ? { assignment: Assignment }
+        : T extends 'INTERACTIVE'
+          ? { content?: string }
+          : never;
 
 // =============================================================================
 // Permission and Access Control Types
@@ -509,12 +517,12 @@ export type FilterInput<T> = {
   [K in keyof T]?: T[K] extends string
     ? string | { contains?: string; startsWith?: string; endsWith?: string }
     : T[K] extends number
-    ? number | { gt?: number; gte?: number; lt?: number; lte?: number }
-    : T[K] extends boolean
-    ? boolean
-    : T[K] extends Date
-    ? Date | { before?: Date; after?: Date }
-    : T[K];
+      ? number | { gt?: number; gte?: number; lt?: number; lte?: number }
+      : T[K] extends boolean
+        ? boolean
+        : T[K] extends Date
+          ? Date | { before?: Date; after?: Date }
+          : T[K];
 };
 
 /**

@@ -1,6 +1,6 @@
 /**
  * Form Components
- * 
+ *
  * React components for form handling with validation and type safety.
  */
 
@@ -64,28 +64,31 @@ const FormContext = createContext<FormContextValue | null>(null);
 // Provider Component
 // =============================================================================
 
-export function FormProvider({ 
-  children, 
-  initialValues = {}, 
+export function FormProvider({
+  children,
+  initialValues = {},
   onSubmit,
-  validate 
+  validate,
 }: FormProviderProps) {
   const [values, setValues] = useState<Record<string, unknown>>(initialValues);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouchedState] = useState<Record<string, boolean>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const setValue = useCallback((name: string, value: unknown) => {
-    setValues(prev => ({ ...prev, [name]: value }));
-    // Clear error when value changes
-    if (errors[name]) {
-      setErrors(prev => {
-        const newErrors = { ...prev };
-        delete newErrors[name];
-        return newErrors;
-      });
-    }
-  }, [errors]);
+  const setValue = useCallback(
+    (name: string, value: unknown) => {
+      setValues(prev => ({ ...prev, [name]: value }));
+      // Clear error when value changes
+      if (errors[name]) {
+        setErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors[name];
+          return newErrors;
+        });
+      }
+    },
+    [errors]
+  );
 
   const setError = useCallback((name: string, error: string) => {
     setErrors(prev => ({ ...prev, [name]: error }));
@@ -95,21 +98,24 @@ export function FormProvider({
     setTouchedState(prev => ({ ...prev, [name]: touched }));
   }, []);
 
-  const validateField = useCallback((name: string): boolean => {
-    if (!validate) return true;
-    
-    const fieldErrors = validate(values);
-    const fieldError = fieldErrors[name];
-    if (fieldError) {
-      setError(name, fieldError);
-      return false;
-    }
-    return true;
-  }, [validate, values, setError]);
+  const validateField = useCallback(
+    (name: string): boolean => {
+      if (!validate) return true;
+
+      const fieldErrors = validate(values);
+      const fieldError = fieldErrors[name];
+      if (fieldError) {
+        setError(name, fieldError);
+        return false;
+      }
+      return true;
+    },
+    [validate, values, setError]
+  );
 
   const validateForm = useCallback((): boolean => {
     if (!validate) return true;
-    
+
     const formErrors = validate(values);
     setErrors(formErrors);
     return Object.keys(formErrors).length === 0;
@@ -124,7 +130,7 @@ export function FormProvider({
 
   const submitForm = useCallback(async () => {
     if (!onSubmit) return;
-    
+
     setIsSubmitting(true);
     try {
       if (validateForm()) {
@@ -149,11 +155,7 @@ export function FormProvider({
     submitForm,
   };
 
-  return (
-    <FormContext.Provider value={contextValue}>
-      {children}
-    </FormContext.Provider>
-  );
+  return <FormContext.Provider value={contextValue}>{children}</FormContext.Provider>;
 }
 
 // =============================================================================
@@ -170,15 +172,18 @@ export function useForm(): FormContextValue {
 
 export function useFormField(name: string) {
   const { values, errors, touched, setValue, setTouched, validateField } = useForm();
-  
+
   const value = values[name] || '';
   const error = errors[name];
   const isTouched = touched[name];
   const hasError = Boolean(error && isTouched);
 
-  const handleChange = useCallback((newValue: unknown) => {
-    setValue(name, newValue);
-  }, [name, setValue]);
+  const handleChange = useCallback(
+    (newValue: unknown) => {
+      setValue(name, newValue);
+    },
+    [name, setValue]
+  );
 
   const handleBlur = useCallback(() => {
     setTouched(name, true);
@@ -199,15 +204,15 @@ export function useFormField(name: string) {
 // Form Field Component
 // =============================================================================
 
-export function FormField({ 
-  name, 
-  label, 
-  type = 'text', 
-  placeholder, 
-  required, 
+export function FormField({
+  name,
+  label,
+  type = 'text',
+  placeholder,
+  required,
   disabled,
   className = '',
-  children 
+  children,
 }: FormFieldProps) {
   const { value, error, hasError, onChange, onBlur } = useFormField(name);
 
@@ -216,27 +221,30 @@ export function FormField({
     return (
       <div className={`form-field ${hasError ? 'error' : ''} ${className}`}>
         {label && (
-          <label htmlFor={name} className="form-label">
+          <label htmlFor={name} className='form-label'>
             {label}
-            {required && <span className="required">*</span>}
+            {required && <span className='required'>*</span>}
           </label>
         )}
-        {React.cloneElement(children as React.ReactElement<{ 
-          id?: string; 
-          name?: string; 
-          value?: unknown; 
-          onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void; 
-          onBlur?: () => void; 
-          disabled?: boolean; 
-        }>, {
-          id: name,
-          name,
-          value,
-          onChange: (e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value),
-          onBlur,
-          ...(disabled !== undefined && { disabled }),
-        })}
-        {hasError && <div className="form-error">{error}</div>}
+        {React.cloneElement(
+          children as React.ReactElement<{
+            id?: string;
+            name?: string;
+            value?: unknown;
+            onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+            onBlur?: () => void;
+            disabled?: boolean;
+          }>,
+          {
+            id: name,
+            name,
+            value,
+            onChange: (e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value),
+            onBlur,
+            ...(disabled !== undefined && { disabled }),
+          }
+        )}
+        {hasError && <div className='form-error'>{error}</div>}
       </div>
     );
   }
@@ -244,9 +252,9 @@ export function FormField({
   return (
     <div className={`form-field ${hasError ? 'error' : ''} ${className}`}>
       {label && (
-        <label htmlFor={name} className="form-label">
+        <label htmlFor={name} className='form-label'>
           {label}
-          {required && <span className="required">*</span>}
+          {required && <span className='required'>*</span>}
         </label>
       )}
       <input
@@ -255,13 +263,13 @@ export function FormField({
         type={type}
         value={typeof value === 'string' || typeof value === 'number' ? String(value) : ''}
         placeholder={placeholder}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={e => onChange(e.target.value)}
         onBlur={onBlur}
         disabled={disabled}
-        className="form-input"
+        className='form-input'
         required={required}
       />
-      {hasError && <div className="form-error">{error}</div>}
+      {hasError && <div className='form-error'>{error}</div>}
     </div>
   );
 }
@@ -270,14 +278,14 @@ export function FormField({
 // Form Button Component
 // =============================================================================
 
-export function FormButton({ 
-  type = 'button', 
-  variant = 'primary', 
-  disabled, 
-  loading, 
+export function FormButton({
+  type = 'button',
+  variant = 'primary',
+  disabled,
+  loading,
   className = '',
   children,
-  onClick 
+  onClick,
 }: FormButtonProps) {
   const { isSubmitting, submitForm } = useForm();
 

@@ -1,9 +1,9 @@
 /**
  * Type Guards and Utility Types
- * 
+ *
  * Provides type guards for polymorphic GraphQL types, utility types for common patterns,
  * discriminated union helpers, and type assertion utilities with validation.
- * 
+ *
  * Requirements: 2.4 - Type guards for polymorphic types and utility types
  */
 
@@ -33,13 +33,7 @@ import type {
  * Type guard to check if an object is a User
  */
 export function isUser(obj: unknown): obj is User {
-  return (
-    obj != null &&
-    typeof obj === 'object' &&
-    'id' in obj &&
-    'email' in obj &&
-    'role' in obj
-  );
+  return obj != null && typeof obj === 'object' && 'id' in obj && 'email' in obj && 'role' in obj;
 }
 
 /**
@@ -162,21 +156,27 @@ export function isEnrollableCourse(course: Course): course is Course & { status:
 /**
  * Type guard to check if an enrollment is active
  */
-export function isActiveEnrollment(enrollment: Enrollment): enrollment is Enrollment & { status: 'ACTIVE' } {
+export function isActiveEnrollment(
+  enrollment: Enrollment
+): enrollment is Enrollment & { status: 'ACTIVE' } {
   return enrollment.status === 'ACTIVE';
 }
 
 /**
  * Type guard to check if an enrollment is completed
  */
-export function isCompletedEnrollment(enrollment: Enrollment): enrollment is Enrollment & { status: 'COMPLETED' } {
+export function isCompletedEnrollment(
+  enrollment: Enrollment
+): enrollment is Enrollment & { status: 'COMPLETED' } {
   return enrollment.status === 'COMPLETED';
 }
 
 /**
  * Type guard to check if an enrollment has a certificate
  */
-export function hasCompletionCertificate(enrollment: Enrollment): enrollment is Enrollment & { certificate: NonNullable<Enrollment['certificate']> } {
+export function hasCompletionCertificate(
+  enrollment: Enrollment
+): enrollment is Enrollment & { certificate: NonNullable<Enrollment['certificate']> } {
   return enrollment.certificate != null;
 }
 
@@ -187,7 +187,9 @@ export function hasCompletionCertificate(enrollment: Enrollment): enrollment is 
 /**
  * Type guard to check if a lesson is a video lesson
  */
-export function isVideoLesson(lesson: Lesson): lesson is Lesson & { type: 'VIDEO'; videoUrl: string } {
+export function isVideoLesson(
+  lesson: Lesson
+): lesson is Lesson & { type: 'VIDEO'; videoUrl: string } {
   return lesson.type === 'VIDEO' && lesson.videoUrl != null;
 }
 
@@ -208,7 +210,9 @@ export function isQuizLesson(lesson: Lesson): lesson is Lesson & { type: 'QUIZ';
 /**
  * Type guard to check if a lesson is an assignment lesson
  */
-export function isAssignmentLesson(lesson: Lesson): lesson is Lesson & { type: 'ASSIGNMENT'; assignment: Assignment } {
+export function isAssignmentLesson(
+  lesson: Lesson
+): lesson is Lesson & { type: 'ASSIGNMENT'; assignment: Assignment } {
   return lesson.type === 'ASSIGNMENT' && lesson.assignment != null;
 }
 
@@ -226,35 +230,45 @@ export function isInteractiveLesson(lesson: Lesson): lesson is Lesson & { type: 
 /**
  * Type guard to check if a quiz attempt is in progress
  */
-export function isQuizAttemptInProgress(attempt: QuizAttempt): attempt is QuizAttempt & { status: 'IN_PROGRESS' } {
+export function isQuizAttemptInProgress(
+  attempt: QuizAttempt
+): attempt is QuizAttempt & { status: 'IN_PROGRESS' } {
   return attempt.status === 'IN_PROGRESS';
 }
 
 /**
  * Type guard to check if a quiz attempt is submitted
  */
-export function isQuizAttemptSubmitted(attempt: QuizAttempt): attempt is QuizAttempt & { status: 'SUBMITTED' } {
+export function isQuizAttemptSubmitted(
+  attempt: QuizAttempt
+): attempt is QuizAttempt & { status: 'SUBMITTED' } {
   return attempt.status === 'SUBMITTED';
 }
 
 /**
  * Type guard to check if a quiz attempt is graded
  */
-export function isQuizAttemptGraded(attempt: QuizAttempt): attempt is QuizAttempt & { status: 'GRADED'; score: number } {
+export function isQuizAttemptGraded(
+  attempt: QuizAttempt
+): attempt is QuizAttempt & { status: 'GRADED'; score: number } {
   return attempt.status === 'GRADED' && attempt.score != null;
 }
 
 /**
  * Type guard to check if an assignment submission is submitted
  */
-export function isAssignmentSubmitted(submission: AssignmentSubmission): submission is AssignmentSubmission & { status: 'SUBMITTED' } {
+export function isAssignmentSubmitted(
+  submission: AssignmentSubmission
+): submission is AssignmentSubmission & { status: 'SUBMITTED' } {
   return submission.status === 'SUBMITTED';
 }
 
 /**
  * Type guard to check if an assignment submission is graded
  */
-export function isAssignmentGraded(submission: AssignmentSubmission): submission is AssignmentSubmission & { status: 'GRADED'; grade: number } {
+export function isAssignmentGraded(
+  submission: AssignmentSubmission
+): submission is AssignmentSubmission & { status: 'GRADED'; grade: number } {
   return submission.status === 'GRADED' && submission.grade != null;
 }
 
@@ -265,14 +279,18 @@ export function isAssignmentGraded(submission: AssignmentSubmission): submission
 /**
  * Type guard to check if video processing is completed
  */
-export function isVideoProcessingCompleted(status: VideoProcessingStatus): status is VideoProcessingStatus & { status: 'completed' } {
+export function isVideoProcessingCompleted(
+  status: VideoProcessingStatus
+): status is VideoProcessingStatus & { status: 'completed' } {
   return status.status === 'completed';
 }
 
 /**
  * Type guard to check if video processing failed
  */
-export function isVideoProcessingFailed(status: VideoProcessingStatus): status is VideoProcessingStatus & { status: 'failed'; error: string } {
+export function isVideoProcessingFailed(
+  status: VideoProcessingStatus
+): status is VideoProcessingStatus & { status: 'failed'; error: string } {
   return status.status === 'failed' && status.error != null;
 }
 
@@ -283,7 +301,9 @@ export function isVideoProcessingFailed(status: VideoProcessingStatus): status i
 /**
  * Type guard to check if a connection has data
  */
-export function hasConnectionData<T>(connection: Connection<T> | null | undefined): connection is Connection<T> & { edges: Array<Edge<T> & { node: T }> } {
+export function hasConnectionData<T>(
+  connection: Connection<T> | null | undefined
+): connection is Connection<T> & { edges: Array<Edge<T> & { node: T }> } {
   return connection != null && connection.edges.length > 0;
 }
 
@@ -333,7 +353,7 @@ export type ID = string;
 /**
  * Utility type for polymorphic lesson content
  */
-export type LessonContent = 
+export type LessonContent =
   | { type: 'VIDEO'; videoUrl: string; duration?: number }
   | { type: 'TEXT'; content: string }
   | { type: 'QUIZ'; quiz: Quiz }
@@ -343,7 +363,7 @@ export type LessonContent =
 /**
  * Utility type for assessment results
  */
-export type AssessmentResult = 
+export type AssessmentResult =
   | { type: 'QUIZ'; attempt: QuizAttempt; score: number; maxScore: number }
   | { type: 'ASSIGNMENT'; submission: AssignmentSubmission; grade?: number; maxPoints: number };
 
@@ -353,10 +373,10 @@ export type AssessmentResult =
 export type UserPermissions<T extends UserRole> = T extends 'ADMIN'
   ? 'ALL_PERMISSIONS'
   : T extends 'EDUCATOR'
-  ? 'COURSE_MANAGEMENT' | 'GRADING' | 'STUDENT_MANAGEMENT'
-  : T extends 'STUDENT'
-  ? 'COURSE_ACCESS' | 'ASSIGNMENT_SUBMISSION'
-  : never;
+    ? 'COURSE_MANAGEMENT' | 'GRADING' | 'STUDENT_MANAGEMENT'
+    : T extends 'STUDENT'
+      ? 'COURSE_ACCESS' | 'ASSIGNMENT_SUBMISSION'
+      : never;
 
 // =============================================================================
 // Discriminated Union Helpers
@@ -365,12 +385,8 @@ export type UserPermissions<T extends UserRole> = T extends 'ADMIN'
 /**
  * Helper to create discriminated union type guards
  */
-export function createDiscriminatedGuard<T, K extends keyof T>(
-  discriminant: K
-) {
-  return function<V extends T[K]>(
-    value: V
-  ): (obj: T) => obj is T & { [P in K]: V } {
+export function createDiscriminatedGuard<T, K extends keyof T>(discriminant: K) {
+  return function <V extends T[K]>(value: V): (obj: T) => obj is T & { [P in K]: V } {
     return (obj: T): obj is T & { [P in K]: V } => {
       return obj[discriminant] === value;
     };
@@ -380,10 +396,7 @@ export function createDiscriminatedGuard<T, K extends keyof T>(
 /**
  * Helper to extract discriminated union values
  */
-export function extractDiscriminatedValue<T, K extends keyof T>(
-  obj: T,
-  discriminant: K
-): T[K] {
+export function extractDiscriminatedValue<T, K extends keyof T>(obj: T, discriminant: K): T[K] {
   return obj[discriminant];
 }
 
@@ -394,7 +407,10 @@ export function extractDiscriminatedValue<T, K extends keyof T>(
 /**
  * Assert that a value is not null or undefined
  */
-export function assertNonNull<T>(value: T | null | undefined, message?: string): asserts value is T {
+export function assertNonNull<T>(
+  value: T | null | undefined,
+  message?: string
+): asserts value is T {
   if (value == null) {
     throw new Error(message || 'Expected non-null value');
   }
@@ -435,7 +451,9 @@ export function assertEnrollmentStatus<T extends EnrollmentStatus>(
   message?: string
 ): asserts enrollment is Enrollment & { status: T } {
   if (enrollment.status !== status) {
-    throw new Error(message || `Expected enrollment to have status ${status}, got ${enrollment.status}`);
+    throw new Error(
+      message || `Expected enrollment to have status ${status}, got ${enrollment.status}`
+    );
   }
 }
 
@@ -494,17 +512,17 @@ export function validateConnection<T>(
   if (!connection || typeof connection !== 'object') {
     throw new Error(`${connectionName} must be an object`);
   }
-  
+
   const conn = connection as Record<string, unknown>;
-  
+
   if (!Array.isArray(conn.edges)) {
     throw new Error(`${connectionName}.edges must be an array`);
   }
-  
+
   if (!conn.pageInfo || typeof conn.pageInfo !== 'object') {
     throw new Error(`${connectionName}.pageInfo must be an object`);
   }
-  
+
   validateRequiredProperties(
     conn.pageInfo as Record<string, unknown>,
     ['hasNextPage', 'hasPreviousPage'],

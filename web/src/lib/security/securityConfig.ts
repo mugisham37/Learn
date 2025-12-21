@@ -1,9 +1,9 @@
 /**
  * Security Configuration
- * 
+ *
  * Central configuration for all security features in the frontend foundation layer.
  * Provides environment-specific security settings and validation.
- * 
+ *
  * Requirements: 13.1, 13.2, 13.3, 13.4
  */
 
@@ -44,14 +44,29 @@ const productionConfig: SecurityConfig = {
     enabled: true,
     strictMode: true,
     allowedTags: [
-      'p', 'br', 'strong', 'em', 'u', 'ol', 'ul', 'li',
-      'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-      'blockquote', 'code', 'pre',
-      'a', 'img',
+      'p',
+      'br',
+      'strong',
+      'em',
+      'u',
+      'ol',
+      'ul',
+      'li',
+      'h1',
+      'h2',
+      'h3',
+      'h4',
+      'h5',
+      'h6',
+      'blockquote',
+      'code',
+      'pre',
+      'a',
+      'img',
     ],
     allowedAttributes: {
-      'a': ['href', 'title', 'target'],
-      'img': ['src', 'alt', 'title', 'width', 'height'],
+      a: ['href', 'title', 'target'],
+      img: ['src', 'alt', 'title', 'width', 'height'],
       '*': ['class', 'id'],
     },
   },
@@ -104,14 +119,31 @@ const developmentConfig: SecurityConfig = {
     enabled: true,
     strictMode: false,
     allowedTags: [
-      'p', 'br', 'strong', 'em', 'u', 'ol', 'ul', 'li',
-      'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-      'blockquote', 'code', 'pre',
-      'a', 'img', 'div', 'span',
+      'p',
+      'br',
+      'strong',
+      'em',
+      'u',
+      'ol',
+      'ul',
+      'li',
+      'h1',
+      'h2',
+      'h3',
+      'h4',
+      'h5',
+      'h6',
+      'blockquote',
+      'code',
+      'pre',
+      'a',
+      'img',
+      'div',
+      'span',
     ],
     allowedAttributes: {
-      'a': ['href', 'title', 'target'],
-      'img': ['src', 'alt', 'title', 'width', 'height'],
+      a: ['href', 'title', 'target'],
+      img: ['src', 'alt', 'title', 'width', 'height'],
       '*': ['class', 'id', 'style'],
     },
   },
@@ -185,7 +217,7 @@ const testConfig: SecurityConfig = {
  */
 export function getSecurityConfig(): SecurityConfig {
   const env = process.env.NODE_ENV;
-  
+
   switch (env) {
     case 'production':
       return productionConfig;
@@ -238,23 +270,35 @@ export const SECURITY_CONSTANTS = {
   TOKEN_STORAGE_KEY: 'app_access_token',
   REFRESH_TOKEN_STORAGE_KEY: 'app_refresh_token',
   ENCRYPTED_TOKEN_PREFIX: 'enc:',
-  
+
   // XSS protection
   XSS_SCAN_TIMEOUT: 5000, // 5 seconds
   MAX_CONTENT_LENGTH: 1000000, // 1MB
-  
+
   // CSRF protection
   CSRF_TOKEN_LENGTH: 32,
   CSRF_TOKEN_LIFETIME: 3600000, // 1 hour
-  
+
   // File upload security
   FILE_SCAN_TIMEOUT: 30000, // 30 seconds
   MAX_FILE_NAME_LENGTH: 255,
   SUSPICIOUS_EXTENSIONS: [
-    'exe', 'bat', 'cmd', 'com', 'pif', 'scr', 'vbs', 'js',
-    'jar', 'app', 'deb', 'pkg', 'dmg', 'rpm',
+    'exe',
+    'bat',
+    'cmd',
+    'com',
+    'pif',
+    'scr',
+    'vbs',
+    'js',
+    'jar',
+    'app',
+    'deb',
+    'pkg',
+    'dmg',
+    'rpm',
   ],
-  
+
   // Security headers
   SECURITY_HEADERS: {
     'X-Content-Type-Options': 'nosniff',
@@ -272,13 +316,13 @@ export const ENVIRONMENT_SECURITY = {
   isDevelopment: process.env.NODE_ENV === 'development',
   isProduction: process.env.NODE_ENV === 'production',
   isTest: process.env.NODE_ENV === 'test',
-  
+
   // Feature flags
   enableTokenEncryption: process.env.NODE_ENV === 'production',
   enableCSRFProtection: process.env.NODE_ENV === 'production',
   enableMalwareScanning: process.env.NODE_ENV === 'production',
   enableSecurityLogging: process.env.NODE_ENV !== 'test',
-  
+
   // Debug settings
   logSecurityEvents: process.env.NODE_ENV === 'development',
   strictValidation: process.env.NODE_ENV === 'production',

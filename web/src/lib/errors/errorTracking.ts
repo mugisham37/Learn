@@ -1,23 +1,19 @@
 /**
  * Error Tracking Integration
- * 
+ *
  * Comprehensive error tracking system with Sentry integration,
  * error logging with request context, reporting utilities,
  * and performance monitoring for error scenarios.
  */
 
-import type { 
-  ClassifiedError, 
-  ErrorContext,
-  PerformanceMetrics
-} from './errorTypes';
-import { 
+import type { ClassifiedError, ErrorContext, PerformanceMetrics } from './errorTypes';
+import {
   createBackendSentryConfig,
   getBackendErrorFingerprint,
   getBackendErrorTags,
   getBackendErrorContext,
   shouldReportBackendError,
-  BACKEND_SENTRY_LEVELS
+  BACKEND_SENTRY_LEVELS,
 } from './backendSentryConfig';
 
 /**
@@ -26,22 +22,22 @@ import {
 interface ErrorTrackingService {
   /** Initialize the tracking service */
   initialize(config: ErrorTrackingServiceConfig): Promise<void>;
-  
+
   /** Report an error */
   reportError(error: ClassifiedError, context?: ErrorContext): Promise<void>;
-  
+
   /** Report performance metrics */
   reportPerformance(metrics: PerformanceMetrics): Promise<void>;
-  
+
   /** Set user context */
   setUserContext(user: { id: string; email?: string; role?: string }): void;
-  
+
   /** Add breadcrumb */
   addBreadcrumb(message: string, category?: string, level?: 'info' | 'warning' | 'error'): void;
-  
+
   /** Start performance transaction */
   startTransaction(name: string, operation: string): PerformanceTransaction;
-  
+
   /** Check if service is enabled */
   isEnabled(): boolean;
 }
@@ -52,13 +48,13 @@ interface ErrorTrackingService {
 interface PerformanceTransaction {
   /** Set transaction status */
   setStatus(status: 'ok' | 'cancelled' | 'unknown_error' | 'invalid_argument'): void;
-  
+
   /** Set transaction data */
   setData(key: string, value: unknown): void;
-  
+
   /** Start child span */
   startChild(operation: string, description?: string): PerformanceSpan;
-  
+
   /** Finish transaction */
   finish(): void;
 }
@@ -69,10 +65,10 @@ interface PerformanceTransaction {
 interface PerformanceSpan {
   /** Set span data */
   setData(key: string, value: unknown): void;
-  
+
   /** Set span status */
   setStatus(status: 'ok' | 'cancelled' | 'unknown_error'): void;
-  
+
   /** Finish span */
   finish(): void;
 }
@@ -83,22 +79,22 @@ interface PerformanceSpan {
 interface ErrorTrackingServiceConfig {
   /** Service DSN or API key */
   dsn?: string;
-  
+
   /** Environment (development, staging, production) */
   environment: string;
-  
+
   /** Application version */
   version?: string;
-  
+
   /** Sample rate for error reporting (0.0 to 1.0) */
   sampleRate: number;
-  
+
   /** Sample rate for performance monitoring (0.0 to 1.0) */
   tracesSampleRate: number;
-  
+
   /** Whether to enable in current environment */
   enabled: boolean;
-  
+
   /** Additional configuration */
   additionalConfig?: Record<string, unknown>;
 }
@@ -117,7 +113,12 @@ interface SentryModule {
   captureException(error: Error): void;
   setMeasurement(name: string, value: number, unit: string): void;
   setUser(user: { id: string; email?: string; role?: string }): void;
-  addBreadcrumb(breadcrumb: { message: string; category: string; level: string; timestamp: number }): void;
+  addBreadcrumb(breadcrumb: {
+    message: string;
+    category: string;
+    level: string;
+    timestamp: number;
+  }): void;
   startTransaction(options: { name: string; op: string }): SentryTransaction;
 }
 
@@ -159,18 +160,18 @@ class SentryTrackingService implements ErrorTrackingService {
       let sentryModule;
       try {
         // Use eval to prevent TypeScript from checking the import at compile time
-        sentryModule = await eval('import("@sentry/nextjs")') as SentryModule;
+        sentryModule = (await eval('import("@sentry/nextjs")')) as SentryModule;
       } catch {
         console.warn('Sentry package not found, error tracking disabled');
         this.enabled = false;
         return;
       }
-      
+
       this.sentry = sentryModule;
 
       // Use backend-specific configuration
       const backendConfig = createBackendSentryConfig();
-      
+
       sentryModule.init({
         ...backendConfig,
         // Override with provided config
@@ -207,11 +208,13 @@ class SentryTrackingService implements ErrorTrackingService {
     }
 
     // Check if error should be reported based on backend configuration
-    if (!shouldReportBackendError({
-      type: error.type,
-      code: error.code,
-      severity: error.severity,
-    })) {
+    if (
+      !shouldReportBackendError({
+        type: error.type,
+        code: error.code,
+        severity: error.severity,
+      })
+    ) {
       return;
     }
 
@@ -227,7 +230,7 @@ class SentryTrackingService implements ErrorTrackingService {
           operation: context?.operation,
           userId: context?.userId,
         });
-        
+
         Object.entries(backendTags).forEach(([key, value]) => {
           scope.setTag(key, value);
         });
@@ -237,7 +240,7 @@ class SentryTrackingService implements ErrorTrackingService {
           message: error.message,
           context,
         });
-        
+
         Object.entries(backendContext).forEach(([key, value]) => {
           scope.setContext(key, value as Record<string, unknown>);
         });
@@ -249,9 +252,10 @@ class SentryTrackingService implements ErrorTrackingService {
           operation: context?.operation,
           field: error.field,
         });
-        
+
         // Set error level based on backend severity mapping
-        const level = BACKEND_SENTRY_LEVELS[error.severity as keyof typeof BACKEND_SENTRY_LEVELS] || 'error';
+        const level =
+          BACKEND_SENTRY_LEVELS[error.severity as keyof typeof BACKEND_SENTRY_LEVELS] || 'error';
         scope.setLevel(level);
 
         // Create error object
@@ -303,7 +307,11 @@ class SentryTrackingService implements ErrorTrackingService {
     }
   }
 
-  addBreadcrumb(message: string, category = 'default', level: 'info' | 'warning' | 'error' = 'info'): void {
+  addBreadcrumb(
+    message: string,
+    category = 'default',
+    level: 'info' | 'warning' | 'error' = 'info'
+  ): void {
     if (!this.enabled || !this.sentry) {
       return;
     }
@@ -364,7 +372,7 @@ class SentryTrackingService implements ErrorTrackingService {
     }
 
     const sensitiveFields = ['password', 'token', 'secret', 'key', 'authorization'];
-    const sanitized = { ...data as Record<string, unknown> };
+    const sanitized = { ...(data as Record<string, unknown>) };
 
     for (const field of sensitiveFields) {
       if (field in sanitized) {
@@ -406,9 +414,9 @@ class SentryTransactionWrapper implements PerformanceTransaction {
   }
 
   startChild(operation: string, description?: string): PerformanceSpan {
-    const span = this.transaction.startChild({ 
-      op: operation, 
-      ...(description && { description }) 
+    const span = this.transaction.startChild({
+      op: operation,
+      ...(description && { description }),
     });
     return new SentrySpanWrapper(span);
   }
@@ -443,7 +451,9 @@ class SentrySpanWrapper implements PerformanceSpan {
 class NoOpTransaction implements PerformanceTransaction {
   setStatus(): void {}
   setData(): void {}
-  startChild(): PerformanceSpan { return new NoOpSpan(); }
+  startChild(): PerformanceSpan {
+    return new NoOpSpan();
+  }
   finish(): void {}
 }
 
@@ -491,7 +501,11 @@ class ConsoleTrackingService implements ErrorTrackingService {
     }
   }
 
-  addBreadcrumb(message: string, category = 'default', level: 'info' | 'warning' | 'error' = 'info'): void {
+  addBreadcrumb(
+    message: string,
+    category = 'default',
+    level: 'info' | 'warning' | 'error' = 'info'
+  ): void {
     if (this.enabled) {
       console.info(`🍞 Breadcrumb [${category}] ${level}: ${message}`);
     }
@@ -603,11 +617,7 @@ export class ErrorTrackingManager {
    */
   async reportError(error: ClassifiedError, context?: ErrorContext): Promise<void> {
     // Add breadcrumb for error
-    this.service.addBreadcrumb(
-      `Error occurred: ${error.message}`,
-      'error',
-      'error'
-    );
+    this.service.addBreadcrumb(`Error occurred: ${error.message}`, 'error', 'error');
 
     // Report the error
     await this.service.reportError(error, context);
@@ -648,13 +658,16 @@ export class ErrorTrackingManager {
   /**
    * Tracks GraphQL operation performance
    */
-  trackGraphQLOperation(operationName: string, variables?: Record<string, unknown>): PerformanceTransaction {
+  trackGraphQLOperation(
+    operationName: string,
+    variables?: Record<string, unknown>
+  ): PerformanceTransaction {
     const transaction = this.startTransaction(operationName, 'graphql');
-    
+
     if (variables) {
       transaction.setData('variables', variables);
     }
-    
+
     return transaction;
   }
 
@@ -698,7 +711,7 @@ export function createErrorTrackingService(): ErrorTrackingService {
   if (process.env.NODE_ENV === 'production' && process.env.NEXT_PUBLIC_SENTRY_DSN) {
     return new SentryTrackingService();
   }
-  
+
   return new ConsoleTrackingService();
 }
 

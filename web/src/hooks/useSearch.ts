@@ -1,10 +1,10 @@
 /**
  * Search Module Hooks
- * 
+ *
  * Comprehensive React hooks for search functionality with Elasticsearch integration.
  * Provides typed access to course search, lesson search, autocomplete, trending searches,
  * and search analytics with proper error handling and cache integration.
- * 
+ *
  * Requirements: 2.2 - Complete Module Hook Implementation (Search)
  */
 
@@ -96,16 +96,8 @@ const SEARCH_COURSES = gql`
 `;
 
 const SEARCH_LESSONS = gql`
-  query SearchLessons(
-    $query: String!
-    $courseId: ID
-    $pagination: SearchPagination
-  ) {
-    searchLessons(
-      query: $query
-      courseId: $courseId
-      pagination: $pagination
-    ) {
+  query SearchLessons($query: String!, $courseId: ID, $pagination: SearchPagination) {
+    searchLessons(query: $query, courseId: $courseId, pagination: $pagination) {
       documents {
         id
         moduleId
@@ -319,24 +311,24 @@ export interface UseFacetedSearchReturn {
   searchResult?: SearchResult;
   loading: boolean;
   error?: Error;
-  
+
   // Filter management
   filters: SearchFilters;
   setFilter: (key: keyof SearchFilters, value: any) => void;
   clearFilter: (key: keyof SearchFilters) => void;
   clearAllFilters: () => void;
-  
+
   // Search actions
   search: () => Promise<void>;
   refetch: () => Promise<void>;
-  
+
   // Pagination
   loadMore: () => Promise<void>;
   hasNextPage: boolean;
-  
+
   // Facets
   facets?: SearchFacets;
-  
+
   // Analytics
   searchTime?: number;
   resultCount: number;
@@ -399,83 +391,98 @@ export function useSearch(options: UseSearchOptions): UseSearchReturn {
     options.pagination || { from: 0, size: 20 }
   );
 
-  const { data, loading, error, refetch: apolloRefetch, fetchMore: apolloFetchMore } = useQuery(
-    SEARCH_COURSES,
-    {
-      variables: {
-        query: options.query,
-        filters: activeFilters,
-        pagination: currentPagination,
-        sort: options.sort || { field: 'RELEVANCE', order: 'DESC' },
-        includeFacets: options.includeFacets !== false,
-      },
-      skip: options.skip || !options.query.trim(),
-      pollInterval: options.pollInterval,
-      errorPolicy: 'partial',
-      notifyOnNetworkStatusChange: true,
-    }
-  );
+  const {
+    data,
+    loading,
+    error,
+    refetch: apolloRefetch,
+    fetchMore: apolloFetchMore,
+  } = useQuery(SEARCH_COURSES, {
+    variables: {
+      query: options.query,
+      filters: activeFilters,
+      pagination: currentPagination,
+      sort: options.sort || { field: 'RELEVANCE', order: 'DESC' },
+      includeFacets: options.includeFacets !== false,
+    },
+    skip: options.skip || !options.query.trim(),
+    pollInterval: options.pollInterval,
+    errorPolicy: 'partial',
+    notifyOnNetworkStatusChange: true,
+  });
 
   const searchResult = data?.searchCourses;
   const resultCount = searchResult?.total || 0;
   const hasNextPage = currentPagination.from + currentPagination.size < resultCount;
 
-  const refetch = useCallback(async (variables?: Partial<UseSearchOptions>) => {
-    if (variables?.filters) {
-      setActiveFilters(variables.filters);
-    }
-    if (variables?.pagination) {
-      setCurrentPagination(variables.pagination);
-    }
-    
-    await apolloRefetch({
-      query: variables?.query || options.query,
-      filters: variables?.filters || activeFilters,
-      pagination: variables?.pagination || currentPagination,
-      sort: variables?.sort || options.sort || { field: 'RELEVANCE', order: 'DESC' },
-      includeFacets: variables?.includeFacets !== false,
-    });
-  }, [apolloRefetch, options.query, options.sort, activeFilters, currentPagination]);
+  const refetch = useCallback(
+    async (variables?: Partial<UseSearchOptions>) => {
+      if (variables?.filters) {
+        setActiveFilters(variables.filters);
+      }
+      if (variables?.pagination) {
+        setCurrentPagination(variables.pagination);
+      }
 
-  const fetchMore = useCallback(async (pagination: SearchPagination) => {
-    setCurrentPagination(pagination);
-    
-    await apolloFetchMore({
-      variables: {
-        query: options.query,
-        filters: activeFilters,
-        pagination,
-        sort: options.sort || { field: 'RELEVANCE', order: 'DESC' },
-        includeFacets: options.includeFacets !== false,
-      },
-      updateQuery: (prev, { fetchMoreResult }) => {
-        if (!fetchMoreResult?.searchCourses) return prev;
-        
-        return {
-          searchCourses: {
-            ...fetchMoreResult.searchCourses,
-            documents: [
-              ...prev.searchCourses.documents,
-              ...fetchMoreResult.searchCourses.documents,
-            ],
-          },
-        };
-      },
-    });
-  }, [apolloFetchMore, options.query, options.sort, options.includeFacets, activeFilters]);
+      await apolloRefetch({
+        query: variables?.query || options.query,
+        filters: variables?.filters || activeFilters,
+        pagination: variables?.pagination || currentPagination,
+        sort: variables?.sort || options.sort || { field: 'RELEVANCE', order: 'DESC' },
+        includeFacets: variables?.includeFacets !== false,
+      });
+    },
+    [apolloRefetch, options.query, options.sort, activeFilters, currentPagination]
+  );
 
-  const applyFilter = useCallback((key: keyof SearchFilters, value: any) => {
-    setActiveFilters(prev => ({ ...prev, [key]: value }));
-    setCurrentPagination({ from: 0, size: currentPagination.size }); // Reset pagination
-  }, [currentPagination.size]);
+  const fetchMore = useCallback(
+    async (pagination: SearchPagination) => {
+      setCurrentPagination(pagination);
 
-  const clearFilter = useCallback((key: keyof SearchFilters) => {
-    setActiveFilters(prev => {
-      const { [key]: _, ...rest } = prev;
-      return rest;
-    });
-    setCurrentPagination({ from: 0, size: currentPagination.size }); // Reset pagination
-  }, [currentPagination.size]);
+      await apolloFetchMore({
+        variables: {
+          query: options.query,
+          filters: activeFilters,
+          pagination,
+          sort: options.sort || { field: 'RELEVANCE', order: 'DESC' },
+          includeFacets: options.includeFacets !== false,
+        },
+        updateQuery: (prev, { fetchMoreResult }) => {
+          if (!fetchMoreResult?.searchCourses) return prev;
+
+          return {
+            searchCourses: {
+              ...fetchMoreResult.searchCourses,
+              documents: [
+                ...prev.searchCourses.documents,
+                ...fetchMoreResult.searchCourses.documents,
+              ],
+            },
+          };
+        },
+      });
+    },
+    [apolloFetchMore, options.query, options.sort, options.includeFacets, activeFilters]
+  );
+
+  const applyFilter = useCallback(
+    (key: keyof SearchFilters, value: any) => {
+      setActiveFilters(prev => ({ ...prev, [key]: value }));
+      setCurrentPagination({ from: 0, size: currentPagination.size }); // Reset pagination
+    },
+    [currentPagination.size]
+  );
+
+  const clearFilter = useCallback(
+    (key: keyof SearchFilters) => {
+      setActiveFilters(prev => {
+        const { [key]: _, ...rest } = prev;
+        return rest;
+      });
+      setCurrentPagination({ from: 0, size: currentPagination.size }); // Reset pagination
+    },
+    [currentPagination.size]
+  );
 
   const clearAllFilters = useCallback(() => {
     setActiveFilters({});
@@ -513,24 +520,24 @@ export function useFacetedSearch(options: UseFacetedSearchOptions): UseFacetedSe
 
   // Debounced search execution
   const [searchTrigger, setSearchTrigger] = useState(0);
-  
+
   useEffect(() => {
     if (!options.autoSearch) return;
-    
+
     const timer = setTimeout(() => {
       setSearchTrigger(prev => prev + 1);
     }, options.debounceMs || 500);
-    
+
     return () => clearTimeout(timer);
   }, [searchQuery, filters, options.autoSearch, options.debounceMs]);
 
-  const [executeSearch, { data, loading, error, refetch: apolloRefetch, fetchMore: apolloFetchMore }] = useLazyQuery(
-    SEARCH_COURSES,
-    {
-      errorPolicy: 'partial',
-      notifyOnNetworkStatusChange: true,
-    }
-  );
+  const [
+    executeSearch,
+    { data, loading, error, refetch: apolloRefetch, fetchMore: apolloFetchMore },
+  ] = useLazyQuery(SEARCH_COURSES, {
+    errorPolicy: 'partial',
+    notifyOnNetworkStatusChange: true,
+  });
 
   // Auto-execute search when trigger changes
   useEffect(() => {
@@ -551,18 +558,24 @@ export function useFacetedSearch(options: UseFacetedSearchOptions): UseFacetedSe
   const resultCount = searchResult?.total || 0;
   const hasNextPage = pagination.from + pagination.size < resultCount;
 
-  const setFilter = useCallback((key: keyof SearchFilters, value: any) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
-    setPagination({ from: 0, size: pagination.size }); // Reset pagination
-  }, [pagination.size]);
+  const setFilter = useCallback(
+    (key: keyof SearchFilters, value: any) => {
+      setFilters(prev => ({ ...prev, [key]: value }));
+      setPagination({ from: 0, size: pagination.size }); // Reset pagination
+    },
+    [pagination.size]
+  );
 
-  const clearFilter = useCallback((key: keyof SearchFilters) => {
-    setFilters(prev => {
-      const { [key]: _, ...rest } = prev;
-      return rest;
-    });
-    setPagination({ from: 0, size: pagination.size }); // Reset pagination
-  }, [pagination.size]);
+  const clearFilter = useCallback(
+    (key: keyof SearchFilters) => {
+      setFilters(prev => {
+        const { [key]: _, ...rest } = prev;
+        return rest;
+      });
+      setPagination({ from: 0, size: pagination.size }); // Reset pagination
+    },
+    [pagination.size]
+  );
 
   const clearAllFilters = useCallback(() => {
     setFilters({});
@@ -571,7 +584,7 @@ export function useFacetedSearch(options: UseFacetedSearchOptions): UseFacetedSe
 
   const search = useCallback(async () => {
     if (!searchQuery.trim()) return;
-    
+
     await executeSearch({
       variables: {
         query: searchQuery,
@@ -581,7 +594,7 @@ export function useFacetedSearch(options: UseFacetedSearchOptions): UseFacetedSe
         includeFacets: true,
       },
     });
-    
+
     setPagination({ from: 0, size: pagination.size });
   }, [executeSearch, searchQuery, filters, pagination.size]);
 
@@ -595,14 +608,14 @@ export function useFacetedSearch(options: UseFacetedSearchOptions): UseFacetedSe
 
   const loadMore = useCallback(async () => {
     if (!hasNextPage || loading) return;
-    
+
     const newPagination = {
       from: pagination.from + pagination.size,
       size: pagination.size,
     };
-    
+
     setPagination(newPagination);
-    
+
     if (apolloFetchMore) {
       await apolloFetchMore({
         variables: {
@@ -614,7 +627,7 @@ export function useFacetedSearch(options: UseFacetedSearchOptions): UseFacetedSe
         },
         updateQuery: (prev, { fetchMoreResult }) => {
           if (!fetchMoreResult?.searchCourses) return prev;
-          
+
           return {
             searchCourses: {
               ...fetchMoreResult.searchCourses,
@@ -705,7 +718,9 @@ export function useAutocomplete(options: UseAutocompleteOptions): UseAutocomplet
  * Trending searches hook for popular queries
  * Provides cached trending search terms with optional polling
  */
-export function useTrendingSearches(options: UseTrendingSearchesOptions = {}): UseTrendingSearchesReturn {
+export function useTrendingSearches(
+  options: UseTrendingSearchesOptions = {}
+): UseTrendingSearchesReturn {
   const { data, loading, error, refetch } = useQuery(TRENDING_SEARCHES, {
     variables: {
       limit: options.limit || 10,
@@ -743,60 +758,69 @@ export function useSearchLessons(options: UseSearchLessonsOptions): UseSearchLes
     options.pagination || { from: 0, size: 20 }
   );
 
-  const { data, loading, error, refetch: apolloRefetch, fetchMore: apolloFetchMore } = useQuery(
-    SEARCH_LESSONS,
-    {
-      variables: {
-        query: options.query,
-        courseId: options.courseId,
-        pagination: currentPagination,
-      },
-      skip: options.skip || !options.query.trim(),
-      errorPolicy: 'partial',
-      notifyOnNetworkStatusChange: true,
-    }
-  );
+  const {
+    data,
+    loading,
+    error,
+    refetch: apolloRefetch,
+    fetchMore: apolloFetchMore,
+  } = useQuery(SEARCH_LESSONS, {
+    variables: {
+      query: options.query,
+      courseId: options.courseId,
+      pagination: currentPagination,
+    },
+    skip: options.skip || !options.query.trim(),
+    errorPolicy: 'partial',
+    notifyOnNetworkStatusChange: true,
+  });
 
   const searchResult = data?.searchLessons;
   const resultCount = searchResult?.total || 0;
   const hasNextPage = currentPagination.from + currentPagination.size < resultCount;
 
-  const refetch = useCallback(async (variables?: Partial<UseSearchLessonsOptions>) => {
-    if (variables?.pagination) {
-      setCurrentPagination(variables.pagination);
-    }
-    
-    await apolloRefetch({
-      query: variables?.query || options.query,
-      courseId: variables?.courseId || options.courseId,
-      pagination: variables?.pagination || currentPagination,
-    });
-  }, [apolloRefetch, options.query, options.courseId, currentPagination]);
+  const refetch = useCallback(
+    async (variables?: Partial<UseSearchLessonsOptions>) => {
+      if (variables?.pagination) {
+        setCurrentPagination(variables.pagination);
+      }
 
-  const fetchMore = useCallback(async (pagination: SearchPagination) => {
-    setCurrentPagination(pagination);
-    
-    await apolloFetchMore({
-      variables: {
-        query: options.query,
-        courseId: options.courseId,
-        pagination,
-      },
-      updateQuery: (prev, { fetchMoreResult }) => {
-        if (!fetchMoreResult?.searchLessons) return prev;
-        
-        return {
-          searchLessons: {
-            ...fetchMoreResult.searchLessons,
-            documents: [
-              ...prev.searchLessons.documents,
-              ...fetchMoreResult.searchLessons.documents,
-            ],
-          },
-        };
-      },
-    });
-  }, [apolloFetchMore, options.query, options.courseId]);
+      await apolloRefetch({
+        query: variables?.query || options.query,
+        courseId: variables?.courseId || options.courseId,
+        pagination: variables?.pagination || currentPagination,
+      });
+    },
+    [apolloRefetch, options.query, options.courseId, currentPagination]
+  );
+
+  const fetchMore = useCallback(
+    async (pagination: SearchPagination) => {
+      setCurrentPagination(pagination);
+
+      await apolloFetchMore({
+        variables: {
+          query: options.query,
+          courseId: options.courseId,
+          pagination,
+        },
+        updateQuery: (prev, { fetchMoreResult }) => {
+          if (!fetchMoreResult?.searchLessons) return prev;
+
+          return {
+            searchLessons: {
+              ...fetchMoreResult.searchLessons,
+              documents: [
+                ...prev.searchLessons.documents,
+                ...fetchMoreResult.searchLessons.documents,
+              ],
+            },
+          };
+        },
+      });
+    },
+    [apolloFetchMore, options.query, options.courseId]
+  );
 
   return {
     data: searchResult,
@@ -826,13 +850,15 @@ export function useSearchAnalytics() {
     zeroResultQueries: [] as string[],
   });
 
-  const { data: healthData, loading: healthLoading, error: healthError, refetch: refetchHealth } = useQuery(
-    SEARCH_HEALTH,
-    {
-      pollInterval: 30000, // Poll every 30 seconds
-      errorPolicy: 'ignore',
-    }
-  );
+  const {
+    data: healthData,
+    loading: healthLoading,
+    error: healthError,
+    refetch: refetchHealth,
+  } = useQuery(SEARCH_HEALTH, {
+    pollInterval: 30000, // Poll every 30 seconds
+    errorPolicy: 'ignore',
+  });
 
   const { data: trendingData } = useQuery(TRENDING_SEARCHES, {
     variables: { limit: 20 },
@@ -856,15 +882,17 @@ export function useSearchAnalytics() {
   const trackSearch = useCallback((query: string, resultCount: number, searchTime: number) => {
     setSearchMetrics(prev => {
       const newTotalSearches = prev.totalSearches + 1;
-      const newAverageSearchTime = 
+      const newAverageSearchTime =
         (prev.averageSearchTime * prev.totalSearches + searchTime) / newTotalSearches;
-      
-      const newZeroResultQueries = resultCount === 0 
-        ? [...prev.zeroResultQueries, query].slice(-50) // Keep last 50
-        : prev.zeroResultQueries;
-      
-      const newSuccessRate = 
-        ((prev.searchSuccessRate * prev.totalSearches) + (resultCount > 0 ? 1 : 0)) / newTotalSearches;
+
+      const newZeroResultQueries =
+        resultCount === 0
+          ? [...prev.zeroResultQueries, query].slice(-50) // Keep last 50
+          : prev.zeroResultQueries;
+
+      const newSuccessRate =
+        (prev.searchSuccessRate * prev.totalSearches + (resultCount > 0 ? 1 : 0)) /
+        newTotalSearches;
 
       return {
         ...prev,
@@ -917,133 +945,142 @@ export function useSearchOptimization() {
     diversifyResults: true,
   });
 
-  const optimizeResults = useCallback((results: CourseSearchResult[], userPreferences?: any) => {
-    let optimizedResults = [...results];
+  const optimizeResults = useCallback(
+    (results: CourseSearchResult[], userPreferences?: any) => {
+      let optimizedResults = [...results];
 
-    // Apply popularity boost
-    if (optimizationSettings.boostPopularCourses) {
-      optimizedResults = optimizedResults.sort((a, b) => {
-        const aScore = (a.popularityScore || 0) + (a.enrollmentCount * 0.1);
-        const bScore = (b.popularityScore || 0) + (b.enrollmentCount * 0.1);
-        return bScore - aScore;
-      });
-    }
+      // Apply popularity boost
+      if (optimizationSettings.boostPopularCourses) {
+        optimizedResults = optimizedResults.sort((a, b) => {
+          const aScore = (a.popularityScore || 0) + a.enrollmentCount * 0.1;
+          const bScore = (b.popularityScore || 0) + b.enrollmentCount * 0.1;
+          return bScore - aScore;
+        });
+      }
 
-    // Apply recency boost
-    if (optimizationSettings.boostRecentContent) {
-      const now = new Date().getTime();
-      optimizedResults = optimizedResults.sort((a, b) => {
-        const aRecency = now - new Date(a.publishedAt || a.createdAt).getTime();
-        const bRecency = now - new Date(b.publishedAt || b.createdAt).getTime();
-        
-        // Boost more recent content
-        const aScore = (a.searchBoost || 1) + (aRecency < 30 * 24 * 60 * 60 * 1000 ? 0.2 : 0);
-        const bScore = (b.searchBoost || 1) + (bRecency < 30 * 24 * 60 * 60 * 1000 ? 0.2 : 0);
-        
-        return bScore - aScore;
-      });
-    }
+      // Apply recency boost
+      if (optimizationSettings.boostRecentContent) {
+        const now = new Date().getTime();
+        optimizedResults = optimizedResults.sort((a, b) => {
+          const aRecency = now - new Date(a.publishedAt || a.createdAt).getTime();
+          const bRecency = now - new Date(b.publishedAt || b.createdAt).getTime();
 
-    // Apply rating boost
-    if (optimizationSettings.boostHighRatedContent) {
-      optimizedResults = optimizedResults.sort((a, b) => {
-        const aRatingScore = (a.averageRating || 0) * (a.totalReviews > 10 ? 1 : 0.5);
-        const bRatingScore = (b.averageRating || 0) * (b.totalReviews > 10 ? 1 : 0.5);
-        return bRatingScore - aRatingScore;
-      });
-    }
+          // Boost more recent content
+          const aScore = (a.searchBoost || 1) + (aRecency < 30 * 24 * 60 * 60 * 1000 ? 0.2 : 0);
+          const bScore = (b.searchBoost || 1) + (bRecency < 30 * 24 * 60 * 60 * 1000 ? 0.2 : 0);
 
-    // Apply personalization
-    if (optimizationSettings.personalizeResults && userPreferences) {
-      optimizedResults = optimizedResults.sort((a, b) => {
-        let aPersonalizationScore = 0;
-        let bPersonalizationScore = 0;
+          return bScore - aScore;
+        });
+      }
 
-        // Boost based on user's preferred categories
-        if (userPreferences.preferredCategories?.includes(a.category)) {
-          aPersonalizationScore += 0.3;
+      // Apply rating boost
+      if (optimizationSettings.boostHighRatedContent) {
+        optimizedResults = optimizedResults.sort((a, b) => {
+          const aRatingScore = (a.averageRating || 0) * (a.totalReviews > 10 ? 1 : 0.5);
+          const bRatingScore = (b.averageRating || 0) * (b.totalReviews > 10 ? 1 : 0.5);
+          return bRatingScore - aRatingScore;
+        });
+      }
+
+      // Apply personalization
+      if (optimizationSettings.personalizeResults && userPreferences) {
+        optimizedResults = optimizedResults.sort((a, b) => {
+          let aPersonalizationScore = 0;
+          let bPersonalizationScore = 0;
+
+          // Boost based on user's preferred categories
+          if (userPreferences.preferredCategories?.includes(a.category)) {
+            aPersonalizationScore += 0.3;
+          }
+          if (userPreferences.preferredCategories?.includes(b.category)) {
+            bPersonalizationScore += 0.3;
+          }
+
+          // Boost based on user's skill level
+          if (userPreferences.skillLevel === a.difficulty.toLowerCase()) {
+            aPersonalizationScore += 0.2;
+          }
+          if (userPreferences.skillLevel === b.difficulty.toLowerCase()) {
+            bPersonalizationScore += 0.2;
+          }
+
+          return bPersonalizationScore - aPersonalizationScore;
+        });
+      }
+
+      // Apply diversification
+      if (optimizationSettings.diversifyResults) {
+        const diversified: CourseSearchResult[] = [];
+        const categoryCount: Record<string, number> = {};
+        const difficultyCount: Record<string, number> = {};
+
+        for (const result of optimizedResults) {
+          const catCount = categoryCount[result.category] || 0;
+          const diffCount = difficultyCount[result.difficulty] || 0;
+
+          // Prefer diverse categories and difficulties in top results
+          if (diversified.length < 10 && (catCount < 3 || diffCount < 3)) {
+            diversified.push(result);
+            categoryCount[result.category] = catCount + 1;
+            difficultyCount[result.difficulty] = diffCount + 1;
+          } else if (diversified.length >= 10) {
+            diversified.push(result);
+          }
         }
-        if (userPreferences.preferredCategories?.includes(b.category)) {
-          bPersonalizationScore += 0.3;
+
+        // Add remaining results
+        for (const result of optimizedResults) {
+          if (!diversified.includes(result)) {
+            diversified.push(result);
+          }
         }
 
-        // Boost based on user's skill level
-        if (userPreferences.skillLevel === a.difficulty.toLowerCase()) {
-          aPersonalizationScore += 0.2;
+        optimizedResults = diversified;
+      }
+
+      return optimizedResults;
+    },
+    [optimizationSettings]
+  );
+
+  const updateOptimizationSettings = useCallback(
+    (settings: Partial<typeof optimizationSettings>) => {
+      setOptimizationSettings(prev => ({ ...prev, ...settings }));
+    },
+    []
+  );
+
+  const generateSearchRecommendations = useCallback(
+    (query: string, results: CourseSearchResult[]) => {
+      const recommendations: string[] = [];
+
+      // Suggest related queries based on results
+      if (results.length > 0) {
+        const categories = [...new Set(results.map(r => r.category))];
+        const difficulties = [...new Set(results.map(r => r.difficulty))];
+
+        if (categories.length > 1) {
+          recommendations.push(`${query} ${categories[0].toLowerCase()}`);
         }
-        if (userPreferences.skillLevel === b.difficulty.toLowerCase()) {
-          bPersonalizationScore += 0.2;
-        }
 
-        return bPersonalizationScore - aPersonalizationScore;
-      });
-    }
-
-    // Apply diversification
-    if (optimizationSettings.diversifyResults) {
-      const diversified: CourseSearchResult[] = [];
-      const categoryCount: Record<string, number> = {};
-      const difficultyCount: Record<string, number> = {};
-
-      for (const result of optimizedResults) {
-        const catCount = categoryCount[result.category] || 0;
-        const diffCount = difficultyCount[result.difficulty] || 0;
-
-        // Prefer diverse categories and difficulties in top results
-        if (diversified.length < 10 && (catCount < 3 || diffCount < 3)) {
-          diversified.push(result);
-          categoryCount[result.category] = catCount + 1;
-          difficultyCount[result.difficulty] = diffCount + 1;
-        } else if (diversified.length >= 10) {
-          diversified.push(result);
+        if (difficulties.length > 1) {
+          recommendations.push(`${difficulties[0].toLowerCase()} ${query}`);
         }
       }
 
-      // Add remaining results
-      for (const result of optimizedResults) {
-        if (!diversified.includes(result)) {
-          diversified.push(result);
+      // Suggest broader queries if no results
+      if (results.length === 0) {
+        const words = query.split(' ');
+        if (words.length > 1) {
+          recommendations.push(words[0]); // Suggest first word only
+          recommendations.push(words.slice(0, -1).join(' ')); // Remove last word
         }
       }
 
-      optimizedResults = diversified;
-    }
-
-    return optimizedResults;
-  }, [optimizationSettings]);
-
-  const updateOptimizationSettings = useCallback((settings: Partial<typeof optimizationSettings>) => {
-    setOptimizationSettings(prev => ({ ...prev, ...settings }));
-  }, []);
-
-  const generateSearchRecommendations = useCallback((query: string, results: CourseSearchResult[]) => {
-    const recommendations: string[] = [];
-
-    // Suggest related queries based on results
-    if (results.length > 0) {
-      const categories = [...new Set(results.map(r => r.category))];
-      const difficulties = [...new Set(results.map(r => r.difficulty))];
-
-      if (categories.length > 1) {
-        recommendations.push(`${query} ${categories[0].toLowerCase()}`);
-      }
-      
-      if (difficulties.length > 1) {
-        recommendations.push(`${difficulties[0].toLowerCase()} ${query}`);
-      }
-    }
-
-    // Suggest broader queries if no results
-    if (results.length === 0) {
-      const words = query.split(' ');
-      if (words.length > 1) {
-        recommendations.push(words[0]); // Suggest first word only
-        recommendations.push(words.slice(0, -1).join(' ')); // Remove last word
-      }
-    }
-
-    return recommendations.slice(0, 5); // Limit to 5 recommendations
-  }, []);
+      return recommendations.slice(0, 5); // Limit to 5 recommendations
+    },
+    []
+  );
 
   return {
     optimizationSettings,

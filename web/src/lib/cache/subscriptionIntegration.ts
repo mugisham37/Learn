@@ -1,6 +1,6 @@
 /**
  * Subscription Cache Integration
- * 
+ *
  * Enhanced integration between subscription data and cache management utilities.
  * Provides seamless cache updates from real-time subscription data.
  */
@@ -38,19 +38,19 @@ export function handleSubscriptionCacheUpdate<T extends CacheEntity>(
       case 'created':
         handleCreatedSubscription(cache, config);
         break;
-      
+
       case 'updated':
         handleUpdatedSubscription(cache, config);
         break;
-      
+
       case 'deleted':
         handleDeletedSubscription(cache, config);
         break;
-      
+
       case 'status_changed':
         handleStatusChangedSubscription(cache, config);
         break;
-      
+
       default:
         console.warn(`Unknown subscription type: ${config.subscriptionType}`);
     }
@@ -189,18 +189,24 @@ export const subscriptionCachePatterns = {
       subscriptionType: 'created',
       typename: 'Message',
       data: message,
-      listQueries: [{
-        query: graphqlOperations.GET_CONVERSATION_MESSAGES,
-        variables: { conversationId },
-        fieldName: 'messages',
-      }],
+      listQueries: [
+        {
+          query: graphqlOperations.GET_CONVERSATION_MESSAGES,
+          variables: { conversationId },
+          fieldName: 'messages',
+        },
+      ],
     });
   },
 
   /**
    * Enrollment progress updated
    */
-  progressUpdated: (cache: InMemoryCache, progress: Record<string, unknown>, enrollmentId: string) => {
+  progressUpdated: (
+    cache: InMemoryCache,
+    progress: Record<string, unknown>,
+    enrollmentId: string
+  ) => {
     handleSubscriptionCacheUpdate(cache, {
       subscriptionType: 'updated',
       typename: 'Enrollment',
@@ -219,11 +225,13 @@ export const subscriptionCachePatterns = {
       subscriptionType: 'status_changed',
       typename: 'Course',
       data: course,
-      listQueries: [{
-        query: graphqlOperations.GET_PUBLISHED_COURSES,
-        variables: {},
-        fieldName: 'publishedCourses',
-      }],
+      listQueries: [
+        {
+          query: graphqlOperations.GET_PUBLISHED_COURSES,
+          variables: {},
+          fieldName: 'publishedCourses',
+        },
+      ],
       invalidationConfig: {
         fieldNames: ['courses', 'myCourses'],
       },
@@ -238,11 +246,13 @@ export const subscriptionCachePatterns = {
       subscriptionType: 'updated',
       typename: 'UserPresence',
       data: presence,
-      listQueries: [{
-        query: graphqlOperations.GET_COURSE_PRESENCE,
-        variables: { courseId },
-        fieldName: 'coursePresence',
-      }],
+      listQueries: [
+        {
+          query: graphqlOperations.GET_COURSE_PRESENCE,
+          variables: { courseId },
+          fieldName: 'coursePresence',
+        },
+      ],
     });
   },
 
@@ -254,11 +264,13 @@ export const subscriptionCachePatterns = {
       subscriptionType: 'created',
       typename: 'Notification',
       data: notification,
-      listQueries: [{
-        query: graphqlOperations.GET_NOTIFICATIONS,
-        variables: { userId },
-        fieldName: 'notifications',
-      }],
+      listQueries: [
+        {
+          query: graphqlOperations.GET_NOTIFICATIONS,
+          variables: { userId },
+          fieldName: 'notifications',
+        },
+      ],
       invalidationConfig: {
         fieldNames: ['unreadNotificationCount'],
       },
@@ -273,11 +285,13 @@ export const subscriptionCachePatterns = {
       subscriptionType: 'created',
       typename: 'AssignmentSubmission',
       data: submission,
-      listQueries: [{
-        query: graphqlOperations.GET_ASSIGNMENT_SUBMISSIONS,
-        variables: { assignmentId },
-        fieldName: 'submissions',
-      }],
+      listQueries: [
+        {
+          query: graphqlOperations.GET_ASSIGNMENT_SUBMISSIONS,
+          variables: { assignmentId },
+          fieldName: 'submissions',
+        },
+      ],
       invalidationConfig: {
         fieldNames: ['assignmentProgress', 'gradingQueue'],
       },
@@ -303,7 +317,7 @@ export class SubscriptionConflictResolver {
     if (newData.updatedAt && existingData.updatedAt) {
       const newTime = new Date(newData.updatedAt).getTime();
       const existingTime = new Date(existingData.updatedAt).getTime();
-      
+
       return newTime > existingTime ? newData : existingData;
     }
 

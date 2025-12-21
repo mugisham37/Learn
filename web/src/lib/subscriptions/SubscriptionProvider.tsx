@@ -1,6 +1,6 @@
 /**
  * Subscription Provider
- * 
+ *
  * React Context provider for managing WebSocket connections and subscription state.
  * Provides connection status tracking, automatic reconnection with exponential backoff,
  * and authentication handling for GraphQL subscriptions.
@@ -8,13 +8,21 @@
 
 'use client';
 
-import React, { createContext, useContext, useEffect, useState, useCallback, useRef, useMemo } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+  useRef,
+  useMemo,
+} from 'react';
 import { useApolloClient } from '@apollo/client/react';
-import { 
-  ConnectionStatus, 
-  SubscriptionContextValue, 
-  ReconnectionConfig, 
-  DEFAULT_RECONNECTION_CONFIG 
+import {
+  ConnectionStatus,
+  SubscriptionContextValue,
+  ReconnectionConfig,
+  DEFAULT_RECONNECTION_CONFIG,
 } from './types';
 import { useAuth } from '../auth/authHooks';
 
@@ -36,20 +44,23 @@ interface SubscriptionProviderProps {
  * SubscriptionProvider component that manages WebSocket connection state
  * and provides subscription utilities to child components.
  */
-export function SubscriptionProvider({ 
-  children, 
+export function SubscriptionProvider({
+  children,
   reconnectionConfig = {},
-  enableAutoReconnect = true 
+  enableAutoReconnect = true,
 }: SubscriptionProviderProps) {
   const apolloClient = useApolloClient();
   const { isAuthenticated, user } = useAuth();
-  
+
   // Merge default config with provided config
-  const config: ReconnectionConfig = useMemo(() => ({ 
-    ...DEFAULT_RECONNECTION_CONFIG, 
-    ...reconnectionConfig 
-  }), [reconnectionConfig]);
-  
+  const config: ReconnectionConfig = useMemo(
+    () => ({
+      ...DEFAULT_RECONNECTION_CONFIG,
+      ...reconnectionConfig,
+    }),
+    [reconnectionConfig]
+  );
+
   // Connection status state
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>({
     connected: false,
@@ -67,16 +78,19 @@ export function SubscriptionProvider({
   /**
    * Calculate exponential backoff delay for reconnection attempts
    */
-  const calculateReconnectDelay = useCallback((attemptNumber: number): number => {
-    const delay = Math.min(
-      config.initialDelay * Math.pow(config.backoffMultiplier, attemptNumber),
-      config.maxDelay
-    );
-    
-    // Add jitter to prevent thundering herd
-    const jitter = Math.random() * 0.1 * delay;
-    return delay + jitter;
-  }, [config]);
+  const calculateReconnectDelay = useCallback(
+    (attemptNumber: number): number => {
+      const delay = Math.min(
+        config.initialDelay * Math.pow(config.backoffMultiplier, attemptNumber),
+        config.maxDelay
+      );
+
+      // Add jitter to prevent thundering herd
+      const jitter = Math.random() * 0.1 * delay;
+      return delay + jitter;
+    },
+    [config]
+  );
 
   /**
    * Clear any pending reconnection timeout
@@ -117,7 +131,7 @@ export function SubscriptionProvider({
     try {
       // Force Apollo Client to reconnect WebSocket
       await apolloClient.resetStore();
-      
+
       // Simulate connection check - in real implementation, this would
       // check the actual WebSocket connection status
       setConnectionStatus(prev => ({
@@ -131,10 +145,9 @@ export function SubscriptionProvider({
       // Reset reconnection attempts on successful connection
       reconnectAttemptsRef.current = 0;
       isReconnectingRef.current = false;
-
     } catch (error) {
       const delay = calculateReconnectDelay(reconnectAttemptsRef.current - 1);
-      
+
       setConnectionStatus(prev => ({
         ...prev,
         connecting: false,
@@ -201,7 +214,8 @@ export function SubscriptionProvider({
     // For now, we'll simulate connection monitoring
     const connectionCheckInterval = setInterval(() => {
       // Simulate random connection drops for testing
-      if (Math.random() < 0.001 && connectionStatus.connected) { // 0.1% chance
+      if (Math.random() < 0.001 && connectionStatus.connected) {
+        // 0.1% chance
         handleConnectionError();
       }
     }, 1000);
@@ -229,24 +243,22 @@ export function SubscriptionProvider({
   };
 
   return (
-    <SubscriptionContext.Provider value={contextValue}>
-      {children}
-    </SubscriptionContext.Provider>
+    <SubscriptionContext.Provider value={contextValue}>{children}</SubscriptionContext.Provider>
   );
 }
 
 /**
  * Hook to access subscription context
- * 
+ *
  * @throws Error if used outside of SubscriptionProvider
  */
 export function useSubscriptionContext(): SubscriptionContextValue {
   const context = useContext(SubscriptionContext);
-  
+
   if (!context) {
     throw new Error('useSubscriptionContext must be used within a SubscriptionProvider');
   }
-  
+
   return context;
 }
 
