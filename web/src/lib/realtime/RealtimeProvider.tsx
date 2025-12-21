@@ -71,9 +71,12 @@ export function RealtimeProvider({
   // Initialize real-time manager after authentication
   useEffect(() => {
     if (isAuthenticated && user && !isInitialized) {
-      setIsInitialized(true);
+      // Use a separate effect or move to a callback to avoid direct state updates
+      const timer = setTimeout(() => setIsInitialized(true), 0);
+      return () => clearTimeout(timer);
     } else if (!isAuthenticated && isInitialized) {
-      setIsInitialized(false);
+      const timer = setTimeout(() => setIsInitialized(false), 0);
+      return () => clearTimeout(timer);
     }
   }, [isAuthenticated, user, isInitialized]);
 
@@ -106,7 +109,7 @@ function RealtimeProviderInner({
 }) {
   const { isAuthenticated } = useAuth();
   const realtimeManager = useRealtimeManager();
-  const [lastActivity, setLastActivity] = useState(Date.now());
+  const [lastActivity, setLastActivity] = useState(() => Date.now());
 
   // Track user activity for presence updates
   const updateActivity = useCallback(() => {

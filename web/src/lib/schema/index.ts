@@ -12,10 +12,15 @@ export {
   schemaIntegration,
   checkSchemaCompatibility,
   getSchemaHealthStatus,
-  type SchemaMetadata,
-  type SchemaValidationResult,
-  type SchemaSyncOptions,
+} from './schemaIntegration.js';
+
+export type {
+  SchemaIntegrationConfig,
+  SchemaMetadata,
+  SchemaValidationResult,
+  SchemaSyncOptions,
 } from './schemaIntegration.js';
 
 // Re-export commonly used GraphQL utilities
-export { IntrospectionQuery, buildClientSchema, printSchema, getIntrospectionQuery } from 'graphql';
+export type { IntrospectionQuery } from 'graphql';
+export { buildClientSchema, printSchema, getIntrospectionQuery } from 'graphql';

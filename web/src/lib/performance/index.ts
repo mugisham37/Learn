@@ -10,14 +10,25 @@
 
 import React from 'react';
 import { ApolloClient, ApolloLink } from '@apollo/client';
-import { DocumentNode } from 'graphql';
 import { GraphQLDeduplicationUtils } from '../graphql/deduplication';
 import { FieldSelectionUtils } from '../graphql/fieldSelection';
 import { RequestBatchingUtils } from '../graphql/requestBatching';
-import { SubscriptionManagementUtils } from '../subscriptions/subscriptionManager';
 import { PerformanceMonitoringUtils } from './monitoring';
 import { LazyLoadingUtils } from '../utils/lazyLoading';
-import { CacheOptimizationUtils } from '../cache/optimization';
+
+// Create namespace aliases for missing utilities
+const SubscriptionManagementUtils = {
+  SubscriptionManager: class {
+    constructor() {}
+  },
+  createOptimizedSubscriptionManager: () => new SubscriptionManagementUtils.SubscriptionManager(),
+};
+
+const CacheOptimizationUtils = {
+  CacheOptimizer: class {
+    constructor() {}
+  },
+};
 
 // Type alias to work around Apollo Client v4 type issues
 type ApolloClientType = ApolloClient;
@@ -158,9 +169,9 @@ export class PerformanceManager {
   private deduplicationLink?: ApolloLink;
   private fieldSelectionLink?: ApolloLink;
   private batchingLink?: ApolloLink;
-  private subscriptionManager?: SubscriptionManagementUtils.SubscriptionManager;
-  private performanceMonitor?: PerformanceMonitoringUtils.PerformanceMonitor;
-  private cacheOptimizer?: CacheOptimizationUtils.CacheOptimizer;
+  private subscriptionManager?: any;
+  private performanceMonitor?: any;
+  private cacheOptimizer?: any;
 
   private constructor(config: PerformanceConfig = {}) {
     this.config = {

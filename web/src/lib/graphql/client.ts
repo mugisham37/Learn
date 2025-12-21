@@ -6,7 +6,7 @@
  * error handling, and retry logic. Supports both client-side and server-side rendering.
  */
 
-import { ApolloClient, ApolloLink, createHttpLink, split } from '@apollo/client';
+import { ApolloClient, ApolloLink, HttpLink, split } from '@apollo/client';
 import { GraphQLWsLink } from '@apollo/client/link/subscriptions';
 import { getMainDefinition } from '@apollo/client/utilities';
 import { createClient } from 'graphql-ws';
@@ -32,12 +32,12 @@ import { createCacheConfig } from './cache';
  */
 async function createApolloClient(ssrMode: boolean = false) {
   // HTTP link for queries and mutations
-  const httpLink = createHttpLink({
+  const httpLink = new HttpLink({
     uri: ssrMode
       ? config.graphqlEndpoint // Direct connection on server
       : '/api/graphql', // Use proxy in browser
     credentials: 'include', // Include cookies for authentication
-    fetch: ssrMode ? fetch : undefined, // Use global fetch on server
+    ...(ssrMode && { fetch }), // Only add fetch for SSR
   });
 
   // WebSocket link for subscriptions (client-side only)
@@ -72,16 +72,17 @@ async function createApolloClient(ssrMode: boolean = false) {
 
           return {};
         },
-        shouldRetry: closeEvent => {
+        shouldRetry: (errOrCloseEvent: unknown) => {
           // Retry on connection errors but not on authentication failures (4401)
+          const closeEvent = errOrCloseEvent as CloseEvent;
           return closeEvent.code !== 4401;
         },
         retryAttempts: 5,
-        retryWait: async retries => {
+        retryWait: async (retries: number): Promise<void> => {
           // Exponential backoff with jitter
           const delay = Math.min(1000 * Math.pow(2, retries), 30000);
           const jitter = Math.random() * 0.1 * delay;
-          return delay + jitter;
+          await new Promise(resolve => setTimeout(resolve, delay + jitter));
         },
       })
     );
@@ -136,20 +137,19 @@ async function createApolloClient(ssrMode: boolean = false) {
   if (!ssrMode && config.features.realTime) {
     try {
       const { cachePersistence } = await import('./cache');
-      await cachePersistence.loadFromStorage(cache, 'lms-apollo-cache');
+      cachePersistence.loadFromStorage(cache, 'lms-apollo-cache');
     } catch (error) {
       console.warn('Failed to load persisted cache:', error);
     }
   }
 
-  // Create Apollo Client instance
-  const client = new ApolloClient({
+  return new ApolloClient({
     link,
     cache,
     ssrMode,
     defaultOptions: {
       watchQuery: {
-        errorPolicy: 'all', // Return partial data even if there are errors
+        errorPolicy: 'all',
         fetchPolicy: ssrMode ? 'cache-first' : 'cache-and-network',
       },
       query: {
@@ -163,12 +163,10 @@ async function createApolloClient(ssrMode: boolean = false) {
     // Enable Apollo DevTools in development (client-side only)
     ...(config.enableDevTools && !ssrMode && { connectToDevTools: true }),
   });
-
-  return client;
 }
 
 // Create and export the configured Apollo Client instance
-let apolloClientInstance: ApolloClient<unknown> | null = null;
+let apolloClientInstance: any = null;
 
 export const apolloClient = (() => {
   if (typeof window === 'undefined') {

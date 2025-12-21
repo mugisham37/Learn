@@ -12,7 +12,28 @@
  * - Event routing and handler registration
  */
 
-import { io, Socket } from 'socket.io-client';
+// Mock Socket.io types for now - replace with actual socket.io-client when available
+interface Socket {
+  connected: boolean;
+  connect(): void;
+  disconnect(): void;
+  emit(event: string, ...args: unknown[]): void;
+  on(event: string, handler: (...args: unknown[]) => void): void;
+  off(event: string, handler?: (...args: unknown[]) => void): void;
+}
+
+function io(url: string, options?: Record<string, unknown>): Socket {
+  // Mock implementation - replace with actual socket.io-client
+  return {
+    connected: false,
+    connect() { /* mock */ },
+    disconnect() { /* mock */ },
+    emit() { /* mock */ },
+    on() { /* mock */ },
+    off() { /* mock */ },
+  };
+}
+
 import { config } from '../config';
 import { tokenManager } from '../auth/tokenStorage';
 

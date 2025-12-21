@@ -7,7 +7,7 @@
  * Requirements: 8.2, 8.3
  */
 
-import { ApolloClient, InMemoryCache, createHttpLink, from } from '@apollo/client';
+import { ApolloClient, InMemoryCache, HttpLink, from, gql } from '@apollo/client';
 import { setContext } from '@apollo/client/link/context';
 import { onError } from '@apollo/client/link/error';
 import { config } from '@/lib/config';
@@ -18,7 +18,7 @@ import { cookies } from 'next/headers';
  */
 export function createServerClient(accessToken?: string) {
   // HTTP link for GraphQL endpoint
-  const httpLink = createHttpLink({
+  const httpLink = new HttpLink({
     uri: config.graphqlEndpoint,
     fetch: fetch,
   });
@@ -30,7 +30,7 @@ export function createServerClient(accessToken?: string) {
 
     if (!token) {
       try {
-        const cookieStore = cookies();
+        const cookieStore = await cookies();
         token = cookieStore.get('access-token')?.value;
       } catch (error) {
         // Cookies not available in this context
@@ -48,9 +48,15 @@ export function createServerClient(accessToken?: string) {
   });
 
   // Error handling link
-  const errorLink = onError(({ graphQLErrors, networkError, operation, forward }) => {
+  const errorLink = onError((errorResponse) => {
+    const { graphQLErrors, networkError } = errorResponse as any;
     if (graphQLErrors) {
-      graphQLErrors.forEach(({ message, locations, path, extensions }) => {
+      graphQLErrors.forEach(({ message, locations, path, extensions }: {
+        message: string;
+        locations?: readonly unknown[];
+        path?: readonly (string | number)[];
+        extensions?: Record<string, unknown>;
+      }) => {
         console.error(`GraphQL error: Message: ${message}, Location: ${locations}, Path: ${path}`, {
           extensions,
         });
@@ -65,7 +71,6 @@ export function createServerClient(accessToken?: string) {
   // Create cache with server-side configuration
   const cache = new InMemoryCache({
     // Disable cache persistence on server
-    addTypename: true,
     typePolicies: {
       Query: {
         fields: {
@@ -111,17 +116,18 @@ export function createServerClient(accessToken?: string) {
 /**
  * Execute GraphQL query on server-side
  */
-export async function executeServerQuery<T = any, V = any>(
-  query: any,
+export async function executeServerQuery<T = unknown, V = Record<string, unknown>>(
+  queryString: string,
   variables?: V,
   accessToken?: string
 ): Promise<{
   data: T | null;
-  errors?: any[];
+  errors?: Array<{ message: string }>;
   loading: boolean;
 }> {
   try {
     const client = createServerClient(accessToken);
+    const query = gql(queryString);
 
     const result = await client.query({
       query,
@@ -130,8 +136,8 @@ export async function executeServerQuery<T = any, V = any>(
     });
 
     return {
-      data: result.data,
-      errors: result.errors,
+      data: result.data as T,
+      errors: result.error ? [{ message: result.error.message }] : [],
       loading: false,
     };
   } catch (error) {
@@ -139,7 +145,7 @@ export async function executeServerQuery<T = any, V = any>(
 
     return {
       data: null,
-      errors: [error],
+      errors: [{ message: error instanceof Error ? error.message : 'Unknown error' }],
       loading: false,
     };
   }
@@ -148,16 +154,17 @@ export async function executeServerQuery<T = any, V = any>(
 /**
  * Execute GraphQL mutation on server-side
  */
-export async function executeServerMutation<T = any, V = any>(
-  mutation: any,
+export async function executeServerMutation<T = unknown, V = Record<string, unknown>>(
+  mutationString: string,
   variables?: V,
   accessToken?: string
 ): Promise<{
   data: T | null;
-  errors?: any[];
+  errors?: Array<{ message: string }>;
 }> {
   try {
     const client = createServerClient(accessToken);
+    const mutation = gql(mutationString);
 
     const result = await client.mutate({
       mutation,
@@ -165,15 +172,15 @@ export async function executeServerMutation<T = any, V = any>(
     });
 
     return {
-      data: result.data,
-      errors: result.errors,
+      data: result.data as T,
+      errors: result.error ? [{ message: result.error.message }] : [],
     };
   } catch (error) {
     console.error('Server-side GraphQL mutation error:', error);
 
     return {
       data: null,
-      errors: [error],
+      errors: [{ message: error instanceof Error ? error.message : 'Unknown error' }],
     };
   }
 }
@@ -222,8 +229,8 @@ export const serverGraphQL = {
     variables: {
       first?: number;
       after?: string;
-      filter?: any;
-      sort?: any;
+      filter?: Record<string, unknown>;
+      sort?: Record<string, unknown>;
     } = {}
   ) {
     const COURSES_QUERY = `
@@ -343,7 +350,7 @@ export const serverGraphQL = {
     variables: {
       first?: number;
       after?: string;
-      filter?: any;
+      filter?: Record<string, unknown>;
     } = {}
   ) {
     const USER_ENROLLMENTS_QUERY = `

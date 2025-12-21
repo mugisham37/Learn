@@ -15,7 +15,7 @@
  * - Search Module (search results, facets)
  */
 
-import { InMemoryCache, TypePolicy, gql } from '@apollo/client';
+import { InMemoryCache, TypePolicy, gql, NormalizedCacheObject } from '@apollo/client';
 import { cacheConfig } from '../config';
 
 /**
@@ -1123,7 +1123,7 @@ export const cacheHelpers = {
         }
       });
 
-      cache.restore(preservedData);
+      cache.restore(preservedData as NormalizedCacheObject);
     }
   },
 };
@@ -1176,7 +1176,7 @@ export const cachePersistence = {
         return false;
       }
 
-      cache.restore(data);
+      cache.restore(data as NormalizedCacheObject);
       return true;
     } catch (error) {
       console.warn('Failed to load cache from storage:', error);

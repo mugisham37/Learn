@@ -58,7 +58,6 @@ export { DEFAULT_RECONNECTION_CONFIG } from '../subscriptions/types';
 export {
   updateCacheWithSubscriptionData,
   invalidateCacheForEntity,
-  getCacheUpdateStrategy,
   createOptimisticResponse,
 } from '../subscriptions/cacheIntegration';
 
@@ -67,3 +66,6 @@ export type {
   CacheInvalidationRule,
   SubscriptionCacheConfig,
 } from '../subscriptions/cacheIntegration';
+
+// Helper function for getCacheUpdateStrategy
+export { getCacheUpdateStrategy } from '../subscriptions/cacheIntegration';

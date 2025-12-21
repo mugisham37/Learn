@@ -129,7 +129,7 @@ export interface PerformanceReport {
 // Performance Monitor
 // =============================================================================
 
-export class PerformanceMonitor {
+class PerformanceMonitorClass {
   private metrics: PerformanceMetric[] = [];
   private alerts: PerformanceAlert[] = [];
   private thresholds: PerformanceThresholds;
@@ -663,7 +663,7 @@ export class PerformanceMonitor {
 /**
  * Hook for monitoring performance metrics
  */
-export function usePerformanceMonitoring(monitor: PerformanceMonitor): {
+function usePerformanceMonitoringFunction(monitor: PerformanceMonitorClass): {
   metrics: PerformanceMetric[];
   alerts: PerformanceAlert[];
   report: PerformanceReport;
@@ -746,10 +746,11 @@ export function useRenderPerformance(componentName: string, monitor?: Performanc
 // =============================================================================
 
 export const PerformanceMonitoringUtils = {
-  PerformanceMonitor,
-  usePerformanceMonitoring,
+  PerformanceMonitor: PerformanceMonitorClass,
+  usePerformanceMonitoring: usePerformanceMonitoringFunction,
   useRenderPerformance,
 };
 
 // Re-export for convenience
-export { PerformanceMonitor, usePerformanceMonitoring };
+export const PerformanceMonitor = PerformanceMonitorClass;
+export const usePerformanceMonitoring = usePerformanceMonitoringFunction;

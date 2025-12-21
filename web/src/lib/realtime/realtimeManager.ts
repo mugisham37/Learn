@@ -7,7 +7,7 @@
  */
 
 import { useEffect, useCallback, useRef } from 'react';
-import { useApolloClient } from '@apollo/client';
+import { ApolloClient, useApolloClient } from '@apollo/client';
 import { useAuth } from '../auth/authHooks';
 import socketClient, {
   SOCKET_EVENTS,

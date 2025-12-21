@@ -7,8 +7,10 @@
  * Requirements: 11.1
  */
 
-import { DocumentNode, FieldNode, SelectionSetNode, visit, print } from 'graphql';
-import { ApolloLink, Operation, Observable, FetchResult } from '@apollo/client';
+import React from 'react';
+import { DocumentNode, FieldNode, visit } from 'graphql';
+import { ApolloLink, Observable } from '@apollo/client';
+import type { FetchResult } from '@apollo/client';
 
 // =============================================================================
 // Types and Interfaces
@@ -59,7 +61,7 @@ export interface OptimizationResult {
 // Field Selection Optimizer
 // =============================================================================
 
-export class FieldSelectionOptimizer {
+class FieldSelectionOptimizerClass {
   private fieldUsage = new Map<string, FieldUsageMetrics>();
   private options: Required<FieldSelectionOptions>;
 
@@ -193,9 +195,11 @@ export class FieldSelectionOptimizer {
           if (currentDepth > this.options.maxDepth) {
             return null;
           }
+          return undefined;
         },
         leave: () => {
           currentDepth--;
+          return undefined;
         },
       },
     });
@@ -309,8 +313,8 @@ export class FieldSelectionOptimizer {
 /**
  * Creates an Apollo Link for automatic field selection optimization
  */
-export function createFieldSelectionLink(options?: FieldSelectionOptions): ApolloLink {
-  const optimizer = new FieldSelectionOptimizer(options);
+function createFieldSelectionLinkFunction(options?: FieldSelectionOptions): ApolloLink {
+  const optimizer = new FieldSelectionOptimizerClass(options);
 
   return new ApolloLink((operation, forward) => {
     if (!forward) {
@@ -372,7 +376,7 @@ export function analyzeQueryPerformance(query: DocumentNode): {
   recommendations: string[];
   optimizationPotential: number;
 } {
-  const optimizer = new FieldSelectionOptimizer();
+  const optimizer = new FieldSelectionOptimizerClass();
   const complexity = optimizer.calculateComplexity(query);
   const recommendations: string[] = [];
 
@@ -407,20 +411,20 @@ export function createQueryVariants(query: DocumentNode): {
   aggressive: DocumentNode;
   balanced: DocumentNode;
 } {
-  const conservativeOptimizer = new FieldSelectionOptimizer({
+  const conservativeOptimizer = new FieldSelectionOptimizerClass({
     enablePruning: false,
     maxDepth: 15,
     enableComplexityAnalysis: false,
   });
 
-  const aggressiveOptimizer = new FieldSelectionOptimizer({
+  const aggressiveOptimizer = new FieldSelectionOptimizerClass({
     enablePruning: true,
     maxDepth: 5,
     enableComplexityAnalysis: true,
     maxComplexity: 200,
   });
 
-  const balancedOptimizer = new FieldSelectionOptimizer({
+  const balancedOptimizer = new FieldSelectionOptimizerClass({
     enablePruning: true,
     maxDepth: 8,
     enableComplexityAnalysis: true,
@@ -441,8 +445,8 @@ export function createQueryVariants(query: DocumentNode): {
 /**
  * Hook for monitoring field selection performance
  */
-export function useFieldSelectionMetrics(optimizer: FieldSelectionOptimizer): {
-  analytics: ReturnType<FieldSelectionOptimizer['getFieldAnalytics']>;
+export function useFieldSelectionMetrics(optimizer: FieldSelectionOptimizerClass): {
+  analytics: ReturnType<FieldSelectionOptimizerClass['getFieldAnalytics']>;
   refresh: () => void;
 } {
   const [analytics, setAnalytics] = React.useState(optimizer.getFieldAnalytics());
@@ -464,12 +468,13 @@ export function useFieldSelectionMetrics(optimizer: FieldSelectionOptimizer): {
 // =============================================================================
 
 export const FieldSelectionUtils = {
-  FieldSelectionOptimizer,
-  createFieldSelectionLink,
+  FieldSelectionOptimizer: FieldSelectionOptimizerClass,
+  createFieldSelectionLink: createFieldSelectionLinkFunction,
   analyzeQueryPerformance,
   createQueryVariants,
   useFieldSelectionMetrics,
 };
 
 // Re-export for convenience
-export { FieldSelectionOptimizer, createFieldSelectionLink };
+export const FieldSelectionOptimizer = FieldSelectionOptimizerClass;
+export const createFieldSelectionLink = createFieldSelectionLinkFunction;

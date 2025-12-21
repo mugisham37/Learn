@@ -7,8 +7,10 @@
  * Requirements: 11.4
  */
 
-import { DocumentNode, print } from 'graphql';
-import { ApolloLink, Operation, Observable, FetchResult } from '@apollo/client';
+import React from 'react';
+import { print } from 'graphql';
+import { ApolloLink, Observable } from '@apollo/client';
+import type { FetchResult } from '@apollo/client';
 import { GraphQLRequestDeduplicator } from './deduplication';
 
 // =============================================================================
@@ -31,7 +33,11 @@ export interface BatchingConfig {
 }
 
 export interface BatchedOperation {
-  operation: Operation;
+  operation: {
+    query: any;
+    variables?: Record<string, unknown>;
+    operationName?: string;
+  };
   observer: {
     next: (value: FetchResult) => void;
     error: (error: unknown) => void;
@@ -64,7 +70,7 @@ export interface RequestAnalysis {
 // Request Batcher
 // =============================================================================
 
-export class RequestBatcher {
+class RequestBatcherClass {
   private batchQueue: BatchedOperation[] = [];
   private batchTimeout: NodeJS.Timeout | null = null;
   private deduplicator: GraphQLRequestDeduplicator;
@@ -101,8 +107,8 @@ export class RequestBatcher {
    * Add operation to batch queue
    */
   addToBatch(
-    operation: Operation,
-    forward: (operation: Operation) => Observable<FetchResult>
+    operation: { query: any; variables?: Record<string, unknown>; operationName?: string },
+    forward: (operation: { query: any; variables?: Record<string, unknown>; operationName?: string }) => Observable<FetchResult>
   ): Observable<FetchResult> {
     this.metrics.totalRequests++;
 
@@ -150,7 +156,7 @@ export class RequestBatcher {
   /**
    * Process the current batch
    */
-  private processBatch(forward: (operation: Operation) => Observable<FetchResult>): void {
+  private processBatch(forward: (operation: { query: any; variables?: Record<string, unknown>; operationName?: string }) => Observable<FetchResult>): void {
     if (this.batchQueue.length === 0) return;
 
     const batch = this.batchQueue.splice(0);
@@ -171,7 +177,7 @@ export class RequestBatcher {
    */
   private processIntelligentBatch(
     batch: BatchedOperation[],
-    forward: (operation: Operation) => Observable<FetchResult>
+    forward: (operation: { query: any; variables?: Record<string, unknown>; operationName?: string }) => Observable<FetchResult>
   ): void {
     // Group operations by similarity
     const groups = this.groupOperationsBySimilarity(batch);
@@ -196,7 +202,7 @@ export class RequestBatcher {
    */
   private processSimpleBatch(
     batch: BatchedOperation[],
-    forward: (operation: Operation) => Observable<FetchResult>
+    forward: (operation: { query: any; variables?: Record<string, unknown>; operationName?: string }) => Observable<FetchResult>
   ): void {
     // Sort by priority
     batch.sort((a, b) => b.priority - a.priority);
@@ -232,7 +238,7 @@ export class RequestBatcher {
   /**
    * Analyze operation for batching decisions
    */
-  private analyzeOperation(operation: Operation): RequestAnalysis {
+  private analyzeOperation(operation: { query: any; variables?: Record<string, unknown>; operationName?: string }): RequestAnalysis {
     const query = print(operation.query);
     const queryHash = this.hashString(query);
 
@@ -269,7 +275,7 @@ export class RequestBatcher {
    */
   private executeBatchedOperations(
     operations: BatchedOperation[],
-    forward: (operation: Operation) => Observable<FetchResult>
+    forward: (operation: { query: any; variables?: Record<string, unknown>; operationName?: string }) => Observable<FetchResult>
   ): void {
     // For now, execute operations individually
     // In a real implementation, you would merge queries or use GraphQL batching
@@ -281,7 +287,7 @@ export class RequestBatcher {
   /**
    * Calculate operation priority
    */
-  private calculatePriority(operation: Operation): number {
+  private calculatePriority(operation: { query: any; variables?: Record<string, unknown>; operationName?: string }): number {
     // Higher priority for mutations and subscriptions
     const definition = operation.query.definitions[0];
     if (definition && definition.kind === 'OperationDefinition') {
@@ -433,8 +439,8 @@ export class RequestBatcher {
 /**
  * Creates an Apollo Link for request batching and deduplication
  */
-export function createBatchingLink(config?: BatchingConfig): ApolloLink {
-  const batcher = new RequestBatcher(config);
+function createBatchingLinkFunction(config?: BatchingConfig): ApolloLink {
+  const batcher = new RequestBatcherClass(config);
 
   return new ApolloLink((operation, forward) => {
     if (!forward) {
@@ -494,7 +500,7 @@ export function createBatchingConfig(
 /**
  * Analyze request patterns for optimization recommendations
  */
-export function analyzeRequestPatterns(operations: Operation[]): {
+export function analyzeRequestPatterns(operations: { query: any; variables?: Record<string, unknown>; operationName?: string }[]): {
   batchingPotential: number;
   deduplicationPotential: number;
   recommendations: string[];
@@ -554,9 +560,9 @@ export function analyzeRequestPatterns(operations: Operation[]): {
 /**
  * Hook for monitoring request batching performance
  */
-export function useBatchingMetrics(batcher: RequestBatcher): {
+export function useBatchingMetrics(batcher: RequestBatcherClass): {
   metrics: BatchMetrics;
-  report: ReturnType<RequestBatcher['getPerformanceReport']>;
+  report: ReturnType<RequestBatcherClass['getPerformanceReport']>;
   reset: () => void;
 } {
   const [metrics, setMetrics] = React.useState(batcher.getMetrics());
@@ -585,12 +591,13 @@ export function useBatchingMetrics(batcher: RequestBatcher): {
 // =============================================================================
 
 export const RequestBatchingUtils = {
-  RequestBatcher,
-  createBatchingLink,
+  RequestBatcher: RequestBatcherClass,
+  createBatchingLink: createBatchingLinkFunction,
   createBatchingConfig,
   analyzeRequestPatterns,
   useBatchingMetrics,
 };
 
 // Re-export for convenience
-export { RequestBatcher, createBatchingLink };
+export const RequestBatcher = RequestBatcherClass;
+export const createBatchingLink = createBatchingLinkFunction;
