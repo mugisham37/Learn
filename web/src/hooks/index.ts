@@ -82,3 +82,17 @@ export {
   useCreateThread,
   useReplyToThread,
 } from './useCommunication';
+
+// Payment Processing Hooks
+export {
+  usePayments,
+  useStripeCheckout,
+  usePaymentHistory,
+  usePayment,
+  useSubscriptionManagement,
+  useSubscription,
+  useRefundProcessing,
+  useRefund,
+  usePaymentMethods,
+  useInvoices,
+} from './usePayments';
