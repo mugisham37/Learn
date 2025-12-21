@@ -21,7 +21,7 @@ export interface DeduplicationMetrics {
 }
 
 export class GraphQLRequestDeduplicator {
-  private cache = new Map<string, Observable<unknown>>();
+  private cache = new Map<string, Observable<FetchResult>>();
   private config: Required<DeduplicationConfig>;
   private metrics: DeduplicationMetrics = {
     totalRequests: 0,

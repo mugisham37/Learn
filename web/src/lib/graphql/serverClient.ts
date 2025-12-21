@@ -32,7 +32,7 @@ export function createServerClient(accessToken?: string) {
       try {
         const cookieStore = await cookies();
         token = cookieStore.get('access-token')?.value;
-      } catch (error) {
+      } catch {
         // Cookies not available in this context
         console.warn('Unable to access cookies for server-side GraphQL request');
       }
@@ -48,8 +48,7 @@ export function createServerClient(accessToken?: string) {
   });
 
   // Error handling link
-  const errorLink = onError((errorResponse) => {
-    const { graphQLErrors, networkError } = errorResponse as any;
+  const errorLink = onError(({ graphQLErrors, networkError }) => {
     if (graphQLErrors) {
       graphQLErrors.forEach(({ message, locations, path, extensions }: {
         message: string;

@@ -6,7 +6,7 @@
  * error handling, and retry logic. Supports both client-side and server-side rendering.
  */
 
-import { ApolloClient, ApolloLink, HttpLink, split, FetchPolicy } from '@apollo/client';
+import { ApolloClient, ApolloLink, HttpLink, split, FetchPolicy, NormalizedCacheObject } from '@apollo/client';
 import { GraphQLWsLink } from '@apollo/client/link/subscriptions';
 import { getMainDefinition } from '@apollo/client/utilities';
 import { createClient } from 'graphql-ws';

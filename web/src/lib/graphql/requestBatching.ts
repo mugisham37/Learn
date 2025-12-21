@@ -39,7 +39,7 @@ export interface BatchedOperation {
     operationName?: string;
   };
   observer: {
-    next: (value: unknown) => void;
+    next: (value: FetchResult) => void;
     error: (error: unknown) => void;
     complete: () => void;
   };

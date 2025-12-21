@@ -49,7 +49,7 @@ async function initializeSentry(): Promise<void> {
     // Dynamically import Sentry to avoid bundling if not needed
     const sentryModule = await import('@sentry/nextjs');
     Sentry = sentryModule as unknown as SentryModule;
-  } catch (error) {
+  } catch {
     console.warn('Sentry package not found, error tracking disabled');
   }
 }
@@ -159,8 +159,8 @@ export function setUserContext(user: { id: string; email?: string; role?: string
     Sentry.configureScope((scope: SentryScope) => {
       scope.setUser({
         id: user.id,
-        email: user.email,
-        role: user.role,
+        ...(user.email && { email: user.email }),
+        ...(user.role && { role: user.role }),
       });
     });
   } catch (error) {
@@ -197,7 +197,7 @@ export function addBreadcrumb(message: string, category: string, data?: Record<s
     Sentry.addBreadcrumb({
       message,
       category,
-      data,
+      ...(data && { data }),
       level: 'info',
       timestamp: Date.now() / 1000,
     });
@@ -244,7 +244,7 @@ export function monitorGraphQLOperation(
       if (transaction) {
         if (error) {
           transaction.setStatus('internal_error');
-          transaction.setTag('error', true);
+          transaction.setTag('error', 'true');
         } else {
           transaction.setStatus('ok');
         }

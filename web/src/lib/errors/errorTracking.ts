@@ -246,7 +246,7 @@ class SentryTrackingService implements ErrorTrackingService {
         });
 
         // Set backend-specific error fingerprint
-        const fingerprint = getBackendErrorFingerprint({
+        getBackendErrorFingerprint({
           type: error.type,
           code: error.code,
           ...(context?.operation && { operation: context.operation }),

@@ -140,7 +140,7 @@ export async function initializeNextJSConfiguration(): Promise<void> {
     const result = await initializeAllSystems();
 
     // Store initialization result globally for debugging
-    (window as any).__APP_INIT_RESULT__ = result;
+    (window as unknown as Record<string, unknown>).__APP_INIT_RESULT__ = result;
 
     if (!result.success) {
       console.error('⚠️  Application started with configuration issues');
@@ -165,7 +165,7 @@ export function getInitializationStatus(): InitializationResult | null {
     return null;
   }
 
-  return (window as any).__APP_INIT_RESULT__ || null;
+  return ((window as unknown as Record<string, unknown>).__APP_INIT_RESULT__ as InitializationResult) || null;
 }
 
 /**

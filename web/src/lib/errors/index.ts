@@ -149,6 +149,7 @@ export async function initializeErrorHandling(config?: {
     const { errorTrackingManager } = await import('./errorTracking');
     const { errorHandler } = await import('./errorHandler');
     const { NetworkErrorRecovery } = await import('./errorRecovery');
+    const { createBackendSentryConfig } = await import('./backendSentryConfig');
 
     // Initialize error tracking with backend integration
     if (enableTracking) {

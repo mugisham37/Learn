@@ -16,7 +16,6 @@
  */
 
 import { InMemoryCache, TypePolicy, gql, NormalizedCacheObject } from '@apollo/client';
-import { cacheConfig } from '../config';
 
 /**
  * Comprehensive type policies for all backend modules
@@ -143,7 +142,7 @@ const typePolicies: Record<string, TypePolicy> = {
       // Content Module Queries
       courseContent: {
         keyArgs: ['courseId'],
-        merge(existing = [], incoming) {
+        merge(_, incoming) {
           return incoming; // Content structure can change completely
         },
       },
@@ -169,7 +168,7 @@ const typePolicies: Record<string, TypePolicy> = {
       },
       subscriptions: {
         keyArgs: ['userId'],
-        merge(existing = [], incoming) {
+        merge(_, incoming) {
           return incoming; // Subscription data should be replaced
         },
       },
@@ -185,7 +184,7 @@ const typePolicies: Record<string, TypePolicy> = {
         },
       },
       unreadNotifications: {
-        merge(existing = [], incoming) {
+        merge(_, incoming) {
           return incoming; // Unread notifications should be replaced
         },
       },
@@ -229,7 +228,7 @@ const typePolicies: Record<string, TypePolicy> = {
       },
       coursePresence: {
         keyArgs: ['courseId'],
-        merge(existing = [], incoming) {
+        merge(_, incoming) {
           // Always replace with latest presence data
           return incoming;
         },
@@ -281,7 +280,7 @@ const typePolicies: Record<string, TypePolicy> = {
       },
       searchSuggestions: {
         keyArgs: ['query'],
-        merge(existing = [], incoming) {
+        merge(_, incoming) {
           return incoming; // Suggestions should be replaced
         },
       },
@@ -299,7 +298,7 @@ const typePolicies: Record<string, TypePolicy> = {
         merge: true, // Deep merge preferences
       },
       permissions: {
-        merge(existing = [], incoming) {
+        merge(_, incoming) {
           return incoming; // Permissions should be replaced completely
         },
       },
@@ -361,12 +360,12 @@ const typePolicies: Record<string, TypePolicy> = {
         },
       },
       tags: {
-        merge(existing = [], incoming) {
+        merge(_, incoming) {
           return incoming; // Tags should be replaced
         },
       },
       prerequisites: {
-        merge(existing = [], incoming) {
+        merge(_, incoming) {
           return incoming;
         },
       },
@@ -423,7 +422,7 @@ const typePolicies: Record<string, TypePolicy> = {
         merge: true, // Deep merge lesson content
       },
       resources: {
-        merge(existing = [], incoming) {
+        merge(_, incoming) {
           return incoming; // Resources should be replaced
         },
       },
@@ -460,7 +459,7 @@ const typePolicies: Record<string, TypePolicy> = {
         },
       },
       certificates: {
-        merge(existing = [], incoming) {
+        merge(_, incoming) {
           return incoming; // Certificates should be replaced
         },
       },
@@ -553,7 +552,7 @@ const typePolicies: Record<string, TypePolicy> = {
     keyFields: ['id'],
     fields: {
       files: {
-        merge(existing = [], incoming) {
+        merge(_, incoming) {
           return incoming; // Files should be replaced
         },
       },
@@ -600,7 +599,7 @@ const typePolicies: Record<string, TypePolicy> = {
         },
       },
       outputs: {
-        merge(existing = [], incoming) {
+        merge(_, incoming) {
           return incoming;
         },
       },
@@ -643,7 +642,7 @@ const typePolicies: Record<string, TypePolicy> = {
     keyFields: ['id'],
     fields: {
       lineItems: {
-        merge(existing = [], incoming) {
+        merge(_, incoming) {
           return incoming;
         },
       },
@@ -702,7 +701,7 @@ const typePolicies: Record<string, TypePolicy> = {
         },
       },
       participants: {
-        merge(existing = [], incoming) {
+        merge(_, incoming) {
           return incoming; // Participants should be replaced
         },
       },
@@ -742,7 +741,7 @@ const typePolicies: Record<string, TypePolicy> = {
         },
       },
       reactions: {
-        merge(existing = [], incoming) {
+        merge(_, incoming) {
           return incoming;
         },
       },
@@ -777,7 +776,7 @@ const typePolicies: Record<string, TypePolicy> = {
     keyFields: ['id'],
     fields: {
       reactions: {
-        merge(existing = [], incoming) {
+        merge(_, incoming) {
           return incoming;
         },
       },
@@ -895,7 +894,7 @@ const typePolicies: Record<string, TypePolicy> = {
     keyFields: ['field'],
     fields: {
       buckets: {
-        merge(existing = [], incoming) {
+        merge(_, incoming) {
           return incoming;
         },
       },
@@ -1214,7 +1213,7 @@ export const cachePersistence = {
         age: Date.now() - parsed.timestamp,
         sizeInMB: (stored.length / (1024 * 1024)).toFixed(2),
       };
-    } catch (error) {
+    } catch {
       return null;
     }
   },
