@@ -634,7 +634,7 @@ class PerformanceMonitorClass {
    * Utility methods
    */
   private generateMetricId(): string {
-    return `metric_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return `metric_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
   }
 
   private extractQueryName(query: DocumentNode): string | null {
@@ -715,14 +715,12 @@ function usePerformanceMonitoringFunction(monitor: PerformanceMonitorClass): {
 /**
  * Hook for measuring component render performance
  */
-export function useRenderPerformance(componentName: string, monitor?: PerformanceMonitor): void {
+export function useRenderPerformance(componentName: string, monitor?: PerformanceMonitorClass): void {
   const renderCount = React.useRef(0);
-  const lastProps = React.useRef<unknown>(null);
-  const lastState = React.useRef<unknown>(null);
 
   React.useEffect(() => {
     const startTime = performance.now();
-    renderCount.current++;
+    const currentRenderCount = ++renderCount.current;
 
     return () => {
       const endTime = performance.now();
@@ -732,13 +730,13 @@ export function useRenderPerformance(componentName: string, monitor?: Performanc
         monitor.recordRenderPerformance(
           componentName,
           renderTime,
-          renderCount.current,
+          currentRenderCount,
           false, // Would need actual props comparison
           false // Would need actual state comparison
         );
       }
     };
-  });
+  }, [componentName, monitor]);
 }
 
 // =============================================================================

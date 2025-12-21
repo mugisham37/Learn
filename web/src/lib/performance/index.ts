@@ -18,15 +18,32 @@ import { PerformanceMonitoringUtils } from './monitoring';
 // Create namespace aliases for missing utilities
 const SubscriptionManagementUtils = {
   SubscriptionManager: class {
-    constructor(_options?: unknown) {}
+    constructor(options?: unknown) {
+      void options; // Use parameter to avoid unused warning
+    }
+    getManagerStats() {
+      return {
+        activeSubscriptions: 0,
+        totalSubscriptions: 0,
+        memoryUsage: 0,
+      };
+    }
+    stop() {
+      // Cleanup logic would go here
+    }
   },
   createOptimizedSubscriptionManager: () => new SubscriptionManagementUtils.SubscriptionManager(),
 };
 
 const CacheOptimizationUtils = {
   CacheOptimizer: class {
-    constructor(_cache?: unknown, _options?: unknown) {}
-    warmCache(_client: unknown, _queries: unknown): Promise<void> {
+    constructor(cache?: unknown, options?: unknown) {
+      void cache; // Use parameters to avoid unused warnings
+      void options;
+    }
+    warmCache(client: unknown, queries: unknown): Promise<void> {
+      void client; // Use parameters to avoid unused warnings
+      void queries;
       return Promise.resolve();
     }
     getOptimizationReport() {
@@ -34,7 +51,9 @@ const CacheOptimizationUtils = {
         performance: { hitRate: 0.8 },
       };
     }
-    stop() {}
+    stop() {
+      // Cleanup logic would go here
+    }
   },
 };
 
@@ -48,12 +67,13 @@ const LazyLoadingUtils = {
     } = {}
   ): React.LazyExoticComponent<React.ComponentType<TProps>> => {
     // Simple implementation that ignores options for now
+    void options; // Use options to avoid unused parameter warning
     return React.lazy(importFn);
   },
 };
 
 // Type alias to work around Apollo Client v4 type issues
-type ApolloClientType = ApolloClient<unknown>;
+type ApolloClientType = ApolloClient;
 
 // =============================================================================
 // Types and Interfaces
@@ -233,7 +253,7 @@ export class PerformanceManager {
   /**
    * Configure Apollo Client with all performance optimizations
    */
-  configureApolloClient(client: ApolloClientType): ApolloClientType {
+  configureApolloClient(client: ApolloClient): ApolloClient {
     const links: ApolloLink[] = [];
 
     // Add field selection optimization link
@@ -323,11 +343,21 @@ export class PerformanceManager {
       return React.lazy(importFn);
     }
 
-    return LazyLoadingUtils.createLazyComponent(importFn, {
+    // Filter out undefined loadingComponent to satisfy exactOptionalPropertyTypes
+    const filteredOptions: {
+      retryAttempts?: number;
+      preload?: boolean;
+      loadingComponent?: React.ComponentType;
+    } = {
       retryAttempts: options.retryAttempts || 3,
       preload: options.preload ?? false,
-      loadingComponent: options.loadingComponent,
-    });
+    };
+
+    if (options.loadingComponent) {
+      filteredOptions.loadingComponent = options.loadingComponent;
+    }
+
+    return LazyLoadingUtils.createLazyComponent(importFn, filteredOptions);
   }
 
   /**
@@ -381,7 +411,7 @@ export class PerformanceManager {
    * Warm cache with critical queries
    */
   async warmCache(
-    client: ApolloClientType,
+    client: ApolloClient,
     queries: Array<{ query: unknown; variables?: Record<string, unknown>; priority?: number }>
   ): Promise<void> {
     if (!this.config.enableCacheOptimization || !this.cacheOptimizer) {
@@ -401,7 +431,7 @@ export class PerformanceManager {
 
     const monitoringReport = this.performanceMonitor?.generateReport();
     const cacheReport = this.cacheOptimizer?.getOptimizationReport();
-    const subscriptionStats = this.subscriptionManager?.getManagerStats();
+    const subscriptionStats = this.subscriptionManager?.getManagerStats?.();
 
     return {
       deduplication: deduplicationMetrics || {
@@ -563,9 +593,9 @@ export class PerformanceManager {
    * Cleanup and stop all performance monitoring
    */
   cleanup(): void {
-    this.subscriptionManager?.stop();
-    this.cacheOptimizer?.stop();
-    this.performanceMonitor?.clear();
+    this.subscriptionManager?.stop?.();
+    this.cacheOptimizer?.stop?.();
+    this.performanceMonitor?.clear?.();
     console.log('Performance optimization cleanup completed');
   }
 }
@@ -615,7 +645,7 @@ export function usePerformanceMetrics(): {
  * Initialize performance optimizations for the entire application
  */
 export function initializePerformanceOptimizations(
-  client: ApolloClientType,
+  client: ApolloClient,
   config?: PerformanceConfig
 ): PerformanceManager {
   const manager = PerformanceManager.getInstance(config);
@@ -639,9 +669,9 @@ export function initializePerformanceOptimizations(
  * Create a performance-optimized Apollo Client
  */
 export function createOptimizedApolloClient(
-  baseClient: ApolloClientType,
+  baseClient: ApolloClient,
   config?: PerformanceConfig
-): ApolloClientType {
+): ApolloClient {
   const manager = PerformanceManager.getInstance(config);
   return manager.configureApolloClient(baseClient);
 }

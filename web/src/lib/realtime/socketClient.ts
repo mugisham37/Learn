@@ -24,8 +24,10 @@ interface Socket {
   off(event: string, handler?: (...args: unknown[]) => void): void;
 }
 
-function io(_url: string, _options?: Record<string, unknown>): Socket {
+function io(url: string, options?: Record<string, unknown>): Socket {
   // Mock implementation - replace with actual socket.io-client
+  // Use parameters to avoid unused warnings
+  console.debug('Mock socket.io client for:', url, options);
   return {
     connected: false,
     connecting: false,

@@ -5,8 +5,8 @@
  * optimization system in a real application.
  */
 
-import React, { useState, useEffect } from 'react';
-import { ApolloClient, InMemoryCache } from '@apollo/client';
+import React, { useState, useEffect, useCallback } from 'react';
+import { ApolloClient, InMemoryCache, ApolloLink } from '@apollo/client';
 import { PerformanceManager, PerformanceMetrics } from './index';
 
 // =============================================================================
@@ -16,11 +16,11 @@ import { PerformanceManager, PerformanceMetrics } from './index';
 /**
  * Create an optimized Apollo Client with all performance features enabled
  */
-export function createOptimizedApolloClient(): ApolloClient<unknown> {
+export function createOptimizedApolloClient(): ApolloClient {
   // Create base Apollo Client
   const client = new ApolloClient({
-    uri: '/api/graphql',
     cache: new InMemoryCache(),
+    link: new ApolloLink(), // Required link property
   });
 
   // Initialize performance optimizations
@@ -63,28 +63,35 @@ function MetricCard({ title, value, subtitle, color = 'blue' }: MetricCardProps)
 /**
  * Performance Dashboard Component
  */
-export function PerformanceDashboard(): JSX.Element {
+export function PerformanceDashboard(): React.ReactElement {
   const [metrics, setMetrics] = useState<PerformanceMetrics>({} as PerformanceMetrics);
   const [report, setReport] = useState<ReturnType<PerformanceManager['generateReport']>>(
     {} as ReturnType<PerformanceManager['generateReport']>
   );
 
-  const refresh = () => {
+  const refresh = useCallback(() => {
     const manager = PerformanceManager.getInstance();
     const newMetrics = manager.getMetrics();
     const newReport = manager.generateReport();
 
     setMetrics(newMetrics);
     setReport(newReport);
-  };
+  }, []);
 
   useEffect(() => {
-    refresh();
+    // Use a timeout to avoid calling setState directly in effect
+    const timer = setTimeout(() => {
+      refresh();
+    }, 0);
 
     // Refresh metrics every 30 seconds
     const interval = setInterval(refresh, 30000);
-    return () => clearInterval(interval);
-  }, []);
+    
+    return () => {
+      clearTimeout(timer);
+      clearInterval(interval);
+    };
+  }, [refresh]);
 
   return (
     <div className="performance-dashboard p-6 bg-white rounded-lg shadow-lg">
@@ -183,12 +190,15 @@ export function PerformanceDashboard(): JSX.Element {
  * Custom hook for monitoring component performance
  */
 export function usePerformanceMonitoring(componentName: string) {
+  const renderCountRef = React.useRef(0);
   const [renderCount, setRenderCount] = useState(0);
   const [lastRenderTime, setLastRenderTime] = useState<number | null>(null);
 
   useEffect(() => {
     const startTime = performance.now();
-    setRenderCount(prev => prev + 1);
+    renderCountRef.current += 1;
+    const currentRenderCount = renderCountRef.current;
+    setRenderCount(currentRenderCount);
 
     return () => {
       const endTime = performance.now();
@@ -196,11 +206,9 @@ export function usePerformanceMonitoring(componentName: string) {
       setLastRenderTime(renderTime);
 
       // Record metric with performance manager
-      const manager = PerformanceManager.getInstance();
-      // In a real implementation, you would have a recordMetric method
-      console.log(`[Performance] ${componentName} rendered in ${renderTime.toFixed(2)}ms`);
+      console.log(`[Performance] ${componentName} rendered in ${renderTime.toFixed(2)}ms (render #${currentRenderCount})`);
     };
-  });
+  }, [componentName]);
 
   return {
     renderCount,
@@ -229,21 +237,40 @@ export function OptimizedQuery({ children, query, variables }: OptimizedQueryPro
   const performanceMetrics = usePerformanceMonitoring('OptimizedQuery');
 
   useEffect(() => {
-    const manager = PerformanceManager.getInstance();
+    let isCancelled = false;
     
     // Simulate query optimization and execution
-    setLoading(true);
-    setError(null);
-
-    // In a real implementation, you would use the optimized Apollo Client
-    setTimeout(() => {
-      setData({ optimized: true });
-      setLoading(false);
+    const executeQuery = async () => {
+      if (isCancelled) return;
       
-      // Record performance metrics
-      // manager.recordMetric('query_execution', performanceMetrics.lastRenderTime || 0);
-    }, Math.random() * 1000 + 500);
+      setLoading(true);
+      setError(null);
+
+      try {
+        // In a real implementation, you would use the optimized Apollo Client
+        await new Promise(resolve => setTimeout(resolve, Math.random() * 1000 + 500));
+        
+        if (!isCancelled) {
+          setData({ optimized: true, query, variables });
+          setLoading(false);
+        }
+      } catch (err) {
+        if (!isCancelled) {
+          setError(err as Error);
+          setLoading(false);
+        }
+      }
+    };
+
+    executeQuery();
+
+    return () => {
+      isCancelled = true;
+    };
   }, [query, variables]);
+
+  // Use performanceMetrics to avoid unused variable warning
+  console.debug('Performance metrics:', performanceMetrics);
 
   if (loading) {
     return <div className="animate-pulse">Loading optimized query...</div>;
@@ -357,14 +384,5 @@ export function setupPerformanceOptimizedApp() {
 }
 
 // =============================================================================
-// Exports
+// Exports - Single export statement to avoid conflicts
 // =============================================================================
-
-export {
-  createOptimizedApolloClient,
-  PerformanceDashboard,
-  usePerformanceMonitoring,
-  OptimizedQuery,
-  withPerformanceOptimization,
-  setupPerformanceOptimizedApp,
-};

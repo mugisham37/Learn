@@ -7,7 +7,6 @@
  */
 
 import { useEffect, useCallback, useRef } from 'react';
-import { ApolloClient } from '@apollo/client';
 import { useAuth } from '../auth/authHooks';
 import socketClient, {
   SOCKET_EVENTS,
@@ -107,23 +106,27 @@ export function useRealtimeManager() {
   const handleNotificationEvent = useCallback(
     (data: unknown) => {
       try {
-        // Update Apollo cache with new notification
-        apolloClient.cache.modify({
-          fields: {
-            notifications(existingNotifications = []) {
-              // Add new notification to the beginning of the list
-              return [data, ...existingNotifications];
+        // Update Apollo cache with new notification if client is available
+        if (apolloClient) {
+          apolloClient.cache.modify({
+            fields: {
+              notifications(existingNotifications = []) {
+                // Add new notification to the beginning of the list
+                return [data, ...existingNotifications];
+              },
+              unreadNotificationCount(existingCount = 0) {
+                return existingCount + 1;
+              },
             },
-            unreadNotificationCount(existingCount = 0) {
-              return existingCount + 1;
-            },
-          },
-        });
+          });
+        } else {
+          console.log('Notification received (no client):', data);
+        }
       } catch (error) {
         console.error('Failed to update notification cache:', error);
       }
     },
-    [apolloClient.cache]
+    [apolloClient]
   );
 
   /**
@@ -132,30 +135,34 @@ export function useRealtimeManager() {
   const handleMessageEvent = useCallback(
     (data: unknown) => {
       try {
-        const messageData = data as { conversationId?: string; [key: string]: unknown };
-        // Update Apollo cache with new message
-        apolloClient.cache.modify({
-          fields: {
-            conversations(existingConversations = []) {
-              // Update the specific conversation with new message
-              return existingConversations.map((conversation: { id: string; [key: string]: unknown }) => {
-                if (conversation.id === messageData?.conversationId) {
-                  return {
-                    ...conversation,
-                    lastMessage: data,
-                    updatedAt: new Date().toISOString(),
-                  };
-                }
-                return conversation;
-              });
+        if (apolloClient) {
+          const messageData = data as { conversationId?: string; [key: string]: unknown };
+          // Update Apollo cache with new message
+          apolloClient.cache.modify({
+            fields: {
+              conversations(existingConversations = []) {
+                // Update the specific conversation with new message
+                return existingConversations.map((conversation: { id: string; [key: string]: unknown }) => {
+                  if (conversation.id === messageData?.conversationId) {
+                    return {
+                      ...conversation,
+                      lastMessage: data,
+                      updatedAt: new Date().toISOString(),
+                    };
+                  }
+                  return conversation;
+                });
+              },
             },
-          },
-        });
+          });
+        } else {
+          console.log('Message received (no client):', data);
+        }
       } catch (error) {
         console.error('Failed to update message cache:', error);
       }
     },
-    [apolloClient.cache]
+    [apolloClient]
   );
 
   /**
@@ -164,29 +171,33 @@ export function useRealtimeManager() {
   const handleProgressEvent = useCallback(
     (data: unknown) => {
       try {
-        const progressData = data as { enrollmentId?: string; progress?: number; [key: string]: unknown };
-        // Update Apollo cache with progress data
-        apolloClient.cache.modify({
-          fields: {
-            enrollments(existingEnrollments = []) {
-              return existingEnrollments.map((enrollment: { id: string; progress?: number; [key: string]: unknown }) => {
-                if (enrollment.id === progressData?.enrollmentId) {
-                  return {
-                    ...enrollment,
-                    progress: progressData?.progress || enrollment.progress,
-                    updatedAt: new Date().toISOString(),
-                  };
-                }
-                return enrollment;
-              });
+        if (apolloClient) {
+          const progressData = data as { enrollmentId?: string; progress?: number; [key: string]: unknown };
+          // Update Apollo cache with progress data
+          apolloClient.cache.modify({
+            fields: {
+              enrollments(existingEnrollments = []) {
+                return existingEnrollments.map((enrollment: { id: string; progress?: number; [key: string]: unknown }) => {
+                  if (enrollment.id === progressData?.enrollmentId) {
+                    return {
+                      ...enrollment,
+                      progress: progressData?.progress || enrollment.progress,
+                      updatedAt: new Date().toISOString(),
+                    };
+                  }
+                  return enrollment;
+                });
+              },
             },
-          },
-        });
+          });
+        } else {
+          console.log('Progress updated (no client):', data);
+        }
       } catch (error) {
         console.error('Failed to update progress cache:', error);
       }
     },
-    [apolloClient.cache]
+    [apolloClient]
   );
 
   /**
@@ -195,29 +206,33 @@ export function useRealtimeManager() {
   const handlePresenceEvent = useCallback(
     (data: unknown) => {
       try {
-        const presenceData = data as { userId?: string; status?: string; lastSeen?: string; [key: string]: unknown };
-        // Update Apollo cache with presence data
-        apolloClient.cache.modify({
-          fields: {
-            coursePresence(existingPresence = []) {
-              return existingPresence.map((presence: { userId: string; status?: string; lastSeen?: string; [key: string]: unknown }) => {
-                if (presence.userId === presenceData?.userId) {
-                  return {
-                    ...presence,
-                    status: presenceData.status,
-                    lastSeen: presenceData.lastSeen || new Date().toISOString(),
-                  };
-                }
-                return presence;
-              });
+        if (apolloClient) {
+          const presenceData = data as { userId?: string; status?: string; lastSeen?: string; [key: string]: unknown };
+          // Update Apollo cache with presence data
+          apolloClient.cache.modify({
+            fields: {
+              coursePresence(existingPresence = []) {
+                return existingPresence.map((presence: { userId: string; status?: string; lastSeen?: string; [key: string]: unknown }) => {
+                  if (presence.userId === presenceData?.userId) {
+                    return {
+                      ...presence,
+                      status: presenceData.status,
+                      lastSeen: presenceData.lastSeen || new Date().toISOString(),
+                    };
+                  }
+                  return presence;
+                });
+              },
             },
-          },
-        });
+          });
+        } else {
+          console.log('Presence updated (no client):', data);
+        }
       } catch (error) {
         console.error('Failed to update presence cache:', error);
       }
     },
-    [apolloClient.cache]
+    [apolloClient]
   );
 
   /**

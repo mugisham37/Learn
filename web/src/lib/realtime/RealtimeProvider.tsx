@@ -78,6 +78,7 @@ export function RealtimeProvider({
       const timer = setTimeout(() => setIsInitialized(false), 0);
       return () => clearTimeout(timer);
     }
+    return undefined;
   }, [isAuthenticated, user, isInitialized]);
 
   return (
@@ -118,7 +119,7 @@ function RealtimeProviderInner({
 
   // Setup activity tracking
   useEffect(() => {
-    if (!enableAutoPresence || !isInitialized) return;
+    if (!enableAutoPresence || !isInitialized) return undefined;
 
     const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
 
@@ -135,7 +136,7 @@ function RealtimeProviderInner({
 
   // Automatic presence updates based on activity
   useEffect(() => {
-    if (!enableAutoPresence || !isAuthenticated || !isInitialized) return;
+    if (!enableAutoPresence || !isAuthenticated || !isInitialized) return undefined;
 
     const interval = setInterval(() => {
       const now = Date.now();
@@ -166,7 +167,7 @@ function RealtimeProviderInner({
 
   // Handle page visibility changes for presence
   useEffect(() => {
-    if (!enableAutoPresence || !isAuthenticated || !isInitialized) return;
+    if (!enableAutoPresence || !isAuthenticated || !isInitialized) return undefined;
 
     const handleVisibilityChange = () => {
       if (document.hidden) {
@@ -186,7 +187,7 @@ function RealtimeProviderInner({
 
   // Handle page unload for presence cleanup
   useEffect(() => {
-    if (!enableAutoPresence || !isAuthenticated || !isInitialized) return;
+    if (!enableAutoPresence || !isAuthenticated || !isInitialized) return undefined;
 
     const handleBeforeUnload = () => {
       realtimeManager.updatePresence('offline');
@@ -246,6 +247,7 @@ export function useCourseRealtime(courseId: string | null) {
       joinCourse(courseId);
       return () => leaveCourse(courseId);
     }
+    return undefined;
   }, [courseId, joinCourse, leaveCourse]);
 }
 
@@ -260,6 +262,7 @@ export function useConversationRealtime(conversationId: string | null) {
       joinConversation(conversationId);
       return () => leaveConversation(conversationId);
     }
+    return undefined;
   }, [conversationId, joinConversation, leaveConversation]);
 
   const startTyping = useCallback(() => {

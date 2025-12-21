@@ -230,6 +230,7 @@ export function useSchemaIntegration(
         }
       };
     }
+    return undefined;
   }, [autoSync, syncInterval, sync]);
 
   // Initial validation on mount
