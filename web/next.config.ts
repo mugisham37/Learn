@@ -14,27 +14,87 @@ const nextConfig: NextConfig = {
 
   // Webpack configuration for better bundle optimization
   webpack: (config, { buildId, dev, isServer, defaultLoaders, webpack }) => {
-    // Optimize bundle size
+    // Optimize bundle size and performance
     if (!dev && !isServer) {
+      // Enhanced code splitting configuration
       config.optimization.splitChunks = {
         ...config.optimization.splitChunks,
+        chunks: 'all',
+        minSize: 20000,
+        maxSize: 244000,
         cacheGroups: {
           ...config.optimization.splitChunks?.cacheGroups,
+          // Apollo Client and GraphQL optimization
           apollo: {
             name: 'apollo',
             test: /[\\/]node_modules[\\/](@apollo|graphql)[\\/]/,
             chunks: 'all',
-            priority: 10,
+            priority: 20,
+            enforce: true,
           },
+          // Performance utilities
+          performance: {
+            name: 'performance',
+            test: /[\\/]src[\\/]lib[\\/](performance|utils|cache|graphql)[\\/]/,
+            chunks: 'all',
+            priority: 15,
+            minChunks: 2,
+          },
+          // React and core libraries
+          react: {
+            name: 'react',
+            test: /[\\/]node_modules[\\/](react|react-dom)[\\/]/,
+            chunks: 'all',
+            priority: 10,
+            enforce: true,
+          },
+          // Common vendor libraries
           vendor: {
             name: 'vendor',
             test: /[\\/]node_modules[\\/]/,
             chunks: 'all',
             priority: 5,
+            minChunks: 2,
+          },
+          // Default chunk for remaining code
+          default: {
+            minChunks: 2,
+            priority: -10,
+            reuseExistingChunk: true,
           },
         },
       };
+
+      // Enable tree shaking and dead code elimination
+      config.optimization.usedExports = true;
+      config.optimization.sideEffects = false;
+
+      // Minimize bundle size
+      config.optimization.minimize = true;
     }
+
+    // Performance monitoring in development
+    if (dev) {
+      // Add bundle analyzer plugin for development
+      const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
+      
+      if (process.env.ANALYZE === 'true') {
+        config.plugins.push(
+          new BundleAnalyzerPlugin({
+            analyzerMode: 'server',
+            analyzerPort: isServer ? 8888 : 8889,
+            openAnalyzer: true,
+          })
+        );
+      }
+    }
+
+    // Add performance budget warnings
+    config.performance = {
+      maxAssetSize: 250000, // 250KB
+      maxEntrypointSize: 250000, // 250KB
+      hints: dev ? false : 'warning',
+    };
 
     return config;
   },

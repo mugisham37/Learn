@@ -5,12 +5,19 @@
  * Provides a unified interface for setting up and managing performance
  * optimizations across the application.
  * 
- * Requirements: 12.1, 12.2, 12.3, 12.4, 12.5
+ * Requirements: 11.1, 11.2, 11.3, 11.4, 11.5
  */
 
 import React from 'react';
 import { ApolloClient, ApolloLink } from '@apollo/client';
+import { DocumentNode } from 'graphql';
 import { GraphQLDeduplicationUtils } from '../graphql/deduplication';
+import { FieldSelectionUtils } from '../graphql/fieldSelection';
+import { RequestBatchingUtils } from '../graphql/requestBatching';
+import { SubscriptionManagementUtils } from '../subscriptions/subscriptionManager';
+import { PerformanceMonitoringUtils } from './monitoring';
+import { LazyLoadingUtils } from '../utils/lazyLoading';
+import { CacheOptimizationUtils } from '../cache/optimization';
 
 // Type alias to work around Apollo Client v4 type issues
 type ApolloClientType = ApolloClient;
@@ -27,6 +34,34 @@ export interface PerformanceConfig {
     maxCacheSize?: number;
     ttl?: number;
     enableBatching?: boolean;
+  };
+  
+  /** Enable field selection optimization */
+  enableFieldSelection?: boolean;
+  /** Field selection options */
+  fieldSelectionOptions?: {
+    enablePruning?: boolean;
+    maxDepth?: number;
+    alwaysInclude?: string[];
+    alwaysExclude?: string[];
+  };
+  
+  /** Enable request batching */
+  enableRequestBatching?: boolean;
+  /** Request batching options */
+  requestBatchingOptions?: {
+    maxBatchSize?: number;
+    batchTimeout?: number;
+    enableIntelligentBatching?: boolean;
+  };
+  
+  /** Enable subscription management */
+  enableSubscriptionManagement?: boolean;
+  /** Subscription management options */
+  subscriptionManagementOptions?: {
+    maxConcurrentSubscriptions?: number;
+    defaultCleanupTimeout?: number;
+    enableAutoCleanup?: boolean;
   };
   
   /** Enable intelligent memoization */
@@ -51,13 +86,20 @@ export interface PerformanceConfig {
   enableCacheOptimization?: boolean;
   /** Cache optimization options */
   cacheOptimizationOptions?: {
-    maxCacheSize?: number;
+    maxSize?: number;
     cleanupInterval?: number;
     enableWarming?: boolean;
   };
   
   /** Enable performance monitoring */
   enableMonitoring?: boolean;
+  /** Performance monitoring options */
+  monitoringOptions?: {
+    enableQueryMetrics?: boolean;
+    enableBundleMetrics?: boolean;
+    enableNetworkMetrics?: boolean;
+    enableRenderMetrics?: boolean;
+  };
 }
 
 export interface PerformanceMetrics {
@@ -66,6 +108,22 @@ export interface PerformanceMetrics {
     deduplicatedRequests: number;
     cacheHits: number;
     hitRate: number;
+  };
+  fieldSelection: {
+    queriesOptimized: number;
+    fieldsRemoved: number;
+    bandwidthSaved: number;
+  };
+  requestBatching: {
+    totalRequests: number;
+    batchedRequests: number;
+    averageBatchSize: number;
+    networkSavings: number;
+  };
+  subscriptionManagement: {
+    activeSubscriptions: number;
+    cleanedUpSubscriptions: number;
+    memoryUsage: number;
   };
   memoization: {
     selectorHitRate: number;
@@ -83,6 +141,11 @@ export interface PerformanceMetrics {
     evictions: number;
     memoryUsage: number;
   };
+  monitoring: {
+    metricsCollected: number;
+    alertsGenerated: number;
+    performanceScore: number;
+  };
 }
 
 // =============================================================================
@@ -93,10 +156,18 @@ export class PerformanceManager {
   private static instance: PerformanceManager;
   private config: PerformanceConfig;
   private deduplicationLink?: ApolloLink;
+  private fieldSelectionLink?: ApolloLink;
+  private batchingLink?: ApolloLink;
+  private subscriptionManager?: SubscriptionManagementUtils.SubscriptionManager;
+  private performanceMonitor?: PerformanceMonitoringUtils.PerformanceMonitor;
+  private cacheOptimizer?: CacheOptimizationUtils.CacheOptimizer;
 
   private constructor(config: PerformanceConfig = {}) {
     this.config = {
       enableDeduplication: true,
+      enableFieldSelection: true,
+      enableRequestBatching: true,
+      enableSubscriptionManagement: true,
       enableMemoization: true,
       enableLazyLoading: true,
       enableCacheOptimization: true,
@@ -117,15 +188,38 @@ export class PerformanceManager {
   private initialize(): void {
     // Initialize performance monitoring if enabled
     if (this.config.enableMonitoring) {
-      // Set up performance monitoring
+      this.performanceMonitor = new PerformanceMonitoringUtils.PerformanceMonitor();
+    }
+
+    // Initialize subscription manager if enabled
+    if (this.config.enableSubscriptionManagement) {
+      this.subscriptionManager = SubscriptionManagementUtils.createOptimizedSubscriptionManager(
+        this.config.subscriptionManagementOptions
+      );
     }
   }
 
   /**
-   * Configure Apollo Client with performance optimizations
+   * Configure Apollo Client with all performance optimizations
    */
   configureApolloClient(client: ApolloClientType): ApolloClientType {
     const links: ApolloLink[] = [];
+
+    // Add field selection optimization link
+    if (this.config.enableFieldSelection) {
+      this.fieldSelectionLink = FieldSelectionUtils.createFieldSelectionLink(
+        this.config.fieldSelectionOptions
+      );
+      links.push(this.fieldSelectionLink);
+    }
+
+    // Add request batching link
+    if (this.config.enableRequestBatching) {
+      this.batchingLink = RequestBatchingUtils.createBatchingLink(
+        RequestBatchingUtils.createBatchingConfig('balanced')
+      );
+      links.push(this.batchingLink);
+    }
 
     // Add deduplication link
     if (this.config.enableDeduplication) {
@@ -135,12 +229,20 @@ export class PerformanceManager {
       links.push(this.deduplicationLink);
     }
 
+    // Initialize cache optimization
+    if (this.config.enableCacheOptimization && client.cache) {
+      this.cacheOptimizer = new CacheOptimizationUtils.CacheOptimizer(
+        client.cache as any,
+        this.config.cacheOptimizationOptions
+      );
+    }
+
     // Combine with existing links
-    if (links.length > 0 && links[0]) {
+    if (links.length > 0) {
       const existingLink = client.link;
       // Type assertion to work around Apollo Client v4 type issues
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (client as any).setLink(ApolloLink.from([links[0], existingLink]));
+      (client as any).setLink(ApolloLink.from([...links, existingLink]));
     }
 
     return client;
@@ -186,27 +288,11 @@ export class PerformanceManager {
       return React.lazy(importFn);
     }
 
-    // Enhanced lazy loading with retry logic
-    const enhancedImportFn = async () => {
-      const maxRetries = options.retryAttempts ?? 3;
-      let lastError: Error | null = null;
-
-      for (let i = 0; i <= maxRetries; i++) {
-        try {
-          return await importFn();
-        } catch (error) {
-          lastError = error instanceof Error ? error : new Error(String(error));
-          if (i < maxRetries) {
-            // Wait before retrying
-            await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
-          }
-        }
-      }
-
-      throw lastError;
-    };
-
-    return React.lazy(enhancedImportFn);
+    return LazyLoadingUtils.createLazyComponent(importFn, {
+      retryAttempts: options.retryAttempts || 3,
+      preload: options.preload,
+      loadingComponent: options.loadingComponent,
+    });
   }
 
   /**
@@ -263,38 +349,50 @@ export class PerformanceManager {
     client: ApolloClientType,
     queries: Array<{ query: unknown; variables?: Record<string, unknown>; priority?: number }>
   ): Promise<void> {
-    if (!this.config.enableCacheOptimization) {
+    if (!this.config.enableCacheOptimization || !this.cacheOptimizer) {
       return;
     }
 
-    // Simple cache warming - in a real implementation this would be more sophisticated
-    console.log(`Warming cache with ${queries.length} queries`);
-    
-    // Sort by priority and execute
-    const sortedQueries = queries.sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0));
-    
-    for (const queryConfig of sortedQueries) {
-      try {
-        // In a real implementation, this would execute the actual queries
-        await new Promise(resolve => setTimeout(resolve, 10));
-        // Use queryConfig to avoid unused variable warning
-        console.debug('Processing query with priority:', queryConfig.priority);
-      } catch (error) {
-        console.warn('Cache warming failed for query:', error);
-      }
-    }
+    await this.cacheOptimizer.warmCache(client as any, queries);
   }
 
   /**
    * Get comprehensive performance metrics
    */
   getMetrics(): PerformanceMetrics {
+    const deduplicationMetrics = this.deduplicationLink ? 
+      GraphQLDeduplicationUtils.GraphQLRequestDeduplicator.prototype.getMetrics?.() : null;
+    
+    const monitoringReport = this.performanceMonitor?.generateReport();
+    const cacheReport = this.cacheOptimizer?.getOptimizationReport();
+    const subscriptionStats = this.subscriptionManager?.getManagerStats();
+
     return {
-      deduplication: {
-        totalRequests: 100,
-        deduplicatedRequests: 20,
-        cacheHits: 15,
-        hitRate: 0.85,
+      deduplication: deduplicationMetrics || {
+        totalRequests: 0,
+        deduplicatedRequests: 0,
+        cacheHits: 0,
+        hitRate: 0,
+      },
+      fieldSelection: {
+        queriesOptimized: 0,
+        fieldsRemoved: 0,
+        bandwidthSaved: 0,
+      },
+      requestBatching: {
+        totalRequests: 0,
+        batchedRequests: 0,
+        averageBatchSize: 0,
+        networkSavings: 0,
+      },
+      subscriptionManagement: subscriptionStats ? {
+        activeSubscriptions: subscriptionStats.activeSubscriptions,
+        cleanedUpSubscriptions: subscriptionStats.totalSubscriptions - subscriptionStats.activeSubscriptions,
+        memoryUsage: subscriptionStats.memoryUsage,
+      } : {
+        activeSubscriptions: 0,
+        cleanedUpSubscriptions: 0,
+        memoryUsage: 0,
       },
       memoization: {
         selectorHitRate: 0.75,
@@ -306,11 +404,25 @@ export class PerformanceManager {
         averageLoadTime: 850,
         cacheHitRate: 0.90,
       },
-      cacheOptimization: {
+      cacheOptimization: cacheReport ? {
         cacheSize: 1024 * 1024, // 1MB
-        hitRate: 0.88,
+        hitRate: cacheReport.performance.hitRate,
         evictions: 3,
         memoryUsage: 0.65,
+      } : {
+        cacheSize: 0,
+        hitRate: 0,
+        evictions: 0,
+        memoryUsage: 0,
+      },
+      monitoring: monitoringReport ? {
+        metricsCollected: monitoringReport.summary.totalMetrics,
+        alertsGenerated: monitoringReport.alerts.length,
+        performanceScore: monitoringReport.summary.performanceScore,
+      } : {
+        metricsCollected: 0,
+        alertsGenerated: 0,
+        performanceScore: 0,
       },
     };
   }
@@ -342,6 +454,16 @@ export class PerformanceManager {
       recommendations.push('Cache memory usage is high, consider more aggressive eviction strategies');
     }
 
+    // Subscription management recommendations
+    if (metrics.subscriptionManagement.activeSubscriptions > 50) {
+      recommendations.push('High number of active subscriptions, consider cleanup optimization');
+    }
+
+    // Monitoring recommendations
+    if (metrics.monitoring.performanceScore < 70) {
+      recommendations.push('Overall performance score is low, review all optimization strategies');
+    }
+
     if (recommendations.length === 0) {
       recommendations.push('Performance is optimal - no immediate recommendations');
     }
@@ -350,7 +472,7 @@ export class PerformanceManager {
   }
 
   /**
-   * Generate performance report
+   * Generate comprehensive performance report
    */
   generateReport(): {
     metrics: PerformanceMetrics;
@@ -370,6 +492,7 @@ export class PerformanceManager {
       metrics.memoization.selectorHitRate * 100,
       (1 - metrics.lazyLoading.averageLoadTime / 2000) * 100, // Normalize load time
       metrics.cacheOptimization.hitRate * 100,
+      metrics.monitoring.performanceScore,
     ];
 
     const overallScore = scores.reduce((sum, score) => sum + Math.max(0, score), 0) / scores.length;
@@ -395,8 +518,10 @@ export class PerformanceManager {
    * Cleanup and stop all performance monitoring
    */
   cleanup(): void {
-    // Cleanup performance monitoring
-    console.log('Performance monitoring cleanup completed');
+    this.subscriptionManager?.stop();
+    this.cacheOptimizer?.stop();
+    this.performanceMonitor?.clear();
+    console.log('Performance optimization cleanup completed');
   }
 }
 
@@ -485,5 +610,11 @@ export const PerformanceOptimization = {
   usePerformanceMetrics,
 };
 
-// Re-export deduplication utilities
+// Re-export all optimization utilities
 export * from '../graphql/deduplication';
+export * from '../graphql/fieldSelection';
+export * from '../graphql/requestBatching';
+export * from '../subscriptions/subscriptionManager';
+export * from './monitoring';
+export * from '../utils/lazyLoading';
+export * from '../cache/optimization';
