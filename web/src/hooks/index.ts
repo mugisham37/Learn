@@ -11,7 +11,7 @@ export {
   useCurrentUser,
   useUserById,
   useUpdateProfile,
-  useNotificationPreferences,
+  useUserNotificationPreferences,
   // Authentication Hooks
   useLogin,
   useRegister,
@@ -110,3 +110,34 @@ export {
   useSearchAnalytics,
   useSearchOptimization,
 } from './useSearch';
+
+// Notification Management Hooks
+export {
+  useNotifications,
+  useNotification,
+  useUnreadNotificationCount,
+  useGetNotificationPreferences,
+  useMarkNotificationRead,
+  useMarkAllNotificationsRead,
+  useUpdateNotificationPreferences,
+  useNotificationReceived,
+  useNotificationRead,
+  useUnreadCountChanged,
+  useNotificationManagement,
+  useNotificationAnalytics,
+  useNotificationScheduling,
+  useMultiChannelNotifications,
+  // Types
+  type Notification,
+  type NotificationType,
+  type Priority,
+  type NotificationChannel,
+  type ChannelPreferences,
+  type NotificationPreferences,
+  type NotificationFilter,
+  type NotificationConnection,
+  type NotificationEdge,
+  type MarkNotificationReadInput,
+  type MarkAllNotificationsReadInput,
+  type UpdateNotificationPreferencesInput,
+} from './useNotifications';

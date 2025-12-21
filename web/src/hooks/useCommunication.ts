@@ -19,15 +19,15 @@ import type {
   PaginationInput,
   ConversationConnection,
   ThreadConnection,
+  User,
+} from '../types';
+import type {
   Announcement,
   AnnouncementInput,
   UpdateAnnouncementInput,
-  AnnouncementFilter,
   PresenceUpdate,
   PresenceStatus,
-  TypingIndicator,
-  User,
-} from '../types';
+} from '../types/entities';
 import type {
   GetConversationsResponse,
   GetConversationMessagesResponse,

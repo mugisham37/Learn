@@ -247,14 +247,15 @@ export function useUpdateProfile(): MutationResult<User, { input: UpdateProfileI
 }
 
 /**
- * Hook for managing notification preferences
+ * Hook for managing basic user notification preferences (legacy)
  * 
+ * @deprecated Use useUpdateNotificationPreferences from useNotifications for full functionality
  * @returns Mutation function with loading state and error handling
  * 
  * @example
  * ```tsx
- * function NotificationSettings() {
- *   const { mutate: updatePreferences, loading } = useNotificationPreferences();
+ * function BasicNotificationSettings() {
+ *   const { mutate: updatePreferences, loading } = useUserNotificationPreferences();
  *   
  *   const handleToggle = async (setting: keyof NotificationPreferences, value: boolean) => {
  *     await updatePreferences({
@@ -266,7 +267,7 @@ export function useUpdateProfile(): MutationResult<User, { input: UpdateProfileI
  * }
  * ```
  */
-export function useNotificationPreferences(): MutationResult<User, { input: UpdateNotificationPreferencesInput }> {
+export function useUserNotificationPreferences(): MutationResult<User, { input: UpdateNotificationPreferencesInput }> {
   const [updatePreferencesMutation, { loading, error, reset }] = useMutation<UpdateNotificationPreferencesResponse>(
     UPDATE_NOTIFICATION_PREFERENCES,
     {
