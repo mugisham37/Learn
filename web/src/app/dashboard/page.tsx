@@ -11,21 +11,14 @@ import { Suspense } from 'react';
 import { ProtectedLayout } from '@/components/layouts/ProtectedLayout';
 import { pageData } from '@/lib/ssr/dataFetching';
 import { nextCache } from '@/lib/cache/nextCacheIntegration';
+import type { DashboardData } from '@/types/admin';
 
 /**
  * Dashboard content component
  */
-function DashboardContent({
-  user,
-  recentEnrollments,
-  featuredCourses,
-  stats,
-}: {
-  user: any;
-  recentEnrollments: any[];
-  featuredCourses: any[];
-  stats: any;
-}) {
+function DashboardContent({ dashboardData }: { dashboardData: DashboardData }) {
+  const { user, recentEnrollments, featuredCourses, stats } = dashboardData;
+
   return (
     <div className='space-y-6'>
       {/* Welcome Section */}
@@ -33,14 +26,14 @@ function DashboardContent({
         <h1 className='text-2xl font-bold text-gray-900 mb-2'>
           Welcome back, {user.profile?.fullName || user.email}!
         </h1>
-        <p className='text-gray-600'>Here's what's happening with your learning journey.</p>
+        <p className='text-gray-600'>Here&apos;s what&apos;s happening with your learning journey.</p>
       </div>
 
       {/* Stats Grid */}
       <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
         <div className='bg-white rounded-lg shadow p-6'>
           <div className='flex items-center'>
-            <div className='flex-shrink-0'>
+            <div className='shrink-0'>
               <div className='w-8 h-8 bg-blue-500 rounded-md flex items-center justify-center'>
                 <span className='text-white text-sm font-medium'>📚</span>
               </div>
@@ -54,7 +47,7 @@ function DashboardContent({
 
         <div className='bg-white rounded-lg shadow p-6'>
           <div className='flex items-center'>
-            <div className='flex-shrink-0'>
+            <div className='shrink-0'>
               <div className='w-8 h-8 bg-green-500 rounded-md flex items-center justify-center'>
                 <span className='text-white text-sm font-medium'>✅</span>
               </div>
@@ -68,7 +61,7 @@ function DashboardContent({
 
         <div className='bg-white rounded-lg shadow p-6'>
           <div className='flex items-center'>
-            <div className='flex-shrink-0'>
+            <div className='shrink-0'>
               <div className='w-8 h-8 bg-purple-500 rounded-md flex items-center justify-center'>
                 <span className='text-white text-sm font-medium'>🎯</span>
               </div>
@@ -93,7 +86,7 @@ function DashboardContent({
             <div className='space-y-4'>
               {recentEnrollments.map(enrollment => (
                 <div key={enrollment.id} className='flex items-center space-x-4'>
-                  <div className='flex-shrink-0'>
+                  <div className='shrink-0'>
                     {enrollment.course.thumbnailUrl ? (
                       <img
                         src={enrollment.course.thumbnailUrl}
@@ -114,14 +107,14 @@ function DashboardContent({
                       by {enrollment.course.instructor.profile.fullName}
                     </p>
                   </div>
-                  <div className='flex-shrink-0'>
+                  <div className='shrink-0'>
                     <div className='w-16 bg-gray-200 rounded-full h-2'>
                       <div
                         className='bg-blue-600 h-2 rounded-full'
-                        style={{ width: `${enrollment.progress}%` }}
+                        style={{ width: `${enrollment.progressPercentage}%` }}
                       ></div>
                     </div>
-                    <p className='text-xs text-gray-500 mt-1'>{enrollment.progress}%</p>
+                    <p className='text-xs text-gray-500 mt-1'>{enrollment.progressPercentage}%</p>
                   </div>
                 </div>
               ))}
@@ -220,12 +213,7 @@ export default async function DashboardPage() {
   return (
     <ProtectedLayout>
       <Suspense fallback={<DashboardLoading />}>
-        <DashboardContent
-          user={dashboardData.user}
-          recentEnrollments={dashboardData.recentEnrollments}
-          featuredCourses={dashboardData.featuredCourses}
-          stats={dashboardData.stats}
-        />
+        <DashboardContent dashboardData={dashboardData} />
       </Suspense>
     </ProtectedLayout>
   );

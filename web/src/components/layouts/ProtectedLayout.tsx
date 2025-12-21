@@ -368,12 +368,14 @@ export function ProtectedLayout({
         return;
       }
     }
+  }, [isAuthenticated, isLoading, user, requiredRoles, router, fallbackPath]);
 
-    // Set layout configuration based on user role
+  // Set layout configuration based on user role
+  useEffect(() => {
     if (user?.role) {
       setLayoutConfig(getLayoutConfig(user.role));
     }
-  }, [isAuthenticated, isLoading, user, requiredRoles, router, fallbackPath]);
+  }, [user?.role]);
 
   // Show loading state
   if (isLoading || !layoutConfig) {
@@ -392,16 +394,18 @@ export function ProtectedLayout({
 
   return (
     <ErrorBoundary
-      fallback={({ error, resetError }) => <ErrorLayout error={error} retry={resetError} />}
+      fallback={({ error, resetError }: { error: Error; resetError: () => void }) => (
+        <ErrorLayout error={error} retry={resetError} />
+      )}
     >
       <div className={`min-h-screen bg-gray-50 ${className}`}>
         {showHeader && layoutConfig.showHeader && (
-          <Header actions={layoutConfig.headerActions} userRole={user.role} user={user} />
+          <Header actions={layoutConfig.headerActions} userRole={user?.role || ''} user={user} />
         )}
 
         <div className='flex'>
           {showSidebar && layoutConfig.showSidebar && (
-            <Sidebar items={layoutConfig.sidebarItems} userRole={user.role} />
+            <Sidebar items={layoutConfig.sidebarItems} userRole={user?.role || ''} />
           )}
 
           <main className='flex-1 p-6'>{children}</main>

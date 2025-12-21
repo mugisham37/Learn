@@ -18,12 +18,22 @@ interface AuthState {
 /**
  * Hook for authentication state
  */
-export function useAuth(): AuthState {
+export function useAuth(): AuthState & { logout: () => Promise<void> } {
   const [authState, setAuthState] = useState<AuthState>({
     user: null,
     isAuthenticated: false,
     isLoading: true,
   });
+
+  const logout = async () => {
+    localStorage.removeItem('access-token');
+    localStorage.removeItem('refresh-token');
+    setAuthState({
+      user: null,
+      isAuthenticated: false,
+      isLoading: false,
+    });
+  };
 
   useEffect(() => {
     // Mock authentication check
@@ -55,7 +65,7 @@ export function useAuth(): AuthState {
     checkAuth();
   }, []);
 
-  return authState;
+  return { ...authState, logout };
 }
 
 /**

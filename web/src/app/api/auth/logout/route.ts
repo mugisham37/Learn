@@ -14,10 +14,6 @@ const LOGOUT_MUTATION = `
   }
 `;
 
-interface LogoutInput {
-  refreshToken?: string;
-}
-
 interface LogoutResponse {
   data: {
     logout: boolean;

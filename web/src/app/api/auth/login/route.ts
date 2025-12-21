@@ -96,8 +96,8 @@ export async function POST(request: NextRequest) {
       const error = data.errors[0];
       return NextResponse.json(
         {
-          error: error.message,
-          code: error.extensions?.code || 'LOGIN_FAILED',
+          error: error?.message || 'Login failed',
+          code: error?.extensions?.code || 'LOGIN_FAILED',
         },
         { status: 401 }
       );
@@ -149,5 +149,6 @@ export async function POST(request: NextRequest) {
       },
       { status: 500 }
     );
+  }
   }
 }

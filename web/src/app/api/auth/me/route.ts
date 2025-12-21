@@ -107,11 +107,11 @@ export async function GET(request: NextRequest) {
       const error = data.errors[0];
 
       // If authentication error, clear cookies
-      if (error.extensions?.code === 'UNAUTHENTICATED') {
+      if (error?.extensions?.code === 'UNAUTHENTICATED') {
         const errorResponse = NextResponse.json(
           {
-            error: error.message,
-            code: error.extensions.code,
+            error: error?.message || 'Authentication failed',
+            code: error?.extensions?.code || 'UNAUTHENTICATED',
           },
           { status: 401 }
         );
@@ -126,8 +126,8 @@ export async function GET(request: NextRequest) {
 
       return NextResponse.json(
         {
-          error: error.message,
-          code: error.extensions?.code || 'QUERY_FAILED',
+          error: error?.message || 'Query failed',
+          code: error?.extensions?.code || 'QUERY_FAILED',
         },
         { status: 400 }
       );
@@ -148,5 +148,6 @@ export async function GET(request: NextRequest) {
       },
       { status: 500 }
     );
+  }
   }
 }

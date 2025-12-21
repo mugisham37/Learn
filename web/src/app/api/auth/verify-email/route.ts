@@ -154,8 +154,8 @@ async function sendVerificationEmail(input: SendVerificationInput) {
     const error = data.errors[0];
     return NextResponse.json(
       {
-        error: error.message,
-        code: error.extensions?.code || 'VERIFICATION_SEND_FAILED',
+        error: error?.message || 'Email verification send failed',
+        code: error?.extensions?.code || 'VERIFICATION_SEND_FAILED',
       },
       { status: 400 }
     );
@@ -200,8 +200,8 @@ async function verifyEmail(input: VerifyEmailInput) {
     const error = data.errors[0];
     return NextResponse.json(
       {
-        error: error.message,
-        code: error.extensions?.code || 'EMAIL_VERIFICATION_FAILED',
+        error: error?.message || 'Email verification failed',
+        code: error?.extensions?.code || 'EMAIL_VERIFICATION_FAILED',
       },
       { status: 400 }
     );

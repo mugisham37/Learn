@@ -177,7 +177,8 @@ export async function POST(request: NextRequest) {
     let body;
     try {
       body = await request.json();
-    } catch (error) {
+    } catch (parseError) {
+      console.error('JSON parse error:', parseError);
       return NextResponse.json(
         {
           errors: [

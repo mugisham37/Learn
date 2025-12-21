@@ -114,8 +114,8 @@ export async function POST(request: NextRequest) {
       const error = data.errors[0];
       return NextResponse.json(
         {
-          error: error.message,
-          code: error.extensions?.code || 'REGISTRATION_FAILED',
+          error: error?.message || 'Registration failed',
+          code: error?.extensions?.code || 'REGISTRATION_FAILED',
         },
         { status: 400 }
       );

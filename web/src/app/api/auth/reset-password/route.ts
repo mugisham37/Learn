@@ -133,8 +133,8 @@ async function requestPasswordReset(input: RequestPasswordResetInput) {
     const error = data.errors[0];
     return NextResponse.json(
       {
-        error: error.message,
-        code: error.extensions?.code || 'PASSWORD_RESET_REQUEST_FAILED',
+        error: error?.message || 'Password reset request failed',
+        code: error?.extensions?.code || 'PASSWORD_RESET_REQUEST_FAILED',
       },
       { status: 400 }
     );
@@ -191,8 +191,8 @@ async function resetPassword(input: ResetPasswordInput) {
     const error = data.errors[0];
     return NextResponse.json(
       {
-        error: error.message,
-        code: error.extensions?.code || 'PASSWORD_RESET_FAILED',
+        error: error?.message || 'Password reset failed',
+        code: error?.extensions?.code || 'PASSWORD_RESET_FAILED',
       },
       { status: 400 }
     );

@@ -43,7 +43,10 @@ export async function POST(request: NextRequest) {
 
     // In production, try to get refresh token from httpOnly cookie first
     if (process.env.NODE_ENV === 'production' && !refreshToken) {
-      refreshToken = request.cookies.get('refresh-token')?.value;
+      const cookieRefreshToken = request.cookies.get('refresh-token')?.value;
+      if (cookieRefreshToken) {
+        refreshToken = cookieRefreshToken;
+      }
     }
 
     // Validate input
@@ -78,8 +81,8 @@ export async function POST(request: NextRequest) {
       // Clear cookies on refresh failure
       const errorResponse = NextResponse.json(
         {
-          error: error.message,
-          code: error.extensions?.code || 'TOKEN_REFRESH_FAILED',
+          error: error?.message || 'Token refresh failed',
+          code: error?.extensions?.code || 'TOKEN_REFRESH_FAILED',
         },
         { status: 401 }
       );

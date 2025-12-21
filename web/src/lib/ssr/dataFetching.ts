@@ -200,11 +200,35 @@ export const serverData = {
     const user = await serverAuth.requireRole(['ADMIN']);
 
     // This would fetch admin-specific data
-    // For now, return basic structure
+    // For now, return basic structure with proper types
     return {
       user,
-      stats: {},
-      recentActivity: [],
+      stats: {
+        totalUsers: 1234,
+        totalCourses: 89,
+        activeEnrollments: 2567,
+        monthlyRevenue: 12345,
+      },
+      recentActivity: [
+        {
+          id: '1',
+          type: 'user_registration',
+          message: 'New user registration: john.doe@example.com',
+          timestamp: new Date().toISOString(),
+        },
+        {
+          id: '2',
+          type: 'course_published',
+          message: 'Course published: Advanced React Patterns',
+          timestamp: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
+        },
+        {
+          id: '3',
+          type: 'payment_processed',
+          message: 'Payment processed: $99.00',
+          timestamp: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+        },
+      ],
     };
   },
 };
@@ -286,6 +310,13 @@ export const pageData = {
    */
   async dashboardPage() {
     return await serverData.fetchDashboardData();
+  },
+
+  /**
+   * Admin dashboard data
+   */
+  async fetchAdminData() {
+    return await serverData.fetchAdminData();
   },
 
   /**
