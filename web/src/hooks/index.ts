@@ -81,6 +81,9 @@ export {
   useDiscussionThreads,
   useCreateThread,
   useReplyToThread,
+  useAnnouncements,
+  usePresenceTracking,
+  useThreadTyping,
 } from './useCommunication';
 
 // Payment Processing Hooks

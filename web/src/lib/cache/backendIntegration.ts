@@ -597,6 +597,24 @@ export const moduleOperations = {
         data: { ...messageData, conversationId },
       });
     },
+    createAnnouncement: (cache: InMemoryCache, announcementData: CacheEntity, courseId: string) => {
+      const manager = new BackendCacheManager(cache, {} as ApolloClient<unknown>);
+      return manager.executeOperation({
+        module: BackendModule.COMMUNICATION,
+        operation: 'create',
+        typename: 'Announcement',
+        data: { ...announcementData, courseId },
+      });
+    },
+    updatePresence: (cache: InMemoryCache, presenceData: CacheEntity, courseId: string) => {
+      const manager = new BackendCacheManager(cache, {} as ApolloClient<unknown>);
+      return manager.executeOperation({
+        module: BackendModule.COMMUNICATION,
+        operation: 'update',
+        typename: 'PresenceUpdate',
+        data: { ...presenceData, courseId },
+      });
+    },
   },
   
   notifications: {

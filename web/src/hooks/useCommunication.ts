@@ -19,6 +19,14 @@ import type {
   PaginationInput,
   ConversationConnection,
   ThreadConnection,
+  Announcement,
+  AnnouncementInput,
+  UpdateAnnouncementInput,
+  AnnouncementFilter,
+  PresenceUpdate,
+  PresenceStatus,
+  TypingIndicator,
+  User,
 } from '../types';
 import type {
   GetConversationsResponse,
@@ -30,6 +38,16 @@ import type {
   ReplyToThreadResponse,
   MessageAddedSubscription,
   UserTypingSubscription,
+  GetAnnouncementsResponse,
+  CreateAnnouncementResponse,
+  UpdateAnnouncementResponse,
+  PublishAnnouncementResponse,
+  DeleteAnnouncementResponse,
+  GetCoursePresenceResponse,
+  UpdatePresenceResponse,
+  AnnouncementPublishedSubscription,
+  UserPresenceSubscription,
+  ThreadTypingSubscription,
 } from '../types/graphql-responses';
 
 // GraphQL Queries and Mutations
@@ -357,6 +375,193 @@ const TYPING_SUBSCRIPTION = gql`
   }
 `;
 
+// Additional GraphQL Operations for Announcements
+const GET_ANNOUNCEMENTS = gql`
+  query GetAnnouncements($courseId: ID!, $filter: AnnouncementFilter, $pagination: PaginationInput) {
+    announcements(courseId: $courseId, filter: $filter, pagination: $pagination) {
+      edges {
+        node {
+          id
+          title
+          content
+          educator {
+            id
+            profile {
+              fullName
+              avatarUrl
+            }
+          }
+          course {
+            id
+            title
+          }
+          scheduledFor
+          publishedAt
+          createdAt
+          updatedAt
+        }
+        cursor
+      }
+      pageInfo {
+        hasNextPage
+        hasPreviousPage
+        startCursor
+        endCursor
+      }
+      totalCount
+    }
+  }
+`;
+
+const CREATE_ANNOUNCEMENT = gql`
+  mutation CreateAnnouncement($courseId: ID!, $input: AnnouncementInput!) {
+    createAnnouncement(courseId: $courseId, input: $input) {
+      id
+      title
+      content
+      educator {
+        id
+        profile {
+          fullName
+          avatarUrl
+        }
+      }
+      course {
+        id
+        title
+      }
+      scheduledFor
+      publishedAt
+      createdAt
+      updatedAt
+    }
+  }
+`;
+
+const UPDATE_ANNOUNCEMENT = gql`
+  mutation UpdateAnnouncement($announcementId: ID!, $input: UpdateAnnouncementInput!) {
+    updateAnnouncement(announcementId: $announcementId, input: $input) {
+      id
+      title
+      content
+      scheduledFor
+      publishedAt
+      updatedAt
+    }
+  }
+`;
+
+const PUBLISH_ANNOUNCEMENT = gql`
+  mutation PublishAnnouncement($announcementId: ID!) {
+    publishAnnouncement(announcementId: $announcementId) {
+      id
+      publishedAt
+      updatedAt
+    }
+  }
+`;
+
+const DELETE_ANNOUNCEMENT = gql`
+  mutation DeleteAnnouncement($announcementId: ID!) {
+    deleteAnnouncement(announcementId: $announcementId)
+  }
+`;
+
+// Presence and Real-time Operations
+const UPDATE_PRESENCE = gql`
+  mutation UpdatePresence($status: PresenceStatus!, $courseId: ID) {
+    updatePresence(status: $status, courseId: $courseId)
+  }
+`;
+
+const GET_COURSE_PRESENCE = gql`
+  query GetCoursePresence($courseId: ID!) {
+    coursePresence(courseId: $courseId) {
+      userId
+      user {
+        id
+        profile {
+          fullName
+          avatarUrl
+        }
+      }
+      status
+      courseId
+      lastSeen
+    }
+  }
+`;
+
+const START_TYPING = gql`
+  mutation StartTyping($conversationId: String, $threadId: ID) {
+    startTyping(conversationId: $conversationId, threadId: $threadId)
+  }
+`;
+
+const STOP_TYPING = gql`
+  mutation StopTyping($conversationId: String, $threadId: ID) {
+    stopTyping(conversationId: $conversationId, threadId: $threadId)
+  }
+`;
+
+// Enhanced Subscriptions
+const ANNOUNCEMENT_SUBSCRIPTION = gql`
+  subscription OnAnnouncementPublished($courseId: ID!) {
+    announcementPublished(courseId: $courseId) {
+      id
+      title
+      content
+      educator {
+        id
+        profile {
+          fullName
+          avatarUrl
+        }
+      }
+      course {
+        id
+        title
+      }
+      publishedAt
+      createdAt
+    }
+  }
+`;
+
+const PRESENCE_SUBSCRIPTION = gql`
+  subscription OnUserPresence($courseId: ID!) {
+    userPresence(courseId: $courseId) {
+      userId
+      user {
+        id
+        profile {
+          fullName
+          avatarUrl
+        }
+      }
+      status
+      courseId
+      lastSeen
+    }
+  }
+`;
+
+const THREAD_TYPING_SUBSCRIPTION = gql`
+  subscription OnThreadTyping($threadId: ID!) {
+    typingIndicator(threadId: $threadId) {
+      userId
+      user {
+        id
+        profile {
+          fullName
+        }
+      }
+      threadId
+      isTyping
+    }
+  }
+`;
+
 // Hook return types
 interface QueryResult<T> {
   data: T | undefined;
@@ -379,6 +584,23 @@ interface ChatSession {
   markAsRead: (messageIds: string[]) => Promise<void>;
   typingUsers: string[];
   setTyping: (isTyping: boolean) => void;
+  loading: boolean;
+  error: Error | undefined;
+}
+
+interface PresenceManager {
+  presenceList: PresenceUpdate[];
+  updatePresence: (status: PresenceStatus, courseId?: string) => Promise<void>;
+  loading: boolean;
+  error: Error | undefined;
+}
+
+interface AnnouncementManager {
+  announcements: Announcement[];
+  createAnnouncement: (input: AnnouncementInput) => Promise<Announcement>;
+  updateAnnouncement: (id: string, input: UpdateAnnouncementInput) => Promise<Announcement>;
+  publishAnnouncement: (id: string) => Promise<Announcement>;
+  deleteAnnouncement: (id: string) => Promise<boolean>;
   loading: boolean;
   error: Error | undefined;
 }
@@ -885,5 +1107,361 @@ export function useReplyToThread(): MutationResult<DiscussionReply, { input: Rep
     loading,
     error,
     reset,
+  };
+}
+
+
+/**
+ * Hook for managing course announcements
+ * 
+ * @param courseId - The course ID to manage announcements for
+ * @returns Announcement management utilities
+ * 
+ * @example
+ * ```tsx
+ * function AnnouncementManager({ courseId }: { courseId: string }) {
+ *   const { 
+ *     announcements, 
+ *     createAnnouncement, 
+ *     updateAnnouncement, 
+ *     publishAnnouncement, 
+ *     deleteAnnouncement, 
+ *     loading, 
+ *     error 
+ *   } = useAnnouncements(courseId);
+ *   
+ *   const handleCreateAnnouncement = async (data: { title: string; content: string; scheduledFor?: Date }) => {
+ *     try {
+ *       const announcement = await createAnnouncement({
+ *         title: data.title,
+ *         content: data.content,
+ *         scheduledFor: data.scheduledFor?.toISOString(),
+ *       });
+ *       console.log('Announcement created:', announcement);
+ *     } catch (err) {
+ *       console.error('Failed to create announcement:', err);
+ *     }
+ *   };
+ *   
+ *   return (
+ *     <div>
+ *       <h2>Course Announcements</h2>
+ *       {announcements.map(announcement => (
+ *         <AnnouncementCard 
+ *           key={announcement.id} 
+ *           announcement={announcement}
+ *           onUpdate={(input) => updateAnnouncement(announcement.id, input)}
+ *           onPublish={() => publishAnnouncement(announcement.id)}
+ *           onDelete={() => deleteAnnouncement(announcement.id)}
+ *         />
+ *       ))}
+ *       <CreateAnnouncementForm onSubmit={handleCreateAnnouncement} />
+ *     </div>
+ *   );
+ * }
+ * ```
+ */
+export function useAnnouncements(courseId: string): AnnouncementManager {
+  const [createAnnouncementMutation, { loading: createLoading, error: createError }] = useMutation<CreateAnnouncementResponse>(CREATE_ANNOUNCEMENT);
+  const [updateAnnouncementMutation, { loading: updateLoading, error: updateError }] = useMutation<UpdateAnnouncementResponse>(UPDATE_ANNOUNCEMENT);
+  const [publishAnnouncementMutation, { loading: publishLoading, error: publishError }] = useMutation<PublishAnnouncementResponse>(PUBLISH_ANNOUNCEMENT);
+  const [deleteAnnouncementMutation, { loading: deleteLoading, error: deleteError }] = useMutation<DeleteAnnouncementResponse>(DELETE_ANNOUNCEMENT);
+
+  // Fetch announcements
+  const { data: announcementsData, loading: queryLoading, error: queryError } = useQuery<GetAnnouncementsResponse>(GET_ANNOUNCEMENTS, {
+    variables: { courseId, pagination: { first: 50 } },
+    skip: !courseId,
+    errorPolicy: 'all',
+  });
+
+  // Subscribe to new announcements
+  useSubscription<AnnouncementPublishedSubscription>(ANNOUNCEMENT_SUBSCRIPTION, {
+    variables: { courseId },
+    skip: !courseId,
+    onData: ({ data, client }) => {
+      if (data.data?.announcementPublished) {
+        // Update cache with new announcement
+        client.cache.updateQuery<GetAnnouncementsResponse>(
+          { query: GET_ANNOUNCEMENTS, variables: { courseId } },
+          (existingData: GetAnnouncementsResponse | null) => {
+            if (!existingData?.announcements?.edges) return existingData;
+            
+            return {
+              announcements: {
+                ...existingData.announcements,
+                edges: [
+                  {
+                    node: data.data!.announcementPublished,
+                    cursor: data.data!.announcementPublished.id,
+                    __typename: 'AnnouncementEdge',
+                  },
+                  ...existingData.announcements.edges,
+                ],
+                totalCount: existingData.announcements.totalCount + 1,
+              },
+            };
+          }
+        );
+      }
+    },
+  });
+
+  const createAnnouncement = useCallback(async (input: AnnouncementInput): Promise<Announcement> => {
+    const result = await createAnnouncementMutation({
+      variables: { courseId, input },
+    });
+    if (!result.data?.createAnnouncement) {
+      throw new Error('Failed to create announcement');
+    }
+    return result.data.createAnnouncement;
+  }, [courseId, createAnnouncementMutation]);
+
+  const updateAnnouncement = useCallback(async (announcementId: string, input: UpdateAnnouncementInput): Promise<Announcement> => {
+    const result = await updateAnnouncementMutation({
+      variables: { announcementId, input },
+    });
+    if (!result.data?.updateAnnouncement) {
+      throw new Error('Failed to update announcement');
+    }
+    return result.data.updateAnnouncement;
+  }, [updateAnnouncementMutation]);
+
+  const publishAnnouncement = useCallback(async (announcementId: string): Promise<Announcement> => {
+    const result = await publishAnnouncementMutation({
+      variables: { announcementId },
+    });
+    if (!result.data?.publishAnnouncement) {
+      throw new Error('Failed to publish announcement');
+    }
+    return result.data.publishAnnouncement;
+  }, [publishAnnouncementMutation]);
+
+  const deleteAnnouncement = useCallback(async (announcementId: string): Promise<boolean> => {
+    const result = await deleteAnnouncementMutation({
+      variables: { announcementId },
+    });
+    return result.data?.deleteAnnouncement || false;
+  }, [deleteAnnouncementMutation]);
+
+  const announcements = announcementsData?.announcements?.edges?.map((edge: { node: Announcement }) => edge.node) || [];
+  const loading = queryLoading || createLoading || updateLoading || publishLoading || deleteLoading;
+  const error = queryError || createError || updateError || publishError || deleteError;
+
+  return {
+    announcements,
+    createAnnouncement,
+    updateAnnouncement,
+    publishAnnouncement,
+    deleteAnnouncement,
+    loading,
+    error,
+  };
+}
+
+/**
+ * Hook for managing user presence in courses
+ * 
+ * @param courseId - The course ID to track presence for
+ * @returns Presence management utilities
+ * 
+ * @example
+ * ```tsx
+ * function CoursePresence({ courseId }: { courseId: string }) {
+ *   const { presenceList, updatePresence, loading, error } = usePresenceTracking(courseId);
+ *   
+ *   useEffect(() => {
+ *     // Set user as online when component mounts
+ *     updatePresence('ONLINE', courseId);
+ *     
+ *     // Set user as offline when component unmounts
+ *     return () => {
+ *       updatePresence('OFFLINE', courseId);
+ *     };
+ *   }, [courseId, updatePresence]);
+ *   
+ *   const handleActivityChange = (isActive: boolean) => {
+ *     updatePresence(isActive ? 'ONLINE' : 'AWAY', courseId);
+ *   };
+ *   
+ *   return (
+ *     <div>
+ *       <h3>Online Users ({presenceList.filter(p => p.status === 'ONLINE').length})</h3>
+ *       {presenceList.map(presence => (
+ *         <UserPresenceIndicator 
+ *           key={presence.userId} 
+ *           user={presence.user}
+ *           status={presence.status}
+ *           lastSeen={presence.lastSeen}
+ *         />
+ *       ))}
+ *     </div>
+ *   );
+ * }
+ * ```
+ */
+export function usePresenceTracking(courseId: string): PresenceManager {
+  const [updatePresenceMutation, { loading: mutationLoading, error: mutationError }] = useMutation<UpdatePresenceResponse>(UPDATE_PRESENCE);
+  
+  // Fetch current presence
+  const { data: presenceData, loading: queryLoading, error: queryError } = useQuery<GetCoursePresenceResponse>(GET_COURSE_PRESENCE, {
+    variables: { courseId },
+    skip: !courseId,
+    errorPolicy: 'all',
+    pollInterval: 30000, // Poll every 30 seconds
+  });
+
+  // Subscribe to presence updates
+  useSubscription<UserPresenceSubscription>(PRESENCE_SUBSCRIPTION, {
+    variables: { courseId },
+    skip: !courseId,
+    onData: ({ data, client }) => {
+      if (data.data?.userPresence) {
+        // Update cache with presence change
+        client.cache.updateQuery<GetCoursePresenceResponse>(
+          { query: GET_COURSE_PRESENCE, variables: { courseId } },
+          (existingData: GetCoursePresenceResponse | null) => {
+            if (!existingData?.coursePresence) return existingData;
+            
+            const updatedPresence = data.data!.userPresence;
+            const existingPresenceList = [...existingData.coursePresence];
+            const existingIndex = existingPresenceList.findIndex(p => p.userId === updatedPresence.userId);
+            
+            if (existingIndex >= 0) {
+              existingPresenceList[existingIndex] = updatedPresence;
+            } else {
+              existingPresenceList.push(updatedPresence);
+            }
+            
+            return {
+              coursePresence: existingPresenceList,
+            };
+          }
+        );
+      }
+    },
+  });
+
+  const updatePresence = useCallback(async (status: PresenceStatus, targetCourseId?: string): Promise<void> => {
+    try {
+      await updatePresenceMutation({
+        variables: {
+          status,
+          courseId: targetCourseId || courseId,
+        },
+      });
+    } catch (err) {
+      console.error('Failed to update presence:', err);
+      throw err;
+    }
+  }, [courseId, updatePresenceMutation]);
+
+  const presenceList = presenceData?.coursePresence || [];
+  const loading = queryLoading || mutationLoading;
+  const error = queryError || mutationError;
+
+  return {
+    presenceList,
+    updatePresence,
+    loading,
+    error,
+  };
+}
+
+/**
+ * Hook for managing typing indicators in discussion threads
+ * 
+ * @param threadId - The thread ID to track typing for
+ * @returns Typing indicator utilities
+ * 
+ * @example
+ * ```tsx
+ * function ThreadReplyForm({ threadId }: { threadId: string }) {
+ *   const { typingUsers, setTyping } = useThreadTyping(threadId);
+ *   const [replyContent, setReplyContent] = useState('');
+ *   
+ *   const handleContentChange = (content: string) => {
+ *     setReplyContent(content);
+ *     setTyping(content.length > 0);
+ *   };
+ *   
+ *   const handleBlur = () => {
+ *     setTyping(false);
+ *   };
+ *   
+ *   return (
+ *     <div>
+ *       <textarea
+ *         value={replyContent}
+ *         onChange={(e) => handleContentChange(e.target.value)}
+ *         onBlur={handleBlur}
+ *         placeholder="Write your reply..."
+ *       />
+ *       {typingUsers.length > 0 && (
+ *         <div className="typing-indicator">
+ *           {typingUsers.map(user => user.profile.fullName).join(', ')} 
+ *           {typingUsers.length === 1 ? ' is' : ' are'} typing...
+ *         </div>
+ *       )}
+ *     </div>
+ *   );
+ * }
+ * ```
+ */
+export function useThreadTyping(threadId: string) {
+  const [typingUsers, setTypingUsers] = useState<User[]>([]);
+  const [startTypingMutation] = useMutation(START_TYPING);
+  const [stopTypingMutation] = useMutation(STOP_TYPING);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Subscribe to typing indicators
+  useSubscription<ThreadTypingSubscription>(THREAD_TYPING_SUBSCRIPTION, {
+    variables: { threadId },
+    skip: !threadId,
+    onData: ({ data }) => {
+      if (data.data?.typingIndicator) {
+        const { user, isTyping } = data.data.typingIndicator;
+        
+        setTypingUsers(prev => {
+          if (isTyping) {
+            return prev.find(u => u.id === user.id) ? prev : [...prev, user];
+          } else {
+            return prev.filter(u => u.id !== user.id);
+          }
+        });
+      }
+    },
+  });
+
+  const setTyping = useCallback(async (isTyping: boolean) => {
+    // Clear existing timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    try {
+      if (isTyping) {
+        await startTypingMutation({
+          variables: { threadId },
+        });
+        
+        // Auto-stop typing after 3 seconds
+        typingTimeoutRef.current = setTimeout(async () => {
+          await stopTypingMutation({
+            variables: { threadId },
+          });
+        }, 3000);
+      } else {
+        await stopTypingMutation({
+          variables: { threadId },
+        });
+      }
+    } catch (err) {
+      console.error('Failed to update typing status:', err);
+    }
+  }, [threadId, startTypingMutation, stopTypingMutation]);
+
+  return {
+    typingUsers,
+    setTyping,
   };
 }

@@ -238,6 +238,56 @@ export interface MarkMessagesReadResponse {
   markMessagesRead: Conversation;
 }
 
+// Additional Communication responses
+export interface GetAnnouncementsResponse {
+  announcements: import('./entities').Connection<Announcement>;
+}
+
+export interface CreateAnnouncementResponse {
+  createAnnouncement: Announcement;
+}
+
+export interface UpdateAnnouncementResponse {
+  updateAnnouncement: Announcement;
+}
+
+export interface PublishAnnouncementResponse {
+  publishAnnouncement: Announcement;
+}
+
+export interface DeleteAnnouncementResponse {
+  deleteAnnouncement: boolean;
+}
+
+export interface GetCoursePresenceResponse {
+  coursePresence: PresenceUpdate[];
+}
+
+export interface UpdatePresenceResponse {
+  updatePresence: boolean;
+}
+
+// Subscription responses
+export interface MessageAddedSubscription {
+  messageAdded: Message;
+}
+
+export interface UserTypingSubscription {
+  userTyping: TypingIndicator;
+}
+
+export interface AnnouncementPublishedSubscription {
+  announcementPublished: Announcement;
+}
+
+export interface UserPresenceSubscription {
+  userPresence: PresenceUpdate;
+}
+
+export interface ThreadTypingSubscription {
+  typingIndicator: TypingIndicator;
+}
+
 // Content responses
 export interface GetStreamingUrlResponse {
   generateStreamingUrl: {

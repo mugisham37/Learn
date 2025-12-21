@@ -216,6 +216,22 @@ const typePolicies: Record<string, TypePolicy> = {
           return incoming;
         },
       },
+      announcements: {
+        keyArgs: ['courseId', 'filter'],
+        merge(existing = [], incoming, { args }) {
+          if (args?.after) {
+            return [...existing, ...incoming];
+          }
+          return incoming;
+        },
+      },
+      coursePresence: {
+        keyArgs: ['courseId'],
+        merge(existing = [], incoming) {
+          // Always replace with latest presence data
+          return incoming;
+        },
+      },
       
       // Analytics Module Queries
       courseAnalytics: {
@@ -732,6 +748,44 @@ const typePolicies: Record<string, TypePolicy> = {
         },
       },
       isEdited: {
+        merge(existing, incoming) {
+          return incoming;
+        },
+      },
+    },
+  },
+
+  Announcement: {
+    keyFields: ['id'],
+    fields: {
+      course: {
+        merge(existing, incoming) {
+          return incoming;
+        },
+      },
+      educator: {
+        merge(existing, incoming) {
+          return incoming;
+        },
+      },
+    },
+  },
+
+  PresenceUpdate: {
+    keyFields: ['userId', 'courseId'],
+    fields: {
+      user: {
+        merge(existing, incoming) {
+          return incoming;
+        },
+      },
+    },
+  },
+
+  TypingIndicator: {
+    keyFields: ['userId', ['conversationId', 'threadId']],
+    fields: {
+      user: {
         merge(existing, incoming) {
           return incoming;
         },

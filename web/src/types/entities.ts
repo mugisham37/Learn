@@ -296,6 +296,43 @@ export interface Announcement {
   updatedAt: DateTime;
 }
 
+// Additional Communication types
+export interface PresenceUpdate {
+  userId: ID;
+  user: User;
+  status: PresenceStatus;
+  courseId?: ID;
+  lastSeen: DateTime;
+}
+
+export interface TypingIndicator {
+  userId: ID;
+  user: User;
+  conversationId?: string;
+  threadId?: ID;
+  isTyping: boolean;
+}
+
+export type PresenceStatus = 'ONLINE' | 'OFFLINE' | 'AWAY';
+export type VoteType = 'UPVOTE' | 'REMOVE_VOTE';
+
+export interface AnnouncementInput {
+  title: string;
+  content: string;
+  scheduledFor?: DateTime;
+}
+
+export interface UpdateAnnouncementInput {
+  title?: string;
+  content?: string;
+  scheduledFor?: DateTime;
+}
+
+export interface AnnouncementFilter {
+  publishedOnly?: boolean;
+  scheduledOnly?: boolean;
+}
+
 // Content management types
 export interface PresignedUploadUrl {
   uploadUrl: string;
