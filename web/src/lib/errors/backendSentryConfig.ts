@@ -308,3 +308,6 @@ export function createBackendSentryConfig() {
     },
   };
 }
+
+// Export alias for compatibility
+export const backendSentryConfig = createBackendSentryConfig;

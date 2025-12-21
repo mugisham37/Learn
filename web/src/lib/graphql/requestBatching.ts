@@ -9,7 +9,8 @@
 
 import React from 'react';
 import { print, DocumentNode } from 'graphql';
-import { ApolloLink, Observable, Operation } from '@apollo/client';
+import { ApolloLink, Observable, FetchResult } from '@apollo/client';
+import type { Operation } from '@apollo/client/core';
 import { GraphQLRequestDeduplicator } from './deduplication';
 
 // =============================================================================
@@ -107,8 +108,8 @@ class RequestBatcherClass {
    */
   addToBatch(
     operation: Operation,
-    forward: (operation: Operation) => Observable<unknown>
-  ): Observable<unknown> {
+    forward: (operation: Operation) => Observable<FetchResult>
+  ): Observable<FetchResult> {
     this.metrics.totalRequests++;
 
     // Check if deduplication is enabled and operation can be deduplicated
@@ -120,12 +121,12 @@ class RequestBatcherClass {
       }
     }
 
-    return new Observable<unknown>(observer => {
+    return new Observable<FetchResult>(observer => {
       const batchedOperation: BatchedOperation = {
         operation: {
           query: operation.query,
           variables: operation.variables,
-          operationName: operation.operationName || undefined,
+          ...(operation.operationName && { operationName: operation.operationName }),
         },
         observer,
         timestamp: Date.now(),
@@ -159,7 +160,7 @@ class RequestBatcherClass {
   /**
    * Process the current batch
    */
-  private processBatch(forward: (operation: Operation) => Observable<unknown>): void {
+  private processBatch(forward: (operation: Operation) => Observable<FetchResult>): void {
     if (this.batchQueue.length === 0) return;
 
     const batch = this.batchQueue.splice(0);
@@ -180,7 +181,7 @@ class RequestBatcherClass {
    */
   private processIntelligentBatch(
     batch: BatchedOperation[],
-    forward: (operation: Operation) => Observable<unknown>
+    forward: (operation: Operation) => Observable<FetchResult>
   ): void {
     // Group operations by similarity
     const groups = this.groupOperationsBySimilarity(batch);
@@ -210,7 +211,7 @@ class RequestBatcherClass {
    */
   private processSimpleBatch(
     batch: BatchedOperation[],
-    forward: (operation: Operation) => Observable<unknown>
+    forward: (operation: Operation) => Observable<FetchResult>
   ): void {
     // Sort by priority
     batch.sort((a, b) => b.priority - a.priority);
@@ -288,7 +289,7 @@ class RequestBatcherClass {
    */
   private executeBatchedOperations(
     operations: BatchedOperation[],
-    forward: (operation: Operation) => Observable<unknown>
+    forward: (operation: Operation) => Observable<FetchResult>
   ): void {
     // For now, execute operations individually
     // In a real implementation, you would merge queries or use GraphQL batching

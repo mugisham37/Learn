@@ -331,6 +331,20 @@ export const BACKEND_RETRY_CONFIG = {
     backoffMultiplier: 1,
   },
 
+  // Authorization errors - no retry
+  AUTHORIZATION_ERROR: {
+    maxAttempts: 0, // No retry for authorization errors
+    baseDelay: 0,
+    backoffMultiplier: 1,
+  },
+
+  // Validation errors - no retry (user input issue)
+  VALIDATION_ERROR: {
+    maxAttempts: 0, // No retry for validation errors
+    baseDelay: 0,
+    backoffMultiplier: 1,
+  },
+
   // Network errors - aggressive retry for backend services
   NETWORK_ERROR: {
     maxAttempts: 5, // More retries for network issues
@@ -350,6 +364,13 @@ export const BACKEND_RETRY_CONFIG = {
     maxAttempts: 10, // Many retries for real-time connections
     baseDelay: 1000,
     backoffMultiplier: 1.2, // Gentle backoff
+  },
+
+  // Cache errors - moderate retry
+  CACHE_ERROR: {
+    maxAttempts: 2,
+    baseDelay: 1000,
+    backoffMultiplier: 1.5,
   },
 
   // Server errors - moderate retry

@@ -227,8 +227,8 @@ class SentryTrackingService implements ErrorTrackingService {
           category: error.category,
           severity: error.severity,
           retryable: error.retryable,
-          operation: context?.operation,
-          userId: context?.userId,
+          ...(context?.operation && { operation: context.operation }),
+          ...(context?.userId && { userId: context.userId }),
         });
 
         Object.entries(backendTags).forEach(([key, value]) => {
@@ -238,7 +238,7 @@ class SentryTrackingService implements ErrorTrackingService {
         // Set backend-specific error context
         const backendContext = getBackendErrorContext({
           message: error.message,
-          context,
+          ...(context && { context }),
         });
 
         Object.entries(backendContext).forEach(([key, value]) => {
@@ -249,8 +249,8 @@ class SentryTrackingService implements ErrorTrackingService {
         const fingerprint = getBackendErrorFingerprint({
           type: error.type,
           code: error.code,
-          operation: context?.operation,
-          field: error.field,
+          ...(context?.operation && { operation: context.operation }),
+          ...(error.field && { field: error.field }),
         });
 
         // Set error level based on backend severity mapping
@@ -266,9 +266,7 @@ class SentryTrackingService implements ErrorTrackingService {
         }
 
         // Capture exception with backend fingerprint
-        this.sentry?.captureException(errorObj, {
-          fingerprint,
-        });
+        this.sentry?.captureException(errorObj);
       });
     } catch (trackingError) {
       console.error('Failed to report backend error to tracking service:', trackingError);
@@ -346,26 +344,6 @@ class SentryTrackingService implements ErrorTrackingService {
     return this.enabled;
   }
 
-  private beforeSend(event: Record<string, unknown>): Record<string, unknown> {
-    // Filter out sensitive information
-    const request = event.request as Record<string, unknown> | undefined;
-    if (request?.data) {
-      request.data = this.sanitizeData(request.data);
-    }
-
-    const extra = event.extra as Record<string, unknown> | undefined;
-    if (extra?.variables) {
-      extra.variables = this.sanitizeData(extra.variables);
-    }
-
-    return event;
-  }
-
-  private beforeSendTransaction(event: Record<string, unknown>): Record<string, unknown> {
-    // Filter out sensitive transaction data
-    return event;
-  }
-
   private sanitizeData(data: unknown): unknown {
     if (!data || typeof data !== 'object') {
       return data;
@@ -381,21 +359,6 @@ class SentryTrackingService implements ErrorTrackingService {
     }
 
     return sanitized;
-  }
-
-  private mapSeverityToLevel(severity: string): 'fatal' | 'error' | 'warning' | 'info' {
-    switch (severity) {
-      case 'critical':
-        return 'fatal';
-      case 'high':
-        return 'error';
-      case 'medium':
-        return 'warning';
-      case 'low':
-        return 'info';
-      default:
-        return 'error';
-    }
   }
 }
 

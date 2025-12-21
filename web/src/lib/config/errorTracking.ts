@@ -5,8 +5,54 @@
  * Uses the new backend-integrated error handling system.
  */
 
-import { errorTrackingConfig, config } from '../config';
+import { errorTrackingConfig } from '../config';
 import { initializeErrorHandling } from '../errors';
+
+// Import Sentry types for better type safety
+interface SentryScope {
+  setTag(key: string, value: string): void;
+  setContext(key: string, context: Record<string, unknown>): void;
+  setLevel(level: 'fatal' | 'error' | 'warning' | 'info'): void;
+  setUser(user: { id: string; email?: string; role?: string }): void;
+  clear(): void;
+}
+
+interface SentryModule {
+  withScope(callback: (scope: SentryScope) => void): void;
+  configureScope(callback: (scope: SentryScope) => void): void;
+  captureException(error: Error): void;
+  captureMessage(message: string): void;
+  addBreadcrumb(breadcrumb: {
+    message: string;
+    category: string;
+    data?: Record<string, unknown>;
+    level: string;
+    timestamp: number;
+  }): void;
+  startTransaction(options: { name: string; op: string }): SentryTransaction;
+}
+
+interface SentryTransaction {
+  setTag(key: string, value: string): void;
+  setStatus(status: string): void;
+  finish(): void;
+}
+
+// Global Sentry instance
+let Sentry: SentryModule | null = null;
+
+// Initialize Sentry dynamically
+async function initializeSentry(): Promise<void> {
+  if (Sentry) return;
+  
+  try {
+    // Dynamically import Sentry to avoid bundling if not needed
+    const sentryModule = await import('@sentry/nextjs');
+    Sentry = sentryModule as unknown as SentryModule;
+  } catch (error) {
+    console.warn('Sentry package not found, error tracking disabled');
+  }
+}
 
 /**
  * Initialize error tracking with backend integration
@@ -20,6 +66,9 @@ export async function initializeErrorTracking(): Promise<void> {
   try {
     console.log('🔧 Initializing backend-integrated error tracking...');
 
+    // Initialize Sentry first
+    await initializeSentry();
+
     // Initialize the new backend-integrated error handling system
     await initializeErrorHandling({
       sentryDsn: errorTrackingConfig.sentryDsn,
@@ -30,8 +79,12 @@ export async function initializeErrorTracking(): Promise<void> {
       sampleRate: errorTrackingConfig.sampleRate,
       tracesSampleRate: errorTrackingConfig.tracesSampleRate,
       backendIntegration: {
-        backendVersion: process.env.NEXT_PUBLIC_BACKEND_VERSION,
-        backendEnvironment: process.env.NEXT_PUBLIC_BACKEND_ENV,
+        ...(process.env.NEXT_PUBLIC_BACKEND_VERSION && {
+          backendVersion: process.env.NEXT_PUBLIC_BACKEND_VERSION,
+        }),
+        ...(process.env.NEXT_PUBLIC_BACKEND_ENV && {
+          backendEnvironment: process.env.NEXT_PUBLIC_BACKEND_ENV,
+        }),
         enableCorrelation: true,
       },
     });
@@ -45,20 +98,20 @@ export async function initializeErrorTracking(): Promise<void> {
 /**
  * Report error to tracking service
  */
-export function reportError(error: Error, context?: Record<string, any>): void {
+export function reportError(error: Error, context?: Record<string, unknown>): void {
   if (!Sentry) {
     console.error('Error tracking not initialized:', error);
     return;
   }
 
   try {
-    Sentry.withScope((scope: any) => {
+    Sentry.withScope((scope: SentryScope) => {
       if (context) {
         scope.setContext('error_context', context);
       }
 
       scope.setLevel('error');
-      Sentry.captureException(error);
+      Sentry!.captureException(error);
     });
   } catch (trackingError) {
     console.error('Failed to report error to tracking service:', trackingError);
@@ -72,7 +125,7 @@ export function reportError(error: Error, context?: Record<string, any>): void {
 export function reportMessage(
   message: string,
   level: 'info' | 'warning' | 'error' = 'info',
-  context?: Record<string, any>
+  context?: Record<string, unknown>
 ): void {
   if (!Sentry) {
     console.log('Error tracking not initialized, logging message:', message);
@@ -80,13 +133,13 @@ export function reportMessage(
   }
 
   try {
-    Sentry.withScope((scope: any) => {
+    Sentry.withScope((scope: SentryScope) => {
       if (context) {
         scope.setContext('message_context', context);
       }
 
       scope.setLevel(level);
-      Sentry.captureMessage(message);
+      Sentry!.captureMessage(message);
     });
   } catch (trackingError) {
     console.error('Failed to report message to tracking service:', trackingError);
@@ -103,7 +156,7 @@ export function setUserContext(user: { id: string; email?: string; role?: string
   }
 
   try {
-    Sentry.configureScope((scope: any) => {
+    Sentry.configureScope((scope: SentryScope) => {
       scope.setUser({
         id: user.id,
         email: user.email,
@@ -124,7 +177,7 @@ export function clearUserContext(): void {
   }
 
   try {
-    Sentry.configureScope((scope: any) => {
+    Sentry.configureScope((scope: SentryScope) => {
       scope.clear();
     });
   } catch (error) {
@@ -135,7 +188,7 @@ export function clearUserContext(): void {
 /**
  * Add breadcrumb for debugging
  */
-export function addBreadcrumb(message: string, category: string, data?: Record<string, any>): void {
+export function addBreadcrumb(message: string, category: string, data?: Record<string, unknown>): void {
   if (!Sentry) {
     return;
   }
@@ -156,7 +209,7 @@ export function addBreadcrumb(message: string, category: string, data?: Record<s
 /**
  * Start performance transaction
  */
-export function startTransaction(name: string, operation: string): any {
+export function startTransaction(name: string, operation: string): SentryTransaction | null {
   if (!Sentry) {
     return null;
   }

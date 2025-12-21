@@ -41,7 +41,7 @@ async function checkGraphQLHealth(): Promise<ServiceStatus> {
         name: 'GraphQL API',
         status: 'degraded',
         lastCheck: new Date(),
-        error: `HTTP ${response.status}: ${response.statusText}`,
+        ...(response.status && { error: `HTTP ${response.status}: ${response.statusText}` }),
       };
     }
   } catch (error) {
@@ -49,7 +49,7 @@ async function checkGraphQLHealth(): Promise<ServiceStatus> {
       name: 'GraphQL API',
       status: 'unhealthy',
       lastCheck: new Date(),
-      error: error instanceof Error ? error.message : 'Unknown error',
+      ...(error instanceof Error && { error: error.message }),
     };
   }
 }
@@ -81,7 +81,7 @@ async function checkWebSocketHealth(): Promise<ServiceStatus> {
         });
       };
 
-      ws.onerror = error => {
+      ws.onerror = () => {
         clearTimeout(timeout);
         resolve({
           name: 'WebSocket',
@@ -95,7 +95,7 @@ async function checkWebSocketHealth(): Promise<ServiceStatus> {
         name: 'WebSocket',
         status: 'unhealthy',
         lastCheck: new Date(),
-        error: error instanceof Error ? error.message : 'Unknown error',
+        ...(error instanceof Error && { error: error.message }),
       });
     }
   });
@@ -123,7 +123,7 @@ function checkAuthHealth(): ServiceStatus {
     name: 'Authentication',
     status: issues.length === 0 ? 'healthy' : 'degraded',
     lastCheck: new Date(),
-    error: issues.length > 0 ? issues.join(', ') : undefined,
+    ...(issues.length > 0 && { error: issues.join(', ') }),
   };
 }
 
@@ -151,7 +151,7 @@ function checkUploadHealth(): ServiceStatus {
     name: 'File Upload',
     status: issues.length === 0 ? 'healthy' : config.features.fileUploads ? 'degraded' : 'healthy',
     lastCheck: new Date(),
-    error: issues.length > 0 ? issues.join(', ') : undefined,
+    ...(issues.length > 0 && { error: issues.join(', ') }),
   };
 }
 
@@ -173,7 +173,7 @@ function checkErrorTrackingHealth(): ServiceStatus {
     name: 'Error Tracking',
     status: issues.length === 0 ? 'healthy' : 'degraded',
     lastCheck: new Date(),
-    error: issues.length > 0 ? issues.join(', ') : undefined,
+    ...(issues.length > 0 && { error: issues.join(', ') }),
   };
 }
 

@@ -166,7 +166,7 @@ async function createApolloClient(ssrMode: boolean = false) {
 }
 
 // Create and export the configured Apollo Client instance
-let apolloClientInstance: ApolloClient<unknown> | null = null;
+let apolloClientInstance: ApolloClient<any> | null = null;
 
 export const apolloClient = (() => {
   if (typeof window === 'undefined') {

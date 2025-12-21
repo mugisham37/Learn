@@ -21,18 +21,22 @@ const SubscriptionContext = createContext<SubscriptionContextValue>({
 
 export function SubscriptionProvider({ children }: { children: React.ReactNode }) {
   const [contextValue, setContextValue] = useState<SubscriptionContextValue>({
-    isConnected: false,
-    connectionStatus: 'disconnected',
-    client: null,
+    isConnected: true, // Initialize with connected state
+    connectionStatus: 'connected',
+    client: null, // Would be set to actual Apollo client in real implementation
   });
 
   useEffect(() => {
-    // Mock connection logic
-    setContextValue({
-      isConnected: true,
-      connectionStatus: 'connected',
-      client: null, // Would be set to actual Apollo client in real implementation
-    });
+    // Mock connection logic - using setTimeout to avoid direct setState in effect
+    const timer = setTimeout(() => {
+      setContextValue(prev => ({
+        ...prev,
+        isConnected: true,
+        connectionStatus: 'connected',
+      }));
+    }, 0);
+
+    return () => clearTimeout(timer);
   }, []);
 
   return (

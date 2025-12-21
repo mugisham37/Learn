@@ -4,7 +4,8 @@
  * Utilities for deduplicating GraphQL requests.
  */
 
-import { Observable, Operation, ApolloLink } from '@apollo/client';
+import { Observable, ApolloLink, FetchResult } from '@apollo/client';
+import type { Operation } from '@apollo/client/core';
 
 export interface DeduplicationConfig {
   ttl?: number;
@@ -40,8 +41,8 @@ export class GraphQLRequestDeduplicator {
 
   deduplicate(
     operation: Operation,
-    forward: (operation: Operation) => Observable<unknown>
-  ): Observable<unknown> | null {
+    forward: (operation: Operation) => Observable<FetchResult>
+  ): Observable<FetchResult> | null {
     this.metrics.totalRequests++;
     
     // Simple deduplication logic
