@@ -3,7 +3,7 @@
  * 
  * Main GraphQL client setup with authentication, error handling, and caching.
  * Provides a fully configured Apollo Client with normalized cache, authentication,
- * error handling, and retry logic.
+ * error handling, and retry logic. Supports both client-side and server-side rendering.
  */
 
 import { ApolloClient, ApolloLink, createHttpLink, split } from '@apollo/client';
@@ -26,71 +26,81 @@ import { createCacheConfig } from './cache';
  * - Authentication with automatic token injection
  * - Backend-integrated error handling with classification and recovery
  * - Retry logic with exponential backoff
- * - WebSocket subscriptions with automatic reconnection
+ * - WebSocket subscriptions with automatic reconnection (client-side only)
  * - Development tools integration
+ * - Server-side rendering support
  */
-async function createApolloClient() {
+async function createApolloClient(ssrMode: boolean = false) {
   // HTTP link for queries and mutations
   const httpLink = createHttpLink({
-    uri: config.graphqlEndpoint,
+    uri: ssrMode 
+      ? config.graphqlEndpoint // Direct connection on server
+      : '/api/graphql', // Use proxy in browser
     credentials: 'include', // Include cookies for authentication
+    fetch: ssrMode ? fetch : undefined, // Use global fetch on server
   });
 
-  // WebSocket link for subscriptions
-  const wsLink = new GraphQLWsLink(
-    createClient({
-      url: config.wsEndpoint,
-      connectionParams: async () => {
-        // Get access token for WebSocket authentication
-        const accessToken = tokenManager.getAccessToken();
-        
-        if (accessToken) {
-          // Check if token needs refresh
-          if (tokenManager.isTokenExpired(accessToken)) {
-            try {
-              const refreshedToken = await tokenManager.refreshAccessToken();
-              return {
-                authorization: `Bearer ${refreshedToken}`,
-              };
-            } catch (error) {
-              console.warn('Token refresh failed for WebSocket connection:', error);
-              return {};
+  // WebSocket link for subscriptions (client-side only)
+  let wsLink: GraphQLWsLink | null = null;
+  
+  if (!ssrMode && typeof window !== 'undefined') {
+    wsLink = new GraphQLWsLink(
+      createClient({
+        url: config.wsEndpoint,
+        connectionParams: async () => {
+          // Get access token for WebSocket authentication
+          const accessToken = tokenManager.getAccessToken();
+          
+          if (accessToken) {
+            // Check if token needs refresh
+            if (tokenManager.isTokenExpired(accessToken)) {
+              try {
+                const refreshedToken = await tokenManager.refreshAccessToken();
+                return {
+                  authorization: `Bearer ${refreshedToken}`,
+                };
+              } catch (error) {
+                console.warn('Token refresh failed for WebSocket connection:', error);
+                return {};
+              }
             }
+            
+            return {
+              authorization: `Bearer ${accessToken}`,
+            };
           }
           
-          return {
-            authorization: `Bearer ${accessToken}`,
-          };
-        }
-        
-        return {};
-      },
-      shouldRetry: (closeEvent) => {
-        // Retry on connection errors but not on authentication failures (4401)
-        return closeEvent.code !== 4401;
-      },
-      retryAttempts: 5,
-      retryWait: async (retries) => {
-        // Exponential backoff with jitter
-        const delay = Math.min(1000 * Math.pow(2, retries), 30000);
-        const jitter = Math.random() * 0.1 * delay;
-        return delay + jitter;
-      },
-    })
-  );
+          return {};
+        },
+        shouldRetry: (closeEvent) => {
+          // Retry on connection errors but not on authentication failures (4401)
+          return closeEvent.code !== 4401;
+        },
+        retryAttempts: 5,
+        retryWait: async (retries) => {
+          // Exponential backoff with jitter
+          const delay = Math.min(1000 * Math.pow(2, retries), 30000);
+          const jitter = Math.random() * 0.1 * delay;
+          return delay + jitter;
+        },
+      })
+    );
+  }
 
   // Split link to route queries/mutations to HTTP and subscriptions to WebSocket
-  const splitLink = split(
-    ({ query }) => {
-      const definition = getMainDefinition(query);
-      return (
-        definition.kind === 'OperationDefinition' &&
-        definition.operation === 'subscription'
-      );
-    },
-    wsLink,
-    httpLink
-  );
+  const splitLink = wsLink
+    ? split(
+        ({ query }) => {
+          const definition = getMainDefinition(query);
+          return (
+            definition.kind === 'OperationDefinition' &&
+            definition.operation === 'subscription'
+          );
+        },
+        wsLink,
+        httpLink
+      )
+    : httpLink;
 
   // Create authentication link
   const authLink = createAuthLink();
@@ -104,25 +114,27 @@ async function createApolloClient() {
   // Create general error handling link (fallback)
   const errorLink = createErrorLink();
 
-  // Create retry link
-  const retryLink = createRetryLink();
+  // Create retry link (disabled on server to avoid hanging)
+  const retryLink = ssrMode ? null : createRetryLink();
 
   // Combine all links in the correct order
   // Order matters: auth -> auth-error -> backend-error -> error -> retry -> transport
-  const link = ApolloLink.from([
+  const links = [
     authLink,
     authErrorLink,
     backendErrorLink,
     errorLink,
-    retryLink,
+    ...(retryLink ? [retryLink] : []),
     splitLink,
-  ]);
+  ].filter(Boolean);
+
+  const link = ApolloLink.from(links);
 
   // Create cache configuration with backend integration
   const cache = createCacheConfig();
 
-  // Load persisted cache if enabled
-  if (config.features.realTime) {
+  // Load persisted cache if enabled (client-side only)
+  if (!ssrMode && config.features.realTime) {
     try {
       const { cachePersistence } = await import('./cache');
       await cachePersistence.loadFromStorage(cache, 'lms-apollo-cache');
@@ -135,19 +147,22 @@ async function createApolloClient() {
   const client = new ApolloClient({
     link,
     cache,
+    ssrMode,
     defaultOptions: {
       watchQuery: {
         errorPolicy: 'all', // Return partial data even if there are errors
+        fetchPolicy: ssrMode ? 'cache-first' : 'cache-and-network',
       },
       query: {
         errorPolicy: 'all',
+        fetchPolicy: ssrMode ? 'cache-first' : 'cache-and-network',
       },
       mutate: {
         errorPolicy: 'all',
       },
     },
-    // Enable Apollo DevTools in development
-    ...(config.enableDevTools && { connectToDevTools: true }),
+    // Enable Apollo DevTools in development (client-side only)
+    ...(config.enableDevTools && !ssrMode && { connectToDevTools: true }),
   });
 
   return client;
@@ -157,8 +172,13 @@ async function createApolloClient() {
 let apolloClientInstance: ApolloClient<unknown> | null = null;
 
 export const apolloClient = (() => {
+  if (typeof window === 'undefined') {
+    // Server-side: create new instance for each request
+    return null;
+  }
+  
   if (!apolloClientInstance) {
-    createApolloClient().then(client => {
+    createApolloClient(false).then(client => {
       apolloClientInstance = client;
     }).catch(error => {
       console.error('Failed to create Apollo Client:', error);
@@ -168,9 +188,14 @@ export const apolloClient = (() => {
 })();
 
 // Export async client creation for proper initialization
-export async function getApolloClient() {
+export async function getApolloClient(ssrMode: boolean = false) {
+  if (ssrMode || typeof window === 'undefined') {
+    // Always create new instance for server-side
+    return await createApolloClient(true);
+  }
+  
   if (!apolloClientInstance) {
-    apolloClientInstance = await createApolloClient();
+    apolloClientInstance = await createApolloClient(false);
   }
   return apolloClientInstance;
 }

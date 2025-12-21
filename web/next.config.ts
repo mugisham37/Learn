@@ -43,40 +43,108 @@ const nextConfig: NextConfig = {
   async headers() {
     const headers = [];
 
-    // Security headers for all routes
+    // Comprehensive security headers for all routes
     headers.push({
       source: '/(.*)',
       headers: [
+        // Frame protection
         {
           key: 'X-Frame-Options',
           value: 'DENY',
         },
+        // MIME type sniffing protection
         {
           key: 'X-Content-Type-Options',
           value: 'nosniff',
         },
+        // XSS protection
+        {
+          key: 'X-XSS-Protection',
+          value: '1; mode=block',
+        },
+        // Referrer policy
         {
           key: 'Referrer-Policy',
           value: 'strict-origin-when-cross-origin',
         },
+        // Permissions policy
+        {
+          key: 'Permissions-Policy',
+          value: 'camera=(), microphone=(), geolocation=(), interest-cohort=()',
+        },
+        // Content Security Policy
+        {
+          key: 'Content-Security-Policy',
+          value: process.env.NODE_ENV === 'production' 
+            ? "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' https:; connect-src 'self' wss: https:; media-src 'self' https:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests;"
+            : "default-src 'self' 'unsafe-inline' 'unsafe-eval'; img-src 'self' data: https:; connect-src 'self' wss: https: ws://localhost:*; media-src 'self' https:;",
+        },
+        // HSTS (only in production)
+        ...(process.env.NODE_ENV === 'production' ? [{
+          key: 'Strict-Transport-Security',
+          value: 'max-age=31536000; includeSubDomains; preload',
+        }] : []),
       ],
     });
 
-    // CORS headers for API routes
+    // Enhanced CORS headers for API routes
     headers.push({
       source: '/api/(.*)',
       headers: [
         {
           key: 'Access-Control-Allow-Origin',
-          value: process.env.CORS_ORIGIN || 'http://localhost:3000',
+          value: process.env.CORS_ORIGIN || (process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : 'https://yourdomain.com'),
         },
         {
           key: 'Access-Control-Allow-Methods',
-          value: 'GET, POST, PUT, DELETE, OPTIONS',
+          value: 'GET, POST, PUT, DELETE, OPTIONS, PATCH',
         },
         {
           key: 'Access-Control-Allow-Headers',
-          value: 'Content-Type, Authorization',
+          value: 'Content-Type, Authorization, X-Requested-With, X-CSRF-Token, Accept, Accept-Version, Content-Length, Content-MD5, Date, X-Api-Version',
+        },
+        {
+          key: 'Access-Control-Allow-Credentials',
+          value: 'true',
+        },
+        {
+          key: 'Access-Control-Max-Age',
+          value: '86400', // 24 hours
+        },
+        // Additional security headers for API
+        {
+          key: 'X-Content-Type-Options',
+          value: 'nosniff',
+        },
+        {
+          key: 'X-Frame-Options',
+          value: 'DENY',
+        },
+        {
+          key: 'X-XSS-Protection',
+          value: '1; mode=block',
+        },
+      ],
+    });
+
+    // Cache headers for static assets
+    headers.push({
+      source: '/static/(.*)',
+      headers: [
+        {
+          key: 'Cache-Control',
+          value: 'public, max-age=31536000, immutable',
+        },
+      ],
+    });
+
+    // Cache headers for images
+    headers.push({
+      source: '/_next/image(.*)',
+      headers: [
+        {
+          key: 'Cache-Control',
+          value: 'public, max-age=31536000, immutable',
         },
       ],
     });

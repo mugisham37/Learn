@@ -188,3 +188,36 @@ export type {
   SchemaValidationResult,
   SchemaSyncOptions,
 } from './schema';
+// Server-side Rendering and Data Fetching
+export {
+  serverAuth,
+  serverData,
+  pageData,
+  serverError,
+} from './ssr/dataFetching';
+
+export {
+  serverGraphQL,
+  executeServerQuery,
+  executeServerMutation,
+  createServerClient,
+} from './graphql/serverClient';
+
+// Next.js Cache Integration
+export {
+  nextCache,
+  cacheRevalidation,
+  cacheInvalidation,
+  cacheWarming,
+  cacheMonitoring,
+  CACHE_CONFIG,
+  CACHE_TAGS,
+} from './cache/nextCacheIntegration';
+
+// Protected Layouts
+export {
+  ProtectedLayout,
+  AdminLayout,
+  EducatorLayout,
+  StudentLayout,
+} from '../components/layouts/ProtectedLayout';
