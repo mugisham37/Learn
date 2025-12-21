@@ -96,3 +96,14 @@ export {
   usePaymentMethods,
   useInvoices,
 } from './usePayments';
+
+// Search Module Hooks
+export {
+  useSearch,
+  useFacetedSearch,
+  useAutocomplete,
+  useTrendingSearches,
+  useSearchLessons,
+  useSearchAnalytics,
+  useSearchOptimization,
+} from './useSearch';
