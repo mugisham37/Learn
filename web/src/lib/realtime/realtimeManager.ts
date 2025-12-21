@@ -7,7 +7,7 @@
  */
 
 import { useEffect, useCallback, useRef } from 'react';
-import { ApolloClient, useApolloClient } from '@apollo/client';
+import { ApolloClient } from '@apollo/client';
 import { useAuth } from '../auth/authHooks';
 import socketClient, {
   SOCKET_EVENTS,
@@ -30,9 +30,8 @@ export interface RealtimeEvent {
  * Real-time manager hook
  */
 export function useRealtimeManager() {
-  const apolloClient = useApolloClient();
   const { user, isAuthenticated } = useAuth();
-  const { isConnected: graphqlConnected } = useSubscriptionContext();
+  const { isConnected: graphqlConnected, client: apolloClient } = useSubscriptionContext();
   const eventHandlersRef = useRef<Map<string, Set<SocketEventHandler>>>(new Map());
 
   /**
@@ -133,13 +132,14 @@ export function useRealtimeManager() {
   const handleMessageEvent = useCallback(
     (data: unknown) => {
       try {
+        const messageData = data as { conversationId?: string; [key: string]: unknown };
         // Update Apollo cache with new message
         apolloClient.cache.modify({
           fields: {
             conversations(existingConversations = []) {
               // Update the specific conversation with new message
-              return existingConversations.map((conversation: any) => {
-                if (conversation.id === (data as any)?.conversationId) {
+              return existingConversations.map((conversation: { id: string; [key: string]: unknown }) => {
+                if (conversation.id === messageData?.conversationId) {
                   return {
                     ...conversation,
                     lastMessage: data,
@@ -164,15 +164,16 @@ export function useRealtimeManager() {
   const handleProgressEvent = useCallback(
     (data: unknown) => {
       try {
+        const progressData = data as { enrollmentId?: string; progress?: number; [key: string]: unknown };
         // Update Apollo cache with progress data
         apolloClient.cache.modify({
           fields: {
             enrollments(existingEnrollments = []) {
-              return existingEnrollments.map((enrollment: any) => {
-                if (enrollment.id === (data as any)?.enrollmentId) {
+              return existingEnrollments.map((enrollment: { id: string; progress?: number; [key: string]: unknown }) => {
+                if (enrollment.id === progressData?.enrollmentId) {
                   return {
                     ...enrollment,
-                    progress: (data as any)?.progress || enrollment.progress,
+                    progress: progressData?.progress || enrollment.progress,
                     updatedAt: new Date().toISOString(),
                   };
                 }
@@ -194,12 +195,12 @@ export function useRealtimeManager() {
   const handlePresenceEvent = useCallback(
     (data: unknown) => {
       try {
+        const presenceData = data as { userId?: string; status?: string; lastSeen?: string; [key: string]: unknown };
         // Update Apollo cache with presence data
         apolloClient.cache.modify({
           fields: {
             coursePresence(existingPresence = []) {
-              const presenceData = data as any;
-              return existingPresence.map((presence: any) => {
+              return existingPresence.map((presence: { userId: string; status?: string; lastSeen?: string; [key: string]: unknown }) => {
                 if (presence.userId === presenceData?.userId) {
                   return {
                     ...presence,
@@ -359,7 +360,9 @@ export function useRealtimeProvider() {
 /**
  * Export real-time utilities
  */
-export default {
+const realtimeUtils = {
   useRealtimeManager,
   useRealtimeProvider,
 };
+
+export default realtimeUtils;

@@ -8,9 +8,8 @@
  */
 
 import React from 'react';
-import { print } from 'graphql';
-import { ApolloLink, Observable } from '@apollo/client';
-import type { FetchResult } from '@apollo/client';
+import { print, DocumentNode } from 'graphql';
+import { ApolloLink, Observable, Operation } from '@apollo/client';
 import { GraphQLRequestDeduplicator } from './deduplication';
 
 // =============================================================================
@@ -34,12 +33,12 @@ export interface BatchingConfig {
 
 export interface BatchedOperation {
   operation: {
-    query: any;
+    query: DocumentNode;
     variables?: Record<string, unknown>;
     operationName?: string;
   };
   observer: {
-    next: (value: FetchResult) => void;
+    next: (value: unknown) => void;
     error: (error: unknown) => void;
     complete: () => void;
   };
@@ -107,9 +106,9 @@ class RequestBatcherClass {
    * Add operation to batch queue
    */
   addToBatch(
-    operation: { query: any; variables?: Record<string, unknown>; operationName?: string },
-    forward: (operation: { query: any; variables?: Record<string, unknown>; operationName?: string }) => Observable<FetchResult>
-  ): Observable<FetchResult> {
+    operation: Operation,
+    forward: (operation: Operation) => Observable<unknown>
+  ): Observable<unknown> {
     this.metrics.totalRequests++;
 
     // Check if deduplication is enabled and operation can be deduplicated
@@ -121,9 +120,13 @@ class RequestBatcherClass {
       }
     }
 
-    return new Observable<FetchResult>(observer => {
+    return new Observable<unknown>(observer => {
       const batchedOperation: BatchedOperation = {
-        operation,
+        operation: {
+          query: operation.query,
+          variables: operation.variables,
+          operationName: operation.operationName || undefined,
+        },
         observer,
         timestamp: Date.now(),
         priority: this.calculatePriority(operation),
@@ -156,7 +159,7 @@ class RequestBatcherClass {
   /**
    * Process the current batch
    */
-  private processBatch(forward: (operation: { query: any; variables?: Record<string, unknown>; operationName?: string }) => Observable<FetchResult>): void {
+  private processBatch(forward: (operation: Operation) => Observable<unknown>): void {
     if (this.batchQueue.length === 0) return;
 
     const batch = this.batchQueue.splice(0);
@@ -177,7 +180,7 @@ class RequestBatcherClass {
    */
   private processIntelligentBatch(
     batch: BatchedOperation[],
-    forward: (operation: { query: any; variables?: Record<string, unknown>; operationName?: string }) => Observable<FetchResult>
+    forward: (operation: Operation) => Observable<unknown>
   ): void {
     // Group operations by similarity
     const groups = this.groupOperationsBySimilarity(batch);
@@ -188,7 +191,12 @@ class RequestBatcherClass {
         // Single operation - process normally
         const batchedOp = group[0];
         if (batchedOp) {
-          forward(batchedOp.operation).subscribe(batchedOp.observer);
+          const operation: Operation = {
+            query: batchedOp.operation.query,
+            variables: batchedOp.operation.variables,
+            operationName: batchedOp.operation.operationName,
+          } as Operation;
+          forward(operation).subscribe(batchedOp.observer);
         }
       } else {
         // Multiple similar operations - batch them
@@ -202,14 +210,19 @@ class RequestBatcherClass {
    */
   private processSimpleBatch(
     batch: BatchedOperation[],
-    forward: (operation: { query: any; variables?: Record<string, unknown>; operationName?: string }) => Observable<FetchResult>
+    forward: (operation: Operation) => Observable<unknown>
   ): void {
     // Sort by priority
     batch.sort((a, b) => b.priority - a.priority);
 
     // Execute operations
     batch.forEach(batchedOp => {
-      forward(batchedOp.operation).subscribe(batchedOp.observer);
+      const operation: Operation = {
+        query: batchedOp.operation.query,
+        variables: batchedOp.operation.variables,
+        operationName: batchedOp.operation.operationName,
+      } as Operation;
+      forward(operation).subscribe(batchedOp.observer);
     });
   }
 
@@ -238,7 +251,7 @@ class RequestBatcherClass {
   /**
    * Analyze operation for batching decisions
    */
-  private analyzeOperation(operation: { query: any; variables?: Record<string, unknown>; operationName?: string }): RequestAnalysis {
+  private analyzeOperation(operation: { query: DocumentNode; variables?: Record<string, unknown>; operationName?: string }): RequestAnalysis {
     const query = print(operation.query);
     const queryHash = this.hashString(query);
 
@@ -275,19 +288,24 @@ class RequestBatcherClass {
    */
   private executeBatchedOperations(
     operations: BatchedOperation[],
-    forward: (operation: { query: any; variables?: Record<string, unknown>; operationName?: string }) => Observable<FetchResult>
+    forward: (operation: Operation) => Observable<unknown>
   ): void {
     // For now, execute operations individually
     // In a real implementation, you would merge queries or use GraphQL batching
     operations.forEach(batchedOp => {
-      forward(batchedOp.operation).subscribe(batchedOp.observer);
+      const operation: Operation = {
+        query: batchedOp.operation.query,
+        variables: batchedOp.operation.variables,
+        operationName: batchedOp.operation.operationName,
+      } as Operation;
+      forward(operation).subscribe(batchedOp.observer);
     });
   }
 
   /**
    * Calculate operation priority
    */
-  private calculatePriority(operation: { query: any; variables?: Record<string, unknown>; operationName?: string }): number {
+  private calculatePriority(operation: Operation): number {
     // Higher priority for mutations and subscriptions
     const definition = operation.query.definitions[0];
     if (definition && definition.kind === 'OperationDefinition') {
@@ -500,7 +518,7 @@ export function createBatchingConfig(
 /**
  * Analyze request patterns for optimization recommendations
  */
-export function analyzeRequestPatterns(operations: { query: any; variables?: Record<string, unknown>; operationName?: string }[]): {
+export function analyzeRequestPatterns(operations: Operation[]): {
   batchingPotential: number;
   deduplicationPotential: number;
   recommendations: string[];

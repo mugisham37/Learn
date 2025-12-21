@@ -4,8 +4,7 @@
  * Utilities for deduplicating GraphQL requests.
  */
 
-import { Observable } from '@apollo/client';
-import type { FetchResult } from '@apollo/client';
+import { Observable, Operation, ApolloLink } from '@apollo/client';
 
 export interface DeduplicationConfig {
   ttl?: number;
@@ -13,9 +12,22 @@ export interface DeduplicationConfig {
   maxCacheSize?: number;
 }
 
+export interface DeduplicationMetrics {
+  totalRequests: number;
+  deduplicatedRequests: number;
+  cacheHits: number;
+  hitRate: number;
+}
+
 export class GraphQLRequestDeduplicator {
-  private cache = new Map<string, Observable<FetchResult>>();
+  private cache = new Map<string, Observable<unknown>>();
   private config: Required<DeduplicationConfig>;
+  private metrics: DeduplicationMetrics = {
+    totalRequests: 0,
+    deduplicatedRequests: 0,
+    cacheHits: 0,
+    hitRate: 0,
+  };
 
   constructor(config: DeduplicationConfig = {}) {
     this.config = {
@@ -27,13 +39,18 @@ export class GraphQLRequestDeduplicator {
   }
 
   deduplicate(
-    operation: any,
-    forward: (operation: any) => Observable<FetchResult>
-  ): Observable<FetchResult> | null {
+    operation: Operation,
+    forward: (operation: Operation) => Observable<unknown>
+  ): Observable<unknown> | null {
+    this.metrics.totalRequests++;
+    
     // Simple deduplication logic
     const key = this.getOperationKey(operation);
     
     if (this.cache.has(key)) {
+      this.metrics.cacheHits++;
+      this.metrics.deduplicatedRequests++;
+      this.updateHitRate();
       return this.cache.get(key)!;
     }
 
@@ -45,18 +62,47 @@ export class GraphQLRequestDeduplicator {
       this.cache.delete(key);
     }, this.config.ttl);
 
+    this.updateHitRate();
     return observable;
   }
 
-  private getOperationKey(operation: any): string {
+  private getOperationKey(operation: Operation): string {
     return `${operation.operationName || 'anonymous'}-${JSON.stringify(operation.variables || {})}`;
+  }
+
+  private updateHitRate(): void {
+    this.metrics.hitRate = this.metrics.totalRequests > 0 
+      ? this.metrics.cacheHits / this.metrics.totalRequests 
+      : 0;
+  }
+
+  getMetrics(): DeduplicationMetrics {
+    return { ...this.metrics };
   }
 
   clear(): void {
     this.cache.clear();
+    this.metrics = {
+      totalRequests: 0,
+      deduplicatedRequests: 0,
+      cacheHits: 0,
+      hitRate: 0,
+    };
   }
 }
 
 export const GraphQLDeduplicationUtils = {
   GraphQLRequestDeduplicator,
+  createGraphQLDeduplicationLink: (config?: DeduplicationConfig): ApolloLink => {
+    const deduplicator = new GraphQLRequestDeduplicator(config);
+    
+    return new ApolloLink((operation, forward) => {
+      if (!forward) {
+        throw new Error('Deduplication link must not be the last link in the chain');
+      }
+      
+      const result = deduplicator.deduplicate(operation, forward);
+      return result || forward(operation);
+    });
+  },
 };

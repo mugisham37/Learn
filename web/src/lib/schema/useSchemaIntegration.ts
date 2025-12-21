@@ -106,7 +106,7 @@ export function useSchemaIntegration(
 
   // Sync schema from backend
   const sync = useCallback(
-    async (syncOptions: SchemaSyncOptions = {}) => {
+    async (syncOptions: Partial<SchemaSyncOptions> = {}) => {
       if (state.isSyncing) {
         return; // Prevent concurrent syncs
       }
@@ -118,26 +118,33 @@ export function useSchemaIntegration(
       });
 
       try {
-        const result = await schemaIntegration.synchronize({
-          endpoint,
+        const fullSyncOptions: SchemaSyncOptions = {
+          endpoint: endpoint || '/graphql',
+          validateBeforeUse: true,
+          retryAttempts: 3,
+          retryDelay: 1000,
+          timeout: 10000,
           ...syncOptions,
-        });
+        };
 
-        if (result.success) {
-          updateState({
-            metadata: result.metadata || null,
-            validation: result.validation || null,
-            schemaSDL: result.schemaSDL || null,
-            lastSyncAt: new Date(),
-            healthScore: result.validation?.health.score || 0,
-            healthStatus: result.validation?.health.status || 'unknown',
-            error: null,
-          });
-        } else {
-          updateState({
-            error: result.error || 'Schema synchronization failed',
-          });
-        }
+        await schemaIntegration.synchronize(fullSyncOptions);
+
+        // Get updated metadata and validation
+        const metadata = await schemaIntegration.getMetadata();
+        const validation = await schemaIntegration.getLastValidation();
+
+        updateState({
+          metadata,
+          validation,
+          schemaSDL: null, // Would be populated in real implementation
+          lastSyncAt: new Date(),
+          healthScore: validation?.health?.score || 0,
+          healthStatus: validation?.health?.score ? 
+            (validation.health.score >= 90 ? 'excellent' :
+             validation.health.score >= 80 ? 'good' :
+             validation.health.score >= 60 ? 'fair' : 'poor') : 'unknown',
+          error: null,
+        });
       } catch (error) {
         updateState({
           error: (error as Error).message,
@@ -165,15 +172,18 @@ export function useSchemaIntegration(
 
     try {
       // Get current validation from schema integration
-      const validation = schemaIntegration.getLastValidation();
-      const metadata = schemaIntegration.getMetadata();
+      const validation = await schemaIntegration.getLastValidation();
+      const metadata = await schemaIntegration.getMetadata();
 
       if (validation && metadata) {
         updateState({
           validation,
           metadata,
-          healthScore: validation.health.score,
-          healthStatus: validation.health.status,
+          healthScore: validation.health?.score || 0,
+          healthStatus: validation.health?.score ? 
+            (validation.health.score >= 90 ? 'excellent' :
+             validation.health.score >= 80 ? 'good' :
+             validation.health.score >= 60 ? 'fair' : 'poor') : 'unknown',
         });
       } else {
         // No validation available, trigger sync
@@ -241,8 +251,9 @@ export function useSchemaIntegration(
 
   // Computed values
   const isHealthy = state.healthScore >= 70;
-  const hasPlaceholders =
-    state.validation?.errors.some(error => error.code === 'PLACEHOLDER_OPERATIONS') || false;
+  const hasPlaceholders = state.validation?.errors.some(error => 
+    typeof error === 'string' && error.includes('PLACEHOLDER_OPERATIONS')
+  ) || false;
   const needsImprovement = state.healthScore < 60;
   const stats = state.metadata?.stats || null;
 
@@ -272,9 +283,13 @@ export function useSchemaHealth() {
       validateOnMount: true,
     });
 
-  const recommendations = validation?.health.recommendations || [];
-  const criticalIssues = validation?.errors.filter(e => e.severity === 'error') || [];
-  const warnings = validation?.errors.filter(e => e.severity === 'warning') || [];
+  const recommendations: string[] = [];
+  const criticalIssues = validation?.errors.filter(e => 
+    typeof e === 'string' && e.includes('error')
+  ) || [];
+  const warnings = validation?.errors.filter(e => 
+    typeof e === 'string' && e.includes('warning')
+  ) || [];
 
   return {
     healthScore,

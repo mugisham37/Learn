@@ -42,7 +42,11 @@ export const tokenManager = {
    */
   isTokenExpired(token: string): boolean {
     try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
+      const parts = token.split('.');
+      if (parts.length !== 3) {
+        return true;
+      }
+      const payload = JSON.parse(atob(parts[1]));
       return Date.now() >= payload.exp * 1000;
     } catch {
       return true;

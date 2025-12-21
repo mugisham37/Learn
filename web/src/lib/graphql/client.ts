@@ -6,7 +6,7 @@
  * error handling, and retry logic. Supports both client-side and server-side rendering.
  */
 
-import { ApolloClient, ApolloLink, HttpLink, split } from '@apollo/client';
+import { ApolloClient, ApolloLink, HttpLink, split, FetchPolicy } from '@apollo/client';
 import { GraphQLWsLink } from '@apollo/client/link/subscriptions';
 import { getMainDefinition } from '@apollo/client/utilities';
 import { createClient } from 'graphql-ws';
@@ -150,11 +150,11 @@ async function createApolloClient(ssrMode: boolean = false) {
     defaultOptions: {
       watchQuery: {
         errorPolicy: 'all',
-        fetchPolicy: ssrMode ? 'cache-first' : 'cache-and-network',
+        fetchPolicy: (ssrMode ? 'cache-first' : 'cache-and-network') as FetchPolicy,
       },
       query: {
         errorPolicy: 'all',
-        fetchPolicy: ssrMode ? 'cache-first' : 'cache-and-network',
+        fetchPolicy: (ssrMode ? 'cache-first' : 'cache-and-network') as FetchPolicy,
       },
       mutate: {
         errorPolicy: 'all',
@@ -166,7 +166,7 @@ async function createApolloClient(ssrMode: boolean = false) {
 }
 
 // Create and export the configured Apollo Client instance
-let apolloClientInstance: any = null;
+let apolloClientInstance: ApolloClient<unknown> | null = null;
 
 export const apolloClient = (() => {
   if (typeof window === 'undefined') {

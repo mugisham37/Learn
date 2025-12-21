@@ -15,6 +15,8 @@
 // Mock Socket.io types for now - replace with actual socket.io-client when available
 interface Socket {
   connected: boolean;
+  connecting: boolean;
+  auth?: { token: string };
   connect(): void;
   disconnect(): void;
   emit(event: string, ...args: unknown[]): void;
@@ -22,10 +24,12 @@ interface Socket {
   off(event: string, handler?: (...args: unknown[]) => void): void;
 }
 
-function io(url: string, options?: Record<string, unknown>): Socket {
+function io(_url: string, _options?: Record<string, unknown>): Socket {
   // Mock implementation - replace with actual socket.io-client
   return {
     connected: false,
+    connecting: false,
+    auth: { token: '' },
     connect() { /* mock */ },
     disconnect() { /* mock */ },
     emit() { /* mock */ },
@@ -149,8 +153,8 @@ export function createSocketClient(): Socket {
       tokenManager
         .refreshAccessToken()
         .then(newToken => {
-          if (socket) {
-            socket.auth = { token: newToken };
+          if (socket && socket.auth) {
+            socket.auth.token = newToken;
           }
         })
         .catch(error => {
@@ -312,7 +316,7 @@ export function leaveConversationRoom(conversationId: string): void {
 /**
  * Export socket client utilities
  */
-export default {
+const socketClientUtils = {
   createSocketClient,
   getSocketClient,
   connectSocket,
@@ -330,3 +334,5 @@ export default {
   leaveConversationRoom,
   SOCKET_EVENTS,
 };
+
+export default socketClientUtils;

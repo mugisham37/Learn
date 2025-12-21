@@ -16,12 +16,25 @@ export interface SchemaMetadata {
   version: string;
   lastUpdated: Date;
   hash: string;
+  stats?: {
+    types: number;
+    fields: number;
+    queries: number;
+    mutations: number;
+    subscriptions: number;
+  };
+  extractedAt?: Date;
+  endpoint?: string;
 }
 
 export interface SchemaValidationResult {
   valid: boolean;
   errors: string[];
   warnings: string[];
+  health?: {
+    score: number;
+    issues: Array<{ severity: 'error' | 'warning' | 'info'; message: string }>;
+  };
 }
 
 export interface SchemaSyncOptions {
@@ -33,8 +46,46 @@ export interface SchemaSyncOptions {
 }
 
 export class SchemaIntegration {
+  private config: SchemaIntegrationConfig;
+
   constructor(config: SchemaIntegrationConfig) {
-    // Implementation
+    this.config = config;
+  }
+
+  async synchronize(options: SchemaSyncOptions): Promise<void> {
+    // Implementation for schema synchronization
+    console.log('Synchronizing schema with options:', options);
+  }
+
+  async getLastValidation(): Promise<SchemaValidationResult | null> {
+    // Mock implementation
+    return {
+      valid: true,
+      errors: [],
+      warnings: [],
+      health: {
+        score: 95,
+        issues: [],
+      },
+    };
+  }
+
+  async getMetadata(): Promise<SchemaMetadata | null> {
+    // Mock implementation
+    return {
+      version: '1.0.0',
+      lastUpdated: new Date(),
+      hash: 'abc123',
+      stats: {
+        types: 50,
+        fields: 200,
+        queries: 25,
+        mutations: 15,
+        subscriptions: 5,
+      },
+      extractedAt: new Date(),
+      endpoint: this.config.endpoint,
+    };
   }
 }
 
