@@ -554,3 +554,367 @@ export interface PaginationInput {
   last?: number;
   before?: string;
 }
+
+// Analytics-related types
+export type PerformanceLevel = 'EXCELLENT' | 'GOOD' | 'NEEDS_IMPROVEMENT' | 'POOR';
+export type EngagementLevel = 'HIGH' | 'MEDIUM' | 'LOW';
+export type LearningConsistency = 'CONSISTENT' | 'IRREGULAR' | 'INACTIVE';
+export type BadgeCategory = 'COMPLETION' | 'PERFORMANCE' | 'ENGAGEMENT' | 'STREAK' | 'SKILL';
+export type ImprovementTrend = 'IMPROVING' | 'STABLE' | 'DECLINING';
+
+export interface CourseAnalytics {
+  courseId: ID;
+  course: Course;
+  totalEnrollments: number;
+  activeEnrollments: number;
+  completionCount: number;
+  completionRate: number;
+  averageRating?: number;
+  totalRevenue: number;
+  averageTimeToCompletionDays?: number;
+  dropoutRate: number;
+  mostDifficultLesson?: Lesson;
+  engagementMetrics: EngagementMetrics;
+  lastUpdated: DateTime;
+}
+
+export interface EngagementMetrics {
+  averageSessionDuration: number;
+  totalVideoWatchTime: number;
+  discussionParticipationRate: number;
+  assignmentSubmissionRate: number;
+  quizAttemptRate: number;
+  averageQuizScore: number;
+  lessonCompletionVelocity: number;
+  studentRetentionRate: number;
+}
+
+export interface StudentAnalytics {
+  userId: ID;
+  user: User;
+  totalCoursesEnrolled: number;
+  coursesCompleted: number;
+  coursesInProgress: number;
+  averageQuizScore?: number;
+  totalTimeInvestedMinutes: number;
+  currentStreakDays: number;
+  longestStreakDays: number;
+  badgesEarned: string[];
+  skillRatings: JSON;
+  lastUpdated: DateTime;
+  completionRate: number;
+  averageTimePerCourse: number;
+  performanceSummary: StudentPerformanceSummary;
+  learningStreak: LearningStreak;
+}
+
+export interface StudentPerformanceSummary {
+  completionRate: number;
+  performanceLevel: PerformanceLevel;
+  engagementLevel: EngagementLevel;
+  learningConsistency: LearningConsistency;
+  totalBadges: number;
+  averageSkillRating: number;
+}
+
+export interface LearningStreak {
+  currentStreak: number;
+  longestStreak: number;
+  lastActivityDate: DateTime;
+  streakStartDate?: DateTime;
+}
+
+export interface DashboardMetrics {
+  role: UserRole;
+  userId: ID;
+  generatedAt: DateTime;
+  overview?: PlatformOverview;
+  studentMetrics?: StudentDashboardMetrics;
+  educatorMetrics?: EducatorDashboardMetrics;
+  adminMetrics?: AdminDashboardMetrics;
+}
+
+export interface PlatformOverview {
+  totalUsers?: number;
+  totalCourses?: number;
+  totalEnrollments?: number;
+  totalRevenue?: number;
+}
+
+export interface StudentDashboardMetrics {
+  enrolledCourses: number;
+  completedCourses: number;
+  inProgressCourses: number;
+  currentStreak: number;
+  totalTimeInvested: number;
+  averageQuizScore?: number;
+  badgesEarned: number;
+  upcomingDeadlines: UpcomingDeadline[];
+  recentGrades: RecentGrade[];
+  recommendedCourses: RecommendedCourse[];
+}
+
+export interface EducatorDashboardMetrics {
+  totalCourses: number;
+  publishedCourses: number;
+  totalStudents: number;
+  averageRating: number;
+  totalRevenue: number;
+  pendingGrading: number;
+  coursePerformance: CoursePerformanceMetric[];
+  recentActivity: RecentActivity[];
+}
+
+export interface AdminDashboardMetrics {
+  platformHealth: PlatformHealth;
+  growthMetrics: GrowthMetrics;
+  systemMetrics: SystemMetrics;
+  topPerformers: TopPerformers;
+}
+
+export interface PlatformHealth {
+  totalUsers: number;
+  activeUsers: number;
+  totalCourses: number;
+  publishedCourses: number;
+  totalEnrollments: number;
+  completionRate: number;
+  averageRating: number;
+  totalRevenue: number;
+}
+
+export interface GrowthMetrics {
+  userGrowthRate: number;
+  courseGrowthRate: number;
+  revenueGrowthRate: number;
+  enrollmentGrowthRate: number;
+}
+
+export interface SystemMetrics {
+  errorRate: number;
+  averageResponseTime: number;
+  uptime: number;
+  storageUsage: number;
+}
+
+export interface TopPerformers {
+  topCourses: TopCourse[];
+  topInstructors: TopInstructor[];
+  topStudents: TopStudent[];
+}
+
+export interface UpcomingDeadline {
+  courseId: ID;
+  courseName: string;
+  assignmentName: string;
+  dueDate: DateTime;
+}
+
+export interface RecentGrade {
+  courseId: ID;
+  courseName: string;
+  assessmentName: string;
+  score: number;
+  gradedAt: DateTime;
+}
+
+export interface RecommendedCourse {
+  courseId: ID;
+  courseName: string;
+  reason: string;
+}
+
+export interface CoursePerformanceMetric {
+  courseId: ID;
+  courseName: string;
+  enrollments: number;
+  completionRate: number;
+  averageRating: number;
+  revenue: number;
+}
+
+export interface RecentActivity {
+  type: string;
+  courseId: ID;
+  courseName: string;
+  studentName: string;
+  timestamp: DateTime;
+}
+
+export interface TopCourse {
+  courseId: ID;
+  courseName: string;
+  instructorName: string;
+  enrollments: number;
+  rating: number;
+}
+
+export interface TopInstructor {
+  instructorId: ID;
+  instructorName: string;
+  totalCourses: number;
+  totalStudents: number;
+  averageRating: number;
+}
+
+export interface TopStudent {
+  studentId: ID;
+  studentName: string;
+  coursesCompleted: number;
+  averageScore: number;
+  currentStreak: number;
+}
+
+export interface CourseReport {
+  courseId: ID;
+  courseName: string;
+  instructorName: string;
+  reportPeriod: DateRange;
+  enrollmentTrends: EnrollmentTrends;
+  performanceMetrics: CoursePerformanceMetrics;
+  engagementMetrics: CourseEngagementMetrics;
+  revenueMetrics: RevenueMetrics;
+  difficultContent: DifficultContent;
+}
+
+export interface StudentReport {
+  studentId: ID;
+  studentName: string;
+  reportPeriod: DateRange;
+  learningProgress: LearningProgress;
+  performanceMetrics: StudentPerformanceMetrics;
+  engagementMetrics: StudentEngagementMetrics;
+  skillDevelopment: SkillDevelopment;
+  recommendations: StudentRecommendations;
+}
+
+export interface DateRange {
+  startDate: DateTime;
+  endDate: DateTime;
+}
+
+export interface EnrollmentTrends {
+  totalEnrollments: number;
+  newEnrollments: number;
+  activeEnrollments: number;
+  completedEnrollments: number;
+  droppedEnrollments: number;
+  enrollmentsByMonth: MonthlyEnrollment[];
+}
+
+export interface MonthlyEnrollment {
+  month: string;
+  count: number;
+}
+
+export interface CoursePerformanceMetrics {
+  completionRate: number;
+  averageTimeToCompletion: number;
+  dropoutRate: number;
+  averageQuizScore: number;
+  assignmentSubmissionRate: number;
+}
+
+export interface CourseEngagementMetrics {
+  averageSessionDuration: number;
+  totalVideoWatchTime: number;
+  discussionParticipationRate: number;
+  lessonCompletionVelocity: number;
+  studentRetentionRate: number;
+}
+
+export interface RevenueMetrics {
+  totalRevenue: number;
+  revenuePerEnrollment: number;
+  refundRate: number;
+}
+
+export interface DifficultContent {
+  mostDifficultLessons: DifficultLesson[];
+  strugglingStudents: StrugglingStudent[];
+}
+
+export interface DifficultLesson {
+  lessonId: ID;
+  lessonName: string;
+  averageAttempts: number;
+  completionRate: number;
+}
+
+export interface StrugglingStudent {
+  studentId: ID;
+  studentName: string;
+  progressPercentage: number;
+  strugglingAreas: string[];
+}
+
+export interface LearningProgress {
+  totalCoursesEnrolled: number;
+  coursesCompleted: number;
+  coursesInProgress: number;
+  completionRate: number;
+  totalTimeInvested: number;
+  averageTimePerCourse: number;
+}
+
+export interface StudentPerformanceMetrics {
+  averageQuizScore: number;
+  totalQuizzesTaken: number;
+  assignmentsSubmitted: number;
+  averageAssignmentScore: number;
+  improvementTrend: ImprovementTrend;
+}
+
+export interface StudentEngagementMetrics {
+  currentStreak: number;
+  longestStreak: number;
+  averageSessionDuration: number;
+  discussionParticipation: number;
+  lastActivityDate: DateTime;
+}
+
+export interface SkillDevelopment {
+  skillRatings: JSON;
+  skillProgress: SkillProgress[];
+  badgesEarned: Badge[];
+}
+
+export interface SkillProgress {
+  skillName: string;
+  currentRating: number;
+  improvement: number;
+  coursesContributing: string[];
+}
+
+export interface Badge {
+  badgeId: string;
+  badgeName: string;
+  earnedAt: DateTime;
+  category: BadgeCategory;
+}
+
+export interface StudentRecommendations {
+  nextCourses: string[];
+  skillsToImprove: string[];
+  studyScheduleSuggestions: string[];
+}
+
+// Analytics Input Types
+export interface DateRangeInput {
+  startDate: DateTime;
+  endDate: DateTime;
+}
+
+export interface CourseReportInput {
+  courseId: ID;
+  dateRange: DateRangeInput;
+}
+
+export interface StudentReportInput {
+  studentId: ID;
+  dateRange: DateRangeInput;
+}
+
+export interface PlatformMetricsInput {
+  dateRange: DateRangeInput;
+}

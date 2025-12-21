@@ -24,6 +24,9 @@ import type {
   StreamingUrl,
   Certificate,
   LessonProgress,
+  Announcement,
+  PresenceUpdate,
+  TypingIndicator,
 } from './entities';
 
 // Assessment responses
@@ -274,18 +277,6 @@ export interface MessageAddedSubscription {
 
 export interface UserTypingSubscription {
   userTyping: TypingIndicator;
-}
-
-export interface AnnouncementPublishedSubscription {
-  announcementPublished: Announcement;
-}
-
-export interface UserPresenceSubscription {
-  userPresence: PresenceUpdate;
-}
-
-export interface ThreadTypingSubscription {
-  typingIndicator: TypingIndicator;
 }
 
 // Content responses
@@ -544,9 +535,50 @@ export interface MessageAddedSubscription {
 }
 
 export interface UserTypingSubscription {
-  userTyping: {
-    userId: string;
-    isTyping: boolean;
-    conversationId: string;
-  };
+  userTyping: TypingIndicator;
+}
+
+export interface AnnouncementPublishedSubscription {
+  announcementPublished: Announcement;
+}
+
+export interface UserPresenceSubscription {
+  userPresence: PresenceUpdate;
+}
+
+export interface ThreadTypingSubscription {
+  typingIndicator: TypingIndicator;
+}
+
+// Analytics responses
+export interface GetCourseAnalyticsResponse {
+  courseAnalytics: import('./entities').CourseAnalytics;
+}
+
+export interface GetStudentAnalyticsResponse {
+  studentAnalytics: import('./entities').StudentAnalytics;
+}
+
+export interface GetDashboardMetricsResponse {
+  dashboardMetrics: import('./entities').DashboardMetrics;
+}
+
+export interface GenerateCourseReportResponse {
+  generateCourseReport: import('./entities').CourseReport;
+}
+
+export interface GenerateStudentReportResponse {
+  generateStudentReport: import('./entities').StudentReport;
+}
+
+export interface GetPlatformMetricsResponse {
+  platformMetrics: import('./entities').PlatformHealth;
+}
+
+export interface GetTrendingCoursesResponse {
+  trendingCourses: import('./entities').CourseAnalytics[];
+}
+
+export interface GetTopPerformingStudentsResponse {
+  topPerformingStudents: import('./entities').StudentAnalytics[];
 }

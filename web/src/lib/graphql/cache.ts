@@ -235,16 +235,36 @@ const typePolicies: Record<string, TypePolicy> = {
       
       // Analytics Module Queries
       courseAnalytics: {
-        keyArgs: ['courseId', 'dateRange'],
-        merge: true, // Analytics data should be replaced
+        keyArgs: ['courseId'],
+        merge: false, // Analytics data should be replaced
       },
-      studentMetrics: {
-        keyArgs: ['studentId', 'dateRange'],
-        merge: true,
+      studentAnalytics: {
+        keyArgs: ['userId'],
+        merge: false, // Analytics data should be replaced
       },
-      dashboardData: {
-        keyArgs: ['userId', 'role'],
-        merge: true,
+      dashboardMetrics: {
+        keyArgs: false, // User-specific, no additional key args needed
+        merge: false, // Dashboard data should be replaced
+      },
+      generateCourseReport: {
+        keyArgs: ['input', ['courseId', 'dateRange']],
+        merge: false, // Reports should be replaced
+      },
+      generateStudentReport: {
+        keyArgs: ['input', ['studentId', 'dateRange']],
+        merge: false, // Reports should be replaced
+      },
+      platformMetrics: {
+        keyArgs: ['input', ['dateRange']],
+        merge: false, // Platform metrics should be replaced
+      },
+      trendingCourses: {
+        keyArgs: ['limit', 'dateRange'],
+        merge: false, // Trending data should be replaced
+      },
+      topPerformingStudents: {
+        keyArgs: ['limit'],
+        merge: false, // Top performers should be replaced
       },
       
       // Search Module Queries
@@ -795,41 +815,49 @@ const typePolicies: Record<string, TypePolicy> = {
 
   // Analytics Module Type Policies
   CourseAnalytics: {
-    keyFields: ['courseId', 'dateRange'],
+    keyFields: ['courseId'],
     fields: {
-      metrics: {
-        merge: true, // Deep merge metrics
+      engagementMetrics: {
+        merge: false, // Replace engagement metrics completely
       },
-      trends: {
-        merge(existing = [], incoming) {
-          return incoming;
-        },
+      mostDifficultLesson: {
+        merge: false, // Replace lesson reference
       },
     },
   },
 
-  StudentMetrics: {
-    keyFields: ['studentId', 'dateRange'],
+  StudentAnalytics: {
+    keyFields: ['userId'],
     fields: {
-      progressData: {
-        merge: true,
+      performanceSummary: {
+        merge: false, // Replace performance summary completely
       },
-      engagementData: {
-        merge: true,
+      learningStreak: {
+        merge: false, // Replace streak data completely
+      },
+      badgesEarned: {
+        merge: false, // Replace badges array completely
+      },
+      skillRatings: {
+        merge: false, // Replace skill ratings completely
       },
     },
   },
 
-  DashboardData: {
+  DashboardMetrics: {
     keyFields: ['userId', 'role'],
     fields: {
-      stats: {
-        merge: true,
+      overview: {
+        merge: false, // Replace overview data
       },
-      recentActivity: {
-        merge(existing = [], incoming) {
-          return incoming;
-        },
+      studentMetrics: {
+        merge: false, // Replace student metrics
+      },
+      educatorMetrics: {
+        merge: false, // Replace educator metrics
+      },
+      adminMetrics: {
+        merge: false, // Replace admin metrics
       },
     },
   },
@@ -891,7 +919,7 @@ export function createCacheConfig(): InMemoryCache {
         'Payment', 'Subscription', 'Invoice',
         'Notification', 'NotificationPreferences',
         'Conversation', 'Message', 'DiscussionThread', 'DiscussionReply',
-        'CourseAnalytics', 'StudentMetrics', 'DashboardData',
+        'CourseAnalytics', 'StudentAnalytics', 'DashboardMetrics',
         'SearchResult', 'SearchFacet'
       ],
       Content: ['VideoContent', 'DocumentContent', 'ImageContent', 'AudioContent'],
@@ -927,12 +955,16 @@ export function createCacheConfig(): InMemoryCache {
           return `NotificationPreferences:${object.userId}`;
         
         case 'CourseAnalytics':
-          // Use course ID and date range for analytics
+          // Use course ID for analytics
           return `CourseAnalytics:${object.courseId}`;
         
-        case 'StudentMetrics':
-          // Use student ID for metrics
-          return `StudentMetrics:${object.studentId || object.userId}`;
+        case 'StudentAnalytics':
+          // Use user ID for student analytics
+          return `StudentAnalytics:${object.userId}`;
+        
+        case 'DashboardMetrics':
+          // Use user ID and role for dashboard metrics
+          return `DashboardMetrics:${object.userId}:${(object as { role?: string }).role || 'unknown'}`;
         
         case 'ConversationParticipant':
           // Use composite key for conversation participants

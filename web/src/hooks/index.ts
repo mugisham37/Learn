@@ -141,3 +141,15 @@ export {
   type MarkAllNotificationsReadInput,
   type UpdateNotificationPreferencesInput,
 } from './useNotifications';
+
+// Analytics Module Hooks
+export {
+  useCourseAnalytics,
+  useStudentMetrics,
+  useDashboardData,
+  useReportGeneration,
+  useStudentReport,
+  usePlatformMetrics,
+  useTrendingCourses,
+  useTopPerformingStudents,
+} from './useAnalytics';
